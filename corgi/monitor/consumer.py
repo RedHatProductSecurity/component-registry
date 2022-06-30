@@ -1,0 +1,91 @@
+import json
+import logging
+from typing import Optional
+
+from django.conf import settings
+from proton import Event, SSLDomain  # type: ignore
+from proton.handlers import MessagingHandler  # type: ignore
+from proton.reactor import Container, Selector  # type: ignore
+
+from corgi.tasks.brew import slow_fetch_brew_build
+
+logger = logging.getLogger(__name__)
+
+
+class UMBReceiverHandler(MessagingHandler):
+    """Handler to deal with received messages from UMB."""
+
+    def __init__(self, virtual_topic_address: str, selector: Optional[str] = None):
+        super(UMBReceiverHandler, self).__init__()
+
+        # A virtual topic address determined by a specific listener.
+        self.virtual_topic_address = virtual_topic_address
+
+        # Set of URLs where UMB brokers are running. Use AMQP protocol port numbers only. See
+        # specific URLs in settings; use env vars to select the appropriate broker.
+        self.urls = [settings.UMB_BROKER_URL]
+
+        # The UMB cert and key are generated for an LDAP user (developer) or service account
+        # (this app). The CA cert is the standard internal root CA cert installed in the Dockerfile.
+        # To request a new set of UMB certs, see docs/developer.md or docs/operations.md.
+        self.ssl_domain = SSLDomain(SSLDomain.MODE_CLIENT)
+        self.ssl_domain.set_credentials(
+            cert_file=settings.UMB_CERT, key_file=settings.UMB_KEY, password=None
+        )
+        self.ssl_domain.set_trusted_ca_db(settings.CA_CERT)
+        self.ssl_domain.set_peer_authentication(SSLDomain.VERIFY_PEER)
+
+        # A set of filters used to narrow down the received messages from UMB; see individual
+        # listeners to see if they define any selectors or consume all messages without any
+        # filtering.
+        self.selector = None if selector is None else Selector(selector)
+
+        # Ack messages manually so that we can ensure we successfully acted upon a message when
+        # it was received.
+        self.auto_accept = True  # False
+
+    def on_start(self, event: Event):
+        recv_opts = [self.selector] if self.selector is not None else []
+        logger.info("Connecting to broker(s): %s", self.urls)
+        conn = event.container.connect(urls=self.urls, ssl_domain=self.ssl_domain, heartbeat=500)
+        event.container.create_receiver(
+            conn, self.virtual_topic_address, name=None, options=recv_opts
+        )
+
+    def on_message(self, event: Event):
+        logger.info("Received UMB event on %s: %s", self.virtual_topic_address, event.message.id)
+        message = json.loads(event.message.body)
+        build_id = message["info"]["build_id"]
+
+        try:
+            slow_fetch_brew_build.apply_async(args=(build_id,))
+        except Exception as exc:
+            logger.error(
+                "Failed to schedule slow_fetch_brew_build task for build ID %s: %s",
+                build_id,
+                str(exc),
+            )
+            # Release message back to the queue but report back that it was delivered. The
+            # message will be re-delivered to any available client again.
+            self.release(event.delivery, delivered=True)
+        else:
+            # Accept the delivered message to remove it from the queue.
+            self.accept(event.delivery)
+
+
+class UMBListener:
+    virtual_topic_address = ""
+    selector = None
+
+    @classmethod
+    def consume(cls):
+        if not cls.virtual_topic_address:
+            raise NotImplementedError("Subclass must defined virtual topic address")
+
+        logger.info("Starting consumer for virtual topic: %s", cls.virtual_topic_address)
+        handler = UMBReceiverHandler(virtual_topic_address=cls.virtual_topic_address)
+        Container(handler).run()
+
+
+class BrewUMBListener(UMBListener):
+    virtual_topic_address = f"Consumer.{settings.UMB_CONSUMER}.VirtualTopic.eng.brew.build.complete"

@@ -1,0 +1,7 @@
+-r base.txt
+-r lint.txt
+-r test.txt
+django-debug-toolbar
+ipdb
+ipython
+pip-tools

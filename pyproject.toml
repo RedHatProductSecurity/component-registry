@@ -1,0 +1,49 @@
+[tool.pytest.ini_options]
+django_debug_mode = true
+testpaths = "tests"
+# Options used for every pytest command:
+# - Run tests marked with the "unit" marker (run "integration" tests with `-m integration`)
+# - Generate coverage report for the "corgi/" directory in the terminal
+# - Show extra test summary info ("a" == (a)ll)
+# - Record VCR cassettes if they are not available
+# - Report on the ten slowest tests
+# - Skip applying migrations to save on DB-setup time
+# - Ensure pytest config here is valid, and all defined markers are specified below in `markers`
+addopts = """
+-m unit
+--cov corgi --cov-report html --cov-report xml:coverage.xml
+-ra
+--record-mode=once
+--durations=10
+--nomigrations
+--strict-config --strict-markers
+"""
+markers = [
+    "unit",
+    "integration",
+]
+filterwarnings = [
+    "ignore::UserWarning",
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+
+[tool.black]
+line-length = 100
+
+[tool.coverage.run]
+omit = ["corgi/core/migrations/*"]
+
+[tool.isort]
+profile = "black"
+
+[tool.mypy]
+python_version = "3.9"
+ignore_missing_imports = true
+warn_return_any = false
+warn_unused_configs = true
+plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
+exclude = ["corgi/core/migrations", "corgi/collectors/migrations"]
+
+[tool.django-stubs]
+django_settings_module = "config.settings.test"

@@ -1,0 +1,12 @@
+-r base.txt
+mypy
+django-stubs
+djangorestframework-stubs
+types-requests
+factory-boy
+lxml
+pytest
+pytest-cov
+pytest-django
+pytest-recording
+pytest-sugar

@@ -1,0 +1,7 @@
+bandit
+black
+detect-secrets
+flake8
+isort
+pip-audit
+radon

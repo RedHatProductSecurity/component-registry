@@ -1868,6 +1868,12 @@ components:
           type: string
         description:
           type: string
+        coverage:
+          type: string
+          readOnly: true
+        build_count:
+          type: string
+          readOnly: true
         tags:
           type: array
           items:
@@ -1908,8 +1914,10 @@ components:
           type: object
           additionalProperties: {}
       required:
+      - build_count
       - builds
       - components
+      - coverage
       - errata
       - link
       - manifest
@@ -1940,6 +1948,12 @@ components:
           maxLength: 1000
         description:
           type: string
+        coverage:
+          type: string
+          readOnly: true
+        build_count:
+          type: string
+          readOnly: true
         tags:
           type: array
           items:
@@ -1980,8 +1994,10 @@ components:
           type: object
           additionalProperties: {}
       required:
+      - build_count
       - builds
       - components
+      - coverage
       - errata
       - link
       - manifest
@@ -2009,6 +2025,9 @@ components:
           type: string
         description:
           type: string
+        build_count:
+          type: string
+          readOnly: true
         tags:
           type: array
           items:
@@ -2049,6 +2068,7 @@ components:
           type: object
           additionalProperties: {}
       required:
+      - build_count
       - builds
       - components
       - errata
@@ -2078,6 +2098,12 @@ components:
           type: string
         description:
           type: string
+        coverage:
+          type: string
+          readOnly: true
+        build_count:
+          type: string
+          readOnly: true
         tags:
           type: array
           items:
@@ -2118,8 +2144,10 @@ components:
           type: object
           additionalProperties: {}
       required:
+      - build_count
       - builds
       - components
+      - coverage
       - errata
       - link
       - manifest

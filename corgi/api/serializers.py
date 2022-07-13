@@ -530,8 +530,9 @@ class ProductSerializer(serializers.ModelSerializer):
                 )
         return p
 
-    def get_build_count(self, instance):
-        return instance.builds.count()
+    @staticmethod
+    def get_build_count(instance):
+        return len(instance.builds)
 
     class Meta:
         model = Product
@@ -636,8 +637,9 @@ class ProductVersionSerializer(serializers.ModelSerializer):
                 )
         return p
 
-    def get_build_count(self, instance):
-        return instance.builds.count()
+    @staticmethod
+    def get_build_count(instance):
+        return len(instance.builds)
 
     class Meta:
         model = ProductVersion
@@ -742,8 +744,9 @@ class ProductStreamSerializer(serializers.ModelSerializer):
                 )
         return p
 
-    def get_build_count(self, instance):
-        return instance.builds.count()
+    @staticmethod
+    def get_build_count(instance):
+        return len(instance.builds)
 
     class Meta:
         model = ProductStream
@@ -849,8 +852,9 @@ class ProductVariantSerializer(serializers.ModelSerializer):
                 )
         return p
 
-    def get_build_count(self, instance):
-        return instance.builds.count()
+    @staticmethod
+    def get_build_count(instance):
+        return len(instance.builds)
 
     class Meta:
         model = ProductVariant

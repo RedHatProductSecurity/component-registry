@@ -343,6 +343,8 @@ class ProductModel(models.Model):
 
     @property
     def coverage(self):
+        if not self.pnodes.count():
+            return 0
         pnode_children = self.pnodes.all()[0].get_children()
         if not pnode_children.count():
             return 0

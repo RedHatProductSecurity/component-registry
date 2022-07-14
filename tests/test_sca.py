@@ -98,7 +98,7 @@ download_lookaside_test_data = [
 @patch("corgi.tasks.sca._download_lookaside_sources")
 def test_get_distgit_sources(mock_git_archive, mock_download_lookaside_sources):
     expected_path = "tests/data/rpms/cri-o/1e52fcdc84be253b5094b942c2fec23d7636d644.tar"
-    result = _get_distgit_sources(
+    _ = _get_distgit_sources(
         f"git://{os.getenv('CORGI_TEST_PKGS_HOST')}"  # Comma not missing, joined with below
         "/rpms/cri-o#1e52fcdc84be253b5094b942c2fec23d7636d644",
         "rpms",
@@ -113,14 +113,18 @@ def test_download_lookaside_sources(
     test_data_file, package_name, expected_filename, expected_path, requests_mock
 ):
     distgit_source_archive = Path(test_data_file)
-    expected_url = f"https://{os.getenv('CORGI_TEST_PKGS_HOST')}/repo/rpms/{package_name}/" \
-                   f"{expected_filename}/{expected_path}{expected_filename}"
+    expected_url = (
+        f"https://{os.getenv('CORGI_TEST_PKGS_HOST')}/repo/rpms/{package_name}/"
+        f"{expected_filename}/{expected_path}{expected_filename}"
+    )
     print(f"mocking call to {expected_url}")
     requests_mock.get(expected_url, text="resp")
     downloaded_sources = _download_lookaside_sources(distgit_source_archive, package_name)
     if expected_filename:
-        full_expected_filename = f"tests/data/rpms/{package_name}/{expected_filename}/" \
-                                 f"{expected_path}/{expected_filename}"
+        full_expected_filename = (
+            f"tests/data/rpms/{package_name}/{expected_filename}/"
+            f"{expected_path}/{expected_filename}"
+        )
         assert downloaded_sources == [PosixPath(full_expected_filename)]
         for source in downloaded_sources:
             if source != test_data_file:
@@ -129,7 +133,10 @@ def test_download_lookaside_sources(
         assert downloaded_sources == []
 
 
-# mocking the git call means we don't need to install git in the test container
+# mock the syft call to avoid having to have actual source code for the test
+# Dummy tar files are prefetch to
+# tests/data/rpms/cri-o/1e52fcdc84be253b5094b942c2fec23d7636d644.tar (with only sources)
+# tests/data/rpms/cri-o/cri-o-41c0779.tar.gz/sha516/<sha256>/cri-o-41c0779.tar.gz (empty file)
 @patch("subprocess.check_output")
 def test_software_composition_analysis(mock_syft):
     sb = SoftwareBuildFactory(

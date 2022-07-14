@@ -5,7 +5,7 @@ from unittest.mock import call, patch
 
 import pytest
 
-from corgi.collectors.brew import Brew
+from corgi.collectors.brew import Brew, BrewBuildTypeNotSupported
 from corgi.core.models import Component, ComponentNode
 from corgi.tasks.brew import save_component, slow_fetch_brew_build
 from tests.data.image_archive_data import (
@@ -18,7 +18,7 @@ from tests.factories import ComponentFactory, SoftwareBuildFactory
 
 pytestmark = pytest.mark.unit
 
-# build id, namespace, name, license, type, supported
+# build id, namespace, name, license, type
 build_corpus = [
     # firefox -brew buildID=1872838
     (
@@ -29,7 +29,6 @@ build_corpus = [
         "firefox",
         "MPLv1.1 or GPLv2+ or LGPLv2+",
         "rpm",
-        True,
     ),
     # grafana-container: brew buildID=1872940
     (
@@ -40,7 +39,6 @@ build_corpus = [
         "grafana-container",
         "",
         "image",
-        True,
     ),
     # rh - nodejs: brew buildID=1700251
     (
@@ -51,7 +49,6 @@ build_corpus = [
         "rh-nodejs12-nodejs",
         "MIT and ASL 2.0 and ISC and BSD",
         "rpm",
-        True,
     ),
     # rubygem: brew buildID=936045
     (
@@ -62,7 +59,6 @@ build_corpus = [
         "rubygem-bcrypt",
         "MIT",
         "rpm",
-        True,
     ),
     # jboss-webserver-container:
     # brew buildID=1879214
@@ -74,7 +70,6 @@ build_corpus = [
         "jboss-webserver-3-webserver31-tomcat8-openshift-container",
         "",
         "image",
-        True,
     ),
     # org.apache.cxf-cxf: brew buildID=1796072
     (
@@ -84,7 +79,16 @@ build_corpus = [
         "org.apache.cxf-cxf",
         "",
         "maven",
-        False,  # TODO: Change back to True when support is added
+    ),
+    # nodejs: brew buildID=1700497
+    (
+        1700497,
+        os.getenv("CORGI_TEST_CODE_URL"),
+        "redhat",
+        "it's a module build of nodejs but I didn't bother to fill in the test data",
+        "",
+        "module",
+        # TODO: complete above when support is added
     ),
     # cryostat-rhel8-operator-container:
     # brew buildID=1841202
@@ -96,7 +100,6 @@ build_corpus = [
         "cryostat-rhel8-operator-container",
         "",
         "image",
-        True,
     ),
 ]
 
@@ -461,41 +464,42 @@ def verify_remote_source(source_container):
 
 @pytest.mark.vcr(match_on=["method", "scheme", "host", "port", "path", "body"])
 @pytest.mark.parametrize(
-    "build_id,build_source,build_ns,build_name,license,build_type,supported", build_corpus
+    "build_id,build_source,build_ns,build_name,license,build_type", build_corpus
 )
-def test_get_component_data(
-    build_id, build_source, build_ns, build_name, license, build_type, supported
-):
-    if supported:
-        c = Brew().get_component_data(build_id)
-        if build_type == "maven":
-            assert list(c.keys()) == ["type", "namespace", "meta", "build_meta"]
-        elif build_type == "image":
-            assert list(c.keys()) == [
-                "type",
-                "namespace",
-                "meta",
-                "nested_builds",
-                "sources",
-                "image_components",
-                "components",
-                "build_meta",
-            ]
-        else:
-            assert list(c.keys()) == [
-                "type",
-                "namespace",
-                "id",
-                "meta",
-                "analysis_meta",
-                "components",
-                "build_meta",
-            ]
-        assert c["build_meta"]["build_info"]["source"] == build_source
-        assert c["build_meta"]["build_info"]["build_id"] == build_id
-        assert c["build_meta"]["build_info"]["name"] == build_name
-        # The "license" field on the Component model defaults to ""
-        # But the Brew collector (via get_rpm_build_data) / Koji (via getRPMHeaders) may return None
-        assert c["meta"].get("license", "") == license
-        assert c["namespace"] == build_ns
-        assert c["type"] == build_type
+def test_get_component_data(build_id, build_source, build_ns, build_name, license, build_type):
+    if build_type not in Brew.SUPPORTED_BUILD_TYPES:
+        with pytest.raises(BrewBuildTypeNotSupported):
+            Brew().get_component_data(build_id)
+        return
+    c = Brew().get_component_data(build_id)
+    if build_type == "maven":
+        assert list(c.keys()) == ["type", "namespace", "meta", "build_meta"]
+    elif build_type == "image":
+        assert list(c.keys()) == [
+            "type",
+            "namespace",
+            "meta",
+            "nested_builds",
+            "sources",
+            "image_components",
+            "components",
+            "build_meta",
+        ]
+    else:
+        assert list(c.keys()) == [
+            "type",
+            "namespace",
+            "id",
+            "meta",
+            "analysis_meta",
+            "components",
+            "build_meta",
+        ]
+    assert c["build_meta"]["build_info"]["source"] == build_source
+    assert c["build_meta"]["build_info"]["build_id"] == build_id
+    assert c["build_meta"]["build_info"]["name"] == build_name
+    # The "license" field on the Component model defaults to ""
+    # But the Brew collector (via get_rpm_build_data) / Koji (via getRPMHeaders) may return None
+    assert c["meta"].get("license", "") == license
+    assert c["namespace"] == build_ns
+    assert c["type"] == build_type

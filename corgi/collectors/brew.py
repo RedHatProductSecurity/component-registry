@@ -48,7 +48,8 @@ class Brew:
         # These builds fail because we don't support Maven (yet?)
         # MAVEN_BUILD_TYPE,
         WIN_BUILD_TYPE,
-        MODULE_BUILD_TYPE,
+        # These builds fail because we don't support RHEL modules
+        # MODULE_BUILD_TYPE,
     )
 
     def __init__(self):
@@ -605,7 +606,7 @@ class Brew:
         build_type_info = self.koji_session.getBuildType(build)
         if not any(type_ in self.SUPPORTED_BUILD_TYPES for type_ in build_type_info.keys()):
             raise BrewBuildTypeNotSupported(
-                f"Build {build_id} type is not supported: %s", build_type_info
+                f"Build {build_id} type is not supported: {build_type_info}"
             )
         build_type = next(
             type_ for type_ in build_type_info.keys() if type_ in self.SUPPORTED_BUILD_TYPES

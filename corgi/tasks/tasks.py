@@ -36,5 +36,3 @@ for _loader, _module_name, _is_pkg in _pkgutil.walk_packages([__file__.replace("
 
         # Else it's an imported name, class constant, or non-task helper method
         # We skip importing these when running "from corgi.tasks import *"
-        # TODO: Or we could just import everything and simplify some logic here
-        #  Might cause naming collisions, conflicts, or other surprises

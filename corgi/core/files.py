@@ -10,7 +10,7 @@ class ProductManifestFile:
     """A data file that represents a product manifest in machine-readable SPDX / JSON format."""
 
     file_name = "product_manifest.json"  # Name of the Django template, not the final file itself.
-    # TODO: Should be same template file for all products we want to manifest
+    # We use the same template file for all products we want to manifest
     # We can subclass this to handle different Product subclasses with different properties
     # Or to handle different ways of generating manifest properties from Product properties
 

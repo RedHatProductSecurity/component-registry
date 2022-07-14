@@ -23,8 +23,8 @@ services:
       retries: 3
 
   redis:
-    container_name: corgi-redis
-    hostname: corgi-redis
+    container_name: redis
+    hostname: redis
     # Keep this in sync with openshift/playbooks/redis.yml
     image: "registry.redhat.io/rhel8/redis-6:1"
     ports:

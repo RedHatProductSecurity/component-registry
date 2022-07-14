@@ -812,7 +812,6 @@ class Component(TimeStampedModel):
     def license_list(self) -> list[str]:
         """Return a list of any possibly-relevant licenses. No information is given about which apply
         To see if all apply or if you may choose between them, parse the license expression above"""
-        # TODO: Load all components and validate
         # "words".split("not present in string") will return ["words"]
         # AKA below will always add one level of nesting to the array
         license_parts = self.license_expression.split(" AND ")

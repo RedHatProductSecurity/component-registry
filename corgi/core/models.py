@@ -343,16 +343,14 @@ class ProductModel(models.Model):
 
     @property
     def coverage(self):
-        if not self.pnodes.count():
+        if not self.pnodes.exists():
             return 0
-        pnode_children = self.pnodes.all()[0].get_children()
-        if not pnode_children.count():
+        pnode_children = self.pnodes.first().get_children()
+        if not pnode_children.exists():
             return 0
         has_build = 0
         for pn in pnode_children:
-            if not pn.obj.builds:
-                break
-            if pn.obj.builds.count():
+            if pn.obj.builds.exists():
                 has_build += 1
         return round(has_build / pnode_children.count(), 2)
 
@@ -504,24 +502,22 @@ class ProductVariant(ProductModel, TimeStampedModel):
         return f"o:redhat:{self.name}:{self.version}"
 
     @property
-    def errata(self):
-        errata = (
-            ProductComponentRelation.objects.filter(
-                type=ProductComponentRelation.Type.ERRATA, product_ref__contains=self.name
-            )
-            .values("external_system_id")
+    def errata(self) -> QuerySet:
+        """Return unique errata IDs with variant_ids matching this variant's name"""
+        return (
+            self.get_related_errata([self.name], "external_system_id")
+            .values_list("external_system_id", flat=True)
             .distinct()
         )
-        return [erratum["external_system_id"] for erratum in errata]
 
     @property
-    def builds(self):
-        prodcomprelations = (
-            ProductComponentRelation.objects.filter(product_ref__contains=self.name)
-            .values("build_id")
+    def builds(self) -> QuerySet:
+        """Return unique build IDs for errata with variant_ids matching this variant's name"""
+        return (
+            self.get_product_component_relations([self.name], "build_id")
+            .values_list("build_id", flat=True)
             .distinct()
         )
-        return [pcr["build_id"] for pcr in prodcomprelations]
 
 
 class ProductVariantTag(Tag):

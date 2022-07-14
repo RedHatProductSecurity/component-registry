@@ -75,6 +75,8 @@ def test_archive_source(
 
 download_lookaside_test_data = [
     (
+        # $BREW_URL/buildinfo?buildID=1210605
+        # spec file removed
         "tests/data/rpms/containernetworking-plugins/containernetworking-plugins-v0.8.6-source.tar",
         "containernetworking-plugins",
         "tests/data/rpms/containernetworking-plugins/v0.8.6.tar.gz/md5/"
@@ -82,6 +84,7 @@ download_lookaside_test_data = [
     ),
     # Nothing gets downloaded because the sources file in the distgit archive is empty
     (
+        # This is just an empty archive
         "tests/data/containers/openshift-enterprise-hyperkube/"
         "20f817be5fafe03bdbfff4a3bc561166bfb14013.tar",
         "openshift-enterprise-hyperkube",

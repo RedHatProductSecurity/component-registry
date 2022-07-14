@@ -4,7 +4,7 @@ import re
 from django.utils import dateformat, timezone
 
 from config.celery import app
-from corgi.collectors.brew import Brew
+from corgi.collectors.brew import Brew, BrewBuildTypeNotSupported
 from corgi.core.models import Component, ComponentNode, SoftwareBuild
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 from corgi.tasks.errata_tool import load_errata
@@ -47,8 +47,7 @@ def slow_fetch_brew_build(build_id: int):
     elif build["type"] == "image":
         root_node = save_container(softwarebuild, build)
     else:
-        logger.info("unsupported build type: %s", build["type"])
-        # TODO: Needs to raise / return or else define root_node
+        raise BrewBuildTypeNotSupported(f"Build {build_id} type is not supported: {build['type']}")
 
     for c in build.get("components", []):
         save_component(c, root_node, softwarebuild)

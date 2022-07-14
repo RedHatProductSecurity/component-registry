@@ -238,8 +238,9 @@ def save_container(softwarebuild, build_data) -> ComponentNode:
         for source in build_data["sources"]:
             new_upstream, created = Component.objects.get_or_create(
                 type=Component.Type.UPSTREAM,
-                name=source["meta"]["name"],
-                version=source["meta"]["version"],
+                name=source["meta"].pop("name"),
+                version=source["meta"].pop("version"),
+                defaults={"meta_attr": source["meta"]},
             )
             upstream_node, _ = new_upstream.cnodes.get_or_create(
                 type=ComponentNode.ComponentNodeType.SOURCE,

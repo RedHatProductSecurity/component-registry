@@ -103,6 +103,200 @@ build_corpus = [
     ),
 ]
 
+
+@pytest.mark.vcr(match_on=["method", "scheme", "host", "port", "path", "body"])
+@pytest.mark.parametrize(
+    "build_id,build_source,build_ns,build_name,license,build_type", build_corpus
+)
+def test_get_component_data(build_id, build_source, build_ns, build_name, license, build_type):
+    if build_type not in Brew.SUPPORTED_BUILD_TYPES:
+        with pytest.raises(BrewBuildTypeNotSupported):
+            Brew().get_component_data(build_id)
+        return
+    c = Brew().get_component_data(build_id)
+    if build_type == "maven":
+        assert list(c.keys()) == ["type", "namespace", "meta", "build_meta"]
+    elif build_type == "image":
+        assert list(c.keys()) == [
+            "type",
+            "namespace",
+            "meta",
+            "nested_builds",
+            "sources",
+            "image_components",
+            "components",
+            "build_meta",
+        ]
+    else:
+        assert list(c.keys()) == [
+            "type",
+            "namespace",
+            "id",
+            "meta",
+            "analysis_meta",
+            "components",
+            "build_meta",
+        ]
+    assert c["build_meta"]["build_info"]["source"] == build_source
+    assert c["build_meta"]["build_info"]["build_id"] == build_id
+    assert c["build_meta"]["build_info"]["name"] == build_name
+    # The "license" field on the Component model defaults to ""
+    # But the Brew collector (via get_rpm_build_data) / Koji (via getRPMHeaders) may return None
+    assert c["meta"].get("license", "") == license
+    assert c["namespace"] == build_ns
+    assert c["type"] == build_type
+
+
+# build_info, list_archives,remote_sources_name
+remote_source_in_archive_data = [
+    # buildID=1475846
+    (
+        {
+            "name": "quay-clair-container",
+            "version": "v3.4.0",
+            "release": "25",
+            "epoch": None,
+            "extra": {
+                "image": {},
+                "typeinfo": {
+                    "remote-sources": {
+                        "remote_source_url":
+                            "https://example.com/api/v1/requests/28637/download"
+                    }
+                },
+            },
+        },
+        [
+            {"btype": "remote-sources", "filename": "remote-source.tar.gz", "type_name": "tar"},
+            {"btype": "remote-sources", "filename": "remote-source.json", "type_name": "json"},
+        ],
+        ["remote-source-quay-clair-container.json"],
+    ),
+    # buildID=1911112
+    (
+        {
+            "name": "quay-registry-container",
+            "version": "v3.6.4",
+            "release": "2",
+            "epoch": None,
+            "extra": {
+                "image": {},
+                "typeinfo": {
+                    "remote-sources": [
+                        {
+                            "name": "quay",
+                            "url": "https://example.com/api/v1/requests/238481",
+                            "archives": ["remote-source-quay.json", "remote-source-quay.tar.gz"],
+                        },
+                        {
+                            "name": "config-tool",
+                            "url": "https://example.com/api/v1/requests/238482",
+                            "archives": [
+                                "remote-source-config-tool.json",
+                                "remote-source-config-tool.tar.gz",
+                            ],
+                        },
+                        {
+                            "name": "jwtproxy",
+                            "url": "https://example.com/api/v1/requests/238483",
+                            "archives": [
+                                "remote-source-jwtproxy.json",
+                                "remote-source-jwtproxy.tar.gz",
+                            ],
+                        },
+                        {
+                            "name": "pushgateway",
+                            "url": "https://example.com/api/v1/requests/238484",
+                            "archives": [
+                                "remote-source-pushgateway.json",
+                                "remote-source-pushgateway.tar.gz",
+                            ],
+                        },
+                    ],
+                },
+            },
+        },
+        [],  # Not used in this case
+        ["quay", "config-tool", "jwtproxy", "pushgateway"],
+    ),
+    # buildID=2011884
+    (
+        {
+            "name": "openshift-enterprise-hyperkube-container",
+            "version": "v4.10.0",
+            "release": "202205120735.p0.g3afdacb.assembly.stream",
+            "epoch": None,
+            "extra": {
+                "image": {},
+                "typeinfo": {
+                    # Changing the file names here, just to make a single remote_source test entry
+                    # consistent with 1475846
+                    "remote-sources": [
+                        {
+                            "archives": ["remote-source.json", "remote-source.tar.gz"],
+                            "name": "cachito-gomod-with-deps",
+                            "url": "https://example.com/api/v1/requests/309649",
+                        }
+                    ]
+                },
+            },
+        },
+        [],  # Not used in this case
+        ["remote-source-openshift-enterprise-hyperkube-container.json"],
+    ),
+]
+
+
+@patch("koji.ClientSession")
+@pytest.mark.parametrize(
+    "build_info,list_archives,remote_sources_names", remote_source_in_archive_data
+)
+def test_get_container_build_data_remote_sources_in_archives(
+    mock_koji_session, build_info, list_archives, remote_sources_names, monkeypatch, requests_mock
+):
+    mock_koji_session.listArchives.return_value = list_archives
+
+    download_path = (
+        f"packages/{build_info['name']}/{build_info['version']}/"
+        f"{build_info['release']}/files/remote-sources"
+    )
+
+    print(f"download_path: {download_path}")
+
+    if len(remote_sources_names) == 1:
+        with open(f"tests/data/{remote_sources_names[0]}", "r") as remote_source_data:
+            requests_mock.get(
+                f"{os.getenv('CORGI_BREW_DOWNLOAD_ROOT_URL')}/{download_path}/remote-source.json",
+                text=remote_source_data.read(),
+            )
+    else:
+        for path in remote_sources_names:
+            with open(f"tests/data/remote-source-{path}.json", "r") as remote_source_data:
+                requests_mock.get(
+                    f"{os.getenv('CORGI_BREW_DOWNLOAD_ROOT_URL')}/{download_path}/remote-source-"
+                    f"{path}.json",
+                    text=remote_source_data.read(),
+                )
+
+    brew = Brew()
+    monkeypatch.setattr(brew, "koji_session", mock_koji_session)
+    c = brew.get_container_build_data(1475846, build_info)
+    assert len(c["sources"]) == len(remote_sources_names)
+    if len(remote_sources_names) == 1:
+        assert (
+            c["sources"][0]["meta"]["remote_source_archive"]
+            == f"{os.getenv('CORGI_BREW_DOWNLOAD_ROOT_URL')}/"
+            f"{download_path}/remote-source.tar.gz"
+        )
+    else:
+        download_urls = [s["meta"]["remote_source_archive"] for s in c["sources"]]
+        assert download_urls == [
+            f"{os.getenv('CORGI_BREW_DOWNLOAD_ROOT_URL')}/{download_path}/"
+            f"remote-source-{path}.tar.gz"
+            for path in remote_sources_names
+        ]
+
+
 nvr_test_data = [
     (
         "openshift-golang-builder-container-v1.15.5-202012181533.el7",
@@ -400,6 +594,7 @@ def test_fetch_container_build_components(mock_sca, mock_fetch_brew_build, mock_
     assert source_container
     assert source_container.software_build
     # There are 4 remote_sources used to build this image
+    print(source_container.get_source())
     assert len(source_container.get_source()) == 4
     runtime_deps = source_container.get_provides(False)
     assert len(runtime_deps) == 1476
@@ -460,46 +655,3 @@ def verify_remote_source(source_container):
     assert len(upstream_nodes) == 1
     assert upstream_nodes[0].name == "github.com/thomasmckay/clair"
     return upstream_nodes[0]
-
-
-@pytest.mark.vcr(match_on=["method", "scheme", "host", "port", "path", "body"])
-@pytest.mark.parametrize(
-    "build_id,build_source,build_ns,build_name,license,build_type", build_corpus
-)
-def test_get_component_data(build_id, build_source, build_ns, build_name, license, build_type):
-    if build_type not in Brew.SUPPORTED_BUILD_TYPES:
-        with pytest.raises(BrewBuildTypeNotSupported):
-            Brew().get_component_data(build_id)
-        return
-    c = Brew().get_component_data(build_id)
-    if build_type == "maven":
-        assert list(c.keys()) == ["type", "namespace", "meta", "build_meta"]
-    elif build_type == "image":
-        assert list(c.keys()) == [
-            "type",
-            "namespace",
-            "meta",
-            "nested_builds",
-            "sources",
-            "image_components",
-            "components",
-            "build_meta",
-        ]
-    else:
-        assert list(c.keys()) == [
-            "type",
-            "namespace",
-            "id",
-            "meta",
-            "analysis_meta",
-            "components",
-            "build_meta",
-        ]
-    assert c["build_meta"]["build_info"]["source"] == build_source
-    assert c["build_meta"]["build_info"]["build_id"] == build_id
-    assert c["build_meta"]["build_info"]["name"] == build_name
-    # The "license" field on the Component model defaults to ""
-    # But the Brew collector (via get_rpm_build_data) / Koji (via getRPMHeaders) may return None
-    assert c["meta"].get("license", "") == license
-    assert c["namespace"] == build_ns
-    assert c["type"] == build_type

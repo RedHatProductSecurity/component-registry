@@ -3,6 +3,8 @@ import logging
 
 import pytest
 
+from corgi.core.models import ProductComponentRelation
+
 from .factories import (
     ComponentFactory,
     ProductComponentRelationFactory,
@@ -27,7 +29,9 @@ def test_product_manifest_properties():
 
     build = SoftwareBuildFactory(build_id=1)
     component = ComponentFactory(software_build=build)
-    ProductComponentRelationFactory(build_id="1", product_ref="1")
+    ProductComponentRelationFactory(
+        build_id="1", product_ref="1", type=ProductComponentRelation.Type.ERRATA
+    )
 
     build.save_component_taxonomy()
     build.save_product_taxonomy()

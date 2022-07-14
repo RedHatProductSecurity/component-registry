@@ -34,9 +34,9 @@ def test_product_related_errata():
         type=ProductComponentRelation.Type.ERRATA, product_ref="Base"
     )
     p = ProductFactory()
-    relations = p.get_related_errata(["Base"], "external_system_id")
+    relations = p.get_product_component_relations(["Base"], only_errata=True)
     assert relations.exists()
-    relations = p.get_related_errata(["rhel"])
+    relations = p.get_product_component_relations(["rhel"], only_errata=True)
     assert not relations.exists()
 
 

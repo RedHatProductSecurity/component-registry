@@ -264,36 +264,20 @@ class ProductModel(models.Model):
         return Component.objects.none()
 
     @staticmethod
-    def get_related_errata(
-        variant_ids: list[str], sort_field: str = "external_system_id"
-    ) -> QuerySet["ProductComponentRelation"]:
-        """Returns unique errata with at least 1 matching variant_id, ordered by sort_field"""
-        if variant_ids:
-            query = Q()
-            query &= Q(type=ProductComponentRelation.Type.ERRATA)
-            for variant_id in variant_ids:
-                query &= Q(product_ref__contains=variant_id)
-            return ProductComponentRelation.objects.filter(query).distinct().order_by(sort_field)
-        # Else self.product_variants is an empty QuerySet
-        return ProductComponentRelation.objects.none()
-
-    @staticmethod
     def get_product_component_relations(
-        variant_ids: list[str], sort_field: str
+        variant_ids: list[str], sort_field="external_system_id", only_errata=False
     ) -> QuerySet["ProductComponentRelation"]:
         """Returns unique productcomponentrelations with at least 1 matching variant_id,
-        ordered by sort_field
+        ordered by sort_field. if only_errata is True, only return PCRs with Type=ERRATA
         """
         if variant_ids:
             query = Q()
             for variant_id in variant_ids:
                 query |= Q(product_ref__contains=variant_id)
-            return (
-                ProductComponentRelation.objects.filter(query)
-                .filter(type=ProductComponentRelation.Type.ERRATA)
-                .distinct()
-                .order_by(sort_field)
-            )
+            result = ProductComponentRelation.objects.filter(query).distinct().order_by(sort_field)
+            if only_errata:
+                result = result.filter(type=ProductComponentRelation.Type.ERRATA)
+            return result
         # Else self.product_variants is an empty QuerySet
         return ProductComponentRelation.objects.none()
 
@@ -301,7 +285,9 @@ class ProductModel(models.Model):
     def builds(self) -> QuerySet:
         """Return unique build IDs for errata with variant_ids matching self.product_variants"""
         return (
-            self.get_product_component_relations(self.product_variants, "build_id")
+            self.get_product_component_relations(
+                self.product_variants, "build_id", only_errata=True
+            )
             .values_list("build_id", flat=True)
             .distinct()
         )
@@ -316,7 +302,7 @@ class ProductModel(models.Model):
     def errata(self) -> QuerySet:
         """Return unique errata IDs with variant_ids matching self.product_variants"""
         return (
-            self.get_related_errata(self.product_variants, "external_system_id")
+            self.get_product_component_relations(self.product_variants, only_errata=True)
             .values_list("external_system_id", flat=True)
             .distinct()
         )
@@ -343,16 +329,14 @@ class ProductModel(models.Model):
 
     @property
     def coverage(self):
-        if not self.pnodes.count():
+        if not self.pnodes.exists():
             return 0
-        pnode_children = self.pnodes.all()[0].get_children()
-        if not pnode_children.count():
+        pnode_children = self.pnodes.first().get_children()
+        if not pnode_children.exists():
             return 0
         has_build = 0
         for pn in pnode_children:
-            if not pn.obj.builds:
-                break
-            if pn.obj.builds.count():
+            if pn.obj.builds.exists():
                 has_build += 1
         return round(has_build / pnode_children.count(), 2)
 
@@ -504,24 +488,22 @@ class ProductVariant(ProductModel, TimeStampedModel):
         return f"o:redhat:{self.name}:{self.version}"
 
     @property
-    def errata(self):
-        errata = (
-            ProductComponentRelation.objects.filter(
-                type=ProductComponentRelation.Type.ERRATA, product_ref__contains=self.name
-            )
-            .values("external_system_id")
+    def errata(self) -> QuerySet:
+        """Return unique errata IDs with variant_ids matching this variant's name"""
+        return (
+            self.get_product_component_relations([self.name], only_errata=True)
+            .values_list("external_system_id", flat=True)
             .distinct()
         )
-        return [erratum["external_system_id"] for erratum in errata]
 
     @property
-    def builds(self):
-        prodcomprelations = (
-            ProductComponentRelation.objects.filter(product_ref__contains=self.name)
-            .values("build_id")
+    def builds(self) -> QuerySet:
+        """Return unique build IDs for errata with variant_ids matching this variant's name"""
+        return (
+            self.get_product_component_relations([self.name], "build_id", only_errata=True)
+            .values_list("build_id", flat=True)
             .distinct()
         )
-        return [pcr["build_id"] for pcr in prodcomprelations]
 
 
 class ProductVariantTag(Tag):

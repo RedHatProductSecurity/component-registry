@@ -192,7 +192,6 @@ DATABASES = {
         "PASSWORD": os.getenv("CORGI_DB_PASSWORD", "test"),
         "HOST": os.getenv("CORGI_DB_HOST", "localhost"),
         "PORT": os.getenv("CORGI_DB_PORT", "5432"),
-        "CONN_MAX_AGE": None,
     }
 }
 
@@ -212,7 +211,7 @@ STATIC_ROOT = str(BASE_DIR / "staticfiles")
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # Celery config
-CELERY_BROKER_URL = os.getenv("CORGI_REDIS_URL", "redis://corgi-redis:6379")
+CELERY_BROKER_URL = os.getenv("CORGI_REDIS_URL", "redis://redis:6379")
 
 CELERY_RESULT_BACKEND = "django-db"
 # Retry tasks due to Postgres failures instead of immediately re-raising exceptions

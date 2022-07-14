@@ -76,6 +76,7 @@ CSP_STYLE_SRC = (
     "'self'",
     "'unsafe-inline'",
     "https://cdnjs.cloudflare.com",
+    "https://cdn.jsdelivr.net",
 )
 CSP_FONT_SRC = (
     "'self'",
@@ -85,11 +86,17 @@ CSP_SCRIPT_SRC = (
     "'self'",
     "'unsafe-inline'",
     "https://cdnjs.cloudflare.com",
+    "https://cdn.jsdelivr.net",
 )
-CSP_IMG_SRC = ("'self'",)
+CSP_IMG_SRC = (
+    "'self'",
+    "https://cdn.jsdelivr.net",
+)
 CSP_DEFAULT_SRC = (
     "'self'",
     "data:",
+    # 'self' should be same as below, but CSP still reports errors
+    f"https://{CORGI_DOMAIN}",
 )
 
 # RFC 5322 datetime format used in web UIs, nicer to read than ISO8601

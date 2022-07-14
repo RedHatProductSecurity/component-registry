@@ -431,3 +431,8 @@ def test_api_component_404(client, api_path):
         f"{api_path}/components?purl=pkg:rpm/redhat/non-existent-fake-libs@3.26.0-15.el8?arch=x86_64"  # noqa
     )
     assert response.status_code == 404
+
+
+def test_api_component_400(client, api_path):
+    response = client.get(f"{api_path}/components?type=NONEXISTANTTYPE")
+    assert response.status_code == 400

@@ -90,13 +90,12 @@ CSP_SCRIPT_SRC = (
 )
 CSP_IMG_SRC = (
     "'self'",
+    "data:",
     "https://cdn.jsdelivr.net",
 )
 CSP_DEFAULT_SRC = (
     "'self'",
     "data:",
-    # 'self' should be same as below, but CSP still reports errors
-    f"https://{CORGI_DOMAIN}",
 )
 
 # RFC 5322 datetime format used in web UIs, nicer to read than ISO8601

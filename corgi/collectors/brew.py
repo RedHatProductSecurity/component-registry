@@ -409,6 +409,15 @@ class Brew:
                     else:
                         self.update_remote_sources(archive, build_info, remote_sources)
 
+        source_components = self._extract_remote_sources(go_stdlib_version, remote_sources)
+
+        component["nested_builds"] = list(rpm_build_ids)
+        component["sources"] = source_components
+        component["image_components"] = child_image_components
+        component["components"] = noarch_rpms_by_id.values()
+        return component
+
+    def _extract_remote_sources(self, go_stdlib_version, remote_sources):
         source_components: list[dict[str, Any]] = []
         for build_loc, coords in remote_sources.items():
             remote_source = self._get_remote_source(coords[0])
@@ -451,12 +460,7 @@ class Brew:
                 else:
                     logger.warning("Found unsupported remote-source pkg_manager %s", pkg_type)
             source_components.append(source_component)
-
-        component["nested_builds"] = list(rpm_build_ids)
-        component["sources"] = source_components
-        component["image_components"] = child_image_components
-        component["components"] = noarch_rpms_by_id.values()
-        return component
+        return source_components
 
     def update_remote_sources(self, archive, build_info, remote_sources):
         cachito_url = next(iter(remote_sources))

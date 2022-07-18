@@ -18,11 +18,10 @@ RUN cd /etc/pki/ca-trust/source/anchors/ && \
 
 WORKDIR /opt/app-root/src/
 
-RUN curl -L -O https://github.com/anchore/syft/releases/download/v0.48.1/syft_0.48.1_linux_amd64.rpm
-
 # Install RPM dependencies and security updates, because UBI is only rebuilt every 6 weeks, not daily like we thought
 # Rebuilt immediately for Critical / some High flaws, but we don't want any Moderate or Low flaws in our services either
-RUN dnf --nodocs -y install --setopt install_weak_deps=false  \
+RUN curl -L -O https://github.com/anchore/syft/releases/download/v0.48.1/syft_0.48.1_linux_amd64.rpm \
+    && dnf --nodocs -y install --setopt install_weak_deps=false  \
         python39 \
         python39-setuptools \
         python39-devel \
@@ -43,7 +42,8 @@ RUN dnf --nodocs -y install --setopt install_weak_deps=false  \
         syft_0.48.1_linux_amd64.rpm \
         git \
     && dnf --nodocs -y upgrade --setopt install_weak_deps=false --security \
-    && dnf clean all
+    && dnf clean all \
+    && rm syft_0.48.1_linux_amd64.rpm
 
 COPY ./requirements ./requirements
 

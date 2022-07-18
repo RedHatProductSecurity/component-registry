@@ -536,7 +536,6 @@ class Brew:
             except AttributeError:
                 pass
 
-            typed_component["build_components"] = []
             typed_component["components"] = []
             for dep in typed_pkg.dependencies:
                 component = {

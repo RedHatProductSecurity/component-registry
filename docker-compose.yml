@@ -63,7 +63,7 @@ services:
       DJANGO_SETTINGS_MODULE: "config.settings.dev"
       CORGI_DB_HOST: corgi-db
     env_file: .env
-    command: ./manage.py runmonitor
+    command: ./run_umb_monitor.sh
     # TODO: add healthcheck
     volumes:
       - .:/opt/app-root/src:z

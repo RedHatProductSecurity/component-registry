@@ -4,6 +4,7 @@ from config.celery import app
 from corgi.collectors.brew import Brew
 from corgi.collectors.rhel_compose import RhelCompose
 from corgi.core.models import ProductComponentRelation, ProductStream
+from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ def load_composes():
             save_compose.delay(zstream_names[0], compose_data)
 
 
-@app.task
+@app.task(autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def save_compose(stream_name, compose_coords) -> None:
     brew = Brew()
     logger.info("Saving compose %s to %s", compose_coords[0], stream_name)

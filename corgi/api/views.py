@@ -477,7 +477,7 @@ def coverage_report_node_to_dict(request, node):
     if node.level == 3:
         product_type = "product_variants"
         child_product_type = "channels"
-    if node.obj.builds.count():
+    if node.obj.builds.exists():
         last_build = node.obj.builds.order_by("created_at").first()
         last_build_date = SoftwareBuild.objects.get(build_id=last_build).created_at
         result = {

@@ -23,7 +23,7 @@ build_corpus = [
     # firefox -brew buildID=1872838
     (
         1872838,
-        f"git://{os.getenv('CORGI_TEST_PKGS_HOST')}"  # Comma not missing, joined with below
+        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
         "/rpms/firefox#1b69e6c1315abe3b4a74f455ea9d6fed3c22bbfe",
         "redhat",
         "firefox",
@@ -33,7 +33,7 @@ build_corpus = [
     # grafana-container: brew buildID=1872940
     (
         1872940,
-        f"git://{os.getenv('CORGI_TEST_PKGS_HOST')}"  # Comma not missing, joined with below
+        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
         "/containers/grafana#1d4356446cbbbb0b23f08fe93e9deb20fe5114bf",
         "redhat",
         "grafana-container",
@@ -43,7 +43,7 @@ build_corpus = [
     # rh - nodejs: brew buildID=1700251
     (
         1700251,
-        f"git://{os.getenv('CORGI_TEST_PKGS_HOST')}"  # Comma not missing, joined with below
+        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
         "/rpms/nodejs#3cbed2be4171502499d0d89bea1ead91690af7d2",
         "redhat",
         "rh-nodejs12-nodejs",
@@ -53,7 +53,7 @@ build_corpus = [
     # rubygem: brew buildID=936045
     (
         936045,
-        f"git://{os.getenv('CORGI_TEST_PKGS_HOST')}"  # Comma not missing, joined with below
+        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
         "/rpms/rubygem-bcrypt#4deddf4d5f521886a5680853ebccd02e3cabac41",
         "redhat",
         "rubygem-bcrypt",
@@ -64,7 +64,7 @@ build_corpus = [
     # brew buildID=1879214
     (
         1879214,
-        f"git://{os.getenv('CORGI_TEST_PKGS_HOST')}"  # Comma not missing, joined with below
+        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
         "/containers/jboss-webserver-3#73d776be91c6adc3ae70b795866a81e72e161492",
         "redhat",
         "jboss-webserver-3-webserver31-tomcat8-openshift-container",
@@ -94,7 +94,7 @@ build_corpus = [
     # brew buildID=1841202
     (
         1841202,
-        f"git://{os.getenv('CORGI_TEST_PKGS_HOST')}"  # Comma not missing, joined with below
+        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
         "/containers/cryostat-operator#ec07a9a48444e849f9282a8b1c158a93bf667d1d",
         "redhat",
         "cryostat-rhel8-operator-container",

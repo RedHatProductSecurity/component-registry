@@ -33,7 +33,7 @@ archive_source_test_data = [
     # We've created test/data/rpms/nodejs.git to simulate prod/stage where that dir exists.
     # In that case, the git archive command should change to that directory by invoking with cwd arg
     (
-        f"git://{os.getenv('CORGI_TEST_PKGS_HOST')}"  # Comma not missing, joined with below
+        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
         "/rpms/nodejs#3cbed2be4171502499d0d89bea1ead91690af7d2",
         "nodejs",
         "rpms",
@@ -41,13 +41,13 @@ archive_source_test_data = [
         "",
     ),
     (
-        f"git://{os.getenv('CORGI_TEST_PKGS_HOST')}"  # Comma not missing, joined with below
+        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
         "/containers/openshift-enterprise-console#f95972ce68d2850ae20c10fbf87182a17fa24b19",
         "openshift-enterprise-console",
         "containers",
         "tests/data/containers/openshift-enterprise-console/"
         "f95972ce68d2850ae20c10fbf87182a17fa24b19.tar",
-        f"git://{os.getenv('CORGI_TEST_PKGS_HOST')}"  # Comma not missing, joined with below
+        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
         "/containers/openshift-enterprise-console",
     ),
 ]
@@ -99,7 +99,7 @@ download_lookaside_test_data = [
 def test_get_distgit_sources(mock_git_archive, mock_download_lookaside_sources):
     expected_path = "tests/data/rpms/cri-o/1e52fcdc84be253b5094b942c2fec23d7636d644.tar"
     _ = _get_distgit_sources(
-        f"git://{os.getenv('CORGI_TEST_PKGS_HOST')}"  # Comma not missing, joined with below
+        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
         "/rpms/cri-o#1e52fcdc84be253b5094b942c2fec23d7636d644",
         "rpms",
     )
@@ -114,7 +114,7 @@ def test_download_lookaside_sources(
 ):
     distgit_source_archive = Path(test_data_file)
     expected_url = (
-        f"https://{os.getenv('CORGI_TEST_PKGS_HOST')}/repo/rpms/{package_name}/"
+        f"https://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}/repo/rpms/{package_name}/"
         f"{expected_filename}/{expected_path}{expected_filename}"
     )
     print(f"mocking call to {expected_url}")
@@ -142,7 +142,7 @@ def test_software_composition_analysis(mock_syft):
     sb = SoftwareBuildFactory(
         build_id=2018747,
         name="cri-o",
-        source=f"git://{os.getenv('CORGI_TEST_PKGS_HOST')}"  # Comma not missing, joined with below
+        source=f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined below
         "/rpms/cri-o#1e52fcdc84be253b5094b942c2fec23d7636d644",
     )
     srpm_root = ComponentFactory(type=Component.Type.SRPM, software_build=sb, name="cri-o")

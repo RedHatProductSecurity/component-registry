@@ -220,7 +220,7 @@ def save_container(softwarebuild, build_data) -> ComponentNode:
                 name=module,
                 # the upstream commit is included in the dist-git commit history, but is not
                 # exposed anywhere in the brew data that I can find
-                version=""
+                version="",
             )
             new_upstream.cnodes.get_or_create(
                 type=ComponentNode.ComponentNodeType.SOURCE,

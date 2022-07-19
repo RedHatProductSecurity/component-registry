@@ -10,6 +10,7 @@ from typing import IO, Any, Optional, Tuple
 
 import requests
 from django.conf import settings
+from django.db.models import Q
 from requests import Response
 
 from config.celery import app
@@ -66,30 +67,30 @@ def software_composition_analysis(build_id: int):
         package_type = "containers"
     distgit_sources = _get_distgit_sources(software_build.source, package_type)
     components = Syft.scan_files(distgit_sources)
-    # TODO for containers, we might want to attached scan sources to their relevant remote-source
     try:
-        srpm_root = Component.objects.get(
-            software_build=software_build, name=software_build.name, type=Component.Type.SRPM
+        root_component = Component.objects.get(
+            Q(software_build=software_build, name=software_build.name),
+            Q(type=Component.Type.SRPM)
+            | (Q(type=Component.Type.CONTAINER_IMAGE) & Q(arch="noarch")),
         )
     except Component.DoesNotExist:
-        # TODO this could be expected for a container build
-        logger.error("SRPM %s root node not found for %s", software_build.name, build_id)
+        logger.error("Component root node (%s) not found for %s", software_build.name, build_id)
         return
     except Component.MultipleObjectsReturned:
-        logger.error("Mutliple %s SRPMs found for %s", software_build.name, build_id)
+        logger.error("Mutliple %s root components found for %s", software_build.name, build_id)
         return
-    srpm_root_node = srpm_root.get_root
-    if not srpm_root_node:
-        logger.error("Didn't find root component node for %s", srpm_root.purl)
+    root_node = root_component.get_root
+    if not root_node:
+        logger.error("Didn't find root component node for %s", root_component.purl)
         return
     new_components = 0
     for component in components:
-        if save_component(component, srpm_root_node):
+        if save_component(component, root_node):
             new_components += 1
     logger.info("Detected %s new components using Syft scan", new_components)
 
-    srpm_root.save_component_taxonomy()
-    srpm_root.save_product_taxonomy()
+    root_component.save_component_taxonomy()
+    root_component.save_product_taxonomy()
 
     logger.info("Finished software composition analysis for %s", build_id)
 

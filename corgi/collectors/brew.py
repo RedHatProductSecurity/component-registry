@@ -354,10 +354,21 @@ class Brew:
 
             component["meta"]["build_parent_nvrs"] = build_parent_nvrs
 
+        # Legacy OSBS builds such as 1890187 copy source code into dist-git but specify where
+        # the source code came from using the 'go' stanza in container.yaml
+        # ref: https://osbs.readthedocs.io/en/osbs_ocp3/users.html#go
+        go_modules = []
+        if "go" in build_info["extra"]["image"]:
+            for module in build_info["extra"]["image"]["go"]["modules"]:
+                if "module" in module:
+                    go_modules.append(module["module"])
+        if go_modules:
+            component["meta"]["upstream_go_modules"] = go_modules
+
+        # builds such as 1911112 have all their info in typeinfo as they use remote_sources map in
         # remote_source json, and tar download urls by cachito url
         remote_sources: dict[str, Tuple] = {}
 
-        # builds such as 1911112 have all their info in typeinfo as they use remote_sources map in
         # Cachito ref https://osbs.readthedocs.io/en/osbs_ocp3/users.html#remote-sources
         if (
             "typeinfo" in build_info["extra"]

@@ -213,6 +213,20 @@ def save_container(softwarebuild, build_data) -> ComponentNode:
         parent=None,
     )
 
+    if "upstream_go_modules" in build_data["meta"]:
+        for module in build_data["meta"]["upstream_go_modules"]:
+            new_upstream, created = Component.objects.get_or_create(
+                type=Component.Type.GOLANG,
+                name=module,
+                # the upstream commit is included in the dist-git commit history, but is not
+                # exposed anywhere in the brew data that I can find
+                version=""
+            )
+            new_upstream.cnodes.get_or_create(
+                type=ComponentNode.ComponentNodeType.SOURCE,
+                parent=root_node,
+            )
+
     if "image_components" in build_data:
         for image in build_data["image_components"]:
             obj, created = Component.objects.get_or_create(

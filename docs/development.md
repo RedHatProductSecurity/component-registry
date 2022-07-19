@@ -70,6 +70,18 @@ export CORGI_UMB_BROKER_URL
 It is recommended to add all the aforementioned environment variables to your virtual
 environment's `venv/bin/activate` script.
 
+In order for the environment variables to be passed into the celery pods started by podman-compose you'll also have to
+add them to a .env file eg.
+```bash
+CORGI_APP_STREAMS_LIFE_CYCLE_URL=<value>
+CORGI_BREW_DOWNLOAD_ROOT_URL=<value>
+CORGI_BREW_URL=<value>
+CORGI_ERRATA_TOOL_URL=<value>
+CORGI_MANIFEST_HINTS_URL=<value>
+CORGI_PRODSEC_DASHBOARD_URL=<value>
+CORGI_LOOKASIDE_CACHE_URL=<value>
+```
+
 Build container images:
 ```bash
 > podman-compose build

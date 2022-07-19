@@ -649,6 +649,8 @@ class Brew:
     def get_component_data(self, build_id: int) -> dict:
         logger.info("Retrieving Brew build: %s", build_id)
         build = self.koji_session.getBuild(build_id)
+        if not build:
+            raise BrewBuildSourceNotFound(f"Build {build_id} was not found")
 
         # Determine build state
         state = build.get("state")

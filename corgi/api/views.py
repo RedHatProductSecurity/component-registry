@@ -460,3 +460,79 @@ class AppStreamLifeCycleView(ReadOnlyModelViewSet):
 
     queryset = AppStreamLifeCycle.objects.all()
     serializer_class = AppStreamLifeCycleSerializer
+
+
+def coverage_report_node_to_dict(request, node):
+    product_type = ""
+    child_product_type = ""
+    if node.level == 0:
+        product_type = "products"
+        child_product_type = "product_versions"
+    if node.level == 1:
+        product_type = "product_versions"
+        child_product_type = "product_streams"
+    if node.level == 2:
+        product_type = "product_streams"
+        child_product_type = "product_variants"
+    if node.level == 3:
+        product_type = "product_variants"
+        child_product_type = "channels"
+    if node.obj.builds.count():
+        last_build = node.obj.builds.order_by("created_at").first()
+        last_build_date = SoftwareBuild.objects.get(build_id=last_build).created_at
+        result = {
+            "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/{product_type}?ofuri={node.obj.ofuri}",  # noqa
+            "ofuri": node.obj.ofuri,
+            "name": node.obj.name,
+        }
+        if node.level < 3:
+            result.update(
+                {
+                    "coverage": node.obj.coverage,
+                    "build_count": node.obj.builds.count(),
+                    "last_build_dt": str(last_build_date),
+                    "component_count": node.obj.components.count(),
+                }
+            )
+        else:
+            result.update(
+                {
+                    "build_count": node.obj.builds.count(),
+                    "last_build_dt": str(last_build_date),
+                    "component_count": node.obj.components.count(),
+                }
+            )
+
+        children = [coverage_report_node_to_dict(request, c) for c in node.get_children()]
+
+        if children:
+            result[child_product_type] = children
+        return result
+    else:
+        return {
+            "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/{product_type}?ofuri={node.obj.ofuri}",  # noqa
+            "ofuri": node.obj.ofuri,
+            "name": node.obj.name,
+        }
+
+
+class CoverageReportView(ReadOnlyModelViewSet):
+
+    queryset = Product.objects.all()
+
+    def list(self, request):
+        """View for api/v1/reports/coverage"""
+
+        include_missing = request.query_params.get("include_missing")
+
+        results = []
+
+        for p in self.queryset:
+            if p.coverage or include_missing:
+                root_nodes = cache_tree_children(p.pnodes.all().get_descendants(include_self=True))
+                dicts = []
+                for n in root_nodes:
+                    dicts.append(coverage_report_node_to_dict(request, n))
+                if dicts:
+                    results.append(dicts[0])
+        return Response(results)

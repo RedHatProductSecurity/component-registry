@@ -354,74 +354,128 @@ class Brew:
 
             component["meta"]["build_parent_nvrs"] = build_parent_nvrs
 
-        source_components: list[dict[str, Any]] = []
+        # remote_source json, and tar download urls by cachito url
+        remote_sources: dict[str, Tuple] = {}
+
+        # builds such as 1911112 have all their info in typeinfo as they use remote_sources map in
+        # Cachito ref https://osbs.readthedocs.io/en/osbs_ocp3/users.html#remote-sources
+        if (
+            "typeinfo" in build_info["extra"]
+            and "remote-sources" in build_info["extra"]["typeinfo"]
+        ):
+            remote_sources_v = build_info["extra"]["typeinfo"]["remote-sources"]
+            if isinstance(remote_sources_v, dict):
+                # Need to collect json, and tar download urls from archives data
+                # Fill the tuple in with empty values now
+                cachito_url = remote_sources_v["remote_source_url"]
+                remote_sources[cachito_url] = ("", "")
+            else:
+                for source in remote_sources_v:
+                    if "archives" in source:
+                        archives = source["archives"]
+                        json = self._build_archive_dl_url(archives[0], build_info)
+                        tar = self._build_archive_dl_url(archives[1], build_info)
+                        remote_sources[source["url"]] = (json, tar)
+                    else:
+                        logger.warning(
+                            "Expected to find archives in remote-source dict, only found %s",
+                            source.keys(),
+                        )
+
         child_image_components: list[dict[str, Any]] = []
         archives = self.koji_session.listArchives(build_id)
 
         # Extract the list of embedded rpms
         noarch_rpms_by_id: dict[int, dict[str, Any]] = {}
         rpm_build_ids: set[int] = set()
+
         for archive in archives:
             if archive["btype"] == "image" and archive["type_name"] == "tar":
                 noarch_rpms_by_id, child_image_component = self._extract_image_components(
                     archive, build_id, build_info["nvr"], noarch_rpms_by_id, rpm_build_ids
                 )
                 child_image_components.append(child_image_component)
-            elif archive["btype"] == "remote-sources" and archive["type_name"] == "json":
-                try:
-                    url = self._build_archive_dl_url(archive["filename"], build_info)
-                    remote_source = self._get_remote_source(url)
-                except requests.HTTPError:
-                    logger.warning(
-                        "Got HTTPError trying to retrieve remote sources for %s/%s",
-                        build_id,
-                        archive["filename"],
-                    )
-                    continue  # skip this archive
-                source_component: dict[str, Any] = {
-                    "type": "upstream",
-                    "namespace": "redhat",
-                    "meta": {
-                        "remote_source": archive["filename"],
-                        "name": self._parse_remote_source_url(remote_source.repo),
-                        "version": remote_source.ref,
-                    },
-                    "analysis_meta": {"source": ["koji.listArchives"]},
-                }
-                logger.info(
-                    "Processing archive %s with package managers: %s",
-                    archive["filename"],
-                    remote_source.pkg_managers,
-                )
-                for pkg_type in remote_source.pkg_managers:
-                    if pkg_type in ["npm", "pip", "yarn"]:
-                        provides, remote_source.packages = self._extract_provides(
-                            remote_source.packages, pkg_type
-                        )
-                        try:
-                            source_component["components"].extend(provides)
-                        except KeyError:
-                            source_component["components"] = provides
-                    elif pkg_type == "gomod":
-                        (
-                            source_component["components"],
-                            remote_source.packages,
-                        ) = self._extract_golang(remote_source.packages, go_stdlib_version)
-                        (
-                            source_component["components"],
-                            remote_source.dependencies,
-                        ) = self._extract_golang(remote_source.dependencies, go_stdlib_version)
+            if archive["btype"] == "remote-sources":
+                # Some OSBS builds don't have remote sources set in extras typeinfo
+                # For example build 1475846 because they use remote_source in Cachito Configuration
+                # ref: https://osbs.readthedocs.io/en/osbs_ocp3/users.html#remote-source
+                # In that case, extract from archives data here
+                if len(remote_sources.keys()) == 1:
+                    first_remote_source = next(iter(remote_sources.values()))
+                    # The remote_source tuple is updated during the loop below, so we need to check
+                    # if both json and tar values in the tuple are empty
+                    if first_remote_source[0] != "" and first_remote_source[1] != "":
+                        continue  # Don't try to populate remote_sources map from archives
                     else:
-                        logger.warning("Found unsupported remote-source pkg_manager %s", pkg_type)
-                source_components.append(source_component)
-            component["nested_builds"] = list(rpm_build_ids)
-            component["sources"] = source_components
-            component["image_components"] = child_image_components
+                        self.update_remote_sources(archive, build_info, remote_sources)
 
-        # TODO this might be an old OSBS build, need to download manifest from OSBS directly
+        source_components = self._extract_remote_sources(go_stdlib_version, remote_sources)
 
+        component["nested_builds"] = list(rpm_build_ids)
+        component["sources"] = source_components
+        component["image_components"] = child_image_components
         component["components"] = noarch_rpms_by_id.values()
         return component
+
+    def _extract_remote_sources(self, go_stdlib_version, remote_sources):
+        source_components: list[dict[str, Any]] = []
+        for build_loc, coords in remote_sources.items():
+            remote_source = self._get_remote_source(coords[0])
+            source_component: dict[str, Any] = {
+                "type": "upstream",
+                "namespace": "redhat",
+                "meta": {
+                    "name": self._parse_remote_source_url(remote_source.repo),
+                    "version": remote_source.ref,
+                    "remote_source": coords[0],
+                    "remote_source_archive": coords[1],
+                },
+                "analysis_meta": {"source": ["koji.listArchives"]},
+            }
+            if build_loc:
+                source_component["meta"]["cachito_build"] = build_loc
+            logger.info(
+                "Processing archive %s with package managers: %s",
+                coords[0],
+                remote_source.pkg_managers,
+            )
+            for pkg_type in remote_source.pkg_managers:
+                if pkg_type in ["npm", "pip", "yarn"]:
+                    provides, remote_source.packages = self._extract_provides(
+                        remote_source.packages, pkg_type
+                    )
+                    try:
+                        source_component["components"].extend(provides)
+                    except KeyError:
+                        source_component["components"] = provides
+                elif pkg_type == "gomod":
+                    (
+                        source_component["components"],
+                        remote_source.packages,
+                    ) = self._extract_golang(remote_source.packages, go_stdlib_version)
+                    (
+                        source_component["components"],
+                        remote_source.dependencies,
+                    ) = self._extract_golang(remote_source.dependencies, go_stdlib_version)
+                else:
+                    logger.warning("Found unsupported remote-source pkg_manager %s", pkg_type)
+            source_components.append(source_component)
+        return source_components
+
+    def update_remote_sources(self, archive, build_info, remote_sources):
+        cachito_url = next(iter(remote_sources))
+        logger.debug("Setting remote sources for %s using archive data %s", cachito_url, archive)
+        remote_sources_url = self._build_archive_dl_url(archive["filename"], build_info)
+        # Update the remote sources download url tuple
+        existing_coords = list(remote_sources[cachito_url])
+        if archive["type_name"] == "tar":
+            remote_sources[cachito_url] = tuple([existing_coords[0], remote_sources_url])
+        elif archive["type_name"] == "json":
+            remote_sources[cachito_url] = tuple([remote_sources_url, existing_coords[1]])
+
+    def extract_common_key(self, filename):
+        without_prefix = filename.removeprefix("remote-source-")
+        return without_prefix.split(".", 1)[0]
 
     def _extract_image_components(
         self,
@@ -482,7 +536,6 @@ class Brew:
             except AttributeError:
                 pass
 
-            typed_component["build_components"] = []
             typed_component["components"] = []
             for dep in typed_pkg.dependencies:
                 component = {

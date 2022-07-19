@@ -34,13 +34,13 @@ Copy the URLs needed to run tests from the internal Gitlab server's CI variables
 # Internal hostnames or URLs that appear in build metadata; used in tests
 export CORGI_TEST_CACHITO_URL
 export CORGI_TEST_CODE_URL
-export cORGI_TEST_DOWNLOAD_URL
+export CORGI_TEST_DOWNLOAD_URL
 export CORGI_TEST_OSBS_HOST1
 export CORGI_TEST_OSBS_HOST2
 export CORGI_TEST_OSBS_HOST3
-export CORGI_TEST_PKGS_HOST
 export CORGI_TEST_REGISTRY_URL
 # Not used in tests directly, but needed for tests to pass
+export CORGI_LOOKASIDE_CACHE_URL
 export CORGI_APP_STREAMS_LIFE_CYCLE_URL
 export CORGI_BREW_URL
 export CORGI_BREW_DOWNLOAD_ROOT_URL
@@ -69,6 +69,18 @@ export CORGI_UMB_BROKER_URL
 
 It is recommended to add all the aforementioned environment variables to your virtual
 environment's `venv/bin/activate` script.
+
+In order for the environment variables to be passed into the celery pods started by podman-compose you'll also have to
+add them to a .env file eg.
+```bash
+CORGI_APP_STREAMS_LIFE_CYCLE_URL=<value>
+CORGI_BREW_DOWNLOAD_ROOT_URL=<value>
+CORGI_BREW_URL=<value>
+CORGI_ERRATA_TOOL_URL=<value>
+CORGI_MANIFEST_HINTS_URL=<value>
+CORGI_PRODSEC_DASHBOARD_URL=<value>
+CORGI_LOOKASIDE_CACHE_URL=<value>
+```
 
 Build container images:
 ```bash

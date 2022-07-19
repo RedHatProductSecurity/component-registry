@@ -71,6 +71,8 @@ services:
   corgi-celery-beat:
     container_name: corgi-celery-beat
     image: corgi
+    env_file:
+      - .env
     environment:
       DJANGO_SETTINGS_MODULE: "config.settings.dev"
       CORGI_DB_HOST: corgi-db
@@ -83,6 +85,8 @@ services:
   corgi-celery-fast:
     container_name: corgi-celery-fast
     image: corgi
+    env_file:
+      - .env
     environment:
       DJANGO_SETTINGS_MODULE: "config.settings.dev"
       CORGI_DB_HOST: corgi-db
@@ -97,6 +101,8 @@ services:
       replicas: 6
     container_name: corgi-celery-slow
     image: corgi
+    env_file:
+      - .env
     environment:
       DJANGO_SETTINGS_MODULE: "config.settings.dev"
       CORGI_DB_HOST: corgi-db

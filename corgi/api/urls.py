@@ -7,6 +7,7 @@ from .views import (
     ChannelView,
     ComponentTaxonomyView,
     ComponentView,
+    CoverageReportView,
     ProductStreamView,
     ProductTaxonomyView,
     ProductVariantView,
@@ -26,6 +27,7 @@ router.register(r"product_streams", ProductStreamView)
 router.register(r"product_variants", ProductVariantView)
 router.register(r"channels", ChannelView)
 router.register(r"status", StatusView, basename="status")
+router.register(r"reports/coverage", CoverageReportView, basename="coverage-reports")
 
 urlpatterns = [
     # v1 API

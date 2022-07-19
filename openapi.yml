@@ -1204,6 +1204,31 @@ paths:
               schema:
                 $ref: '#/components/schemas/Product'
           description: ''
+  /api/v1/reports/coverage:
+    get:
+      operationId: v1_reports_coverage_retrieve
+      description: View for api/v1/reports/coverage
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/reports/coverage/{uuid}:
+    get:
+      operationId: v1_reports_coverage_retrieve_2
+      parameters:
+      - in: path
+        name: uuid
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this product.
+        required: true
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
   /api/v1/schema:
     get:
       operationId: v1_schema_retrieve

@@ -14,7 +14,9 @@ CA_CERT = os.getenv("REQUESTS_CA_BUNDLE")
 DEBUG = False
 
 # Mail these people on uncaught exceptions that result in 500 errors
-ADMINS = [tuple(name_and_email.split(";")) for name_and_email in os.getenv("CORGI_ADMINS", "").split(",")]
+ADMINS = [
+    tuple(name_and_email.split(";")) for name_and_email in os.getenv("CORGI_ADMINS", "").split(",")
+]
 
 CORGI_DOMAIN = os.getenv("CORGI_DOMAIN")
 if CORGI_DOMAIN:

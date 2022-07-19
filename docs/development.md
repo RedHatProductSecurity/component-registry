@@ -34,7 +34,7 @@ Copy the URLs needed to run tests from the internal Gitlab server's CI variables
 # Internal hostnames or URLs that appear in build metadata; used in tests
 export CORGI_TEST_CACHITO_URL
 export CORGI_TEST_CODE_URL
-export cORGI_TEST_DOWNLOAD_URL
+export CORGI_TEST_DOWNLOAD_URL
 export CORGI_TEST_OSBS_HOST1
 export CORGI_TEST_OSBS_HOST2
 export CORGI_TEST_OSBS_HOST3

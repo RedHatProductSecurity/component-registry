@@ -574,18 +574,6 @@ class ProductComponentRelation(TimeStampedModel):
         indexes = [models.Index(fields=("external_system_id", "product_ref", "build_id"))]
 
 
-class RhelCompose(TimeStampedModel):
-    """RHEL Composes represent a frozen set of components shipped for a specific RHEL version."""
-
-    uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    url = models.CharField(max_length=1024)
-    name = models.CharField(max_length=100)
-    srpms = fields.ArrayField(models.CharField(max_length=1024), default=list)
-    container_images = fields.ArrayField(models.CharField(max_length=1024), default=list)
-    rhel_modules = fields.ArrayField(models.CharField(max_length=1024), default=list)
-    variant = models.ForeignKey(ProductVariant, on_delete=models.CASCADE)
-
-
 # TODO change this to use stream ids
 def get_product_details(variant_ids: list[str]) -> dict[str, set[str]]:
     query = Q()

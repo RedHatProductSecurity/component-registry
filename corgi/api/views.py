@@ -479,35 +479,36 @@ def coverage_report_node_to_dict(request, node):
         child_product_type = "channels"
     if node.obj.builds.exists():
         last_build = node.obj.builds.order_by("created_at").first()
-        last_build_date = SoftwareBuild.objects.get(build_id=last_build).created_at
-        result = {
-            "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/{product_type}?ofuri={node.obj.ofuri}",  # noqa
-            "ofuri": node.obj.ofuri,
-            "name": node.obj.name,
-        }
-        if node.level < 3:
-            result.update(
-                {
-                    "coverage": node.obj.coverage,
-                    "build_count": node.obj.builds.count(),
-                    "last_build_dt": str(last_build_date),
-                    "component_count": node.obj.components.count(),
-                }
-            )
-        else:
-            result.update(
-                {
-                    "build_count": node.obj.builds.count(),
-                    "last_build_dt": str(last_build_date),
-                    "component_count": node.obj.components.count(),
-                }
-            )
+        if SoftwareBuild.objects.filter(build_id=last_build).exists():
+            last_build_date = SoftwareBuild.objects.get(build_id=last_build).created_at
+            result = {
+                "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/{product_type}?ofuri={node.obj.ofuri}",  # noqa
+                "ofuri": node.obj.ofuri,
+                "name": node.obj.name,
+            }
+            if node.level < 3:
+                result.update(
+                    {
+                        "coverage": node.obj.coverage,
+                        "build_count": node.obj.builds.count(),
+                        "last_build_dt": str(last_build_date),
+                        "component_count": node.obj.components.count(),
+                    }
+                )
+            else:
+                result.update(
+                    {
+                        "build_count": node.obj.builds.count(),
+                        "last_build_dt": str(last_build_date),
+                        "component_count": node.obj.components.count(),
+                    }
+                )
 
-        children = [coverage_report_node_to_dict(request, c) for c in node.get_children()]
+            children = [coverage_report_node_to_dict(request, c) for c in node.get_children()]
 
-        if children:
-            result[child_product_type] = children
-        return result
+            if children:
+                result[child_product_type] = children
+            return result
     else:
         return {
             "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/{product_type}?ofuri={node.obj.ofuri}",  # noqa

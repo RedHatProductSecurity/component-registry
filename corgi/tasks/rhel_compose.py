@@ -29,6 +29,8 @@ def load_composes():
                 zstream_names[0],
             )
         for compose_data in composes:
+            logger.info(zstream_names[0])
+            logger.info(compose_data)
             save_compose.delay(zstream_names[0], compose_data)
 
 

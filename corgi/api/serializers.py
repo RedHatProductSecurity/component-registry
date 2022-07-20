@@ -9,6 +9,7 @@ from corgi.core.models import (
     Channel,
     Component,
     Product,
+    ProductComponentRelation,
     ProductStream,
     ProductVariant,
     ProductVersion,
@@ -675,6 +676,8 @@ class ProductStreamSerializer(serializers.ModelSerializer):
     product_versions = serializers.SerializerMethodField()
     product_variants = serializers.SerializerMethodField()
 
+    relations = serializers.SerializerMethodField()
+
     def get_link(self, instance):
         request = self.context.get("request")
         if request and "HTTP_HOST" in request.META:
@@ -744,6 +747,28 @@ class ProductStreamSerializer(serializers.ModelSerializer):
                 )
         return p
 
+    def get_relations(self, instance):
+        related_external_system_ids = (
+            ProductComponentRelation.objects.filter(product_ref=instance.name)
+            .distinct()
+            .values_list("external_system_id", flat=True)
+        )
+        relations = []
+        for external_system_id in related_external_system_ids:
+            pcr = ProductComponentRelation.objects.filter(
+                external_system_id=external_system_id
+            ).first()
+            if pcr:
+                relations.append(
+                    {
+                        "type": pcr.type,
+                        "external_system_id": pcr.external_system_id,
+                    }
+                )
+        if relations:
+            return relations
+        return None
+
     @staticmethod
     def get_build_count(instance):
         return instance.builds.count()
@@ -759,6 +784,7 @@ class ProductStreamSerializer(serializers.ModelSerializer):
             "description",
             "coverage",
             "build_count",
+            "relations",
             "tags",
             "products",
             "product_versions",
@@ -782,6 +808,8 @@ class ProductVariantSerializer(serializers.ModelSerializer):
     products = serializers.SerializerMethodField()
     product_versions = serializers.SerializerMethodField()
     product_streams = serializers.SerializerMethodField()
+
+    relations = serializers.SerializerMethodField()
 
     def get_link(self, instance):
         request = self.context.get("request")
@@ -852,6 +880,28 @@ class ProductVariantSerializer(serializers.ModelSerializer):
                 )
         return p
 
+    def get_relations(self, instance):
+        related_external_system_ids = (
+            ProductComponentRelation.objects.filter(product_ref=instance.name)
+            .distinct()
+            .values_list("external_system_id", flat=True)
+        )
+        relations = []
+        for external_system_id in related_external_system_ids:
+            pcr = ProductComponentRelation.objects.filter(
+                external_system_id=external_system_id
+            ).first()
+            if pcr:
+                relations.append(
+                    {
+                        "type": pcr.type,
+                        "external_system_id": pcr.external_system_id,
+                    }
+                )
+        if relations:
+            return relations
+        return None
+
     @staticmethod
     def get_build_count(instance):
         return instance.builds.count()
@@ -866,6 +916,7 @@ class ProductVariantSerializer(serializers.ModelSerializer):
             "description",
             "build_count",
             "tags",
+            "relations",
             "products",
             "product_versions",
             "product_streams",
@@ -888,4 +939,10 @@ class ChannelSerializer(serializers.ModelSerializer):
 class AppStreamLifeCycleSerializer(serializers.ModelSerializer):
     class Meta:
         model = AppStreamLifeCycle
+        fields = "__all__"
+
+
+class RelationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductComponentRelation
         fields = "__all__"

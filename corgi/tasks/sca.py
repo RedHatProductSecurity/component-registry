@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+import shutil
 import subprocess  # nosec B404
 import tarfile
 import urllib
@@ -62,11 +63,6 @@ def software_composition_analysis(build_id: int):
         logger.warning("Tried to scan using software build %s which does not exist in DB", build_id)
         return
 
-    package_type = "rpms"
-    if software_build.name.endswith("-container"):
-        package_type = "containers"
-    distgit_sources = _get_distgit_sources(software_build.source, package_type)
-    components = Syft.scan_files(distgit_sources)
     try:
         root_component = Component.objects.get(
             Q(software_build=software_build, name=software_build.name),
@@ -79,20 +75,55 @@ def software_composition_analysis(build_id: int):
     except Component.MultipleObjectsReturned:
         logger.error("Mutliple %s root components found for %s", software_build.name, build_id)
         return
+
     root_node = root_component.get_root
     if not root_node:
         logger.error("Didn't find root component node for %s", root_component.purl)
         return
-    new_components = 0
-    for component in components:
-        if save_component(component, root_node):
-            new_components += 1
-    logger.info("Detected %s new components using Syft scan", new_components)
+    package_type = "rpms"
+    if root_component.type == Component.Type.CONTAINER_IMAGE:
+        package_type = "containers"
+        _scan_remote_sources(root_component, root_node)
+
+    distgit_sources = _get_distgit_sources(software_build.source, package_type)
+
+    scan_files(root_node, distgit_sources)
 
     root_component.save_component_taxonomy()
     root_component.save_product_taxonomy()
 
     logger.info("Finished software composition analysis for %s", build_id)
+
+
+def _scan_remote_sources(root_component, root_node):
+    for source in root_component.sources:
+        source_node = ComponentNode.objects.get(purl=source, parent=root_node)
+        # This is potentially quite slow. We could probably make this more efficient by splitting
+        # it off into another task
+        if "remote_source_archive" in source_node.obj.meta_attr:
+            # Download source to scratch
+            remote_source_archive = source_node.obj.meta_attr["remote_source_archive"]
+            url = urllib.parse.urlparse(remote_source_archive)
+            filename = url.path.rsplit("/", 1)[-1]
+            target_filepath = Path(
+                f"{settings.SCA_SCRATCH_DIR}/containers/{root_component.nvr}/{filename}"
+            )
+            # This scans the whole archive without unpacking it. If we find this returns extraneous
+            # results we could probably unpack the archive and scan only the app subdirectory
+            _download_source(remote_source_archive, target_filepath)
+            # Scan source
+            scan_files(source_node, [target_filepath])
+            # remove source
+            package_dir = Path(os.path.dirname(target_filepath))
+            shutil.rmtree(package_dir)
+
+
+def scan_files(anchor_node, sources):
+    new_components = 0
+    for component in Syft.scan_files(sources):
+        if save_component(component, anchor_node):
+            new_components += 1
+    logger.info("Detected %s new components using Syft scan", new_components)
 
 
 def _get_distgit_sources(source_url: str, package_type: str) -> list[Path]:
@@ -214,16 +245,19 @@ def _download_lookaside_sources(
         target_filepath = Path(f"{settings.SCA_SCRATCH_DIR}/{lookaside_path}")
         # When running in PSI cluster the lookaside is pre-mounted to lookaside_filepath
         if not lookaside_filepath.exists():
-            package_dir = Path(os.path.dirname(target_filepath))
-            package_dir.mkdir(exist_ok=True, parents=True)
-            logger.info("Downloading lookaside sources from: %s", lookaside_download_url)
-            r: Response = requests.get(lookaside_download_url)
-            target_filepath.open("wb").write(r.content)
-            downloaded_sources.append(target_filepath)
+            _download_source(lookaside_download_url, target_filepath)
         else:
             logger.info("%s already exists, not downloading", lookaside_filepath)
-            downloaded_sources.append(lookaside_filepath)
+        downloaded_sources.append(lookaside_filepath)
     return downloaded_sources
+
+
+def _download_source(download_url, target_filepath):
+    package_dir = Path(os.path.dirname(target_filepath))
+    package_dir.mkdir(exist_ok=True, parents=True)
+    logger.info("Downloading sources from: %s", download_url)
+    r: Response = requests.get(download_url)
+    target_filepath.open("wb").write(r.content)
 
 
 def get_tarinfo(members, archived_filename) -> Optional[tarfile.TarInfo]:

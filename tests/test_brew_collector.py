@@ -160,8 +160,7 @@ remote_source_in_archive_data = [
                 "image": {},
                 "typeinfo": {
                     "remote-sources": {
-                        "remote_source_url": "https://example.com/api/v1/"
-                        "requests/28637/download"
+                        "remote_source_url": "https://example.com/api/v1/" "requests/28637/download"
                     }
                 },
             },
@@ -368,6 +367,27 @@ def test_extract_multiple_remote_sources(requests_mock):
 
     # Inspect pushgateway components
     assert len(source_components[3]["components"]) > 0
+
+
+@patch("koji.ClientSession")
+def test_get_legacy_osbs_source(mock_koji_session, monkeypatch):
+    # buildID=1890187
+    build_info = {
+        "name": "golang-github-prometheus-node_exporter-container",
+        "version": "v4.10.0",
+        "release": "202202160023.p0.g0eed310.assembly.stream",
+        "epoch": None,
+        "extra": {
+            "image": {
+                "go": {"modules": [{"module": "github.com/openshift/node_exporter"}]},
+            },
+        },
+    }
+    mock_koji_session.listArchives.return_value = []
+    brew = Brew()
+    monkeypatch.setattr(brew, "koji_session", mock_koji_session)
+    result = brew.get_container_build_data(1890187, build_info)
+    assert len(result["meta"]["upstream_go_modules"]) == 1
 
 
 nvr_test_data = [

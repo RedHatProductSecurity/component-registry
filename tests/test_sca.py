@@ -10,6 +10,7 @@ from corgi.tasks.sca import (
     _archive_source,
     _download_lookaside_sources,
     _get_distgit_sources,
+    _scan_remote_sources,
     software_composition_analysis,
 )
 from tests.factories import ComponentFactory, SoftwareBuildFactory
@@ -73,6 +74,18 @@ def test_archive_source(
     assert not expected_target_file.exists()
 
 
+@patch("subprocess.check_call")
+@patch("corgi.tasks.sca._download_lookaside_sources")
+def test_get_distgit_sources(mock_git_archive, mock_download_lookaside_sources):
+    expected_path = "tests/data/rpms/cri-o/1e52fcdc84be253b5094b942c2fec23d7636d644.tar"
+    _ = _get_distgit_sources(
+        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
+        "/rpms/cri-o#1e52fcdc84be253b5094b942c2fec23d7636d644",
+        "rpms",
+    )
+    mock_git_archive.assert_called_with(PosixPath(expected_path), "cri-o")
+
+
 download_lookaside_test_data = [
     (
         # $BREW_URL/buildinfo?buildID=1210605
@@ -92,18 +105,6 @@ download_lookaside_test_data = [
         None,
     ),
 ]
-
-
-@patch("subprocess.check_call")
-@patch("corgi.tasks.sca._download_lookaside_sources")
-def test_get_distgit_sources(mock_git_archive, mock_download_lookaside_sources):
-    expected_path = "tests/data/rpms/cri-o/1e52fcdc84be253b5094b942c2fec23d7636d644.tar"
-    _ = _get_distgit_sources(
-        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
-        "/rpms/cri-o#1e52fcdc84be253b5094b942c2fec23d7636d644",
-        "rpms",
-    )
-    mock_git_archive.assert_called_with(PosixPath(expected_path), "cri-o")
 
 
 @pytest.mark.parametrize(
@@ -133,28 +134,130 @@ def test_download_lookaside_sources(
         assert downloaded_sources == []
 
 
+software_composition_analysis_test_data = [
+    # Dummy tar files are prefetch to
+    # tests/data/rpms/cri-o/1e52fcdc84be253b5094b942c2fec23d7636d644.tar (with only sources)
+    # tests/data/rpms/cri-o/cri-o-41c0779.tar.gz/sha516/<sha256>/cri-o-41c0779.tar.gz (empty file)
+    (
+        2018747,
+        "cri-o",
+        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}/rpms/cri-o"  # joined with below
+        "#1e52fcdc84be253b5094b942c2fec23d7636d644",
+        "tests/data/crio-syft.json",
+        "pkg:golang/github.com/Microsoft/go-winio@v0.5.1",
+    ),
+    # Dummy tar file created in
+    # tests/data/containers/grafana/a7b5d3a9cca53e9753102d74adbf630e77337d5c.tar
+    (
+        1890406,
+        "grafana-container",
+        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}/containers/grafana"  # joined with below
+        f"#a7b5d3a9cca53e9753102d74adbf630e77337d5c",
+        "tests/data/grafana-syft.json",
+        "pkg:npm/acorn-globals@4.3.4",
+    ),
+    (
+        1888203,
+        "cnf-tests-container",
+        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}/containers/cnf-tests"  # joined with below
+        "#e7efcd0e4fee97567f9eca2ec0d5f0d6b48b5afb",
+        "tests/data/cnf-tests-syft.json",
+        "pkg:pypi/requests@2.26.0",
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    "build_id,package_name,dist_git_source,syft_results,expected_purl",
+    software_composition_analysis_test_data,
+)
 # mock the syft call to avoid having to have actual source code for the test
-# Dummy tar files are prefetch to
-# tests/data/rpms/cri-o/1e52fcdc84be253b5094b942c2fec23d7636d644.tar (with only sources)
-# tests/data/rpms/cri-o/cri-o-41c0779.tar.gz/sha516/<sha256>/cri-o-41c0779.tar.gz (empty file)
 @patch("subprocess.check_output")
-def test_software_composition_analysis(mock_syft):
+def test_software_composition_analysis(
+    mock_syft,
+    build_id,
+    package_name,
+    dist_git_source,
+    syft_results,
+    expected_purl,
+):
     sb = SoftwareBuildFactory(
-        build_id=2018747,
-        name="cri-o",
-        source=f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined below
-        "/rpms/cri-o#1e52fcdc84be253b5094b942c2fec23d7636d644",
+        build_id=build_id,
+        name=package_name,
+        source=dist_git_source,
     )
-    srpm_root = ComponentFactory(type=Component.Type.SRPM, software_build=sb, name="cri-o")
-    srpm_root.cnodes.get_or_create(type=ComponentNode.ComponentNodeType.SOURCE, parent=None)
-    assert not Component.objects.filter(
-        type=Component.Type.GOLANG, name="github.com/Microsoft/go-winio"
-    ).exists()
-    with open("tests/data/crio-syft.json", "r") as crio_test_data:
-        mock_syft.return_value = crio_test_data.read()
-    software_composition_analysis(2018747)
-    assert Component.objects.filter(
-        type=Component.Type.GOLANG, name="github.com/Microsoft/go-winio"
-    ).exists()
-    srpm_root = Component.objects.get(type=Component.Type.SRPM, software_build=sb)
-    assert "pkg:golang/github.com/Microsoft/go-winio@v0.5.1" in srpm_root.provides
+    if package_name.endswith("-container"):
+        root_component = ComponentFactory(
+            type=Component.Type.CONTAINER_IMAGE, software_build=sb, name=package_name, arch="noarch"
+        )
+    else:
+        root_component = ComponentFactory(
+            type=Component.Type.SRPM, software_build=sb, name=package_name
+        )
+    root_component.cnodes.get_or_create(type=ComponentNode.ComponentNodeType.SOURCE, parent=None)
+    assert not Component.objects.filter(purl=expected_purl).exists()
+    with open(syft_results, "r") as mock_scan_results:
+        mock_syft.return_value = mock_scan_results.read()
+    software_composition_analysis(build_id)
+    assert Component.objects.filter(purl=expected_purl).exists()
+    if package_name.endswith("-container"):
+        root_component = Component.objects.get(
+            type=Component.Type.CONTAINER_IMAGE, arch="noarch", software_build=sb
+        )
+    else:
+        root_component = Component.objects.get(type=Component.Type.SRPM, software_build=sb)
+    assert expected_purl in root_component.provides
+
+
+scan_remote_sources_test_data = [
+    (
+        # buildID=2026282
+        "openshift-enterprise-console-container",
+        "remote-source-cachito-gomod-with-deps.tar.gz",
+        "tests/data/openshift-enterprise-console-syft.json",
+        "pkg:npm/adjust-sourcemap-loader@1.2.0",
+    )
+]
+
+
+@pytest.mark.parametrize(
+    "package_name,remote_sources_filename,syft_results,expected_package",
+    scan_remote_sources_test_data,
+)
+@patch("subprocess.check_output")
+def test_scan_remote_sources(
+    mock_syft, package_name, remote_sources_filename, syft_results, expected_package, requests_mock
+):
+    mock_remote_source_tar_url = f"https://test/{package_name}/{remote_sources_filename}"
+    root_component = ComponentFactory(
+        type=Component.Type.CONTAINER_IMAGE, name=package_name, arch="noarch"
+    )
+    root_node, _ = root_component.cnodes.get_or_create(
+        type=ComponentNode.ComponentNodeType.SOURCE, parent=None
+    )
+    remote_source = ComponentFactory(
+        type=Component.Type.UPSTREAM,
+        meta_attr={"remote_source_archive": mock_remote_source_tar_url},
+    )
+    container_source_cnode, _ = remote_source.cnodes.get_or_create(
+        type=ComponentNode.ComponentNodeType.SOURCE, parent=root_node
+    )
+    root_component.save_component_taxonomy()
+    requests_mock.get(mock_remote_source_tar_url, text="")
+    with open(syft_results, "r") as mock_scan_results:
+        mock_syft.return_value = mock_scan_results.read()
+    _scan_remote_sources(root_component, root_node)
+    mock_syft.assert_called_with(
+        [
+            "/usr/local/bin/syft",
+            "packages",
+            "-q",
+            "-o=syft-json",
+            "--exclude=**/vendor/**",
+            "file:tests/data/containers/" f"{root_component.nvr}/{remote_sources_filename}",
+        ],
+        text=True,
+    )
+    # This is done once after all Syft.scan_files calls in software_component_analysis task
+    root_component.save_component_taxonomy()
+    assert expected_package in root_component.provides

@@ -564,19 +564,21 @@ class RelationsView(ReadOnlyModelViewSet, TagViewMixin):
             build_count = None
 
             if type == ProductComponentRelation.Type.ERRATA:
-                pv = ProductVariant.objects.get(name=related_pcr.first().product_ref)
-                ofuri = pv.ofuri
-                ofuri_link = f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/product_variants?ofuri={ofuri}"  # noqa
-                build_count = pv.builds.count()
+                if ProductVariant.objects.filter(name=related_pcr.first().product_ref).exists():
+                    pv = ProductVariant.objects.get(name=related_pcr.first().product_ref)
+                    ofuri = pv.ofuri
+                    ofuri_link = f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/product_variants?ofuri={ofuri}"  # noqa
+                    build_count = pv.builds.count()
 
             if type == ProductComponentRelation.Type.COMPOSE:
-                ps = ProductStream.objects.get(name=related_pcr.first().product_ref)
-                ofuri = ps.ofuri
-                ofuri_link = f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/product_streams?ofuri={ofuri}"  # noqa
-                build_count = ps.builds.count()
-                expected_build_count = (
-                    related_pcr.values_list("build_id", flat=True).distinct().count()
-                )
+                if ProductStream.objects.filter(name=related_pcr.first().product_ref).exists():
+                    ps = ProductStream.objects.get(name=related_pcr.first().product_ref)
+                    ofuri = ps.ofuri
+                    ofuri_link = f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/product_streams?ofuri={ofuri}"  # noqa
+                    build_count = ps.builds.count()
+                    expected_build_count = (
+                        related_pcr.values_list("build_id", flat=True).distinct().count()
+                    )
 
             result = {
                 "type": related_pcr.first().type,

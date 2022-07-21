@@ -13,6 +13,7 @@ from .views import (
     ProductVariantView,
     ProductVersionView,
     ProductView,
+    RelationsView,
     SoftwareBuildView,
     StatusView,
 )
@@ -28,6 +29,7 @@ router.register(r"product_variants", ProductVariantView)
 router.register(r"channels", ChannelView)
 router.register(r"status", StatusView, basename="status")
 router.register(r"reports/coverage", CoverageReportView, basename="coverage-reports")
+router.register(r"relations", RelationsView)
 
 urlpatterns = [
     # v1 API

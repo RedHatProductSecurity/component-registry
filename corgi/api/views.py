@@ -45,6 +45,7 @@ from .serializers import (
     ProductStreamSerializer,
     ProductVariantSerializer,
     ProductVersionSerializer,
+    RelationSerializer,
     SoftwareBuildSerializer,
 )
 
@@ -536,4 +537,56 @@ class CoverageReportView(ReadOnlyModelViewSet):
                     dicts.append(coverage_report_node_to_dict(request, n))
                 if dicts:
                     results.append(dicts[0])
+        return Response(results)
+
+
+class RelationsView(ReadOnlyModelViewSet, TagViewMixin):
+    """View for api/v1/relations"""
+
+    queryset = ProductComponentRelation.objects.all()
+    serializer_class = RelationSerializer
+    filter_backends = [django_filters.rest_framework.DjangoFilterBackend, filters.SearchFilter]
+    lookup_url_kwarg = "uuid"
+
+    def list(self, request):
+        results = []
+
+        # group all relations by external_system_id/type
+        for external_system_id in self.queryset.distinct().values_list(
+            "external_system_id", flat=True
+        ):
+            related_pcr = self.queryset.filter(external_system_id=external_system_id)
+            type = related_pcr.first().type
+
+            ofuri = None
+            ofuri_link = None
+            expected_build_count = None
+            build_count = None
+
+            if type == ProductComponentRelation.Type.ERRATA:
+                pv = ProductVariant.objects.get(name=related_pcr.first().product_ref)
+                ofuri = pv.ofuri
+                ofuri_link = f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/product_variants?ofuri={ofuri}"  # noqa
+                build_count = pv.builds.count()
+
+            if type == ProductComponentRelation.Type.COMPOSE:
+                ps = ProductStream.objects.get(name=related_pcr.first().product_ref)
+                ofuri = ps.ofuri
+                ofuri_link = f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/product_streams?ofuri={ofuri}"  # noqa
+                build_count = ps.builds.count()
+                expected_build_count = (
+                    related_pcr.values_list("build_id", flat=True).distinct().count()
+                )
+
+            result = {
+                "type": related_pcr.first().type,
+                "link": ofuri_link,
+                "ofuri": ofuri,
+                "external_system_id": external_system_id,
+                "build_count": build_count,
+            }
+            if expected_build_count:
+                # TODO: remove after we refine related user stories
+                result["expected_build_count"] = expected_build_count
+            results.append(result)
         return Response(results)

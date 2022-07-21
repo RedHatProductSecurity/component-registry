@@ -146,8 +146,11 @@ pip-audit:
   script:
     - tox -e pip-audit
 
-#secrets:
-#  stage: lint
-#  image: $PYTHON_TOX_IMAGE_LATEST
-#  script:
-#    - tox -e secrets
+secrets:
+  stage: lint
+  image: $PYTHON_TOX_IMAGE_LATEST
+  script:
+    - tox -e secrets
+  only:
+    refs:
+      - schedules

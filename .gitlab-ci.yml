@@ -76,6 +76,9 @@ test-migrations:
     - dnf --disableplugin=subscription-manager --nodocs -y install python39 python39-devel gcc krb5-devel postgresql-devel
     - python3.9 -m pip install tox
     - tox -e corgi-migrations
+  except:
+    refs:
+      - schedules
 
 mypy:
   stage: test

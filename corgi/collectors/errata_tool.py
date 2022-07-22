@@ -65,7 +65,9 @@ class ErrataTool:
                 logger.info("Created ET Product: %s", et_product.short_name)
             for product_version in product["relationships"]["product_versions"]:
                 et_product_version, created = CollectorErrataProductVersion.objects.get_or_create(
-                    et_id=product_version["id"], name=product_version["name"], product=et_product
+                    et_id=product_version["id"],
+                    name=product_version["name"],
+                    defaults={"product": et_product},
                 )
                 if created:
                     logger.info("Created ET ProductVersion: %s", et_product_version.name)
@@ -80,16 +82,20 @@ class ErrataTool:
         variants = self.get_paged("api/v1/variants", page_data_attr="data")
         for variant in variants:
             try:
+                product_version_id = variant["attributes"]["relationships"]["product_version"]["id"]
                 et_product_version = CollectorErrataProductVersion.objects.get(
-                    et_id=variant["attributes"]["relationships"]["product_version"]["id"]
+                    et_id=product_version_id
                 )
             except CollectorErrataProductVersion.DoesNotExist:
+                logger.warning("Did not find product version with id %s", product_version_id)
                 continue
             et_product_variant, created = CollectorErrataProductVariant.objects.get_or_create(
                 et_id=variant["id"],
                 name=variant["attributes"]["name"],
-                cpe=variant["attributes"]["cpe"],
-                product_version=et_product_version,
+                defaults={
+                    "cpe": variant["attributes"]["cpe"],
+                    "product_version": et_product_version,
+                },
             )
             if created:
                 logger.info("Created ET Product Variant: %s", et_product_variant.name)

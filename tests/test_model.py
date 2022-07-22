@@ -82,15 +82,20 @@ def test_cpes():
 
 
 def test_product_taxonomic_queries():
-    p1 = ProductFactory(name="RHEL")
-    pv1a = ProductVersionFactory(name="RHEL-7", version="7")
-    pv1b = ProductVersionFactory(name="RHEL-8", version="8")
-    ps1 = ProductStreamFactory(name="Ansercanagicus")
-    ps2 = ProductStreamFactory(name="Ansercaerulescens")
-    ps3 = ProductStreamFactory(name="Brantabernicla", cpe="cpe:/o:redhat:Brantabernicla:8")
+    p1, ps1, ps2, ps3, pv1a, pv1b = create_product_hierarchy()
 
+    relate_product_hierarchy(p1, ps1, ps2, ps3, pv1a, pv1b)
+
+    assert p1.product_streams == ["Ansercanagicus", "Ansercaerulescens", "Brantabernicla"]
+    pv1b.save_product_taxonomy()
+    assert pv1b.product_streams == ["Ansercaerulescens", "Brantabernicla"]
+    assert pv1b.products == ["RHEL"]
+    ps3.save_product_taxonomy()
+    assert ps3.products == ["RHEL"]
+
+
+def relate_product_hierarchy(p1, ps1, ps2, ps3, pv1a, pv1b):
     pvar1 = ProductVariantFactory(name="Base8-test")
-
     node1 = ProductNode.objects.create(parent=None, obj=p1)
     assert node1
     node2a = ProductNode.objects.create(parent=node1, obj=pv1a)
@@ -107,12 +112,16 @@ def test_product_taxonomic_queries():
     assert node4a
 
     p1.save_product_taxonomy()
-    assert p1.product_streams == ["Ansercanagicus", "Ansercaerulescens", "Brantabernicla"]
-    pv1b.save_product_taxonomy()
-    assert pv1b.product_streams == ["Ansercaerulescens", "Brantabernicla"]
-    assert pv1b.products == ["RHEL"]
-    ps3.save_product_taxonomy()
-    assert ps3.products == ["RHEL"]
+
+
+def create_product_hierarchy():
+    p1 = ProductFactory(name="RHEL")
+    pv1a = ProductVersionFactory(name="RHEL-7", version="7")
+    pv1b = ProductVersionFactory(name="RHEL-8", version="8")
+    ps1 = ProductStreamFactory(name="Ansercanagicus")
+    ps2 = ProductStreamFactory(name="Ansercaerulescens")
+    ps3 = ProductStreamFactory(name="Brantabernicla", cpe="cpe:/o:redhat:Brantabernicla:8")
+    return p1, ps1, ps2, ps3, pv1a, pv1b
 
 
 def test_component_model():
@@ -181,3 +190,19 @@ def test_get_root():
     # print(container_nested.cnodes.all().get_ancestors(include_self=True))
     # TODO fix me
     # assert container_nested.get_root == container_cnode
+
+
+def test_product_component_relations():
+    build_id = 1754635
+    sb = SoftwareBuildFactory(build_id=build_id)
+    p1, ps1, ps2, ps3, pv1a, pv1b = create_product_hierarchy()
+    relate_product_hierarchy(p1, ps1, ps2, ps3, pv1a, pv1b)
+    ProductComponentRelation.objects.create(
+        type=ProductComponentRelation.Type.COMPOSE, product_ref=ps1.name, build_id=build_id
+    )
+    srpm = ComponentFactory(software_build=sb, type=Component.Type.SRPM)
+    srpm_cnode, _ = srpm.cnodes.get_or_create(
+        type=ComponentNode.ComponentNodeType.SOURCE, parent=None
+    )
+    srpm.save_product_taxonomy()
+    assert ps1.ofuri in srpm.product_streams

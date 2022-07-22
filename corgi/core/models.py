@@ -197,10 +197,19 @@ class SoftwareBuild(TimeStampedModel):
         """update ('materialize') product taxonomy on all build components"""
         variant_ids = list(
             ProductComponentRelation.objects.filter(build_id=self.build_id)
+            .filter(type=ProductComponentRelation.Type.ERRATA)
             .values_list("product_ref", flat=True)
             .distinct()
         )
-        product_details = get_product_details(variant_ids)
+
+        stream_ids = list(
+            ProductComponentRelation.objects.filter(build_id=self.build_id)
+            .filter(type=ProductComponentRelation.Type.COMPOSE)
+            .values_list("product_ref", flat=True)
+            .distinct()
+        )
+
+        product_details = get_product_details(variant_ids, stream_ids)
 
         for component in Component.objects.filter(software_build__build_id=self.build_id):
             # This is needed for container image builds which pull in components not
@@ -574,15 +583,27 @@ class ProductComponentRelation(TimeStampedModel):
         indexes = [models.Index(fields=("external_system_id", "product_ref", "build_id"))]
 
 
-# TODO change this to use stream ids
-def get_product_details(variant_ids: list[str]) -> dict[str, set[str]]:
+def get_product_streams_from_variants(variant_ids: list[str]):
     query = Q()
     for variant_id in variant_ids:
         query = query | Q(name__contains=variant_id)
     product_variants = ProductVariant.objects.filter(query)
+    product_streams = []
+    for pv in product_variants:
+        product_streams.extend(ProductNode.get_product_streams(pv))
+    return list(set(product_streams))
+
+
+def get_product_details(variant_ids: list[str], stream_ids: list[str]) -> dict[str, set[str]]:
+    if variant_ids:
+        stream_ids.extend(get_product_streams_from_variants(variant_ids))
+    query = Q()
+    for stream_id in stream_ids:
+        query = query | Q(name__contains=stream_id)
+    product_streams = ProductStream.objects.filter(query)
     product_details = defaultdict(set)
-    for product_variant in product_variants:
-        for ancestor in product_variant.pnodes.all().get_ancestors():
+    for product_stream in product_streams:
+        for ancestor in product_stream.pnodes.all().get_ancestors(include_self=True):
             if type(ancestor.obj) is Product:
                 product_details["products"].add(ancestor.obj.ofuri)
             if type(ancestor.obj) is ProductVersion:
@@ -825,6 +846,19 @@ class Component(TimeStampedModel):
             .distinct()
         )
 
+    def get_product_streams(self):
+        build_ids = [
+            a.obj.software_build.build_id
+            for a in self.cnodes.all().get_ancestors(include_self=True)
+            if a.obj.software_build
+        ]
+        return list(
+            ProductComponentRelation.objects.filter(build_id__in=set(build_ids))
+            .filter(type=ProductComponentRelation.Type.COMPOSE)
+            .values_list("product_ref", flat=True)
+            .distinct()
+        )
+
     def get_channels(self):
         variant_ids = self.product_variants
         if not variant_ids:
@@ -842,9 +876,12 @@ class Component(TimeStampedModel):
 
     def save_product_taxonomy(self):
         variant_ids = self.get_product_variants()
-        if not variant_ids:
+        stream_ids = self.get_product_streams()
+
+        if not stream_ids:
             return []
-        product_details = get_product_details(variant_ids)
+
+        product_details = get_product_details(variant_ids, stream_ids)
 
         # Since we have all variant ids for this component, we can replace any existing product
         # details

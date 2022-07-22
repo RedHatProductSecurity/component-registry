@@ -83,7 +83,7 @@ def test_get_distgit_sources(mock_git_archive, mock_download_lookaside_sources):
         "/rpms/cri-o#1e52fcdc84be253b5094b942c2fec23d7636d644",
         "rpms",
     )
-    mock_git_archive.assert_called_with(PosixPath(expected_path), "cri-o")
+    mock_git_archive.assert_called_with(PosixPath(expected_path), "cri-o", "rpms")
 
 
 download_lookaside_test_data = [
@@ -92,38 +92,52 @@ download_lookaside_test_data = [
         # spec file removed
         "tests/data/rpms/containernetworking-plugins/containernetworking-plugins-v0.8.6-source.tar",
         "containernetworking-plugins",
+        "rpms",
         "v0.8.6.tar.gz",
         "md5/85eddf3d872418c1c9d990ab8562cc20/",
     ),
-    # Nothing gets downloaded because the sources file in the distgit archive is empty
     (
-        # This is just an empty archive
-        "tests/data/containers/openshift-enterprise-hyperkube/"
+        # Nothing gets downloaded because the sources file in the distgit archive is empty
+        "tests/data/containers/openshift-enterprise-hyperkube/"  # joined with below
         "20f817be5fafe03bdbfff4a3bc561166bfb14013.tar",
         "openshift-enterprise-hyperkube",
+        "containers",
         None,
         None,
+    ),
+    (
+        # buildID=2096033
+        # Dummy distgit archive with all but 'sources' file removed
+        "tests/data/containers/metrics-schema-installer/"  # joined with below
+        "98012f1be90440f90612dc50f2c916e84466d913.tar",
+        "metrics-schema-installer",
+        "containers",
+        "hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar",
+        "md5/587372e4c72d1eddfab8e848457f574e/",
     ),
 ]
 
 
 @pytest.mark.parametrize(
-    "test_data_file,package_name,expected_filename,expected_path", download_lookaside_test_data
+    "test_data_file,package_name,package_type,expected_filename,expected_path",
+    download_lookaside_test_data,
 )
 def test_download_lookaside_sources(
-    test_data_file, package_name, expected_filename, expected_path, requests_mock
+    test_data_file, package_name, package_type, expected_filename, expected_path, requests_mock
 ):
     distgit_source_archive = Path(test_data_file)
     expected_url = (
-        f"https://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}/repo/rpms/{package_name}/"
+        f"https://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}/repo/{package_type}/{package_name}/"
         f"{expected_filename}/{expected_path}{expected_filename}"
     )
     print(f"mocking call to {expected_url}")
     requests_mock.get(expected_url, text="resp")
-    downloaded_sources = _download_lookaside_sources(distgit_source_archive, package_name)
+    downloaded_sources = _download_lookaside_sources(
+        distgit_source_archive, package_name, package_type
+    )
     if expected_filename:
         full_expected_filename = (
-            f"tests/data/rpms/{package_name}/{expected_filename}/"
+            f"tests/data/{package_type}/{package_name}/{expected_filename}/"
             f"{expected_path}/{expected_filename}"
         )
         assert downloaded_sources == [PosixPath(full_expected_filename)]

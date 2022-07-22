@@ -132,7 +132,7 @@ def _get_distgit_sources(source_url: str, package_type: str) -> list[Path]:
     if not raw_source or not package_name:
         return []
     distgit_sources.append(raw_source)
-    distgit_sources.extend(_download_lookaside_sources(raw_source, package_name))
+    distgit_sources.extend(_download_lookaside_sources(raw_source, package_name, package_type))
     return distgit_sources
 
 
@@ -204,7 +204,7 @@ def _call_git_archive(git_archive_command, target_file, target_path, cwd=""):
 
 
 def _download_lookaside_sources(
-    distgit_archive: Path, package_name: str, package_type: str = "rpms"
+    distgit_archive: Path, package_name: str, package_type: str
 ) -> list[Path]:
     source_tar = tarfile.open(distgit_archive)
     source_tarinfo = get_tarinfo(source_tar, "sources")

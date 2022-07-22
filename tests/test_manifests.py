@@ -3,7 +3,7 @@ import logging
 
 import pytest
 
-from corgi.core.models import ProductComponentRelation
+from corgi.core.models import ComponentNode, ProductComponentRelation, ProductNode
 
 from .factories import (
     ComponentFactory,
@@ -26,9 +26,14 @@ def test_product_manifest_properties():
     version = ProductVersionFactory(product_variants=["1"])
     stream = ProductStreamFactory(product_variants=["1"])
     variant = ProductVariantFactory(name="1")
+    pnode = ProductNode.objects.create(parent=None, obj=product)
+    pvnode = ProductNode.objects.create(parent=pnode, obj=version)
+    psnode = ProductNode.objects.create(parent=pvnode, obj=stream)
+    _ = ProductNode.objects.create(parent=psnode, obj=variant)
 
     build = SoftwareBuildFactory(build_id=1)
     component = ComponentFactory(software_build=build)
+    _, _ = component.cnodes.get_or_create(type=ComponentNode.ComponentNodeType.SOURCE, parent=None)
     ProductComponentRelationFactory(
         build_id="1", product_ref="1", type=ProductComponentRelation.Type.ERRATA
     )

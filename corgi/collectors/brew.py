@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 
 import koji  # type: ignore
 import requests
+import yaml
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -48,8 +49,7 @@ class Brew:
         # These builds fail because we don't support Maven (yet?)
         # MAVEN_BUILD_TYPE,
         WIN_BUILD_TYPE,
-        # These builds fail because we don't support RHEL modules
-        # MODULE_BUILD_TYPE,
+        MODULE_BUILD_TYPE,
     )
 
     def __init__(self):
@@ -657,6 +657,32 @@ class Brew:
                 advisory_ids.add(match.group())
         return list(advisory_ids)
 
+    def get_module_build_data(self, build_id: int, build_info: dict, build_type_info: dict) -> dict:
+
+        modulemd_yaml = build_info["extra"]["typeinfo"]["module"].get("modulemd_str", "")
+        modulemd = None
+        if modulemd_yaml:
+            modulemd = yaml.safe_load(modulemd_yaml)
+        module = {
+            "type": "module",
+            "namespace": "redhat",
+            "meta": {
+                "nvr": build_info["nvr"],
+                "name": build_info["name"],
+                "version": modulemd["data"].get("version", ""),  # type: ignore
+                "license": " OR ".join(modulemd["data"]["license"].get("module", "")),  # type: ignore # noqa
+                "release": build_info["release"],
+                # "arch": build_info["arch"],
+                "epoch": build_info["epoch"],
+                "components": modulemd["data"]["components"],  # type: ignore
+            },
+            "analysis_meta": {
+                "source": [],
+            },
+        }
+
+        return module
+
     def get_component_data(self, build_id: int) -> dict:
         logger.info("Retrieving Brew build: %s", build_id)
         build = self.koji_session.getBuild(build_id)
@@ -704,7 +730,7 @@ class Brew:
         elif build_type == self.MAVEN_BUILD_TYPE:
             component = self.get_maven_build_data(build_id, build, build_type_info)
         elif build_type == self.MODULE_BUILD_TYPE:
-            component = {}
+            component = self.get_module_build_data(build_id, build, build_type_info)
         elif build_type == self.WIN_BUILD_TYPE:
             component = {}
         else:

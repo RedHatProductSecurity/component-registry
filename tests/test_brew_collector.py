@@ -83,10 +83,10 @@ build_corpus = [
     # nodejs: brew buildID=1700497
     (
         1700497,
-        os.getenv("CORGI_TEST_CODE_URL"),
+        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}/modules/nodejs?#e457a1b700c09c58beca7e979389a31c98cead34",  # noqa
         "redhat",
-        "it's a module build of nodejs but I didn't bother to fill in the test data",
-        "",
+        "nodejs",
+        "MIT",
         "module",
         # TODO: complete above when support is added
     ),
@@ -114,7 +114,9 @@ def test_get_component_data(build_id, build_source, build_ns, build_name, licens
             Brew().get_component_data(build_id)
         return
     c = Brew().get_component_data(build_id)
-    if build_type == "maven":
+    if build_type == "module":
+        assert list(c.keys()) == ["type", "namespace", "meta", "analysis_meta", "build_meta"]
+    elif build_type == "maven":
         assert list(c.keys()) == ["type", "namespace", "meta", "build_meta"]
     elif build_type == "image":
         assert list(c.keys()) == [

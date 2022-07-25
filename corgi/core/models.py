@@ -584,10 +584,7 @@ class ProductComponentRelation(TimeStampedModel):
 
 
 def get_product_streams_from_variants(variant_ids: list[str]):
-    query = Q()
-    for variant_id in variant_ids:
-        query = query | Q(name__contains=variant_id)
-    product_variants = ProductVariant.objects.filter(query)
+    product_variants = ProductVariant.objects.filter(name__in=variant_ids)
     product_streams = []
     for pv in product_variants:
         product_streams.extend(ProductNode.get_product_streams(pv))
@@ -597,10 +594,7 @@ def get_product_streams_from_variants(variant_ids: list[str]):
 def get_product_details(variant_ids: list[str], stream_ids: list[str]) -> dict[str, set[str]]:
     if variant_ids:
         stream_ids.extend(get_product_streams_from_variants(variant_ids))
-    query = Q()
-    for stream_id in stream_ids:
-        query = query | Q(name__contains=stream_id)
-    product_streams = ProductStream.objects.filter(query)
+    product_streams = ProductStream.objects.filter(name__in=stream_ids)
     product_details = defaultdict(set)
     for product_stream in product_streams:
         for ancestor in product_stream.pnodes.all().get_ancestors(include_self=True):
@@ -878,7 +872,7 @@ class Component(TimeStampedModel):
         variant_ids = self.get_product_variants()
         stream_ids = self.get_product_streams()
 
-        if not stream_ids:
+        if not variant_ids and not stream_ids:
             return []
 
         product_details = get_product_details(variant_ids, stream_ids)

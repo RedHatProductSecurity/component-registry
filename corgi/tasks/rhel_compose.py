@@ -71,3 +71,24 @@ def save_compose(stream_name, compose_coords) -> None:
                     if created:
                         relation.type = ProductComponentRelation.Type.COMPOSE
                         relation.save()
+
+
+def get_builds_by_compose(compose_names):
+    return list(
+        ProductComponentRelation.objects.filter(
+            external_system_id__in=compose_names,
+            type=ProductComponentRelation.Type.COMPOSE,
+        )
+        .values_list("build_id", flat=True)
+        .distinct()
+    )
+
+
+def get_all_builds():
+    return list(
+        ProductComponentRelation.objects.filter(
+            type=ProductComponentRelation.Type.COMPOSE,
+        )
+        .values_list("build_id", flat=True)
+        .distinct()
+    )

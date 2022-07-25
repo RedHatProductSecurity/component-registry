@@ -9,6 +9,7 @@ from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 logger = logging.getLogger(__name__)
 
 
+@app.task
 def load_composes():
     composes_by_minor = RhelCompose().fetch_compose_versions()
     rhel_z_stream_names = (

@@ -46,6 +46,8 @@ def slow_fetch_brew_build(build_id: int):
         root_node = save_srpm(softwarebuild, build)
     elif build["type"] == "image":
         root_node = save_container(softwarebuild, build)
+    elif build["type"] == "module":
+        root_node = save_module(softwarebuild, build)
     else:
         raise BrewBuildTypeNotSupported(f"Build {build_id} type is not supported: {build['type']}")
 
@@ -272,3 +274,25 @@ def recurse_components(component, parent):
         if "components" in component:
             for c in component["components"]:
                 save_component(c, parent)
+
+
+def save_module(softwarebuild, build_data) -> ComponentNode:
+    obj, created = Component.objects.get_or_create(
+        type=Component.Type.RHEL_MODULE,
+        name=build_data["meta"]["name"],
+        version=build_data["meta"].get("version", ""),
+        release=build_data["meta"].get("release", ""),
+        arch=build_data["meta"].get("arch", ""),
+        license=build_data["meta"].get("license", ""),
+        description=build_data["meta"].get("description", ""),
+        software_build=softwarebuild,
+        meta_attr=build_data["meta"]["components"],
+    )
+    node, _ = obj.cnodes.get_or_create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+    )
+    # TODO: add upstream if exists
+    # TODO: recurse components from build_data["meta"]["components"]
+
+    return node

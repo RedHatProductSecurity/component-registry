@@ -46,15 +46,20 @@ test:
   script:
     - dnf --disableplugin=subscription-manager --nodocs -y install python39 python39-devel gcc krb5-devel postgresql-devel
     - python3.9 -m pip install tox
-    - tox -e corgi -- --record-mode=none --cov-report term  # Do not create any VCR cassettes in CI
+    - tox -e corgi -- --record-mode=none --cov-report term --junitxml=junit.xml  # Do not create any VCR cassettes in CI
   except:
     refs:
       - schedules
+  # report coverage lines like 'TOTAL    2962    882    70%'
+  coverage: '/TOTAL(?:\s+\d+\s+\d+\s+)(\d+)%/'
   artifacts:
+      when: always
       reports:
         coverage_report:
           coverage_format: cobertura
           path: coverage.xml
+        junit:
+          - junit.xml
       expire_in: 1 week
 
 test-migrations:

@@ -104,16 +104,17 @@ def load_errata(errata_names: list[str]) -> list[int]:
             for build_obj in build_objects:
                 for build_id, errata_components in build_obj.items():
                     build_ids.add(int(build_id))
-                    pcr, created = ProductComponentRelation.objects.get_or_create(
+                    _, created = ProductComponentRelation.objects.get_or_create(
                         external_system_id=erratum_id,
                         product_ref=variant_id,
                         build_id=build_id,
+                        defaults={
+                            "type": ProductComponentRelation.Type.ERRATA,
+                            "meta_attr": {"components": errata_components},
+                        },
                     )
                     if created:
                         created_relations += 1
-                        pcr.type = ProductComponentRelation.Type.ERRATA
-                        pcr.meta_attr = {"components": errata_components}
-                        pcr.save()
     logger.info("Saved %s new product component relations", created_relations)
     for build_id in build_ids:
         app.send_task("corgi.tasks.brew.slow_fetch_brew_build", args=[build_id])

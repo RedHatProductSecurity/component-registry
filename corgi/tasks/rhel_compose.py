@@ -63,15 +63,12 @@ def save_compose(stream_name, compose_coords) -> None:
                             build_id = rpm_data["build_id"]
                             # found the build_id, stop iterating filenames
                             break
-                    relation, created = ProductComponentRelation.objects.get_or_create(
+                    ProductComponentRelation.objects.get_or_create(
                         external_system_id=compose_id,
                         product_ref=stream_name,
                         build_id=build_id,
+                        defaults={"type": ProductComponentRelation.Type.COMPOSE},
                     )
-                    # Don't include type in get_or_create to avoid slow read of field outside index
-                    if created:
-                        relation.type = ProductComponentRelation.Type.COMPOSE
-                        relation.save()
 
 
 def get_builds_by_compose(compose_names):

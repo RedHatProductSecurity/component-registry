@@ -76,7 +76,7 @@ def software_composition_analysis(build_id: int):
         logger.error("Mutliple %s root components found for %s", software_build.name, build_id)
         return
 
-    root_node = root_component.get_root
+    root_node = root_component.cnodes.first()
     if not root_node:
         logger.error("Didn't find root component node for %s", root_component.purl)
         return

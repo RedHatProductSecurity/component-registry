@@ -151,7 +151,7 @@ def test_software_build_model():
     assert Component.objects.get(name="curl") == c1
 
 
-def test_get_root():
+def test_get_roots():
     srpm = ComponentFactory(type=Component.Type.SRPM)
     srpm_cnode, _ = srpm.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE, parent=None
@@ -160,12 +160,12 @@ def test_get_root():
     rpm_cnode, _ = rpm.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.PROVIDES, parent=srpm_cnode
     )
-    assert rpm.get_root == srpm_cnode
-    assert srpm.get_root == srpm_cnode
+    assert rpm.get_roots == [srpm_cnode]
+    assert srpm.get_roots == [srpm_cnode]
 
     nested = ComponentFactory()
     nested.cnodes.get_or_create(type=ComponentNode.ComponentNodeType.PROVIDES, parent=rpm_cnode)
-    assert nested.get_root == srpm_cnode
+    assert nested.get_roots == [srpm_cnode]
 
     container = ComponentFactory(type=Component.Type.CONTAINER_IMAGE, arch="noarch")
     container_cnode, _ = container.cnodes.get_or_create(
@@ -175,21 +175,20 @@ def test_get_root():
     container_rpm.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.PROVIDES, parent=container_cnode
     )
-    assert not container_rpm.get_root
-    assert container.get_root == container_cnode
+    assert not container_rpm.get_roots
+    assert container.get_roots == [container_cnode]
 
     container_source = ComponentFactory(type=Component.Type.UPSTREAM)
     container_source_cnode, _ = container_source.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE, parent=container_cnode
     )
-    assert container_source.get_root == container_cnode
-    container_nested = ComponentFactory()
+    assert container_source.get_roots == [container_cnode]
+    assert container_source.get_roots == [container_cnode]
+    container_nested = ComponentFactory(type=Component.Type.NPM)
     container_nested.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.PROVIDES, parent=container_source_cnode
     )
-    # print(container_nested.cnodes.all().get_ancestors(include_self=True))
-    # TODO fix me
-    # assert container_nested.get_root == container_cnode
+    assert container_nested.get_roots == [container_cnode]
 
 
 def test_product_component_relations():
@@ -206,3 +205,53 @@ def test_product_component_relations():
     )
     srpm.save_product_taxonomy()
     assert ps1.ofuri in srpm.product_streams
+
+
+def test_get_upstream():
+    srpm = ComponentFactory(type=Component.Type.SRPM)
+    srpm_cnode, _ = srpm.cnodes.get_or_create(
+        type=ComponentNode.ComponentNodeType.SOURCE, parent=None
+    )
+    rpm = ComponentFactory(type=Component.Type.RPM)
+    rpm_cnode, _ = rpm.cnodes.get_or_create(
+        type=ComponentNode.ComponentNodeType.PROVIDES, parent=srpm_cnode
+    )
+    srpm_upstream = ComponentFactory(type=Component.Type.UPSTREAM)
+    srpm_upstream_cnode, _ = srpm_upstream.cnodes.get_or_create(
+        type=ComponentNode.ComponentNodeType.SOURCE, parent=srpm_cnode
+    )
+    assert rpm.get_upstream() == [srpm_upstream.purl]
+
+    container = ComponentFactory(type=Component.Type.CONTAINER_IMAGE, arch="noarch")
+    container_cnode, _ = container.cnodes.get_or_create(
+        type=ComponentNode.ComponentNodeType.SOURCE, parent=None
+    )
+    container_rpm = ComponentFactory(type=Component.Type.RPM)
+    container_rpm.cnodes.get_or_create(
+        type=ComponentNode.ComponentNodeType.PROVIDES, parent=container_cnode
+    )
+    assert container_rpm.get_upstream() == []
+
+    container_source = ComponentFactory(name="container_upstream", type=Component.Type.UPSTREAM)
+    container_source_cnode, _ = container_source.cnodes.get_or_create(
+        type=ComponentNode.ComponentNodeType.SOURCE, parent=container_cnode
+    )
+
+    container_nested = ComponentFactory(type=Component.Type.NPM)
+    container_nested.cnodes.get_or_create(
+        type=ComponentNode.ComponentNodeType.PROVIDES, parent=container_source_cnode
+    )
+    assert container_nested.get_upstream() == [container_source.purl]
+
+    container_o_source = ComponentFactory(
+        name="contain_upstream_other", type=Component.Type.UPSTREAM
+    )
+    container_o_source_cnode, _ = container_o_source.cnodes.get_or_create(
+        type=ComponentNode.ComponentNodeType.SOURCE, parent=container_cnode
+    )
+
+    container_other_nested = ComponentFactory(type=Component.Type.NPM)
+    container_other_nested.cnodes.get_or_create(
+        type=ComponentNode.ComponentNodeType.PROVIDES, parent=container_o_source_cnode
+    )
+    assert container_other_nested.get_upstream() == [container_o_source.purl]

@@ -2,7 +2,6 @@ import logging
 import re
 import uuid as uuid
 from collections import defaultdict
-from typing import Optional
 
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
@@ -190,6 +189,7 @@ class SoftwareBuild(TimeStampedModel):
         """it is only possible to update ('materialize') component taxonomy when all
         components (from a build) have loaded"""
         for component in Component.objects.filter(software_build__build_id=self.build_id):
+            # TODO also call on descendants
             component.save_component_taxonomy()
         return None
 
@@ -759,28 +759,31 @@ class Component(TimeStampedModel):
         super().save(*args, **kwargs)
 
     @property
-    def get_root(self) -> Optional[ComponentNode]:
-        """Return component root entity."""
-        rpm_descendant = False
-        container_root = None
-        # First search for a SRPM ancestor
-        for ancestor in self.cnodes.all().get_ancestors(include_self=True):
-            if ancestor.obj.type == Component.Type.SRPM:
-                return ancestor
-            elif ancestor.obj.type == Component.Type.RPM:
-                rpm_descendant = True
-            elif (
-                ancestor.obj.arch == "noarch"
-                and ancestor.obj.type == Component.Type.CONTAINER_IMAGE
-            ):
-                container_root = ancestor
-        # RPMs are included as children of Containers as well as SRPMs
-        # If we didn't find an SRPM ancestor, that means the SRPM hasn't be processed yet
-        if rpm_descendant:
-            return None
-        else:
-            # Must be part of a container, find the noarch container image ancestor
-            return container_root
+    def get_roots(self) -> list[ComponentNode]:
+        """Return component root entities."""
+        roots = []
+
+        for cnode in self.cnodes.all():
+            root = cnode.get_root()
+            if root.obj.type == Component.Type.CONTAINER_IMAGE:
+                # TODO if we change the CONTAINER->RPM ComponentNode.type to something other than
+                # 'PROVIDES' we would check for that type here to prevent 'hardcoding' the
+                # container -> rpm relationship here.
+
+                # RPMs are included as children of Containers as well as SRPMs
+                # We don't want to include Containers in the RPMs roots.
+                # Partly because RPMs in containers can have unprocesses SRPMs
+                # And partly because we use roots to find upstream components,
+                # and it's not true to say that rpms share upstreams with containers
+                rpm_desendant = False
+                for ancestor in cnode.get_ancestors(include_self=True):
+                    if ancestor.obj.type == Component.Type.RPM:
+                        rpm_desendant = True
+                if not rpm_desendant:
+                    roots.append(root)
+            else:
+                roots.append(root)
+        return roots
 
     @property
     def build_meta(self):
@@ -868,6 +871,7 @@ class Component(TimeStampedModel):
                     channels.append(descendant.obj.name)
         return list(set(channels))
 
+    # TODO remove this? Force the use of SoftwareBuild.save_product_taxnonomy instead
     def save_product_taxonomy(self):
         variant_ids = self.get_product_variants()
         stream_ids = self.get_product_streams()
@@ -906,29 +910,35 @@ class Component(TimeStampedModel):
         return list(set(source + self.get_upstream()))
 
     def get_upstream(self):
-        """return upstream component ancestors in root family tree"""
-        root = self.get_root
-        if not root:
+        """return upstream component ancestors in family trees"""
+        roots = self.get_roots
+        if not roots:
             return []
-        # if the root nodes is a SRPM, or the current node is a noarch container,
-        # get UPSTREAM from children
-        if root.obj.type == Component.Type.SRPM or (
-            self.type == Component.Type.CONTAINER_IMAGE and self.arch == "noarch"
-        ):
-            return [
-                c.obj.purl
-                for c in root.get_children()
-                if c.type == ComponentNode.ComponentNodeType.SOURCE
+        upstreams = []
+        for root in roots:
+            # For SRRPM/RPMS, and noarch containers, these are the cnodes we want.
+            source_children = [
+                c for c in root.get_children() if c.type == ComponentNode.ComponentNodeType.SOURCE
             ]
-        else:
-            # Cachito builds nest components under the relevant source component for that container
-            # build. Get ancestors with type ComponentNodeType SOURCE & Component.Type.UPSTREAM
-            return [
-                a.obj.purl
-                for a in self.cnodes.all().get_ancestors(include_self=True)
-                if a.type == ComponentNode.ComponentNodeType.SOURCE
-                and a.obj.type == Component.Type.UPSTREAM
-            ]
+            # Cachito builds nest components under the relevant source component for that
+            # container build, eg. buildID=1911112. In that case we need to walk up the tree from
+            # the current node to find its relevant source
+            if (
+                root.obj.type == Component.Type.CONTAINER_IMAGE
+                and root.obj.arch == "noarch"
+                and len(source_children) > 1
+            ):
+                upstreams.extend(
+                    [
+                        a.purl
+                        for a in self.cnodes.all().get_ancestors(include_self=True)
+                        if a.type == ComponentNode.ComponentNodeType.SOURCE
+                        and a.obj.type == Component.Type.UPSTREAM
+                    ]
+                )
+            else:
+                upstreams.extend(c.purl for c in source_children)
+        return list(set(upstreams))
 
     def save_datascore(self):
         score = 0

@@ -555,33 +555,34 @@ class RelationsView(ReadOnlyModelViewSet, TagViewMixin):
         for external_system_id in self.queryset.distinct().values_list(
             "external_system_id", flat=True
         ):
-            related_pcr = self.queryset.filter(external_system_id=external_system_id)
-            type = related_pcr.first().type
+            related_set = self.queryset.filter(external_system_id=external_system_id)
+            related_pcr = related_set.first()
+            pcr_type = related_pcr.type
 
             ofuri = None
             ofuri_link = None
             expected_build_count = None
             build_count = None
 
-            if type == ProductComponentRelation.Type.ERRATA:
-                if ProductVariant.objects.filter(name=related_pcr.first().product_ref).exists():
-                    pv = ProductVariant.objects.get(name=related_pcr.first().product_ref)
+            if pcr_type == ProductComponentRelation.Type.ERRATA:
+                pv = ProductVariant.objects.filter(name=related_pcr.product_ref).first()
+                if pv:
                     ofuri = pv.ofuri
                     ofuri_link = f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/product_variants?ofuri={ofuri}"  # noqa
                     build_count = pv.builds.count()
 
-            if type == ProductComponentRelation.Type.COMPOSE:
-                if ProductStream.objects.filter(name=related_pcr.first().product_ref).exists():
-                    ps = ProductStream.objects.get(name=related_pcr.first().product_ref)
+            if pcr_type == ProductComponentRelation.Type.COMPOSE:
+                ps = ProductStream.objects.filter(name=related_pcr.product_ref).first()
+                if ps:
                     ofuri = ps.ofuri
                     ofuri_link = f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/product_streams?ofuri={ofuri}"  # noqa
                     build_count = ps.builds.count()
                     expected_build_count = (
-                        related_pcr.values_list("build_id", flat=True).distinct().count()
+                        related_set.values_list("build_id", flat=True).distinct().count()
                     )
 
             result = {
-                "type": related_pcr.first().type,
+                "type": pcr_type,
                 "link": ofuri_link,
                 "ofuri": ofuri,
                 "external_system_id": external_system_id,

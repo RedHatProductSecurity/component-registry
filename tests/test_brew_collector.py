@@ -83,12 +83,12 @@ build_corpus = [
     # nodejs: brew buildID=1700497
     (
         1700497,
-        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}/modules/nodejs?#e457a1b700c09c58beca7e979389a31c98cead34",  # noqa
+        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
+        f"/modules/nodejs?#e457a1b700c09c58beca7e979389a31c98cead34",
         "redhat",
         "nodejs",
         "MIT",
         "module",
-        # TODO: complete above when support is added
     ),
     # cryostat-rhel8-operator-container:
     # brew buildID=1841202

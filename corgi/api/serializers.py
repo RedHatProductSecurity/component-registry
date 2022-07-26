@@ -747,27 +747,13 @@ class ProductStreamSerializer(serializers.ModelSerializer):
                 )
         return p
 
-    def get_relations(self, instance):
-        related_external_system_ids = (
-            ProductComponentRelation.objects.filter(product_ref=instance.name)
-            .distinct()
-            .values_list("external_system_id", flat=True)
-        )
-        relations = []
-        for external_system_id in related_external_system_ids:
-            pcr = ProductComponentRelation.objects.filter(
-                external_system_id=external_system_id
-            ).first()
-            if pcr:
-                relations.append(
-                    {
-                        "type": pcr.type,
-                        "external_system_id": pcr.external_system_id,
-                    }
-                )
-        if relations:
-            return relations
-        return None
+    @staticmethod
+    def get_relations(instance) -> list[dict[str, str]]:
+        related_pcrs = ProductComponentRelation.objects.filter(product_ref=instance.name).distinct()
+        relations = [
+            {"type": pcr.type, "external_system_id": pcr.external_system_id} for pcr in related_pcrs
+        ]
+        return relations
 
     @staticmethod
     def get_build_count(instance):
@@ -880,27 +866,13 @@ class ProductVariantSerializer(serializers.ModelSerializer):
                 )
         return p
 
-    def get_relations(self, instance):
-        related_external_system_ids = (
-            ProductComponentRelation.objects.filter(product_ref=instance.name)
-            .distinct()
-            .values_list("external_system_id", flat=True)
-        )
-        relations = []
-        for external_system_id in related_external_system_ids:
-            pcr = ProductComponentRelation.objects.filter(
-                external_system_id=external_system_id
-            ).first()
-            if pcr:
-                relations.append(
-                    {
-                        "type": pcr.type,
-                        "external_system_id": pcr.external_system_id,
-                    }
-                )
-        if relations:
-            return relations
-        return None
+    @staticmethod
+    def get_relations(instance) -> list[dict[str, str]]:
+        related_pcrs = ProductComponentRelation.objects.filter(product_ref=instance.name).distinct()
+        relations = [
+            {"type": pcr.type, "external_system_id": pcr.external_system_id} for pcr in related_pcrs
+        ]
+        return relations
 
     @staticmethod
     def get_build_count(instance):

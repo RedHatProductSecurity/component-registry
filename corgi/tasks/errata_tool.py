@@ -87,14 +87,18 @@ def load_errata(errata_names: list[str]) -> list[int]:
         else:
             erratum_id = int(erratum_name)
         # Get all the PCR with errata_id
-        relation_build_ids = ProductComponentRelation.objects.filter(
-            external_system_id=erratum_id
-        ).values_list("build_id", flat=True)
+        relation_build_ids = list(
+            ProductComponentRelation.objects.filter(external_system_id=erratum_id).values_list(
+                "build_id", flat=True
+            )
+        )
         # Check is we have software builds for all of them
         if (
+            # Skip loading erratum if we have all its builds in DB already
+            # But handle case / don't skip it when num_build_ids == num_builds == 0
             0
             < len(relation_build_ids)
-            == SoftwareBuild.objects.filter(build_id__in=list(relation_build_ids)).count()
+            == SoftwareBuild.objects.filter(build_id__in=relation_build_ids).count()
         ):
             logger.info("Already processed %s", erratum_id)
             continue

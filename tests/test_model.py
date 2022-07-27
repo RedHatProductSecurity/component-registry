@@ -220,7 +220,7 @@ def test_get_upstream():
     srpm_upstream_cnode, _ = srpm_upstream.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE, parent=srpm_cnode
     )
-    assert rpm.get_upstream() == [srpm_upstream.purl]
+    assert rpm.get_upstreams() == [srpm_upstream.purl]
 
     container = ComponentFactory(type=Component.Type.CONTAINER_IMAGE, arch="noarch")
     container_cnode, _ = container.cnodes.get_or_create(
@@ -230,7 +230,7 @@ def test_get_upstream():
     container_rpm.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.PROVIDES, parent=container_cnode
     )
-    assert container_rpm.get_upstream() == []
+    assert container_rpm.get_upstreams() == []
 
     container_source = ComponentFactory(name="container_upstream", type=Component.Type.UPSTREAM)
     container_source_cnode, _ = container_source.cnodes.get_or_create(
@@ -241,7 +241,7 @@ def test_get_upstream():
     container_nested.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.PROVIDES, parent=container_source_cnode
     )
-    assert container_nested.get_upstream() == [container_source.purl]
+    assert container_nested.get_upstreams() == [container_source.purl]
 
     container_o_source = ComponentFactory(
         name="contain_upstream_other", type=Component.Type.UPSTREAM
@@ -254,4 +254,4 @@ def test_get_upstream():
     container_other_nested.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.PROVIDES, parent=container_o_source_cnode
     )
-    assert container_other_nested.get_upstream() == [container_o_source.purl]
+    assert container_other_nested.get_upstreams() == [container_o_source.purl]

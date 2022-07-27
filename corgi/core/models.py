@@ -331,8 +331,8 @@ class ProductModel(models.Model):
         #  Union[anything, QuerySet] or QuerySet work for mypy, but not drf-spectacular
         # for RPMS its sibling, SRPM its child
         return (
-            self.get_related_components(self.builds, "upstream")
-            .values_list("upstream", flat=True)
+            self.get_related_components(self.builds, "upstreams")
+            .values_list("upstreams", flat=True)
             .distinct()
         )
 
@@ -645,7 +645,7 @@ class Component(TimeStampedModel):
     channels = fields.ArrayField(models.CharField(max_length=200), default=list)
     provides = fields.ArrayField(models.CharField(max_length=1024), default=list)
     sources = fields.ArrayField(models.CharField(max_length=1024), default=list)
-    upstream = fields.ArrayField(models.CharField(max_length=1024), default=list)
+    upstreams = fields.ArrayField(models.CharField(max_length=1024), default=list)
 
     cnodes = GenericRelation(ComponentNode)
     software_build = models.ForeignKey(SoftwareBuild, on_delete=models.CASCADE, null=True)
@@ -737,7 +737,7 @@ class Component(TimeStampedModel):
             )
 
     def save_component_taxonomy(self):
-        self.upstream = self.get_upstream()
+        self.upstreams = self.get_upstreams()
         self.provides = self.get_provides()
         self.sources = self.get_source()
         self.save()
@@ -908,9 +908,12 @@ class Component(TimeStampedModel):
         ):
             source.append(ancestor.purl)
         return list(set(source + self.get_upstream()))
+        """return all root nodes"""
+        # this uses the mptt get_root function, not the get_root property defined on Component
+        return [cnode.get_root().purl for cnode in self.cnodes.all()]
 
-    def get_upstream(self):
-        """return upstream component ancestors in family trees"""
+    def get_upstreams(self):
+        """return upstreams component ancestors in family trees"""
         roots = self.get_roots
         if not roots:
             return []
@@ -974,7 +977,7 @@ class Component(TimeStampedModel):
         if not self.provides:
             score += 10
             report.add("no provides")
-        if not self.upstream:
+        if not self.upstreams:
             score += 10
             report.add("no upstream")
         if not self.software_build:

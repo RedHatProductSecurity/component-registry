@@ -49,8 +49,8 @@ class ComponentFilter(FilterSet):
     channels = CharFilter(lookup_expr="icontains")
     sources = CharFilter(lookup_expr="icontains")
     provides = CharFilter(lookup_expr="icontains")
-    upstream = CharFilter(lookup_expr="icontains")
-    re_upstream = CharFilter(lookup_expr="regex", field_name="upstream")
+    upstreams = CharFilter(lookup_expr="icontains")
+    re_upstream = CharFilter(lookup_expr="regex", field_name="upstreams")
 
     def filter_ofuri(queryset, name, value):
         logger.info("here")

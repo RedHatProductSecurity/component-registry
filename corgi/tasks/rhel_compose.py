@@ -39,6 +39,7 @@ def save_compose(stream_name, compose_coords) -> None:
     logger.info("Saving compose %s to %s", compose_coords[0], stream_name)
     if not ProductStream.objects.filter(name=stream_name).exists():
         logger.error("Could not find product stream with name: %s", stream_name)
+        # TODO: Should raise ValueError or similar here to fail task
         return
     for compose_id, compose_data in RhelCompose.fetch_compose_data(compose_coords).items():
         for variant, compose_type in compose_data["data"].items():

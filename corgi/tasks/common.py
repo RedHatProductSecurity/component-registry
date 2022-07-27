@@ -1,6 +1,5 @@
 import os
 from datetime import timedelta
-from json import JSONDecodeError
 from ssl import SSLError
 
 from django.db.utils import InterfaceError
@@ -16,7 +15,6 @@ BACKOFF_KWARGS = {"max_tries": 5, "jitter": None}
 # But can also be due to database operation failures that should NOT be retried
 RETRYABLE_ERRORS = (
     InterfaceError,
-    JSONDecodeError,
     Psycopg2InterfaceError,
     RequestException,
     SSLError,

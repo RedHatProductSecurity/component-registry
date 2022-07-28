@@ -89,8 +89,8 @@ def software_composition_analysis(build_id: int):
 
     scan_files(root_node, distgit_sources)
 
-    root_component.save_component_taxonomy()
-    root_component.save_product_taxonomy()
+    software_build.save_component_taxonomy()
+    software_build.save_product_taxonomy()
 
     logger.info("Finished software composition analysis for %s", build_id)
 

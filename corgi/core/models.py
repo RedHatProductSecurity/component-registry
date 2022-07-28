@@ -189,8 +189,9 @@ class SoftwareBuild(TimeStampedModel):
         """it is only possible to update ('materialize') component taxonomy when all
         components (from a build) have loaded"""
         for component in Component.objects.filter(software_build__build_id=self.build_id):
-            # TODO also call on descendants
-            component.save_component_taxonomy()
+            for cnode in component.cnodes.all():
+                for d in cnode.get_descendants(include_self=True):
+                    d.obj.save_component_taxonomy()
         return None
 
     def save_product_taxonomy(self):

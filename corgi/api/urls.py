@@ -17,6 +17,7 @@ from .views import (
     SoftwareBuildView,
     StatusView,
 )
+from .views_search import SearchDeptopiaView
 
 router = routers.DefaultRouter(trailing_slash=False)
 router.register(r"builds", SoftwareBuildView)
@@ -40,5 +41,6 @@ urlpatterns = [
     ),
     path(r"taxonomy/components", ComponentTaxonomyView.as_view()),
     path(r"taxonomy/products", ProductTaxonomyView.as_view()),
+    path(r"search/deptopia", SearchDeptopiaView.as_view()),
     path("", include(router.urls)),
 ]

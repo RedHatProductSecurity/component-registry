@@ -144,8 +144,7 @@ def update_variant_repos() -> None:
         pv_channels = []
         for repo in et_variant_data["repos"]:
             repo, _ = Channel.objects.get_or_create(
-                type=Channel.Type.CDN_REPO,
-                name=repo,
+                name=repo, defaults={"type": Channel.Type.CDN_REPO}
             )
             pv_channels.append(repo.name)
             # TODO: investigate whether we need to delete CDN repos that were removed from a

@@ -750,10 +750,10 @@ class ProductStreamSerializer(serializers.ModelSerializer):
     @staticmethod
     def get_relations(instance) -> list[dict[str, str]]:
         related_pcrs = ProductComponentRelation.objects.filter(product_ref=instance.name).distinct()
-        relations = [
-            {"type": pcr.type, "external_system_id": pcr.external_system_id} for pcr in related_pcrs
-        ]
-        return relations
+        relations = set()
+        for pcr in related_pcrs:
+            relations.add({"type": pcr.type, "external_system_id": pcr.external_system_id})
+        return list(relations)
 
     @staticmethod
     def get_build_count(instance):
@@ -869,10 +869,10 @@ class ProductVariantSerializer(serializers.ModelSerializer):
     @staticmethod
     def get_relations(instance) -> list[dict[str, str]]:
         related_pcrs = ProductComponentRelation.objects.filter(product_ref=instance.name).distinct()
-        relations = [
-            {"type": pcr.type, "external_system_id": pcr.external_system_id} for pcr in related_pcrs
-        ]
-        return relations
+        relations = set()
+        for pcr in related_pcrs:
+            relations.add({"type": pcr.type, "external_system_id": pcr.external_system_id})
+        return list(relations)
 
     @staticmethod
     def get_build_count(instance):

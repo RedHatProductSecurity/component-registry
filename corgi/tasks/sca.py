@@ -76,7 +76,7 @@ def software_composition_analysis(build_id: int):
         logger.error("Mutliple %s root components found for %s", software_build.name, build_id)
         return
 
-    root_node = root_component.get_root
+    root_node = root_component.cnodes.first()
     if not root_node:
         logger.error("Didn't find root component node for %s", root_component.purl)
         return
@@ -89,20 +89,20 @@ def software_composition_analysis(build_id: int):
 
     scan_files(root_node, distgit_sources)
 
-    root_component.save_component_taxonomy()
-    root_component.save_product_taxonomy()
+    software_build.save_component_taxonomy()
+    software_build.save_product_taxonomy()
 
     logger.info("Finished software composition analysis for %s", build_id)
 
 
 def _scan_remote_sources(root_component, root_node):
-    for source in root_component.sources:
-        source_node = ComponentNode.objects.get(purl=source, parent=root_node)
+    for upstream in root_component.upstreams:
+        upstream_node = ComponentNode.objects.get(purl=upstream, parent=root_node)
         # This is potentially quite slow. We could probably make this more efficient by splitting
         # it off into another task
-        if "remote_source_archive" in source_node.obj.meta_attr:
+        if "remote_source_archive" in upstream_node.obj.meta_attr:
             # Download source to scratch
-            remote_source_archive = source_node.obj.meta_attr["remote_source_archive"]
+            remote_source_archive = upstream_node.obj.meta_attr["remote_source_archive"]
             url = urllib.parse.urlparse(remote_source_archive)
             filename = url.path.rsplit("/", 1)[-1]
             target_filepath = Path(
@@ -112,7 +112,7 @@ def _scan_remote_sources(root_component, root_node):
             # results we could probably unpack the archive and scan only the app subdirectory
             _download_source(remote_source_archive, target_filepath)
             # Scan source
-            scan_files(source_node, [target_filepath])
+            scan_files(upstream_node, [target_filepath])
             # remove source
             package_dir = Path(os.path.dirname(target_filepath))
             shutil.rmtree(package_dir)

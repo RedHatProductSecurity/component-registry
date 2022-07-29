@@ -216,8 +216,6 @@ class Brew:
                     }
                     bundled_components.append(bundled_component)
 
-            rpm_deps = self.get_koji_session().getRPMDeps(rpm_id)
-            rpm_component["meta"]["capabilities"] = self._extract_rpm_capabilities(rpm_id, rpm_deps)
             rpm_component["components"] = bundled_components
             rpm_components.append(rpm_component)
 
@@ -230,42 +228,6 @@ class Brew:
 
         # TODO: list all components used as build requirements
         return srpm_component
-
-    @classmethod
-    def _extract_rpm_capabilities(cls, rpm_id: int, rpm_caps: list) -> list:
-        if not rpm_caps:
-            return []
-
-        capabilities = []
-        id_generator = itertools.count(1)
-        for cap in rpm_caps:
-            # Store required, provides, and recommended types
-            # Ref: https://pagure.io/koji/blob/master/f/koji/__init__.py#_225
-            #      https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/packaging_and_distributing_software/new-features-in-rhel-8_packaging-and-distributing-software
-            if cap["type"] == koji.DEP_REQUIRE:
-                relationship = "requires"
-            elif cap["type"] == koji.DEP_PROVIDE:
-                relationship = "provides"
-            elif cap["type"] == koji.DEP_RECOMMEND:
-                relationship = "recommends"
-            else:
-                continue
-            # RPM capabilities are strings the Package Manager (DNF) uses to determine relationships
-            #  https://docs.fedoraproject.org/en-US/Fedora_Draft_Documentation/0.1/html/RPM_Guide/ch-dependencies.html#RPM_Guide-Dependencies-Understanding
-            capability = {
-                "type": relationship,
-                "id": f"{rpm_id}-cap-{next(id_generator)}",
-                "name": cap["name"],
-                "version": cap["version"],
-                # Use kojiweb.utils to translate when displaying
-                # https://pagure.io/koji/blob/master/f/www/lib/kojiweb/util.py#_482
-                "flags": cap["flags"],
-                "analysis_meta": {
-                    "source": ["koji.getRPMDeps"],
-                },
-            }
-            capabilities.append(capability)
-        return capabilities
 
     @staticmethod
     def _build_archive_dl_url(filename: str, build_info: dict) -> str:

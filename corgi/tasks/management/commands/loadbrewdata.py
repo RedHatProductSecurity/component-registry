@@ -35,9 +35,9 @@ class Command(BaseCommand):
         if options["build_ids"]:
             build_ids = options["build_ids"]
         elif options["brew_tag"]:
-            brew = Brew().get_koji_session()
+            brew = Brew()
             try:
-                builds = brew.listTagged(options["brew_tag"])
+                builds = brew.koji_session.listTagged(options["brew_tag"])
             except GenericError as exc:
                 self.stderr.write(self.style.ERROR(str(exc)))
                 sys.exit(1)

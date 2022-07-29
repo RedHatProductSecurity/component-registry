@@ -155,15 +155,17 @@ def save_component(component, parent, softwarebuild=None):
 
 def save_srpm(softwarebuild, build_data) -> ComponentNode:
     obj, created = Component.objects.get_or_create(
-        type=Component.Type.SRPM,
         name=build_data["meta"].get("name"),
+        type=Component.Type.SRPM,
+        arch=build_data["meta"].get("arch", ""),
         version=build_data["meta"].get("version", ""),
         release=build_data["meta"].get("release", ""),
-        arch=build_data["meta"].get("arch", ""),
-        license=build_data["meta"].get("license", ""),
-        description=build_data["meta"].get("description", ""),
-        software_build=softwarebuild,
-        meta_attr=build_data["meta"],
+        defaults={
+            "license": build_data["meta"].get("license", ""),
+            "description": build_data["meta"].get("description", ""),
+            "software_build": softwarebuild,
+            "meta_attr": build_data["meta"],
+        },
     )
     node, _ = obj.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE,
@@ -200,15 +202,16 @@ def process_image_components(image):
 
 
 def save_container(softwarebuild, build_data) -> ComponentNode:
-
     obj, created = Component.objects.get_or_create(
-        type=Component.Type.CONTAINER_IMAGE,
         name=build_data["meta"]["name"],
+        type=Component.Type.CONTAINER_IMAGE,
+        arch="noarch",
         version=build_data["meta"]["version"],
         release=build_data["meta"]["release"],
-        arch="noarch",
-        software_build=softwarebuild,
-        meta_attr=build_data["meta"],
+        defaults={
+            "software_build": softwarebuild,
+            "meta_attr": build_data["meta"],
+        },
     )
     root_node, _ = obj.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE,
@@ -232,13 +235,15 @@ def save_container(softwarebuild, build_data) -> ComponentNode:
     if "image_components" in build_data:
         for image in build_data["image_components"]:
             obj, created = Component.objects.get_or_create(
-                type=Component.Type.CONTAINER_IMAGE,
                 name=image["meta"].pop("name"),
+                type=Component.Type.CONTAINER_IMAGE,
+                arch=image["meta"].pop("arch"),
                 version=image["meta"].pop("version"),
                 release=image["meta"].pop("release"),
-                arch=image["meta"].pop("arch"),
-                software_build=softwarebuild,
-                meta_attr=image["meta"],
+                defaults={
+                    "software_build": softwarebuild,
+                    "meta_attr": image["meta"],
+                },
             )
             image_arch_node, _ = obj.cnodes.get_or_create(
                 type=ComponentNode.ComponentNodeType.PROVIDES,
@@ -278,15 +283,17 @@ def recurse_components(component, parent):
 
 def save_module(softwarebuild, build_data) -> ComponentNode:
     obj, created = Component.objects.get_or_create(
-        type=Component.Type.RHEL_MODULE,
         name=build_data["meta"]["name"],
+        type=Component.Type.RHEL_MODULE,
+        arch=build_data["meta"].get("arch", ""),
         version=build_data["meta"].get("version", ""),
         release=build_data["meta"].get("release", ""),
-        arch=build_data["meta"].get("arch", ""),
-        license=build_data["meta"].get("license", ""),
-        description=build_data["meta"].get("description", ""),
-        software_build=softwarebuild,
-        meta_attr=build_data["meta"]["components"],
+        defaults={
+            "license": build_data["meta"].get("license", ""),
+            "description": build_data["meta"].get("description", ""),
+            "software_build": softwarebuild,
+            "meta_attr": build_data["meta"]["components"],
+        },
     )
     node, _ = obj.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE,

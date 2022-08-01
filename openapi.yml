@@ -2102,11 +2102,7 @@ components:
           type: string
           readOnly: true
         relations:
-          type: array
-          items:
-            type: object
-            additionalProperties:
-              type: string
+          type: string
           readOnly: true
         tags:
           type: array
@@ -2189,11 +2185,7 @@ components:
             $ref: '#/components/schemas/Tag'
           readOnly: true
         relations:
-          type: array
-          items:
-            type: object
-            additionalProperties:
-              type: string
+          type: string
           readOnly: true
         products:
           type: string

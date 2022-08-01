@@ -606,7 +606,7 @@ def test_fetch_rpm_build(mock_sca):
         "pkg:rpm/redhat/cockpit-system@251-1.el8?arch=noarch",
     ]:
         assert package in provides
-    assert len(srpm.get_upstream()) == 1
+    assert len(srpm.get_upstreams()) == 1
     assert len(srpm.get_source()) == 1
     cockpit_system = Component.objects.get(
         type=Component.Type.RPM, name="cockpit-system", version="251", release="1.el8"

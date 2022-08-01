@@ -6,7 +6,7 @@ from types import SimpleNamespace
 from typing import Any, Tuple
 from urllib.parse import urlparse
 
-import koji  # type: ignore
+import koji
 import requests
 import yaml
 from django.conf import settings
@@ -216,8 +216,6 @@ class Brew:
                     }
                     bundled_components.append(bundled_component)
 
-            rpm_deps = self.get_koji_session().getRPMDeps(rpm_id)
-            rpm_component["meta"]["capabilities"] = self._extract_rpm_capabilities(rpm_id, rpm_deps)
             rpm_component["components"] = bundled_components
             rpm_components.append(rpm_component)
 
@@ -230,42 +228,6 @@ class Brew:
 
         # TODO: list all components used as build requirements
         return srpm_component
-
-    @classmethod
-    def _extract_rpm_capabilities(cls, rpm_id: int, rpm_caps: list) -> list:
-        if not rpm_caps:
-            return []
-
-        capabilities = []
-        id_generator = itertools.count(1)
-        for cap in rpm_caps:
-            # Store required, provides, and recommended types
-            # Ref: https://pagure.io/koji/blob/master/f/koji/__init__.py#_225
-            #      https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/packaging_and_distributing_software/new-features-in-rhel-8_packaging-and-distributing-software
-            if cap["type"] == koji.DEP_REQUIRE:
-                relationship = "requires"
-            elif cap["type"] == koji.DEP_PROVIDE:
-                relationship = "provides"
-            elif cap["type"] == koji.DEP_RECOMMEND:
-                relationship = "recommends"
-            else:
-                continue
-            # RPM capabilities are strings the Package Manager (DNF) uses to determine relationships
-            #  https://docs.fedoraproject.org/en-US/Fedora_Draft_Documentation/0.1/html/RPM_Guide/ch-dependencies.html#RPM_Guide-Dependencies-Understanding
-            capability = {
-                "type": relationship,
-                "id": f"{rpm_id}-cap-{next(id_generator)}",
-                "name": cap["name"],
-                "version": cap["version"],
-                # Use kojiweb.utils to translate when displaying
-                # https://pagure.io/koji/blob/master/f/www/lib/kojiweb/util.py#_482
-                "flags": cap["flags"],
-                "analysis_meta": {
-                    "source": ["koji.getRPMDeps"],
-                },
-            }
-            capabilities.append(capability)
-        return capabilities
 
     @staticmethod
     def _build_archive_dl_url(filename: str, build_info: dict) -> str:
@@ -335,63 +297,67 @@ class Brew:
             },
         }
 
-        if "index" in build_info["extra"]["image"]:
-            component["meta"]["digests"] = build_info["extra"]["image"]["index"]["digests"]
-
-        if "parent_build_id" in build_info["extra"]["image"]:
-            parent_image = build_info["extra"]["image"]["parent_build_id"]
-            component["meta"]["parent"] = parent_image
-
         go_stdlib_version = ""
-        # These show up in multi-stage builds such as Build ID 1475846 and are build dependencies
-        if "parent_image_builds" in build_info["extra"]["image"]:
-            build_parent_nvrs = []
-            for parent_image_build in build_info["extra"]["image"]["parent_image_builds"].values():
-                build_name, build_version, _ = Brew.split_nvr(parent_image_build["nvr"])
-                if "go-toolset" in build_name or "golang" in build_name:
-                    build_parent_nvrs.append(build_name)
-                    go_stdlib_version = build_version.removeprefix("v")
-
-            component["meta"]["build_parent_nvrs"] = build_parent_nvrs
-
-        # Legacy OSBS builds such as 1890187 copy source code into dist-git but specify where
-        # the source code came from using the 'go' stanza in container.yaml
-        # ref: https://osbs.readthedocs.io/en/osbs_ocp3/users.html#go
-        go_modules = []
-        if "go" in build_info["extra"]["image"]:
-            for module in build_info["extra"]["image"]["go"]["modules"]:
-                if "module" in module:
-                    go_modules.append(module["module"])
-        if go_modules:
-            component["meta"]["upstream_go_modules"] = go_modules
-
-        # builds such as 1911112 have all their info in typeinfo as they use remote_sources map in
-        # remote_source json, and tar download urls by cachito url
         remote_sources: dict[str, Tuple] = {}
+        # TODO: Should we raise an error if build_info["extra"] is missing?
+        if build_info["extra"]:
+            if "index" in build_info["extra"]["image"]:
+                component["meta"]["digests"] = build_info["extra"]["image"]["index"]["digests"]
 
-        # Cachito ref https://osbs.readthedocs.io/en/osbs_ocp3/users.html#remote-sources
-        if (
-            "typeinfo" in build_info["extra"]
-            and "remote-sources" in build_info["extra"]["typeinfo"]
-        ):
-            remote_sources_v = build_info["extra"]["typeinfo"]["remote-sources"]
-            if isinstance(remote_sources_v, dict):
-                # Need to collect json, and tar download urls from archives data
-                # Fill the tuple in with empty values now
-                cachito_url = remote_sources_v["remote_source_url"]
-                remote_sources[cachito_url] = ("", "")
-            else:
-                for source in remote_sources_v:
-                    if "archives" in source:
-                        archives = source["archives"]
-                        json = self._build_archive_dl_url(archives[0], build_info)
-                        tar = self._build_archive_dl_url(archives[1], build_info)
-                        remote_sources[source["url"]] = (json, tar)
-                    else:
-                        logger.warning(
-                            "Expected to find archives in remote-source dict, only found %s",
-                            source.keys(),
-                        )
+            if "parent_build_id" in build_info["extra"]["image"]:
+                parent_image = build_info["extra"]["image"]["parent_build_id"]
+                component["meta"]["parent"] = parent_image
+
+            # These show up in multistage builds such as Build ID 1475846 and are build dependencies
+            if "parent_image_builds" in build_info["extra"]["image"]:
+                build_parent_nvrs = []
+                for parent_image_build in build_info["extra"]["image"][
+                    "parent_image_builds"
+                ].values():
+                    build_name, build_version, _ = Brew.split_nvr(parent_image_build["nvr"])
+                    if "go-toolset" in build_name or "golang" in build_name:
+                        build_parent_nvrs.append(build_name)
+                        go_stdlib_version = build_version.removeprefix("v")
+
+                component["meta"]["build_parent_nvrs"] = build_parent_nvrs
+
+            # Legacy OSBS builds such as 1890187 copy source code into dist-git but specify where
+            # the source code came from using the 'go' stanza in container.yaml
+            # ref: https://osbs.readthedocs.io/en/osbs_ocp3/users.html#go
+            go_modules = []
+            if "go" in build_info["extra"]["image"]:
+                for module in build_info["extra"]["image"]["go"]["modules"]:
+                    if "module" in module:
+                        go_modules.append(module["module"])
+            if go_modules:
+                component["meta"]["upstream_go_modules"] = go_modules
+
+            # builds such as 1911112 have all their info in typeinfo as they use remote_sources map
+            # in remote_source json, and tar download urls by cachito url
+
+            # Cachito ref https://osbs.readthedocs.io/en/osbs_ocp3/users.html#remote-sources
+            if (
+                "typeinfo" in build_info["extra"]
+                and "remote-sources" in build_info["extra"]["typeinfo"]
+            ):
+                remote_sources_v = build_info["extra"]["typeinfo"]["remote-sources"]
+                if isinstance(remote_sources_v, dict):
+                    # Need to collect json, and tar download urls from archives data
+                    # Fill the tuple in with empty values now
+                    cachito_url = remote_sources_v["remote_source_url"]
+                    remote_sources[cachito_url] = ("", "")
+                else:
+                    for source in remote_sources_v:
+                        if "archives" in source:
+                            archives = source["archives"]
+                            json = self._build_archive_dl_url(archives[0], build_info)
+                            tar = self._build_archive_dl_url(archives[1], build_info)
+                            remote_sources[source["url"]] = (json, tar)
+                        else:
+                            logger.warning(
+                                "Expected to find archives in remote-source dict, only found %s",
+                                source.keys(),
+                            )
 
         child_image_components: list[dict[str, Any]] = []
         archives = self.koji_session.listArchives(build_id)

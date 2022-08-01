@@ -93,7 +93,7 @@ class ComponentSerializer(serializers.ModelSerializer):
 
     provides = serializers.SerializerMethodField()
     sources = serializers.SerializerMethodField()
-    upstream = serializers.SerializerMethodField()
+    upstreams = serializers.SerializerMethodField()
 
     def get_link(self, instance):
         request = self.context.get("request")
@@ -212,10 +212,10 @@ class ComponentSerializer(serializers.ModelSerializer):
                 )
         return components
 
-    def get_upstream(self, instance):
+    def get_upstreams(self, instance):
         request = self.context.get("request")
         components = list()
-        for purl in instance.upstream:
+        for purl in instance.upstreams:
             if request and "HTTP_HOST" in request.META:
                 components.append(
                     {
@@ -253,7 +253,7 @@ class ComponentSerializer(serializers.ModelSerializer):
             # "channels",
             "sources",
             "provides",
-            "upstream",
+            "upstreams",
             # "meta_attr",
         ]
 
@@ -270,7 +270,7 @@ class ComponentDetailSerializer(serializers.ModelSerializer):
 
     provides = serializers.SerializerMethodField()
     sources = serializers.SerializerMethodField()
-    upstream = serializers.SerializerMethodField()
+    upstreams = serializers.SerializerMethodField()
 
     def get_products(self, instance):
         request = self.context.get("request")
@@ -388,10 +388,10 @@ class ComponentDetailSerializer(serializers.ModelSerializer):
                 )
         return components
 
-    def get_upstream(self, instance):
+    def get_upstreams(self, instance):
         request = self.context.get("request")
         components = list()
-        for purl in instance.upstream:
+        for purl in instance.upstreams:
             if request and "HTTP_HOST" in request.META:
                 components.append(
                     {
@@ -429,7 +429,7 @@ class ComponentDetailSerializer(serializers.ModelSerializer):
             # "channels",
             "sources",
             "provides",
-            "upstream",
+            "upstreams",
             "meta_attr",
         ]
 

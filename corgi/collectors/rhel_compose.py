@@ -26,7 +26,9 @@ class RhelCompose:
         # Fetch general compose info file to extract the date timestamp the compose was created
         # and the list of variants in this compose. All variants have empty lists created that
         # will be filled in below.
-        compose_info = requests.get(compose_url + "composeinfo.json").json()
+        response = requests.get(compose_url + "composeinfo.json")
+        response.raise_for_status()
+        compose_info = response.json()
         compose_created_date = compose_info["payload"]["compose"]["date"]
         compose_created_date = datetime.strptime(compose_created_date, "%Y%m%d")
 
@@ -85,6 +87,7 @@ class RhelCompose:
                 f"/rhel-{rhel_major_version}/rel-eng/RHEL-{rhel_major_version}/"
             )
             response = requests.get(compose_list_url)
+            response.raise_for_status()
             # TODO: file RFE for RCM to add a top-level compose_list.json file with this data so we
             #  don't have to parse HTML with regexes...https://stackoverflow.com/a/1732454/864413
             for line in response.text.split("\n"):

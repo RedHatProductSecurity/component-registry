@@ -310,7 +310,7 @@ paths:
           - UNKNOWN
           - UPSTREAM
       - in: query
-        name: upstream
+        name: upstreams
         schema:
           type: string
       - in: query
@@ -1682,7 +1682,7 @@ components:
         provides:
           type: string
           readOnly: true
-        upstream:
+        upstreams:
           type: string
           readOnly: true
       required:
@@ -1701,7 +1701,7 @@ components:
       - sources
       - tags
       - type
-      - upstream
+      - upstreams
       - uuid
       - version
     ComponentDetail:
@@ -1782,7 +1782,7 @@ components:
         provides:
           type: string
           readOnly: true
-        upstream:
+        upstreams:
           type: string
           readOnly: true
         meta_attr:
@@ -1804,7 +1804,7 @@ components:
       - sources
       - tags
       - type
-      - upstream
+      - upstreams
       - uuid
       - version
     ComponentList:

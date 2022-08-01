@@ -35,11 +35,10 @@ def link_stream_using_brew_tag(brew_tag: str, stream_name: str, inherit: bool = 
         product_variant, _ = ProductVariant.objects.get_or_create(name=variant)
         product_stream_node = ProductNode.objects.get(object_id=product_stream.pk)
         product_variant.pnodes.get_or_create(parent=product_stream_node)
-        product_stream = ProductStream.objects.get(uuid=product_stream.pk)
-        product_stream.save_product_taxonomy()
-        product_stream.save()
         product_variant.save_product_taxonomy()
         product_variant.save()
+    product_stream.save_product_taxonomy()
+    product_stream.save()
 
 
 def save_product_components_for_builds(build_ids: list[int]) -> QuerySet:

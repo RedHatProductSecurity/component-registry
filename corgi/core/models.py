@@ -218,7 +218,6 @@ class SoftwareBuild(TimeStampedModel):
             for d in component.cnodes.all().get_descendants(include_self=True):
                 if not d.obj:
                     continue
-                d.obj.product_variants = d.obj.get_product_variants()
                 for a in ["products", "product_versions", "product_streams"]:
                     # Since we're only setting the product details for a specific build id we need
                     # to ensure we are only updating, not replacing the existing product details.

@@ -706,9 +706,8 @@ class Brew:
         return component
 
     def get_builds_with_tag(self, brew_tag: str, inherit: bool = False) -> list[int]:
-        brew = self.get_koji_session()
         try:
-            builds = brew.listTagged(brew_tag, inherit=inherit)
+            builds = self.koji_session.listTagged(brew_tag, inherit=inherit)
             return [b["build_id"] for b in builds]
         except koji.GenericError as exc:
             logger.warning("Couldn't find brew builds with tag %s: %s", brew_tag, exc)

@@ -748,11 +748,17 @@ class ProductStreamSerializer(serializers.ModelSerializer):
         return p
 
     @staticmethod
-    def get_relations(instance) -> list[dict[str, str]]:
-        related_pcrs = ProductComponentRelation.objects.filter(product_ref=instance.name).distinct()
-        relations = [
-            {"type": pcr.type, "external_system_id": pcr.external_system_id} for pcr in related_pcrs
-        ]
+    def get_relations(instance):
+        relations = list()
+        for external_system_id in (
+            ProductComponentRelation.objects.filter(product_ref=instance.name)
+            .distinct()
+            .values_list("external_system_id", flat=True)
+        ):
+            pcr = ProductComponentRelation.objects.filter(
+                external_system_id=external_system_id
+            ).first()
+            relations.append({"type": pcr.type, "external_system_id": pcr.external_system_id})
         return relations
 
     @staticmethod
@@ -867,11 +873,17 @@ class ProductVariantSerializer(serializers.ModelSerializer):
         return p
 
     @staticmethod
-    def get_relations(instance) -> list[dict[str, str]]:
-        related_pcrs = ProductComponentRelation.objects.filter(product_ref=instance.name).distinct()
-        relations = [
-            {"type": pcr.type, "external_system_id": pcr.external_system_id} for pcr in related_pcrs
-        ]
+    def get_relations(instance):
+        relations = list()
+        for external_system_id in (
+            ProductComponentRelation.objects.filter(product_ref=instance.name)
+            .distinct()
+            .values_list("external_system_id", flat=True)
+        ):
+            pcr = ProductComponentRelation.objects.filter(
+                external_system_id=external_system_id
+            ).first()
+            relations.append({"type": pcr.type, "external_system_id": pcr.external_system_id})
         return relations
 
     @staticmethod

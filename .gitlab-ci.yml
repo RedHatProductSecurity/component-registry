@@ -1,6 +1,12 @@
 stages:
   - lint
   - test
+  - deploy-stage
+
+include:
+  - project: 'product-security/dev/component-registry-ops'
+    ref: main
+    file: '/templates/gitlab/ansible-run.yml'
 
 before_script:
     - export LANG=en_US.UTF-8
@@ -17,7 +23,7 @@ before_script:
     - export CORGI_TEST_OSBS_HOST2
     - export CORGI_TEST_OSBS_HOST3
     - export CORGI_TEST_REGISTRY_URL
-  # Not used in tests directly, but needed for tests to pass
+    # Not used in tests directly, but needed for tests to pass
     - export CORGI_LOOKASIDE_CACHE_URL
     - export CORGI_APP_STREAMS_LIFE_CYCLE_URL
     - export CORGI_BREW_URL
@@ -27,6 +33,11 @@ before_script:
     - export CORGI_PRODSEC_DASHBOARD_URL
     - export PIP_INDEX_URL
     - export ROOT_CA_URL
+
+deploy-stage:
+  stage: deploy-stage
+  extends:
+    - .ansible-run
 
 test:
   stage: test

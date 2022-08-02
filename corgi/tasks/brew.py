@@ -54,26 +54,20 @@ def slow_fetch_brew_build(build_id: int):
     for c in build.get("components", []):
         save_component(c, root_node, softwarebuild)
 
+    # Once we have the full component tree loaded
+    softwarebuild.save_component_taxonomy()
+    # We don't call save_product_taxonomy here to reduce CPU cycles and allow async call of load_errata task
+
     # for builds with errata tags set ProductComponentRelation
     # get_component_data always calls _extract_advisory_ids to set tags, but list may be empty
     if not build_meta["errata_tags"]:
         logger.info("no errata tags")
     else:
         if isinstance(build_meta["errata_tags"], str):
-            build_ids = load_errata([build_meta["errata_tags"]])
+            load_errata.delay(build_meta["errata_tags"])
         else:
-            build_ids = load_errata(build_meta["errata_tags"])
-        # Calculate and print the percentage of builds for the errata
-        if len(build_ids) > 0:
-            processed_builds = SoftwareBuild.objects.filter(build_id__in=build_ids).count()
-            percentage_complete = int(processed_builds / len(build_ids) * 100)
-            logger.info(
-                "Processed %i%% of builds in %s", percentage_complete, build_meta["errata_tags"]
-            )
-
-    # once all build's components are ingested we must update component taxonomy
-    softwarebuild.save_component_taxonomy()
-    softwarebuild.save_product_taxonomy()
+            for e in build_meta["errata_tags"]:
+                load_errata.delay(e)
 
     if "nested_builds" in build:
         logger.info("Fetching brew builds for %s", build["nested_builds"])

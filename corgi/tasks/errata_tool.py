@@ -42,6 +42,7 @@ def link_stream_using_brew_tag(brew_tag: str, stream_name: str, inherit: bool = 
 
 
 def save_product_components_for_builds(build_ids: list[int]) -> QuerySet:
+    # TODO fix this so that we don't try to call load_errata with a list
     result = chain(get_errata_for_builds.s(build_ids), load_errata.s())()
     result.get()
 
@@ -72,42 +73,44 @@ def get_errata_for_builds(build_ids: list[int]) -> list[str]:
     autoretry_for=RETRYABLE_ERRORS,
     retry_kwargs=RETRY_KWARGS,
 )
-@transaction.atomic
-def load_errata(errata_names: list[str]) -> list[int]:
-    created_relations = 0
+def load_errata(erratum_name):
     et = ErrataTool()
-    build_ids = set()
-    for erratum_name in errata_names:
-        if not erratum_name.isdigit():
-            erratum_id = et.normalize_erratum_id(erratum_name)
-            if not erratum_id:
-                logger.warning("Couldn't normalize erratum: %s", erratum_name)
-                continue
-        else:
-            erratum_id = int(erratum_name)
-        # Get all the PCR with errata_id
-        relation_build_ids = list(
-            ProductComponentRelation.objects.filter(external_system_id=erratum_id).values_list(
-                "build_id", flat=True
-            )
+    if not erratum_name.isdigit():
+        erratum_id = et.normalize_erratum_id(erratum_name)
+        if not erratum_id:
+            logger.warning("Couldn't normalize erratum: %s", erratum_name)
+            return
+    else:
+        erratum_id = int(erratum_name)
+    # Get all the PCR with errata_id
+    relation_build_ids = (
+        ProductComponentRelation.objects.filter(
+            type=ProductComponentRelation.Type.ERRATA, external_system_id=erratum_id
         )
-        # Check is we have software builds for all of them
-        if (
-            # Skip loading erratum if we have all its builds in DB already
-            # But handle case / don't skip it when num_build_ids == num_builds == 0
-            0
-            < len(relation_build_ids)
-            == SoftwareBuild.objects.filter(build_id__in=relation_build_ids).count()
-        ):
-            logger.info("Already processed %s", erratum_id)
-            continue
+        .values_list("build_id", flat=True)
+        .distinct()
+    )
+    # Convert them to ints for use in queries and tasks
+    # We don't store them as int because another build system not use ints
+    relation_int_build_ids = set([int(b_id) for b_id in relation_build_ids])
+
+    # Check is we have software builds for all of them.
+    # Most of the time will not have all the builds
+    # so we don't load all the software builds at this point
+    no_of_processed_builds = SoftwareBuild.objects.filter(
+        build_id__in=relation_int_build_ids
+    ).count()
+
+    if len(relation_int_build_ids) == 0:
+        # Save PCR
         logger.info("Saving product components for errata %s", erratum_id)
         variant_to_component_map = et.get_erratum_components(str(erratum_id))
         for variant_id, build_objects in variant_to_component_map.items():
             for build_obj in build_objects:
                 for build_id, errata_components in build_obj.items():
-                    build_ids.add(int(build_id))
-                    _, created = ProductComponentRelation.objects.get_or_create(
+                    # Add to relations list as we go, so we can fetch them below
+                    relation_int_build_ids.add(int(build_id))
+                    ProductComponentRelation.objects.get_or_create(
                         external_system_id=erratum_id,
                         product_ref=variant_id,
                         build_id=build_id,
@@ -116,12 +119,27 @@ def load_errata(errata_names: list[str]) -> list[int]:
                             "meta_attr": {"components": errata_components},
                         },
                     )
-                    if created:
-                        created_relations += 1
-    logger.info("Saved %s new product component relations", created_relations)
-    for build_id in build_ids:
-        app.send_task("corgi.tasks.brew.slow_fetch_brew_build", args=[build_id])
-    return list(build_ids)
+    # If the number of relations was more than 0 check if we've processed all the builds
+    # in the errata
+    elif len(relation_build_ids) == no_of_processed_builds:
+        logger.info("Saving product taxonomy for builds")
+        for b in relation_int_build_ids:
+            logger.info("Saving product taxonomy for build %s", b)
+            # once all build's components are ingested we must update component taxonomy
+            sb = SoftwareBuild.objects.get(build_id=b)
+            sb.save_product_taxonomy()
+
+    # Check if we are part way through loading the errata
+    if no_of_processed_builds < len(relation_int_build_ids):
+        # Calculate and print the percentage of builds for the errata
+        if len(relation_int_build_ids) > 0:
+            percentage_complete = int(no_of_processed_builds / len(relation_int_build_ids) * 100)
+            logger.info("Processed %i%% of builds in %s", percentage_complete, erratum_name)
+        for build_id in relation_int_build_ids:
+            logger.info("Calling slow_fetch_brew_build for %s", build_id)
+            app.send_task("corgi.tasks.brew.slow_fetch_brew_build", args=[build_id])
+    else:
+        logger.info("Finished processing %s", erratum_id)
 
 
 @app.task

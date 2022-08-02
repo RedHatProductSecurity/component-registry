@@ -203,8 +203,26 @@ def test_product_component_relations():
     srpm_cnode, _ = srpm.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE, parent=None
     )
-    srpm.save_product_taxonomy()
-    assert ps1.ofuri in srpm.product_streams
+    sb.save_product_taxonomy()
+    c = Component.objects.get(uuid=srpm.uuid)
+    assert ps1.ofuri in c.product_streams
+
+
+def test_product_component_relations_errata():
+    build_id = 1754635
+    sb = SoftwareBuildFactory(build_id=build_id)
+    ProductComponentRelation.objects.create(
+        type=ProductComponentRelation.Type.ERRATA, product_ref="Base8-test", build_id=build_id
+    )
+    p1, ps1, ps2, ps3, pv1a, pv1b = create_product_hierarchy()
+    relate_product_hierarchy(p1, ps1, ps2, ps3, pv1a, pv1b)
+    srpm = ComponentFactory(software_build=sb, type=Component.Type.SRPM)
+    srpm_cnode, _ = srpm.cnodes.get_or_create(
+        type=ComponentNode.ComponentNodeType.SOURCE, parent=None
+    )
+    sb.save_product_taxonomy()
+    c = Component.objects.get(uuid=srpm.uuid)
+    assert ps3.ofuri in c.product_streams
 
 
 def test_get_upstream():

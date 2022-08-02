@@ -871,25 +871,6 @@ class Component(TimeStampedModel):
                     channels.append(descendant.obj.name)
         return list(set(channels))
 
-    # TODO remove this? Force the use of SoftwareBuild.save_product_taxnonomy instead
-    def save_product_taxonomy(self):
-        variant_ids = self.get_product_variants()
-        stream_ids = self.get_product_streams()
-
-        if not variant_ids and not stream_ids:
-            return []
-
-        product_details = get_product_details(variant_ids, stream_ids)
-
-        # Since we have all variant ids for this component, we can replace any existing product
-        # details
-        self.products = list(set(product_details["products"]))
-        self.product_versions = list(set(product_details["product_versions"]))
-        self.product_streams = list(set(product_details["product_streams"]))
-        self.channels = self.get_channels()
-        self.product_variants = list(set(variant_ids))
-        self.save()
-
     def get_provides(self, include_dev=True):
         """return all descendants with PROVIDES ComponentNode type"""
         provides = []

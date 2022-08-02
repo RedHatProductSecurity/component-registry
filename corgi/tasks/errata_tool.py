@@ -1,17 +1,12 @@
 import logging
 
-from celery import chain
 from django.db import transaction
-from django.db.models import QuerySet
 
 from config.celery import app
-from corgi.collectors.brew import Brew
 from corgi.collectors.errata_tool import ErrataTool
 from corgi.core.models import (
     Channel,
     ProductComponentRelation,
-    ProductNode,
-    ProductStream,
     ProductVariant,
     SoftwareBuild,
 )
@@ -23,50 +18,6 @@ logger = logging.getLogger(__name__)
 @app.task
 def load_et_products() -> None:
     ErrataTool().load_et_products()
-
-
-def link_stream_using_brew_tag(brew_tag: str, stream_name: str, inherit: bool = False) -> None:
-    build_ids = Brew().get_builds_with_tag(brew_tag, inherit)
-    product_stream = ProductStream.objects.get(name=stream_name)
-    logger.info("Link stream to variant called with build_ids %s", build_ids)
-    variants = save_product_components_for_builds(build_ids)
-    for variant in variants:
-        # Link the variant with the product stream
-        product_variant, _ = ProductVariant.objects.get_or_create(name=variant)
-        product_stream_node = ProductNode.objects.get(object_id=product_stream.pk)
-        product_variant.pnodes.get_or_create(parent=product_stream_node)
-        product_variant.save_product_taxonomy()
-        product_variant.save()
-    product_stream.save_product_taxonomy()
-    product_stream.save()
-
-
-def save_product_components_for_builds(build_ids: list[int]) -> QuerySet:
-    # TODO fix this so that we don't try to call load_errata with a list
-    result = chain(get_errata_for_builds.s(build_ids), load_errata.s())()
-    result.get()
-
-    # filtering by build_ids ensures we only get variants for the build_ids passed in
-    return (
-        ProductComponentRelation.objects.filter(build_id__in=build_ids)
-        .filter(type=ProductComponentRelation.Type.ERRATA)
-        .values_list("product_ref", flat=True)
-        .order_by("product_ref")
-    )
-
-
-@app.task
-def get_errata_for_builds(build_ids: list[int]) -> list[str]:
-    et = ErrataTool()
-    errata_ids = set()
-    for build_id in build_ids:
-        logger.info("Fetching errata build info for build_id: %s", build_id)
-        build_info = et.get(f"api/v1/build/{build_id}")
-        if "all_errata" in build_info:
-            errata_ids.update([str(e["id"]) for e in build_info["all_errata"]])
-        else:
-            logger.debug("Didn't find any errata for build id: %s", build_id)
-    return list(errata_ids)
 
 
 @app.task(

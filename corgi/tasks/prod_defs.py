@@ -120,6 +120,7 @@ def update_products() -> None:
                             et_pvs = CollectorErrataProductVersion.objects.filter(
                                 brew_tags__contains=[trimmed_brew_tag]
                             )
+                            # TODO add a BREW_TAG productcomposerelation instead of ProductStreamTag
                             # If we didn't find a match in ET collector models create a
                             # ProductSteamTag for later processing
                             if len(et_pvs) == 0:

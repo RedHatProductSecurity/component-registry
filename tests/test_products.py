@@ -24,28 +24,6 @@ pytestmark = pytest.mark.unit
 PRODUCT_DEFINITIONS_CASSETTE = "test_products.yaml"
 
 
-save_compose_test_data = [
-    (
-        "rhel-8.4.0.z",
-        (
-            "RHEL-8.4.0-RC-1.2",
-            f"{os.getenv('CORGI_TEST_DOWNLOAD_URL')}"  # Comma not missing, joined with below
-            "/rhel-8/rel-eng/RHEL-8/RHEL-8.4.0-RC-1.2/compose/metadata/",
-        ),
-        3266,
-    ),
-    (
-        "rhel-7.5.z",
-        (
-            "RHEL-7.5-20171106.1",
-            f"{os.getenv('CORGI_TEST_DOWNLOAD_URL')}"  # Comma not missing, joined with below
-            "/rhel-7/rel-eng/RHEL-7/RHEL-7.5-20171106.1/compose/metadata/",
-        ),
-        0,
-    ),
-]
-
-
 @pytest.mark.vcr()
 @patch("corgi.tasks.rhel_compose.save_compose.delay")
 def test_load_composes(mock_delay):
@@ -70,9 +48,36 @@ def test_load_composes(mock_delay):
     )
 
 
-@pytest.mark.vcr(match_on=["method", "scheme", "host", "port", "path", "body"])
+save_compose_test_data = [
+    (
+        "rhel-8.4.0.z",
+        (
+            "RHEL-8.4.0-RC-1.2",
+            f"{os.getenv('CORGI_TEST_DOWNLOAD_URL')}"  # Comma not missing, joined with below
+            "/rhel-8/rel-eng/RHEL-8/RHEL-8.4.0-RC-1.2/compose/metadata/",
+        ),
+        1,
+    ),
+]
+
+
+class MockBrewResult(object):
+    pass
+
+
+@patch("corgi.tasks.rhel_compose._brew_srpm_lookup")
 @pytest.mark.parametrize("stream_name, compose_coords, no_of_relations", save_compose_test_data)
-def test_save_compose(stream_name, compose_coords, no_of_relations):
+def test_save_compose(
+    mock_brew_srpm_lookup, stream_name, compose_coords, no_of_relations, requests_mock
+):
+    for path in ["composeinfo", "rpms", "osbs", "modules"]:
+        with open(f"tests/data/compose/{compose_coords[0]}/{path}.json") as compose:
+            requests_mock.get(f"{compose_coords[1]}{path}.json", text=compose.read())
+    result = MockBrewResult()
+    result.result = "1533085"
+    mock_brew_srpm_lookup.return_value = [
+        ("389-ds-base-1.4.3.16-13.module+el8.4.0+10307+74bbfb4e", result)
+    ]
     product_stream = ProductStream.objects.create(name=stream_name)
     save_compose(stream_name, compose_coords)
     relations = ProductComponentRelation.objects.filter(product_ref=product_stream)

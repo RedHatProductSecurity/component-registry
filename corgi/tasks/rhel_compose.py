@@ -44,10 +44,8 @@ def save_compose(stream_name, compose_coords) -> None:
     for compose_id, compose_data in RhelCompose.fetch_compose_data(compose_coords).items():
         for variant, compose_type in compose_data["data"].items():
             if "srpms" in compose_type:
-                with brew.koji_session.multicall() as m:
-                    find_build_id_calls = [
-                        (srpm, m.findBuildID(srpm)) for srpm in compose_type["srpms"].keys()
-                    ]
+                srpms = compose_type["srpms"].keys()
+                find_build_id_calls = _brew_srpm_lookup(brew, srpms)
                 for srpm, call in find_build_id_calls:
                     build_id = call.result
                     if not build_id:
@@ -70,6 +68,12 @@ def save_compose(stream_name, compose_coords) -> None:
                         build_id=build_id,
                         defaults={"type": ProductComponentRelation.Type.COMPOSE},
                     )
+
+
+def _brew_srpm_lookup(brew, srpms):
+    with brew.koji_session.multicall() as m:
+        find_build_id_calls = [(srpm, m.findBuildID(srpm)) for srpm in srpms]
+    return find_build_id_calls
 
 
 def get_builds_by_compose(compose_names):

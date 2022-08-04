@@ -17,16 +17,8 @@ class Command(BaseCommand):
             type=str,
             help="Names of composes to load",
         )
-        parser.add_argument(
-            "-c",
-            "--celery",
-            action="store_true",
-            help="Schedule build for ingestion as celery task.",
-        )
 
     def handle(self, *args, **options) -> None:
-        build_ids = []
-
         if options["compose_names"]:
             compose_names = options["compose_names"]
             self.stderr.write(self.style.NOTICE(f"Fetching builds for composes: {compose_names}"))
@@ -47,7 +39,4 @@ class Command(BaseCommand):
 
         for build_id in build_ids:
             id = int(build_id)
-            if options["celery"]:
-                slow_fetch_brew_build.delay(id)
-            else:
-                slow_fetch_brew_build(id)
+            slow_fetch_brew_build.delay(id)

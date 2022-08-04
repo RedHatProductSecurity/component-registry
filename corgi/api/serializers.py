@@ -454,7 +454,7 @@ class ComponentListSerializer(serializers.ModelSerializer):
 
 class ProductSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
-    components = ComponentListSerializer(many=True, read_only=True)
+    components = serializers.SerializerMethodField()
     link = serializers.SerializerMethodField()
     build_count = serializers.SerializerMethodField()
 
@@ -531,6 +531,12 @@ class ProductSerializer(serializers.ModelSerializer):
                 )
         return p
 
+    def get_components(self, instance):
+        request = self.context.get("request")
+        if request and "HTTP_HOST" in request.META:
+            return f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/components?ofuri={instance.ofuri}"  # noqa
+        return None
+
     @staticmethod
     def get_build_count(instance):
         return instance.builds.count()
@@ -545,6 +551,9 @@ class ProductSerializer(serializers.ModelSerializer):
             "description",
             "coverage",
             "build_count",
+            "components",
+            "manifest",
+            "upstream",
             "tags",
             "product_versions",
             "product_streams",
@@ -552,16 +561,13 @@ class ProductSerializer(serializers.ModelSerializer):
             "errata",
             "builds",
             "channels",
-            "components",
-            "manifest",
-            "upstream",
             "meta_attr",
         ]
 
 
 class ProductVersionSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
-    components = ComponentListSerializer(many=True, read_only=True)
+    components = serializers.SerializerMethodField()
     link = serializers.SerializerMethodField()
     build_count = serializers.SerializerMethodField()
 
@@ -638,6 +644,12 @@ class ProductVersionSerializer(serializers.ModelSerializer):
                 )
         return p
 
+    def get_components(self, instance):
+        request = self.context.get("request")
+        if request and "HTTP_HOST" in request.META:
+            return f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/components?ofuri={instance.ofuri}"  # noqa
+        return None
+
     @staticmethod
     def get_build_count(instance):
         return instance.builds.count()
@@ -652,6 +664,9 @@ class ProductVersionSerializer(serializers.ModelSerializer):
             "description",
             "coverage",
             "build_count",
+            "components",
+            "manifest",
+            "upstream",
             "tags",
             "products",
             "product_streams",
@@ -659,16 +674,13 @@ class ProductVersionSerializer(serializers.ModelSerializer):
             "errata",
             "builds",
             "channels",
-            "components",
-            "manifest",
-            "upstream",
             "meta_attr",
         ]
 
 
 class ProductStreamSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
-    components = ComponentListSerializer(many=True, read_only=True)
+    components = serializers.SerializerMethodField()
     link = serializers.SerializerMethodField()
     build_count = serializers.SerializerMethodField()
 
@@ -747,6 +759,12 @@ class ProductStreamSerializer(serializers.ModelSerializer):
                 )
         return p
 
+    def get_components(self, instance):
+        request = self.context.get("request")
+        if request and "HTTP_HOST" in request.META:
+            return f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/components?ofuri={instance.ofuri}"  # noqa
+        return None
+
     @staticmethod
     def get_relations(instance):
         relations = list()
@@ -776,6 +794,9 @@ class ProductStreamSerializer(serializers.ModelSerializer):
             "description",
             "coverage",
             "build_count",
+            "components",
+            "manifest",
+            "upstream",
             "relations",
             "tags",
             "products",
@@ -784,16 +805,13 @@ class ProductStreamSerializer(serializers.ModelSerializer):
             "errata",
             "builds",
             "channels",
-            "components",
-            "manifest",
-            "upstream",
             "meta_attr",
         ]
 
 
 class ProductVariantSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
-    components = ComponentListSerializer(many=True, read_only=True)
+    components = serializers.SerializerMethodField()
     link = serializers.SerializerMethodField()
     build_count = serializers.SerializerMethodField()
 
@@ -872,6 +890,12 @@ class ProductVariantSerializer(serializers.ModelSerializer):
                 )
         return p
 
+    def get_components(self, instance):
+        request = self.context.get("request")
+        if request and "HTTP_HOST" in request.META:
+            return f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/components?ofuri={instance.ofuri}"  # noqa
+        return None
+
     @staticmethod
     def get_relations(instance):
         relations = list()
@@ -899,6 +923,9 @@ class ProductVariantSerializer(serializers.ModelSerializer):
             "name",
             "description",
             "build_count",
+            "components",
+            "manifest",
+            "upstream",
             "tags",
             "relations",
             "products",
@@ -907,9 +934,6 @@ class ProductVariantSerializer(serializers.ModelSerializer):
             "errata",
             "builds",
             "channels",
-            "components",
-            "manifest",
-            "upstream",
             "meta_attr",
         ]
 

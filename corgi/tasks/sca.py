@@ -11,7 +11,6 @@ from typing import IO, Any, Optional, Tuple
 
 import requests
 from django.conf import settings
-from django.db.models import Q
 from requests import Response
 
 from config.celery import app
@@ -57,29 +56,25 @@ def save_component(component: dict[str, Any], parent: ComponentNode):
 @app.task
 def software_composition_analysis(build_id: int):
     logger.info("Started software composition analysis for %s", build_id)
-    try:
-        software_build = SoftwareBuild.objects.get(build_id=build_id)
-    except SoftwareBuild.DoesNotExist:
-        logger.warning("Tried to scan using software build %s which does not exist in DB", build_id)
-        return
+    software_build = SoftwareBuild.objects.get(build_id=build_id)
 
     try:
+        # Get a matching SRPM first
         root_component = Component.objects.get(
-            Q(software_build=software_build, name=software_build.name),
-            Q(type=Component.Type.SRPM)
-            | (Q(type=Component.Type.CONTAINER_IMAGE) & Q(arch="noarch")),
+            software_build=software_build, name=software_build.name, type=Component.Type.SRPM
         )
     except Component.DoesNotExist:
-        logger.error("Component root node (%s) not found for %s", software_build.name, build_id)
-        return
-    except Component.MultipleObjectsReturned:
-        logger.error("Mutliple %s root components found for %s", software_build.name, build_id)
-        return
+        # It might be a container image, else fail the task if neither matched
+        root_component = Component.objects.get(
+            software_build=software_build,
+            name=software_build.name,
+            type=Component.Type.CONTAINER_IMAGE,
+            arch="noarch",
+        )
 
     root_node = root_component.cnodes.first()
     if not root_node:
-        logger.error("Didn't find root component node for %s", root_component.purl)
-        return
+        raise ValueError(f"Didn't find root component node for {root_component.purl}")
     package_type = "rpms"
     if root_component.type == Component.Type.CONTAINER_IMAGE:
         package_type = "containers"

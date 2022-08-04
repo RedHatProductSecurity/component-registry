@@ -17,32 +17,24 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         if options["build_ids"]:
-            build_ids = options["build_ids"]
             self.stdout.write(
                 self.style.SUCCESS(
-                    f"updating {build_ids} component taxonomies",
+                    f"updating {options['build_ids']} component taxonomies",
                 )
             )
-            for build_id in build_ids:
-                sb = SoftwareBuild.objects.get(build_id=build_id)
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        f"updating {sb.build_id}: {sb.name}",
-                    )
-                )
-                sb.save_component_taxonomy
-                sb.save_product_taxonomy
+            builds = SoftwareBuild.objects.filter(build_id__in=options["build_ids"])
         else:
             self.stdout.write(
                 self.style.SUCCESS(
                     "updating all builds component taxonomies",
                 )
             )
-            for sb in SoftwareBuild.objects.all():
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        f"updating {sb.build_id}: {sb.name}",
-                    )
+            builds = SoftwareBuild.objects.all()
+        for sb in builds:
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"updating {sb.build_id}: {sb.name}",
                 )
-                sb.save_component_taxonomy()
-                sb.save_product_taxonomy()
+            )
+            sb.save_component_taxonomy()
+            sb.save_product_taxonomy()

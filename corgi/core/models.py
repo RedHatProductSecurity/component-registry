@@ -260,6 +260,7 @@ class ProductModel(models.Model):
     lifecycle_url = models.CharField(max_length=1024, default="")
 
     # Override each of the below on that model, e.g. products = None on the Product model
+    pnodes = GenericRelation(ProductNode)  # Needed to avoid a mypy warning
     products = fields.ArrayField(models.CharField(max_length=200), default=list)
     product_versions = fields.ArrayField(models.CharField(max_length=200), default=list)
     product_streams = fields.ArrayField(models.CharField(max_length=200), default=list)
@@ -343,7 +344,7 @@ class ProductModel(models.Model):
         )
 
     @property
-    def coverage(self):
+    def coverage(self) -> int:
         if not self.pnodes.exists():
             return 0
         pnode_children = self.pnodes.first().get_children()

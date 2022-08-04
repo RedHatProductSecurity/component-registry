@@ -6,6 +6,7 @@ from collections import defaultdict
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
+from django.core.exceptions import MultipleObjectsReturned
 from django.db import models
 from django.db.models import Q, QuerySet
 from mptt.models import MPTTModel, TreeForeignKey
@@ -764,26 +765,31 @@ class Component(TimeStampedModel):
         roots = []
 
         for cnode in self.cnodes.all():
-            root = cnode.get_root()
-            if root.obj.type == Component.Type.CONTAINER_IMAGE:
-                # TODO if we change the CONTAINER->RPM ComponentNode.type to something other than
-                # 'PROVIDES' we would check for that type here to prevent 'hardcoding' the
-                # container -> rpm relationship here.
+            try:
+                root = cnode.get_root()
+                if root.obj.type == Component.Type.CONTAINER_IMAGE:
+                    # TODO if we change the CONTAINER->RPM ComponentNode.type to something other than # noqa
+                    # 'PROVIDES' we would check for that type here to prevent 'hardcoding' the
+                    # container -> rpm relationship here.
 
-                # RPMs are included as children of Containers as well as SRPMs
-                # We don't want to include Containers in the RPMs roots.
-                # Partly because RPMs in containers can have unprocesses SRPMs
-                # And partly because we use roots to find upstream components,
-                # and it's not true to say that rpms share upstreams with containers
-                rpm_desendant = False
-                for ancestor in cnode.get_ancestors(include_self=True):
-                    if ancestor.obj.type == Component.Type.RPM:
-                        rpm_desendant = True
-                if not rpm_desendant:
+                    # RPMs are included as children of Containers as well as SRPMs
+                    # We don't want to include Containers in the RPMs roots.
+                    # Partly because RPMs in containers can have unprocesses SRPMs
+                    # And partly because we use roots to find upstream components,
+                    # and it's not true to say that rpms share upstreams with containers
+                    rpm_desendant = False
+                    for ancestor in cnode.get_ancestors(include_self=True):
+                        if ancestor.obj.type == Component.Type.RPM:
+                            rpm_desendant = True
+                    if not rpm_desendant:
+                        roots.append(root)
+                else:
                     roots.append(root)
-            else:
-                roots.append(root)
-        return roots
+            except MultipleObjectsReturned:
+                logger.info(
+                    "Component %s returned multiple objects when returning get_roots", self.purl
+                )
+        return list(set(roots))
 
     @property
     def build_meta(self):
@@ -881,10 +887,20 @@ class Component(TimeStampedModel):
             provides.append(descendant.purl)
         return list(set(provides))
 
-    def get_source(self):
+    def get_source(self) -> list:
         """return all root nodes"""
         # this uses the mptt get_root function, not the get_root property defined on Component
-        return [cnode.get_root().purl for cnode in self.cnodes.all()]
+        sources = []
+        for cnode in self.cnodes.all():
+            try:
+                source = cnode.get_root()
+                if source:
+                    sources.append(source.purl)
+            except MultipleObjectsReturned:
+                logger.info(
+                    "Component %s returned multiple objects when returning sources", self.purl
+                )
+        return list(set(sources))
 
     def get_upstreams(self):
         """return upstreams component ancestors in family trees"""
@@ -898,8 +914,8 @@ class Component(TimeStampedModel):
                 c for c in root.get_children() if c.type == ComponentNode.ComponentNodeType.SOURCE
             ]
             # Cachito builds nest components under the relevant source component for that
-            # container build, eg. buildID=1911112. In that case we need to walk up the tree from
-            # the current node to find its relevant source
+            # container build, eg. buildID=1911112. In that case we need to walk up the
+            # tree from the current node to find its relevant source
             if (
                 root.obj.type == Component.Type.CONTAINER_IMAGE
                 and root.obj.arch == "noarch"

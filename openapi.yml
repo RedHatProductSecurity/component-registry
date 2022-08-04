@@ -386,20 +386,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Component'
+              $ref: '#/components/schemas/Tag'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Component'
+              $ref: '#/components/schemas/Tag'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Component'
+              $ref: '#/components/schemas/Tag'
         required: true
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Component'
+                $ref: '#/components/schemas/Tag'
           description: ''
     delete:
       operationId: v1_components_tags_destroy
@@ -1308,16 +1308,33 @@ paths:
           description: No response body
   /api/v1/reports/coverage:
     get:
-      operationId: v1_reports_coverage_retrieve
+      operationId: v1_reports_coverage_list
       description: View for api/v1/reports/coverage
+      parameters:
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
       tags:
       - v1
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProductList'
+          description: ''
   /api/v1/reports/coverage/{uuid}:
     get:
-      operationId: v1_reports_coverage_retrieve_2
+      operationId: v1_reports_coverage_retrieve
       parameters:
       - in: path
         name: uuid
@@ -1330,7 +1347,11 @@ paths:
       - v1
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+          description: ''
   /api/v1/schema:
     get:
       operationId: v1_schema_retrieve
@@ -1483,7 +1504,11 @@ paths:
       - v1
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoftwareBuild'
+          description: ''
   /api/v1/taxonomy/components:
     get:
       operationId: v1_taxonomy_components_retrieve
@@ -1665,25 +1690,53 @@ components:
             type: string
           readOnly: true
         products:
-          type: string
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
           readOnly: true
         product_versions:
-          type: string
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
           readOnly: true
         product_streams:
-          type: string
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
           readOnly: true
         product_variants:
-          type: string
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
           readOnly: true
         sources:
-          type: string
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
           readOnly: true
         provides:
-          type: string
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
           readOnly: true
         upstreams:
-          type: string
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
           readOnly: true
       required:
       - description
@@ -1765,25 +1818,53 @@ components:
             type: string
           readOnly: true
         products:
-          type: string
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
           readOnly: true
         product_versions:
-          type: string
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
           readOnly: true
         product_streams:
-          type: string
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
           readOnly: true
         product_variants:
-          type: string
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
           readOnly: true
         sources:
-          type: string
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
           readOnly: true
         provides:
-          type: string
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
           readOnly: true
         upstreams:
-          type: string
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
           readOnly: true
         meta_attr:
           type: object
@@ -2005,7 +2086,7 @@ components:
         description:
           type: string
         build_count:
-          type: string
+          type: integer
           readOnly: true
         builds:
           type: string
@@ -2022,13 +2103,25 @@ components:
             $ref: '#/components/schemas/Tag'
           readOnly: true
         product_versions:
-          type: string
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
           readOnly: true
         product_streams:
-          type: string
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
           readOnly: true
         product_variants:
-          type: string
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
           readOnly: true
         channels:
           type: array
@@ -2084,7 +2177,7 @@ components:
         description:
           type: string
         build_count:
-          type: string
+          type: integer
           readOnly: true
         builds:
           type: string
@@ -2099,7 +2192,11 @@ components:
           type: string
           readOnly: true
         relations:
-          type: string
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
           readOnly: true
         tags:
           type: array
@@ -2107,13 +2204,25 @@ components:
             $ref: '#/components/schemas/Tag'
           readOnly: true
         products:
-          type: string
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
           readOnly: true
         product_versions:
-          type: string
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
           readOnly: true
         product_variants:
-          type: string
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
           readOnly: true
         channels:
           type: array
@@ -2155,7 +2264,7 @@ components:
         description:
           type: string
         build_count:
-          type: string
+          type: integer
           readOnly: true
         builds:
           type: string
@@ -2175,16 +2284,32 @@ components:
             $ref: '#/components/schemas/Tag'
           readOnly: true
         relations:
-          type: string
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
           readOnly: true
         products:
-          type: string
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
           readOnly: true
         product_versions:
-          type: string
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
           readOnly: true
         product_streams:
-          type: string
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
           readOnly: true
         channels:
           type: array
@@ -2226,7 +2351,7 @@ components:
         description:
           type: string
         build_count:
-          type: string
+          type: integer
           readOnly: true
         builds:
           type: string
@@ -2243,13 +2368,25 @@ components:
             $ref: '#/components/schemas/Tag'
           readOnly: true
         products:
-          type: string
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
           readOnly: true
         product_streams:
-          type: string
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
           readOnly: true
         product_variants:
-          type: string
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
           readOnly: true
         channels:
           type: array
@@ -2342,7 +2479,11 @@ components:
           format: date-time
           readOnly: true
         components:
-          type: string
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
           readOnly: true
         meta_attr:
           type: object

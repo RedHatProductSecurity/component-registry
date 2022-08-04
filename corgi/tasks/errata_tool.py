@@ -76,19 +76,24 @@ def load_errata(erratum_name):
         logger.info("Saving product taxonomy for builds")
         for b in relation_int_build_ids:
             logger.info("Saving product taxonomy for build %s", b)
-            # once all build's components are ingested we must update component taxonomy
+            # once all build's components are ingested we must save product taxonomy
             sb = SoftwareBuild.objects.get(build_id=b)
             sb.save_product_taxonomy()
 
-    # Check if we are part way through loading the errata
+    # Check if we are only part way through loading the errata
     if no_of_processed_builds < len(relation_int_build_ids):
         # Calculate and print the percentage of builds for the errata
         if len(relation_int_build_ids) > 0:
             percentage_complete = int(no_of_processed_builds / len(relation_int_build_ids) * 100)
             logger.info("Processed %i%% of builds in %s", percentage_complete, erratum_name)
         for build_id in relation_int_build_ids:
+            # We set save_product argument to False because it reads from the
+            # ProductComponentRelations table which this function writes to. We've seen contention
+            # on this database table causes by recursive looping of this task, and the
+            # slow_fetch_brew_build task, eg CORGI-21. We call save_product_taxonomy from
+            # this task only after all the builds in the errata have been loaded instead.
             logger.info("Calling slow_fetch_brew_build for %s", build_id)
-            app.send_task("corgi.tasks.brew.slow_fetch_brew_build", args=[build_id])
+            app.send_task("corgi.tasks.brew.slow_fetch_brew_build", args=[build_id, False])
     else:
         logger.info("Finished processing %s", erratum_id)
 

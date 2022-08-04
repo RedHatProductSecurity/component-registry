@@ -1,0 +1,22 @@
+{
+    "header": {
+        "type": "productmd.rpms",
+        "version": "1.2"
+    },
+    "payload": {
+        "compose": {
+            "date": "20210503",
+            "id": "RHEL-8.4.0-20210503.1",
+            "respin": 1,
+            "type": "production"
+        },
+        "rpms": {
+            "AppStream": {
+                "aarch64": {
+                    "389-ds-base-0:1.4.3.16-13.module+el8.4.0+10307+74bbfb4e.src": {
+                   }
+		}
+	    }
+        }
+    }
+}

@@ -1,0 +1,659 @@
+{
+    "header": {
+        "type": "productmd.composeinfo",
+        "version": "1.2"
+    },
+    "payload": {
+        "compose": {
+            "date": "20210503",
+            "final": true,
+            "id": "RHEL-8.4.0-20210503.1",
+            "label": "RC-1.2",
+            "respin": 1,
+            "type": "production"
+        },
+        "release": {
+            "internal": false,
+            "name": "Red Hat Enterprise Linux",
+            "short": "RHEL",
+            "type": "ga",
+            "version": "8.4.0"
+        },
+        "variants": {
+            "AppStream": {
+                "arches": [
+                    "aarch64",
+                    "ppc64le",
+                    "s390x",
+                    "x86_64"
+                ],
+                "id": "AppStream",
+                "name": "AppStream",
+                "paths": {
+                    "debug_packages": {
+                        "aarch64": "AppStream/aarch64/debug/tree/Packages",
+                        "ppc64le": "AppStream/ppc64le/debug/tree/Packages",
+                        "s390x": "AppStream/s390x/debug/tree/Packages",
+                        "x86_64": "AppStream/x86_64/debug/tree/Packages"
+                    },
+                    "debug_repository": {
+                        "aarch64": "AppStream/aarch64/debug/tree",
+                        "ppc64le": "AppStream/ppc64le/debug/tree",
+                        "s390x": "AppStream/s390x/debug/tree",
+                        "x86_64": "AppStream/x86_64/debug/tree"
+                    },
+                    "debug_tree": {
+                        "aarch64": "AppStream/aarch64/debug/tree",
+                        "ppc64le": "AppStream/ppc64le/debug/tree",
+                        "s390x": "AppStream/s390x/debug/tree",
+                        "x86_64": "AppStream/x86_64/debug/tree"
+                    },
+                    "os_tree": {
+                        "aarch64": "AppStream/aarch64/os",
+                        "ppc64le": "AppStream/ppc64le/os",
+                        "s390x": "AppStream/s390x/os",
+                        "x86_64": "AppStream/x86_64/os"
+                    },
+                    "packages": {
+                        "aarch64": "AppStream/aarch64/os/Packages",
+                        "ppc64le": "AppStream/ppc64le/os/Packages",
+                        "s390x": "AppStream/s390x/os/Packages",
+                        "x86_64": "AppStream/x86_64/os/Packages"
+                    },
+                    "repository": {
+                        "aarch64": "AppStream/aarch64/os",
+                        "ppc64le": "AppStream/ppc64le/os",
+                        "s390x": "AppStream/s390x/os",
+                        "x86_64": "AppStream/x86_64/os"
+                    },
+                    "source_packages": {
+                        "aarch64": "AppStream/source/tree/Packages",
+                        "ppc64le": "AppStream/source/tree/Packages",
+                        "s390x": "AppStream/source/tree/Packages",
+                        "x86_64": "AppStream/source/tree/Packages"
+                    },
+                    "source_repository": {
+                        "aarch64": "AppStream/source/tree",
+                        "ppc64le": "AppStream/source/tree",
+                        "s390x": "AppStream/source/tree",
+                        "x86_64": "AppStream/source/tree"
+                    },
+                    "source_tree": {
+                        "aarch64": "AppStream/source/tree",
+                        "ppc64le": "AppStream/source/tree",
+                        "s390x": "AppStream/source/tree",
+                        "x86_64": "AppStream/source/tree"
+                    }
+                },
+                "type": "variant",
+                "uid": "AppStream"
+            },
+            "BaseOS": {
+                "arches": [
+                    "aarch64",
+                    "ppc64le",
+                    "s390x",
+                    "x86_64"
+                ],
+                "id": "BaseOS",
+                "name": "BaseOS",
+                "paths": {
+                    "debug_packages": {
+                        "aarch64": "BaseOS/aarch64/debug/tree/Packages",
+                        "ppc64le": "BaseOS/ppc64le/debug/tree/Packages",
+                        "s390x": "BaseOS/s390x/debug/tree/Packages",
+                        "x86_64": "BaseOS/x86_64/debug/tree/Packages"
+                    },
+                    "debug_repository": {
+                        "aarch64": "BaseOS/aarch64/debug/tree",
+                        "ppc64le": "BaseOS/ppc64le/debug/tree",
+                        "s390x": "BaseOS/s390x/debug/tree",
+                        "x86_64": "BaseOS/x86_64/debug/tree"
+                    },
+                    "debug_tree": {
+                        "aarch64": "BaseOS/aarch64/debug/tree",
+                        "ppc64le": "BaseOS/ppc64le/debug/tree",
+                        "s390x": "BaseOS/s390x/debug/tree",
+                        "x86_64": "BaseOS/x86_64/debug/tree"
+                    },
+                    "images": {
+                        "aarch64": "BaseOS/aarch64/images",
+                        "ppc64le": "BaseOS/ppc64le/images",
+                        "s390x": "BaseOS/s390x/images",
+                        "x86_64": "BaseOS/x86_64/images"
+                    },
+                    "isos": {
+                        "aarch64": "BaseOS/aarch64/iso",
+                        "ppc64le": "BaseOS/ppc64le/iso",
+                        "s390x": "BaseOS/s390x/iso",
+                        "x86_64": "BaseOS/x86_64/iso"
+                    },
+                    "jigdos": {
+                        "aarch64": "BaseOS/aarch64/jigdo",
+                        "ppc64le": "BaseOS/ppc64le/jigdo",
+                        "s390x": "BaseOS/s390x/jigdo",
+                        "x86_64": "BaseOS/x86_64/jigdo"
+                    },
+                    "os_tree": {
+                        "aarch64": "BaseOS/aarch64/os",
+                        "ppc64le": "BaseOS/ppc64le/os",
+                        "s390x": "BaseOS/s390x/os",
+                        "x86_64": "BaseOS/x86_64/os"
+                    },
+                    "packages": {
+                        "aarch64": "BaseOS/aarch64/os/Packages",
+                        "ppc64le": "BaseOS/ppc64le/os/Packages",
+                        "s390x": "BaseOS/s390x/os/Packages",
+                        "x86_64": "BaseOS/x86_64/os/Packages"
+                    },
+                    "repository": {
+                        "aarch64": "BaseOS/aarch64/os",
+                        "ppc64le": "BaseOS/ppc64le/os",
+                        "s390x": "BaseOS/s390x/os",
+                        "x86_64": "BaseOS/x86_64/os"
+                    },
+                    "source_isos": {
+                        "aarch64": "BaseOS/source/iso",
+                        "ppc64le": "BaseOS/source/iso",
+                        "s390x": "BaseOS/source/iso",
+                        "x86_64": "BaseOS/source/iso"
+                    },
+                    "source_jigdos": {
+                        "aarch64": "BaseOS/source/jigdo",
+                        "ppc64le": "BaseOS/source/jigdo",
+                        "s390x": "BaseOS/source/jigdo",
+                        "x86_64": "BaseOS/source/jigdo"
+                    },
+                    "source_packages": {
+                        "aarch64": "BaseOS/source/tree/Packages",
+                        "ppc64le": "BaseOS/source/tree/Packages",
+                        "s390x": "BaseOS/source/tree/Packages",
+                        "x86_64": "BaseOS/source/tree/Packages"
+                    },
+                    "source_repository": {
+                        "aarch64": "BaseOS/source/tree",
+                        "ppc64le": "BaseOS/source/tree",
+                        "s390x": "BaseOS/source/tree",
+                        "x86_64": "BaseOS/source/tree"
+                    },
+                    "source_tree": {
+                        "aarch64": "BaseOS/source/tree",
+                        "ppc64le": "BaseOS/source/tree",
+                        "s390x": "BaseOS/source/tree",
+                        "x86_64": "BaseOS/source/tree"
+                    }
+                },
+                "type": "variant",
+                "uid": "BaseOS"
+            },
+            "CRB": {
+                "arches": [
+                    "aarch64",
+                    "ppc64le",
+                    "s390x",
+                    "x86_64"
+                ],
+                "id": "CRB",
+                "name": "CodeReady Builder",
+                "paths": {
+                    "debug_packages": {
+                        "aarch64": "CRB/aarch64/debug/tree/Packages",
+                        "ppc64le": "CRB/ppc64le/debug/tree/Packages",
+                        "s390x": "CRB/s390x/debug/tree/Packages",
+                        "x86_64": "CRB/x86_64/debug/tree/Packages"
+                    },
+                    "debug_repository": {
+                        "aarch64": "CRB/aarch64/debug/tree",
+                        "ppc64le": "CRB/ppc64le/debug/tree",
+                        "s390x": "CRB/s390x/debug/tree",
+                        "x86_64": "CRB/x86_64/debug/tree"
+                    },
+                    "debug_tree": {
+                        "aarch64": "CRB/aarch64/debug/tree",
+                        "ppc64le": "CRB/ppc64le/debug/tree",
+                        "s390x": "CRB/s390x/debug/tree",
+                        "x86_64": "CRB/x86_64/debug/tree"
+                    },
+                    "os_tree": {
+                        "aarch64": "CRB/aarch64/os",
+                        "ppc64le": "CRB/ppc64le/os",
+                        "s390x": "CRB/s390x/os",
+                        "x86_64": "CRB/x86_64/os"
+                    },
+                    "packages": {
+                        "aarch64": "CRB/aarch64/os/Packages",
+                        "ppc64le": "CRB/ppc64le/os/Packages",
+                        "s390x": "CRB/s390x/os/Packages",
+                        "x86_64": "CRB/x86_64/os/Packages"
+                    },
+                    "repository": {
+                        "aarch64": "CRB/aarch64/os",
+                        "ppc64le": "CRB/ppc64le/os",
+                        "s390x": "CRB/s390x/os",
+                        "x86_64": "CRB/x86_64/os"
+                    },
+                    "source_packages": {
+                        "aarch64": "CRB/source/tree/Packages",
+                        "ppc64le": "CRB/source/tree/Packages",
+                        "s390x": "CRB/source/tree/Packages",
+                        "x86_64": "CRB/source/tree/Packages"
+                    },
+                    "source_repository": {
+                        "aarch64": "CRB/source/tree",
+                        "ppc64le": "CRB/source/tree",
+                        "s390x": "CRB/source/tree",
+                        "x86_64": "CRB/source/tree"
+                    },
+                    "source_tree": {
+                        "aarch64": "CRB/source/tree",
+                        "ppc64le": "CRB/source/tree",
+                        "s390x": "CRB/source/tree",
+                        "x86_64": "CRB/source/tree"
+                    }
+                },
+                "type": "variant",
+                "uid": "CRB"
+            },
+            "HighAvailability": {
+                "arches": [
+                    "aarch64",
+                    "ppc64le",
+                    "s390x",
+                    "x86_64"
+                ],
+                "id": "HighAvailability",
+                "name": "High Availability",
+                "paths": {
+                    "debug_packages": {
+                        "aarch64": "HighAvailability/aarch64/debug/tree/Packages",
+                        "ppc64le": "HighAvailability/ppc64le/debug/tree/Packages",
+                        "s390x": "HighAvailability/s390x/debug/tree/Packages",
+                        "x86_64": "HighAvailability/x86_64/debug/tree/Packages"
+                    },
+                    "debug_repository": {
+                        "aarch64": "HighAvailability/aarch64/debug/tree",
+                        "ppc64le": "HighAvailability/ppc64le/debug/tree",
+                        "s390x": "HighAvailability/s390x/debug/tree",
+                        "x86_64": "HighAvailability/x86_64/debug/tree"
+                    },
+                    "debug_tree": {
+                        "aarch64": "HighAvailability/aarch64/debug/tree",
+                        "ppc64le": "HighAvailability/ppc64le/debug/tree",
+                        "s390x": "HighAvailability/s390x/debug/tree",
+                        "x86_64": "HighAvailability/x86_64/debug/tree"
+                    },
+                    "isos": {
+                        "aarch64": "HighAvailability/aarch64/iso",
+                        "ppc64le": "HighAvailability/ppc64le/iso",
+                        "s390x": "HighAvailability/s390x/iso",
+                        "x86_64": "HighAvailability/x86_64/iso"
+                    },
+                    "jigdos": {
+                        "aarch64": "HighAvailability/aarch64/jigdo",
+                        "ppc64le": "HighAvailability/ppc64le/jigdo",
+                        "s390x": "HighAvailability/s390x/jigdo",
+                        "x86_64": "HighAvailability/x86_64/jigdo"
+                    },
+                    "os_tree": {
+                        "aarch64": "HighAvailability/aarch64/os",
+                        "ppc64le": "HighAvailability/ppc64le/os",
+                        "s390x": "HighAvailability/s390x/os",
+                        "x86_64": "HighAvailability/x86_64/os"
+                    },
+                    "packages": {
+                        "aarch64": "HighAvailability/aarch64/os/Packages",
+                        "ppc64le": "HighAvailability/ppc64le/os/Packages",
+                        "s390x": "HighAvailability/s390x/os/Packages",
+                        "x86_64": "HighAvailability/x86_64/os/Packages"
+                    },
+                    "repository": {
+                        "aarch64": "HighAvailability/aarch64/os",
+                        "ppc64le": "HighAvailability/ppc64le/os",
+                        "s390x": "HighAvailability/s390x/os",
+                        "x86_64": "HighAvailability/x86_64/os"
+                    },
+                    "source_isos": {
+                        "aarch64": "HighAvailability/source/iso",
+                        "ppc64le": "HighAvailability/source/iso",
+                        "s390x": "HighAvailability/source/iso",
+                        "x86_64": "HighAvailability/source/iso"
+                    },
+                    "source_jigdos": {
+                        "aarch64": "HighAvailability/source/jigdo",
+                        "ppc64le": "HighAvailability/source/jigdo",
+                        "s390x": "HighAvailability/source/jigdo",
+                        "x86_64": "HighAvailability/source/jigdo"
+                    },
+                    "source_packages": {
+                        "aarch64": "HighAvailability/source/tree/Packages",
+                        "ppc64le": "HighAvailability/source/tree/Packages",
+                        "s390x": "HighAvailability/source/tree/Packages",
+                        "x86_64": "HighAvailability/source/tree/Packages"
+                    },
+                    "source_repository": {
+                        "aarch64": "HighAvailability/source/tree",
+                        "ppc64le": "HighAvailability/source/tree",
+                        "s390x": "HighAvailability/source/tree",
+                        "x86_64": "HighAvailability/source/tree"
+                    },
+                    "source_tree": {
+                        "aarch64": "HighAvailability/source/tree",
+                        "ppc64le": "HighAvailability/source/tree",
+                        "s390x": "HighAvailability/source/tree",
+                        "x86_64": "HighAvailability/source/tree"
+                    }
+                },
+                "type": "variant",
+                "uid": "HighAvailability"
+            },
+            "NFV": {
+                "arches": [
+                    "x86_64"
+                ],
+                "id": "NFV",
+                "name": "NFV",
+                "paths": {
+                    "debug_packages": {
+                        "x86_64": "NFV/x86_64/debug/tree/Packages"
+                    },
+                    "debug_repository": {
+                        "x86_64": "NFV/x86_64/debug/tree"
+                    },
+                    "debug_tree": {
+                        "x86_64": "NFV/x86_64/debug/tree"
+                    },
+                    "os_tree": {
+                        "x86_64": "NFV/x86_64/os"
+                    },
+                    "packages": {
+                        "x86_64": "NFV/x86_64/os/Packages"
+                    },
+                    "repository": {
+                        "x86_64": "NFV/x86_64/os"
+                    },
+                    "source_packages": {
+                        "x86_64": "NFV/source/tree/Packages"
+                    },
+                    "source_repository": {
+                        "x86_64": "NFV/source/tree"
+                    },
+                    "source_tree": {
+                        "x86_64": "NFV/source/tree"
+                    }
+                },
+                "type": "variant",
+                "uid": "NFV"
+            },
+            "RT": {
+                "arches": [
+                    "x86_64"
+                ],
+                "id": "RT",
+                "name": "RT",
+                "paths": {
+                    "debug_packages": {
+                        "x86_64": "RT/x86_64/debug/tree/Packages"
+                    },
+                    "debug_repository": {
+                        "x86_64": "RT/x86_64/debug/tree"
+                    },
+                    "debug_tree": {
+                        "x86_64": "RT/x86_64/debug/tree"
+                    },
+                    "isos": {
+                        "x86_64": "RT/x86_64/iso"
+                    },
+                    "jigdos": {
+                        "x86_64": "RT/x86_64/jigdo"
+                    },
+                    "os_tree": {
+                        "x86_64": "RT/x86_64/os"
+                    },
+                    "packages": {
+                        "x86_64": "RT/x86_64/os/Packages"
+                    },
+                    "repository": {
+                        "x86_64": "RT/x86_64/os"
+                    },
+                    "source_isos": {
+                        "x86_64": "RT/source/iso"
+                    },
+                    "source_jigdos": {
+                        "x86_64": "RT/source/jigdo"
+                    },
+                    "source_packages": {
+                        "x86_64": "RT/source/tree/Packages"
+                    },
+                    "source_repository": {
+                        "x86_64": "RT/source/tree"
+                    },
+                    "source_tree": {
+                        "x86_64": "RT/source/tree"
+                    }
+                },
+                "type": "variant",
+                "uid": "RT"
+            },
+            "ResilientStorage": {
+                "arches": [
+                    "ppc64le",
+                    "s390x",
+                    "x86_64"
+                ],
+                "id": "ResilientStorage",
+                "name": "Resilient Storage",
+                "paths": {
+                    "debug_packages": {
+                        "ppc64le": "ResilientStorage/ppc64le/debug/tree/Packages",
+                        "s390x": "ResilientStorage/s390x/debug/tree/Packages",
+                        "x86_64": "ResilientStorage/x86_64/debug/tree/Packages"
+                    },
+                    "debug_repository": {
+                        "ppc64le": "ResilientStorage/ppc64le/debug/tree",
+                        "s390x": "ResilientStorage/s390x/debug/tree",
+                        "x86_64": "ResilientStorage/x86_64/debug/tree"
+                    },
+                    "debug_tree": {
+                        "ppc64le": "ResilientStorage/ppc64le/debug/tree",
+                        "s390x": "ResilientStorage/s390x/debug/tree",
+                        "x86_64": "ResilientStorage/x86_64/debug/tree"
+                    },
+                    "isos": {
+                        "ppc64le": "ResilientStorage/ppc64le/iso",
+                        "s390x": "ResilientStorage/s390x/iso",
+                        "x86_64": "ResilientStorage/x86_64/iso"
+                    },
+                    "jigdos": {
+                        "ppc64le": "ResilientStorage/ppc64le/jigdo",
+                        "s390x": "ResilientStorage/s390x/jigdo",
+                        "x86_64": "ResilientStorage/x86_64/jigdo"
+                    },
+                    "os_tree": {
+                        "ppc64le": "ResilientStorage/ppc64le/os",
+                        "s390x": "ResilientStorage/s390x/os",
+                        "x86_64": "ResilientStorage/x86_64/os"
+                    },
+                    "packages": {
+                        "ppc64le": "ResilientStorage/ppc64le/os/Packages",
+                        "s390x": "ResilientStorage/s390x/os/Packages",
+                        "x86_64": "ResilientStorage/x86_64/os/Packages"
+                    },
+                    "repository": {
+                        "ppc64le": "ResilientStorage/ppc64le/os",
+                        "s390x": "ResilientStorage/s390x/os",
+                        "x86_64": "ResilientStorage/x86_64/os"
+                    },
+                    "source_isos": {
+                        "ppc64le": "ResilientStorage/source/iso",
+                        "s390x": "ResilientStorage/source/iso",
+                        "x86_64": "ResilientStorage/source/iso"
+                    },
+                    "source_jigdos": {
+                        "ppc64le": "ResilientStorage/source/jigdo",
+                        "s390x": "ResilientStorage/source/jigdo",
+                        "x86_64": "ResilientStorage/source/jigdo"
+                    },
+                    "source_packages": {
+                        "ppc64le": "ResilientStorage/source/tree/Packages",
+                        "s390x": "ResilientStorage/source/tree/Packages",
+                        "x86_64": "ResilientStorage/source/tree/Packages"
+                    },
+                    "source_repository": {
+                        "ppc64le": "ResilientStorage/source/tree",
+                        "s390x": "ResilientStorage/source/tree",
+                        "x86_64": "ResilientStorage/source/tree"
+                    },
+                    "source_tree": {
+                        "ppc64le": "ResilientStorage/source/tree",
+                        "s390x": "ResilientStorage/source/tree",
+                        "x86_64": "ResilientStorage/source/tree"
+                    }
+                },
+                "type": "variant",
+                "uid": "ResilientStorage"
+            },
+            "SAP": {
+                "arches": [
+                    "ppc64le",
+                    "s390x",
+                    "x86_64"
+                ],
+                "id": "SAP",
+                "name": "SAP",
+                "paths": {
+                    "debug_packages": {
+                        "ppc64le": "SAP/ppc64le/debug/tree/Packages",
+                        "s390x": "SAP/s390x/debug/tree/Packages",
+                        "x86_64": "SAP/x86_64/debug/tree/Packages"
+                    },
+                    "debug_repository": {
+                        "ppc64le": "SAP/ppc64le/debug/tree",
+                        "s390x": "SAP/s390x/debug/tree",
+                        "x86_64": "SAP/x86_64/debug/tree"
+                    },
+                    "debug_tree": {
+                        "ppc64le": "SAP/ppc64le/debug/tree",
+                        "s390x": "SAP/s390x/debug/tree",
+                        "x86_64": "SAP/x86_64/debug/tree"
+                    },
+                    "isos": {
+                        "ppc64le": "SAP/ppc64le/iso",
+                        "s390x": "SAP/s390x/iso",
+                        "x86_64": "SAP/x86_64/iso"
+                    },
+                    "jigdos": {
+                        "ppc64le": "SAP/ppc64le/jigdo",
+                        "s390x": "SAP/s390x/jigdo",
+                        "x86_64": "SAP/x86_64/jigdo"
+                    },
+                    "os_tree": {
+                        "ppc64le": "SAP/ppc64le/os",
+                        "s390x": "SAP/s390x/os",
+                        "x86_64": "SAP/x86_64/os"
+                    },
+                    "packages": {
+                        "ppc64le": "SAP/ppc64le/os/Packages",
+                        "s390x": "SAP/s390x/os/Packages",
+                        "x86_64": "SAP/x86_64/os/Packages"
+                    },
+                    "repository": {
+                        "ppc64le": "SAP/ppc64le/os",
+                        "s390x": "SAP/s390x/os",
+                        "x86_64": "SAP/x86_64/os"
+                    },
+                    "source_isos": {
+                        "ppc64le": "SAP/source/iso",
+                        "s390x": "SAP/source/iso",
+                        "x86_64": "SAP/source/iso"
+                    },
+                    "source_jigdos": {
+                        "ppc64le": "SAP/source/jigdo",
+                        "s390x": "SAP/source/jigdo",
+                        "x86_64": "SAP/source/jigdo"
+                    },
+                    "source_packages": {
+                        "ppc64le": "SAP/source/tree/Packages",
+                        "s390x": "SAP/source/tree/Packages",
+                        "x86_64": "SAP/source/tree/Packages"
+                    },
+                    "source_repository": {
+                        "ppc64le": "SAP/source/tree",
+                        "s390x": "SAP/source/tree",
+                        "x86_64": "SAP/source/tree"
+                    },
+                    "source_tree": {
+                        "ppc64le": "SAP/source/tree",
+                        "s390x": "SAP/source/tree",
+                        "x86_64": "SAP/source/tree"
+                    }
+                },
+                "type": "variant",
+                "uid": "SAP"
+            },
+            "SAPHANA": {
+                "arches": [
+                    "ppc64le",
+                    "x86_64"
+                ],
+                "id": "SAPHANA",
+                "name": "SAP HANA",
+                "paths": {
+                    "debug_packages": {
+                        "ppc64le": "SAPHANA/ppc64le/debug/tree/Packages",
+                        "x86_64": "SAPHANA/x86_64/debug/tree/Packages"
+                    },
+                    "debug_repository": {
+                        "ppc64le": "SAPHANA/ppc64le/debug/tree",
+                        "x86_64": "SAPHANA/x86_64/debug/tree"
+                    },
+                    "debug_tree": {
+                        "ppc64le": "SAPHANA/ppc64le/debug/tree",
+                        "x86_64": "SAPHANA/x86_64/debug/tree"
+                    },
+                    "isos": {
+                        "ppc64le": "SAPHANA/ppc64le/iso",
+                        "x86_64": "SAPHANA/x86_64/iso"
+                    },
+                    "jigdos": {
+                        "ppc64le": "SAPHANA/ppc64le/jigdo",
+                        "x86_64": "SAPHANA/x86_64/jigdo"
+                    },
+                    "os_tree": {
+                        "ppc64le": "SAPHANA/ppc64le/os",
+                        "x86_64": "SAPHANA/x86_64/os"
+                    },
+                    "packages": {
+                        "ppc64le": "SAPHANA/ppc64le/os/Packages",
+                        "x86_64": "SAPHANA/x86_64/os/Packages"
+                    },
+                    "repository": {
+                        "ppc64le": "SAPHANA/ppc64le/os",
+                        "x86_64": "SAPHANA/x86_64/os"
+                    },
+                    "source_isos": {
+                        "ppc64le": "SAPHANA/source/iso",
+                        "x86_64": "SAPHANA/source/iso"
+                    },
+                    "source_jigdos": {
+                        "ppc64le": "SAPHANA/source/jigdo",
+                        "x86_64": "SAPHANA/source/jigdo"
+                    },
+                    "source_packages": {
+                        "ppc64le": "SAPHANA/source/tree/Packages",
+                        "x86_64": "SAPHANA/source/tree/Packages"
+                    },
+                    "source_repository": {
+                        "ppc64le": "SAPHANA/source/tree",
+                        "x86_64": "SAPHANA/source/tree"
+                    },
+                    "source_tree": {
+                        "ppc64le": "SAPHANA/source/tree",
+                        "x86_64": "SAPHANA/source/tree"
+                    }
+                },
+                "type": "variant",
+                "uid": "SAPHANA"
+            }
+        }
+    }
+}

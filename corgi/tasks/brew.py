@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 @app.task(autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def slow_fetch_brew_build(build_id: int):
+def slow_fetch_brew_build(build_id: int, save_product: bool = True):
     logger.info("Fetch brew build called with build id: %s", build_id)
     if SoftwareBuild.objects.filter(build_id=build_id).count() > 0:
         logger.info("Already processed build_id %s", build_id)
@@ -56,8 +56,10 @@ def slow_fetch_brew_build(build_id: int):
 
     # Once we have the full component tree loaded
     softwarebuild.save_component_taxonomy()
-    # We don't call save_product_taxonomy here to reduce CPU cycles and
-    # allow async call of load_errata task
+    # We don't call save_product_taxonomy by default to allow async call of load_errata task
+    # See CORGI-21
+    if save_product:
+        softwarebuild.save_product_taxonomy()
 
     # for builds with errata tags set ProductComponentRelation
     # get_component_data always calls _extract_advisory_ids to set tags, but list may be empty

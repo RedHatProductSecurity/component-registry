@@ -31,7 +31,8 @@ def fatal_code(e):
     """Do not retry on 4xx responses."""
     # Handle requests.exceptions.RequestException
     # 408 is "Request Timeout" that Brew sometimes returns, which can be retried safely
-    # Note http.client.RemoteDisconnected errors have a response attr, but it's set to None / doesn't have a status code
+    # Note http.client.RemoteDisconnected errors have a response attr
+    # but it's set to None / doesn't have a status code
     # so hasattr doesn't work, and getattr without "is not None" doesn't work either
     # because response objects are True for 200ish codes, False for 400ish codes
     if getattr(e, "response", None) is not None:

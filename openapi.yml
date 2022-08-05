@@ -1807,17 +1807,6 @@ components:
       - upstreams
       - uuid
       - version
-    ComponentList:
-      type: object
-      properties:
-        link:
-          type: string
-          readOnly: true
-        purl:
-          type: string
-          maxLength: 1024
-      required:
-      - link
     PaginatedAppStreamLifeCycleList:
       type: object
       properties:
@@ -2015,10 +2004,16 @@ components:
           type: string
         description:
           type: string
-        coverage:
+        build_count:
           type: string
           readOnly: true
-        build_count:
+        builds:
+          type: string
+          readOnly: true
+        components:
+          type: string
+          readOnly: true
+        upstreams:
           type: string
           readOnly: true
         tags:
@@ -2035,28 +2030,11 @@ components:
         product_variants:
           type: string
           readOnly: true
-        errata:
-          type: string
-          readOnly: true
-        builds:
-          type: string
-          readOnly: true
         channels:
           type: array
           items:
             type: string
             maxLength: 200
-        components:
-          type: array
-          items:
-            $ref: '#/components/schemas/ComponentList'
-          readOnly: true
-        manifest:
-          type: string
-          readOnly: true
-        upstream:
-          type: string
-          readOnly: true
         meta_attr:
           type: object
           additionalProperties: {}
@@ -2064,16 +2042,13 @@ components:
       - build_count
       - builds
       - components
-      - coverage
-      - errata
       - link
-      - manifest
       - name
       - product_streams
       - product_variants
       - product_versions
       - tags
-      - upstream
+      - upstreams
       - uuid
     ProductStream:
       type: object
@@ -2095,10 +2070,19 @@ components:
           maxLength: 1000
         description:
           type: string
-        coverage:
+        build_count:
           type: string
           readOnly: true
-        build_count:
+        builds:
+          type: string
+          readOnly: true
+        manifest:
+          type: string
+          readOnly: true
+        components:
+          type: string
+          readOnly: true
+        upstreams:
           type: string
           readOnly: true
         relations:
@@ -2118,28 +2102,11 @@ components:
         product_variants:
           type: string
           readOnly: true
-        errata:
-          type: string
-          readOnly: true
-        builds:
-          type: string
-          readOnly: true
         channels:
           type: array
           items:
             type: string
             maxLength: 200
-        components:
-          type: array
-          items:
-            $ref: '#/components/schemas/ComponentList'
-          readOnly: true
-        manifest:
-          type: string
-          readOnly: true
-        upstream:
-          type: string
-          readOnly: true
         meta_attr:
           type: object
           additionalProperties: {}
@@ -2147,8 +2114,6 @@ components:
       - build_count
       - builds
       - components
-      - coverage
-      - errata
       - link
       - manifest
       - name
@@ -2157,7 +2122,7 @@ components:
       - products
       - relations
       - tags
-      - upstream
+      - upstreams
       - uuid
     ProductVariant:
       type: object
@@ -2179,6 +2144,18 @@ components:
         build_count:
           type: string
           readOnly: true
+        builds:
+          type: string
+          readOnly: true
+        manifest:
+          type: string
+          readOnly: true
+        components:
+          type: string
+          readOnly: true
+        upstreams:
+          type: string
+          readOnly: true
         tags:
           type: array
           items:
@@ -2196,28 +2173,11 @@ components:
         product_streams:
           type: string
           readOnly: true
-        errata:
-          type: string
-          readOnly: true
-        builds:
-          type: string
-          readOnly: true
         channels:
           type: array
           items:
             type: string
             maxLength: 200
-        components:
-          type: array
-          items:
-            $ref: '#/components/schemas/ComponentList'
-          readOnly: true
-        manifest:
-          type: string
-          readOnly: true
-        upstream:
-          type: string
-          readOnly: true
         meta_attr:
           type: object
           additionalProperties: {}
@@ -2225,7 +2185,6 @@ components:
       - build_count
       - builds
       - components
-      - errata
       - link
       - manifest
       - name
@@ -2234,7 +2193,7 @@ components:
       - products
       - relations
       - tags
-      - upstream
+      - upstreams
       - uuid
     ProductVersion:
       type: object
@@ -2253,10 +2212,16 @@ components:
           type: string
         description:
           type: string
-        coverage:
+        build_count:
           type: string
           readOnly: true
-        build_count:
+        builds:
+          type: string
+          readOnly: true
+        components:
+          type: string
+          readOnly: true
+        upstreams:
           type: string
           readOnly: true
         tags:
@@ -2273,28 +2238,11 @@ components:
         product_variants:
           type: string
           readOnly: true
-        errata:
-          type: string
-          readOnly: true
-        builds:
-          type: string
-          readOnly: true
         channels:
           type: array
           items:
             type: string
             maxLength: 200
-        components:
-          type: array
-          items:
-            $ref: '#/components/schemas/ComponentList'
-          readOnly: true
-        manifest:
-          type: string
-          readOnly: true
-        upstream:
-          type: string
-          readOnly: true
         meta_attr:
           type: object
           additionalProperties: {}
@@ -2302,16 +2250,13 @@ components:
       - build_count
       - builds
       - components
-      - coverage
-      - errata
       - link
-      - manifest
       - name
       - product_streams
       - product_variants
       - products
       - tags
-      - upstream
+      - upstreams
       - uuid
     Relation:
       type: object

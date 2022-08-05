@@ -568,6 +568,8 @@ class ProductComponentRelation(TimeStampedModel):
     class Type(models.TextChoices):
         ERRATA = "ERRATA"
         COMPOSE = "COMPOSE"
+        BREW_TAG = "BREW_TAG"
+        YUM_REPO = "YUM_REPO"
 
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     type = models.CharField(choices=Type.choices, max_length=50)

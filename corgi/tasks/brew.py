@@ -5,7 +5,13 @@ from django.utils import dateformat, timezone
 
 from config.celery import app
 from corgi.collectors.brew import Brew, BrewBuildTypeNotSupported
-from corgi.core.models import Component, ComponentNode, SoftwareBuild
+from corgi.core.models import (
+    Component,
+    ComponentNode,
+    ProductComponentRelation,
+    ProductStream,
+    SoftwareBuild,
+)
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 from corgi.tasks.errata_tool import load_errata
 from corgi.tasks.sca import software_composition_analysis
@@ -300,3 +306,21 @@ def save_module(softwarebuild, build_data) -> ComponentNode:
     # TODO: recurse components from build_data["meta"]["components"]
 
     return node
+
+
+def load_brew_tags() -> None:
+    for ps in ProductStream.objects.all():
+        brew = Brew()
+        for brew_tag, inherit in ps.brew_tags.items():
+            builds = brew.get_builds_with_tag(brew_tag, inherit)
+            no_of_created = 0
+            for build in builds:
+                _, created = ProductComponentRelation.objects.get_or_create(
+                    external_system_id=brew_tag,
+                    product_ref=ps.name,
+                    build_id=build,
+                    defaults={"type": ProductComponentRelation.Type.BREW_TAG},
+                )
+                if created:
+                    no_of_created += 1
+            logger.info("Saving %s new builds for %s", no_of_created, brew_tag)

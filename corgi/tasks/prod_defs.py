@@ -10,7 +10,6 @@ from corgi.core.models import (
     Product,
     ProductNode,
     ProductStream,
-    ProductStreamTag,
     ProductVariant,
     ProductVersion,
 )
@@ -89,6 +88,16 @@ def update_products() -> None:
                 for pd_product_stream in pd_product_streams:
                     errata_info = pd_product_stream.pop("errata_info", [])
                     brew_tags = pd_product_stream.pop("brew_tags", [])
+                    yum_repos = pd_product_stream.pop("yum_repositories", [])
+                    composes = pd_product_stream.pop("composes", [])
+
+                    brew_tags_dict = {}
+                    for brew_tag in brew_tags:
+                        brew_tags_dict[brew_tag["tag"]] = brew_tag["inherit"]
+
+                    composes_dict = {}
+                    for compose in composes:
+                        composes_dict[compose["url"]] = compose["variants"]
 
                     name = pd_product_stream.pop("id")
                     if match_version := RE_VERSION_LIKE_STRING.search(name):
@@ -99,7 +108,12 @@ def update_products() -> None:
                         name=name,
                         version=version,
                         description="",
-                        defaults={"meta_attr": pd_product_stream},
+                        defaults={
+                            "brew_tags": brew_tags_dict,
+                            "meta_attr": pd_product_stream,
+                            "yum_repositories": yum_repos,
+                            "composes": composes_dict,
+                        },
                     )
                     product_stream_node, _ = ProductNode.objects.get_or_create(
                         object_id=product_stream.pk,
@@ -116,23 +130,12 @@ def update_products() -> None:
                             product_stream.name,
                         )
                         for brew_tag in brew_tags:
+                            # Also match brew tags in prod_defs with those from ET
                             trimmed_brew_tag = brew_tag["tag"].removesuffix("-released")
                             et_pvs = CollectorErrataProductVersion.objects.filter(
                                 brew_tags__contains=[trimmed_brew_tag]
                             )
-                            # TODO add a BREW_TAG productcomposerelation instead of ProductStreamTag
-                            # If we didn't find a match in ET collector models create a
-                            # ProductSteamTag for later processing
-                            if len(et_pvs) == 0:
-                                logger.debug(
-                                    "Creating or updating Product Stream Tag: name=%s",
-                                    brew_tag["tag"],
-                                )
-                                build_tag, _ = ProductStreamTag.objects.update_or_create(
-                                    name=brew_tag["tag"],
-                                    value=brew_tag["inherit"],
-                                    product_stream=product_stream,
-                                )
+
                             for et_pv in et_pvs:
                                 logger.debug(
                                     "Found Product Version (%s) in ET matching brew tag %s",

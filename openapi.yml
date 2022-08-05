@@ -2068,6 +2068,19 @@ components:
         cpe:
           type: string
           maxLength: 1000
+        active:
+          type: boolean
+        brew_tags:
+          type: object
+          additionalProperties: {}
+        yum_repositories:
+          type: array
+          items:
+            type: string
+            maxLength: 200
+        composes:
+          type: object
+          additionalProperties: {}
         description:
           type: string
         build_count:
@@ -2296,6 +2309,8 @@ components:
       enum:
       - ERRATA
       - COMPOSE
+      - BREW_TAG
+      - YUM_REPO
       type: string
     SoftwareBuild:
       type: object

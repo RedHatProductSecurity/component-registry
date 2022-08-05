@@ -443,6 +443,13 @@ class ProductStream(ProductModel, TimeStampedModel):
 
     cpe = models.CharField(max_length=1000, default="")
 
+    # NOTE brew_tags and yum_repositories values shouldn't be exposed outside of Red Hat
+    brew_tags = models.JSONField(default=dict)
+    yum_repositories = fields.ArrayField(models.CharField(max_length=200), default=list)
+
+    composes = models.JSONField(default=dict)
+    active = models.BooleanField(default=False)
+
     product_streams = None  # type: ignore
     pnodes = GenericRelation(ProductNode, related_query_name="product_stream")
 

@@ -2,20 +2,14 @@ import os
 from unittest.mock import patch
 
 import pytest
+from django.conf import settings
 
 from corgi.collectors.models import (
     CollectorErrataProduct,
     CollectorErrataProductVariant,
     CollectorErrataProductVersion,
 )
-from corgi.core.models import (
-    Product,
-    ProductComponentRelation,
-    ProductStream,
-    ProductStreamTag,
-    ProductVariant,
-    ProductVersion,
-)
+from corgi.core.models import Product, ProductComponentRelation, ProductStream
 from corgi.tasks.prod_defs import update_products
 from corgi.tasks.rhel_compose import load_composes, save_compose
 
@@ -96,9 +90,11 @@ def test_save_compose(
         assert list(relation_sys_ids) == [compose_coords[0]]
 
 
-@pytest.mark.default_cassette(PRODUCT_DEFINITIONS_CASSETTE)
-@pytest.mark.vcr
-def test_products():
+def test_products(requests_mock):
+    with open("tests/data/product-definitions.json") as prod_defs:
+        requests_mock.get(
+            f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=prod_defs.read()
+        )
     et_product = CollectorErrataProduct.objects.create(
         et_id=152, name="Red Hat ACM", short_name="RHACM"
     )
@@ -117,37 +113,25 @@ def test_products():
 
     update_products()
 
-    # TODO: 93 when re-recording cassette, but many requests are missing in new one
-    assert Product.objects.all().count() == 91
+    assert Product.objects.all().count() == 3
 
     rhel_product = Product.objects.get(name="rhel")
     assert rhel_product.name == "rhel"
     assert rhel_product.ofuri == "o:redhat:rhel"
 
-    assert "rhel-4" in rhel_product.product_versions
-    rhel_product_version = ProductVersion.objects.get(name="rhel-4")
-    assert rhel_product_version.ofuri == "o:redhat:rhel:4"
-    assert rhel_product_version.description == "Red Hat Enterprise Linux 4"
-    assert rhel_product_version.version == "4"
+    assert "HighAvailability-8.6.0.Z.MAIN.EUS" in rhel_product.product_variants
 
-    assert "rhel-4.5.z" in rhel_product.product_streams
-    rhel_product_stream = ProductStream.objects.get(name="rhel-4.5.z")
-    assert rhel_product_stream.ofuri == "o:redhat:rhel:4.5.z"
-    assert rhel_product_stream.name == "rhel-4.5.z"
-    assert rhel_product_stream.version == "4.5.z"
-
-    assert "HighAvailability-8.5.0.Z.MAIN" in rhel_product.product_variants
-    rhel_product_variant = ProductVariant.objects.get(name="HighAvailability-8.5.0.Z.MAIN")
-    assert rhel_product_variant.name == "HighAvailability-8.5.0.Z.MAIN"
+    rhel_860 = ProductStream.objects.get(name="rhel-8.6.0")
+    assert len(rhel_860.composes) == 2
 
     openshift410z = ProductStream.objects.get(name="openshift-4.10.z")
     assert openshift410z
     assert len(openshift410z.product_variants) == 0
-    openshift410z_tags = [
-        tag.name for tag in ProductStreamTag.objects.filter(product_stream=openshift410z)
-    ]
-    assert len(openshift410z_tags) == 2
-    assert "rhaos-4.10-rhel-8-container-released" in openshift410z_tags
+    openshift410z_brew_tags = openshift410z.brew_tags.keys()
+    assert len(openshift410z_brew_tags) == 2
+    assert "rhaos-4.10-rhel-8-container-released" in openshift410z_brew_tags
+
+    assert len(openshift410z.yum_repositories) == 5
 
     rhacm24z = ProductStream.objects.get(name="rhacm-2.4.z")
     assert rhacm24z

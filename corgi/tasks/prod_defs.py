@@ -80,6 +80,7 @@ def update_products() -> None:
                 )
                 product_version_node, _ = ProductNode.objects.get_or_create(
                     object_id=product_version.pk,
+                    tree_id=product_node.tree_id,
                     defaults={
                         "parent": product_node,
                         "obj": product_version,
@@ -103,6 +104,7 @@ def update_products() -> None:
                     )
                     product_stream_node, _ = ProductNode.objects.get_or_create(
                         object_id=product_stream.pk,
+                        tree_id=product_version_node.tree_id,
                         defaults={
                             "parent": product_version_node,
                             "obj": product_stream,
@@ -159,8 +161,10 @@ def update_products() -> None:
                                             }
                                         },
                                     )
+                                    # TODO: Why are there two places that create a variant node?
                                     ProductNode.objects.get_or_create(
                                         object_id=product_variant.pk,
+                                        tree_id=product_stream_node.tree_id,
                                         defaults={
                                             "parent": product_stream_node,
                                             "obj": product_variant,
@@ -191,6 +195,7 @@ def update_products() -> None:
                                 )
                                 ProductNode.objects.get_or_create(
                                     object_id=product_variant.pk,
+                                    tree_id=product_stream_node.tree_id,
                                     defaults={
                                         "parent": product_stream_node,
                                         "obj": product_variant,

@@ -32,6 +32,11 @@ class ProductNode(MPTTModel, TimeStampedModel):
 
     class MPTTMeta:
         level_attr = "level"
+        # Make get_or_create with object_id, tree_id kwargs atomic so it doesn't insert duplicates
+        constraints = [
+            models.UniqueConstraint(name="unique_productnode", fields=("object_id", "tree_id")),
+        ]
+        indexes = [models.Index(fields=("object_id", "tree_id"))]
 
     # Tree-traversal methods for product-related models below.
     #
@@ -46,6 +51,7 @@ class ProductNode(MPTTModel, TimeStampedModel):
     #
     # - Each method assumes that an object model will always link to a single ProductNode (thus
     #   the use of `pnodes.first()`).
+    #   TODO: Need to revisit, we have ProductVariants which are linked to two separate streams
     #
     # - The `values_list()` query relies on the GenericRelation of each model's pnodes
     #   attribute's related query name.

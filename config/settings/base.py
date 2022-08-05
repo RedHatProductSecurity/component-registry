@@ -224,7 +224,7 @@ CELERY_RESULT_BACKEND_MAX_RETRIES = 2
 CELERY_DEFAULT_RATE_LIMIT = "8/m"
 # Set a global 15-minute task timeout. Override this on individual tasks by decorating them with:
 # @app.task(soft_time_limit=<TIME_IN_SECONDS>)
-CELERY_TASK_SOFT_TIME_LIMIT = 900
+CELERY_TASK_SOFT_TIME_LIMIT = 3600
 
 CELERY_WORKER_CONCURRENCY = 1  # defaults to CPU core count, which breaks in OpenShift
 

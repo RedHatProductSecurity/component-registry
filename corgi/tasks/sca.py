@@ -55,7 +55,7 @@ def save_component(component: dict[str, Any], parent: ComponentNode):
 
 
 @app.task
-def software_composition_analysis(build_id: int):
+def slow_software_composition_analysis(build_id: int):
     logger.info("Started software composition analysis for %s", build_id)
     try:
         software_build = SoftwareBuild.objects.get(build_id=build_id)

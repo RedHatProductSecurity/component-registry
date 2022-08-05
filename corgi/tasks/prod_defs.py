@@ -86,6 +86,7 @@ def update_products() -> None:
                 )
 
                 for pd_product_stream in pd_product_streams:
+                    active = pd_product_stream.pop("active")
                     errata_info = pd_product_stream.pop("errata_info", [])
                     brew_tags = pd_product_stream.pop("brew_tags", [])
                     yum_repos = pd_product_stream.pop("yum_repositories", [])
@@ -109,6 +110,7 @@ def update_products() -> None:
                         version=version,
                         description="",
                         defaults={
+                            "active": active,
                             "brew_tags": brew_tags_dict,
                             "meta_attr": pd_product_stream,
                             "yum_repositories": yum_repos,

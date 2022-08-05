@@ -32,9 +32,14 @@ class ProdDefs:
                 product_version = data["ps_modules"][ps_module]
                 product_version["product_streams"] = []
                 product_version["id"] = ps_module
+                active_ps_update_streams = product_version["active_ps_update_streams"]
                 for ps_update_stream in product_version["ps_update_streams"]:
                     product_stream = data["ps_update_streams"][ps_update_stream]
                     product_stream["id"] = ps_update_stream
+                    if ps_update_stream in active_ps_update_streams:
+                        product_stream["active"] = True
+                    else:
+                        product_stream["active"] = False
                     product_version["product_streams"].append(product_stream)
                 product_versions.append(product_version)
                 product["product_versions"] = product_versions

@@ -842,6 +842,7 @@ class ProductStreamSerializer(serializers.ModelSerializer):
             "ofuri",
             "name",
             "cpe",
+            "active",
             "brew_tags",
             "yum_repositories",
             "composes",

@@ -1,32 +1,57 @@
 stages:
   - lint
   - test
+  - build
+  - deploy-stage
+  - deploy-prod
 
-before_script:
-    - export LANG=en_US.UTF-8
-    - cd /etc/pki/ca-trust/source/anchors/ && curl -O "${ROOT_CA_URL}"; cd -
-    - update-ca-trust
-    - export REQUESTS_CA_BUNDLE=/etc/pki/tls/certs/ca-bundle.crt
-    # Define below in CI settings, then export here so subprocesses can use also
-    # Keep in sync with OpenShift
-    # Internal hostnames or URLs that appear in build metadata; used in tests
-    - export CORGI_TEST_CACHITO_URL
-    - export CORGI_TEST_CODE_URL
-    - export CORGI_TEST_DOWNLOAD_URL
-    - export CORGI_TEST_OSBS_HOST1
-    - export CORGI_TEST_OSBS_HOST2
-    - export CORGI_TEST_OSBS_HOST3
-    - export CORGI_TEST_REGISTRY_URL
-    # Not used in tests directly, but needed for tests to pass
-    - export CORGI_LOOKASIDE_CACHE_URL
-    - export CORGI_APP_STREAMS_LIFE_CYCLE_URL
-    - export CORGI_BREW_URL
-    - export CORGI_BREW_DOWNLOAD_ROOT_URL
-    - export CORGI_ERRATA_TOOL_URL
-    - export CORGI_MANIFEST_HINTS_URL
-    - export CORGI_PRODSEC_DASHBOARD_URL
-    - export PIP_INDEX_URL
-    - export ROOT_CA_URL
+include:
+  - project: 'product-security/dev/component-registry-ops'
+    ref: cd-from-tags
+    file: '/templates/gitlab/ansible-run.yml'
+
+.common_ci_setup: &common_ci_setup
+  - export LANG=en_US.UTF-8
+  - cd /etc/pki/ca-trust/source/anchors/ && curl -O "${ROOT_CA_URL}"; cd -
+  - update-ca-trust
+  - export REQUESTS_CA_BUNDLE=/etc/pki/tls/certs/ca-bundle.crt
+
+.common_test_setup: &common_test_setup
+  # Define below in CI settings, then export here so subprocesses can use also
+  # Keep in sync with OpenShift
+  # Internal hostnames or URLs that appear in build metadata; used in tests
+  - export CORGI_TEST_CACHITO_URL
+  - export CORGI_TEST_CODE_URL
+  - export CORGI_TEST_DOWNLOAD_URL
+  - export CORGI_TEST_OSBS_HOST1
+  - export CORGI_TEST_OSBS_HOST2
+  - export CORGI_TEST_OSBS_HOST3
+  - export CORGI_TEST_REGISTRY_URL
+  # Not used in tests directly, but needed for tests to pass
+  - export CORGI_LOOKASIDE_CACHE_URL
+  - export CORGI_APP_STREAMS_LIFE_CYCLE_URL
+  - export CORGI_BREW_URL
+  - export CORGI_BREW_DOWNLOAD_ROOT_URL
+  - export CORGI_ERRATA_TOOL_URL
+  - export CORGI_MANIFEST_HINTS_URL
+  - export CORGI_PRODSEC_DASHBOARD_URL
+  - export PIP_INDEX_URL
+  - export ROOT_CA_URL
+
+build-image:
+  stage: build
+  extends:
+    - .ansible-build
+
+deploy-stage:
+  stage: deploy-stage
+  extends:
+    - .ansible-deploy-stage
+
+deploy-prod:
+  stage: deploy-prod
+  extends:
+    - .ansible-deploy-prod
 
 test:
   stage: test
@@ -43,6 +68,9 @@ test:
     CORGI_DB_USER: postgres  # default admin user
     CORGI_DB_HOST: postgres  # same as service alias
     CORGI_DB_PASSWORD: test  # same as POSTGRESQL_ADMIN_PASSWORD
+  before_script:
+    - *common_ci_setup
+    - *common_test_setup
   script:
     - dnf --disableplugin=subscription-manager --nodocs -y install python39 python39-devel gcc krb5-devel postgresql-devel
     - python3.9 -m pip install tox
@@ -77,6 +105,9 @@ test-migrations:
     CORGI_DB_USER: postgres  # default admin user
     CORGI_DB_HOST: postgres  # same as service alias
     CORGI_DB_PASSWORD: test  # same as POSTGRESQL_ADMIN_PASSWORD
+  before_script:
+    - *common_ci_setup
+    - *common_test_setup
   script:
     - dnf --disableplugin=subscription-manager --nodocs -y install python39 python39-devel gcc krb5-devel postgresql-devel
     - python3.9 -m pip install tox
@@ -88,6 +119,8 @@ test-migrations:
 mypy:
   stage: test
   image: $PYTHON_TOX_IMAGE_LATEST
+  before_script:
+    - *common_ci_setup
   script:
     - tox -e mypy
   except:
@@ -97,6 +130,8 @@ mypy:
 schema:
   stage: test
   image: $PYTHON_TOX_IMAGE_LATEST
+  before_script:
+    - *common_ci_setup
   script:
     - tox -e schema
   except:
@@ -106,6 +141,8 @@ schema:
 flake8:
   stage: lint
   image: $PYTHON_TOX_IMAGE_LATEST
+  before_script:
+    - *common_ci_setup
   script:
     - tox -e flake8
   except:
@@ -115,6 +152,8 @@ flake8:
 black:
   stage: lint
   image: $PYTHON_TOX_IMAGE_LATEST
+  before_script:
+    - *common_ci_setup
   script:
     - tox -e black
   except:
@@ -124,6 +163,8 @@ black:
 isort:
   stage: lint
   image: $PYTHON_TOX_IMAGE_LATEST
+  before_script:
+    - *common_ci_setup
   script:
     - tox -e isort
   except:
@@ -133,6 +174,8 @@ isort:
 bandit:
   stage: lint
   image: $PYTHON_TOX_IMAGE_LATEST
+  before_script:
+    - *common_ci_setup
   script:
     - tox -e bandit
   except:
@@ -142,6 +185,8 @@ bandit:
 radon:
   stage: lint
   image: $PYTHON_TOX_IMAGE_LATEST
+  before_script:
+    - *common_ci_setup
   script:
     - tox -e radon
   except:
@@ -151,6 +196,8 @@ radon:
 secrets:
   stage: lint
   image: $PYTHON_TOX_IMAGE_LATEST
+  before_script:
+    - *common_ci_setup
   script:
     - tox -e secrets
   only:

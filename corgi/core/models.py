@@ -206,7 +206,12 @@ class SoftwareBuild(TimeStampedModel):
 
         stream_ids = list(
             ProductComponentRelation.objects.filter(build_id=self.build_id)
-            .filter(type=ProductComponentRelation.Type.COMPOSE)
+            .filter(
+                type__in=[
+                    ProductComponentRelation.Type.COMPOSE,
+                    ProductComponentRelation.Type.BREW_TAG,
+                ]
+            )
             .values_list("product_ref", flat=True)
             .distinct()
         )
@@ -590,7 +595,10 @@ class ProductComponentRelation(TimeStampedModel):
                 fields=("external_system_id", "product_ref", "build_id"),
             ),
         ]
-        indexes = [models.Index(fields=("external_system_id", "product_ref", "build_id"))]
+        indexes = [
+            models.Index(fields=("external_system_id", "product_ref", "build_id")),
+            models.Index(fields=("type", "build_id")),
+        ]
 
 
 def get_product_streams_from_variants(variant_ids: list[str]):

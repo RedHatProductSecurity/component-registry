@@ -779,8 +779,12 @@ class Component(TimeStampedModel):
     @property
     def get_roots(self) -> list[ComponentNode]:
         """Return component root entities."""
-        roots = []
-
+        roots: list[ComponentNode] = []
+        # If a component does have not have a softwarebuild that means it's not built at Red Hat
+        # therefore it doesn't need it's upstream's listed. If we start using the get_roots property
+        # for functions other that get_upstreams we might to revisit this check
+        if not self.software_build:
+            return roots
         for cnode in self.cnodes.all():
             try:
                 root = cnode.get_root()
@@ -798,6 +802,7 @@ class Component(TimeStampedModel):
                     for ancestor in cnode.get_ancestors(include_self=True):
                         if ancestor.obj.type == Component.Type.RPM:
                             rpm_desendant = True
+                            break
                     if not rpm_desendant:
                         roots.append(root)
                 else:
@@ -928,7 +933,7 @@ class Component(TimeStampedModel):
         for root in roots:
             # For SRRPM/RPMS, and noarch containers, these are the cnodes we want.
             source_children = [
-                c for c in root.get_children() if c.type == ComponentNode.ComponentNodeType.SOURCE
+                c for c in root.get_children().filter(type=ComponentNode.ComponentNodeType.SOURCE)
             ]
             # Cachito builds nest components under the relevant source component for that
             # container build, eg. buildID=1911112. In that case we need to walk up the

@@ -1,4 +1,3 @@
-import os
 from datetime import timedelta
 from ssl import SSLError
 
@@ -58,7 +57,3 @@ def get_last_success_for_task(task_name):
     return (
         last_success - timedelta(minutes=30) if last_success else timezone.now() - timedelta(days=3)
     )
-
-
-def running_local():
-    return os.getenv("DJANGO_SETTINGS_MODULE") == "config.settings.dev"

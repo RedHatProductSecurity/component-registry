@@ -1,12 +1,6 @@
 stages:
   - lint
   - test
-  - deploy-stage
-
-include:
-  - project: 'product-security/dev/component-registry-ops'
-    ref: main
-    file: '/templates/gitlab/ansible-run.yml'
 
 before_script:
     - export LANG=en_US.UTF-8
@@ -33,11 +27,6 @@ before_script:
     - export CORGI_PRODSEC_DASHBOARD_URL
     - export PIP_INDEX_URL
     - export ROOT_CA_URL
-
-deploy-stage:
-  stage: deploy-stage
-  extends:
-    - .ansible-run
 
 test:
   stage: test

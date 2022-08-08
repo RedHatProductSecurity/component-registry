@@ -175,7 +175,7 @@ class ComponentTaxonomyView(APIView):
 
     def get(self, request, *args, **kwargs):
         """ """
-        root_nodes = cache_tree_children(ComponentNode.objects.all())
+        root_nodes = cache_tree_children(ComponentNode.objects.get_queryset())
         dicts = []
         for n in root_nodes:
             dicts.append(
@@ -224,7 +224,7 @@ class ProductTaxonomyView(APIView):
 
     def get(self, request, *args, **kwargs):
         """ """
-        root_nodes = cache_tree_children(ProductNode.objects.all())
+        root_nodes = cache_tree_children(ProductNode.objects.get_queryset())
         dicts = []
         for n in root_nodes:
             dicts.append(recursive_product_node_to_dict(n))
@@ -279,7 +279,7 @@ class ProductView(ProductDataView):
         obj = self.queryset.filter(uuid=uuid).first()
         if not obj:
             return Response(status=404)
-        root_nodes = cache_tree_children(obj.pnodes.all().get_descendants(include_self=True))
+        root_nodes = cache_tree_children(obj.pnodes.get_descendants(include_self=True))
         dicts = []
         for n in root_nodes:
             dicts.append(recursive_product_node_to_dict(n))
@@ -317,7 +317,7 @@ class ProductVersionView(ProductDataView):
         obj = self.queryset.filter(uuid=uuid).first()
         if not obj:
             return Response(status=404)
-        root_nodes = cache_tree_children(obj.pnodes.all().get_descendants(include_self=True))
+        root_nodes = cache_tree_children(obj.pnodes.get_descendants(include_self=True))
         dicts = []
         for n in root_nodes:
             dicts.append(recursive_product_node_to_dict(n))
@@ -355,7 +355,7 @@ class ProductStreamView(ProductDataView):
         obj = self.queryset.filter(uuid=uuid).first()
         if not obj:
             return Response(status=404)
-        root_nodes = cache_tree_children(obj.pnodes.all().get_descendants(include_self=True))
+        root_nodes = cache_tree_children(obj.pnodes.get_descendants(include_self=True))
         dicts = []
         for n in root_nodes:
             dicts.append(recursive_product_node_to_dict(n))
@@ -393,7 +393,7 @@ class ProductVariantView(ProductDataView):
         obj = self.queryset.filter(uuid=uuid).first()
         if not obj:
             return Response(status=404)
-        root_nodes = cache_tree_children(obj.pnodes.all().get_descendants(include_self=True))
+        root_nodes = cache_tree_children(obj.pnodes.get_descendants(include_self=True))
         dicts = []
         for n in root_nodes:
             dicts.append(recursive_product_node_to_dict(n))
@@ -443,7 +443,7 @@ class ComponentView(ReadOnlyModelViewSet, TagViewMixin):
         obj = self.queryset.filter(uuid=uuid).first()
         if not obj:
             return Response(status=404)
-        root_nodes = cache_tree_children(obj.cnodes.all().get_descendants(include_self=True))
+        root_nodes = cache_tree_children(obj.cnodes.get_descendants(include_self=True))
         dicts = []
         for n in root_nodes:
             dicts.append(
@@ -462,7 +462,7 @@ class ComponentView(ReadOnlyModelViewSet, TagViewMixin):
         obj = self.queryset.filter(uuid=uuid).first()
         if not obj:
             return Response(status=404)
-        root_nodes = cache_tree_children(obj.cnodes.all().get_descendants(include_self=True))
+        root_nodes = cache_tree_children(obj.cnodes.get_descendants(include_self=True))
         dicts = []
         for n in root_nodes:
             dicts.append(
@@ -541,7 +541,7 @@ class CoverageReportView(ReadOnlyModelViewSet):
 
         for p in self.queryset:
             if p.coverage or include_missing:
-                root_nodes = cache_tree_children(p.pnodes.all().get_descendants(include_self=True))
+                root_nodes = cache_tree_children(p.pnodes.get_descendants(include_self=True))
                 dicts = []
                 for n in root_nodes:
                     dicts.append(coverage_report_node_to_dict(n))

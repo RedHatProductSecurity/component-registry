@@ -14,6 +14,8 @@ CA_CERT = os.getenv("REQUESTS_CA_BUNDLE")
 DEBUG = False
 
 # Mail these people on uncaught exceptions that result in 500 errors
+# Also mail these people once a day if any Celery task failed in the past 24 hours
+# Technically, "twice a day" - you'll get an email from stage and prod
 ADMINS = [
     tuple(name_and_email.split(";")) for name_and_email in os.getenv("CORGI_ADMINS", "").split(",")
 ]
@@ -247,10 +249,6 @@ CELERY_TASK_ACKS_LATE = True
 # https://docs.celeryproject.org/en/latest/userguide/configuration.html#std-setting-result_expires
 # By default, this job is enabled and runs daily at 4am. Disable to keep UMB-triggered task results
 CELERY_RESULT_EXPIRES = None
-
-# Mail these people once a day if any Celery task failed in the past 24 hours
-# Technically, "twice a day" - you'll get an email from stage and prod
-FAILED_CELERY_TASK_SUBSCRIBERS = os.getenv("CORGI_FAILED_CELERY_TASK_SUBSCRIBERS", "").split(",")
 
 CELERY_TASK_ROUTES = (
     [

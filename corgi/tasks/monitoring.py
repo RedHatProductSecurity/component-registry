@@ -85,7 +85,7 @@ def email_failed_tasks():
     email = EmailMessage(
         subject=subject,
         body=failed_tasks,
-        to=settings.FAILED_CELERY_TASK_SUBSCRIBERS,
+        to=settings.ADMINS,
         from_email=settings.SERVER_EMAIL,
     )
     email.send()

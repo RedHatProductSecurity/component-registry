@@ -4,6 +4,7 @@ from django.core.management.base import BaseCommand, CommandParser
 from koji import GenericError
 
 from corgi.collectors.brew import Brew
+from corgi.core.models import ProductStream
 from corgi.tasks.brew import slow_fetch_brew_build
 
 
@@ -19,31 +20,37 @@ class Command(BaseCommand):
             help="Specific build IDs to fetch data for.",
         )
         parser.add_argument(
-            "-t",
-            "--tag",
-            dest="brew_tag",
-            help="Fetch builds tagged with a specific Brew tag.",
+            "-s",
+            "--stream",
+            dest="stream",
+            help="Fetch builds by tag from product stream",
         )
         parser.add_argument(
-            "-c",
-            "--celery",
+            "-i",
+            "--inline",
             action="store_true",
-            help="Schedule build for ingestion as celery task.",
+            help="Schedule build for ingestion inline (not in celery)",
         )
 
     def handle(self, *args, **options) -> None:
         if options["build_ids"]:
             build_ids = options["build_ids"]
-        elif options["brew_tag"]:
+        elif options["stream"]:
+            ps = ProductStream.objects.get(name=options["stream"])
             brew = Brew()
-            try:
-                builds = brew.koji_session.listTagged(options["brew_tag"])
-            except GenericError as exc:
-                self.stderr.write(self.style.ERROR(str(exc)))
-                sys.exit(1)
-            build_ids = [b["build_id"] for b in builds]
+            build_ids = set()
+            for brew_tag, inherit in ps.brew_tags.items():
+                try:
+                    builds = brew.get_builds_with_tag(brew_tag, inherit)
+                except GenericError as exc:
+                    self.stderr.write(self.style.ERROR(str(exc)))
+                    sys.exit(1)
+                self.stdout.write(
+                    self.style.SUCCESS(f"Found {len(builds)} builds matching {brew_tag}")
+                )
+                build_ids.update(builds)
         else:
-            self.stderr.write(self.style.ERROR("No build IDs or tag specified..."))
+            self.stderr.write(self.style.ERROR("No build IDs or Product Stream specified..."))
             sys.exit(1)
 
         self.stdout.write(
@@ -53,7 +60,7 @@ class Command(BaseCommand):
         )
 
         for build_id in build_ids:
-            if options["celery"]:
-                slow_fetch_brew_build.delay(build_id)
-            else:
+            if options["inline"]:
                 slow_fetch_brew_build(build_id)
+            else:
+                slow_fetch_brew_build.delay(build_id)

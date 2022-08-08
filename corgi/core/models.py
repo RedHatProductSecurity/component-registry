@@ -206,7 +206,12 @@ class SoftwareBuild(TimeStampedModel):
 
         stream_ids = list(
             ProductComponentRelation.objects.filter(build_id=self.build_id)
-            .filter(type=ProductComponentRelation.Type.COMPOSE)
+            .filter(
+                type__in=[
+                    ProductComponentRelation.Type.COMPOSE,
+                    ProductComponentRelation.Type.BREW_TAG,
+                ]
+            )
             .values_list("product_ref", flat=True)
             .distinct()
         )
@@ -443,6 +448,13 @@ class ProductStream(ProductModel, TimeStampedModel):
 
     cpe = models.CharField(max_length=1000, default="")
 
+    # NOTE brew_tags and yum_repositories values shouldn't be exposed outside of Red Hat
+    brew_tags = models.JSONField(default=dict)
+    yum_repositories = fields.ArrayField(models.CharField(max_length=200), default=list)
+
+    composes = models.JSONField(default=dict)
+    active = models.BooleanField(default=False)
+
     product_streams = None  # type: ignore
     pnodes = GenericRelation(ProductNode, related_query_name="product_stream")
 
@@ -561,6 +573,8 @@ class ProductComponentRelation(TimeStampedModel):
     class Type(models.TextChoices):
         ERRATA = "ERRATA"
         COMPOSE = "COMPOSE"
+        BREW_TAG = "BREW_TAG"
+        YUM_REPO = "YUM_REPO"
 
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     type = models.CharField(choices=Type.choices, max_length=50)
@@ -581,7 +595,10 @@ class ProductComponentRelation(TimeStampedModel):
                 fields=("external_system_id", "product_ref", "build_id"),
             ),
         ]
-        indexes = [models.Index(fields=("external_system_id", "product_ref", "build_id"))]
+        indexes = [
+            models.Index(fields=("external_system_id", "product_ref", "build_id")),
+            models.Index(fields=("type", "build_id")),
+        ]
 
 
 def get_product_streams_from_variants(variant_ids: list[str]):

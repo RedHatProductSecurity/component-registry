@@ -1,15 +1,15 @@
 FROM registry.redhat.io/ubi8/ubi:8.6
 
 ARG PIP_INDEX_URL="https://pypi.org/simple"
-ARG PRODSEC_EMAIL="secalert@redhat.com"
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=off \
     PIP_INDEX_URL="${PIP_INDEX_URL}" \
-    PRODSEC_EMAIL="${PRODSEC_EMAIL}" \
     REQUESTS_CA_BUNDLE="/etc/pki/tls/certs/ca-bundle.crt"
 
-LABEL summary="Red Hat Component Registry (Corgi)" \
-      maintainer="Product Security Development <${PRODSEC_EMAIL}>"
+LABEL maintainer="Red Hat Product Security Dev - Red Hat, Inc." \
+      vendor="Red Hat Product Security Dev - Red Hat, Inc." \
+      summary="Red Hat Component Registry (Corgi) application image" \
+      distribution-scope="private"
 
 ARG ROOT_CA_URL
 RUN cd /etc/pki/ca-trust/source/anchors/ && \
@@ -18,10 +18,7 @@ RUN cd /etc/pki/ca-trust/source/anchors/ && \
 
 WORKDIR /opt/app-root/src/
 
-# Install RPM dependencies and security updates, because UBI is only rebuilt every 6 weeks, not daily like we thought
-# Rebuilt immediately for Critical / some High flaws, but we don't want any Moderate or Low flaws in our services either
-RUN curl -L -O https://github.com/anchore/syft/releases/download/v0.48.1/syft_0.48.1_linux_amd64.rpm \
-    && dnf --nodocs -y install --setopt install_weak_deps=false  \
+RUN dnf --nodocs -y install --setopt install_weak_deps=false  \
         python39 \
         python39-setuptools \
         python39-devel \
@@ -39,11 +36,9 @@ RUN curl -L -O https://github.com/anchore/syft/releases/download/v0.48.1/syft_0.
         openssl \
         openssl-devel \
         openldap-devel \
-        syft_0.48.1_linux_amd64.rpm \
+        https://github.com/anchore/syft/releases/download/v0.48.1/syft_0.48.1_linux_amd64.rpm \
         git \
-    && dnf --nodocs -y upgrade --setopt install_weak_deps=false --security \
-    && dnf clean all \
-    && rm syft_0.48.1_linux_amd64.rpm
+    && dnf clean all
 
 COPY ./requirements ./requirements
 

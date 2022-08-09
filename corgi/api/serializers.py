@@ -1,8 +1,10 @@
 import logging
 from urllib.parse import quote
 
+from django.conf import settings
 from rest_framework import serializers
 
+from config import utils
 from corgi.api.constants import CORGI_API_VERSION
 from corgi.core.models import (
     AppStreamLifeCycle,
@@ -18,6 +20,82 @@ from corgi.core.models import (
 
 logger = logging.getLogger(__name__)
 
+# Generic URL prefix
+if not utils.running_dev():
+    CORGI_API_URL = f"https://{settings.CORGI_DOMAIN}/api/{CORGI_API_VERSION}"
+else:
+    CORGI_API_URL = f"http://localhost:8008/api/{CORGI_API_VERSION}"
+
+
+def get_component_data_list(component_list: list[str]) -> list[dict[str, str]]:
+    """Generic method to get a list of {link, purl} data for some list of components."""
+    return [
+        {
+            "link": get_component_purl_link(purl),
+            "purl": purl,
+        }
+        for purl in component_list
+    ]
+
+
+def get_component_purl_link(purl: str) -> str:
+    """Generic method to get a pURL link for a Component."""
+    return f"{CORGI_API_URL}/components?purl={quote(purl)}"
+
+
+def get_model_ofuri_link(model_name: str, ofuri: str, related_type=None) -> str:
+    """Generic method to get an ofuri link for an arbitrary Model subclass."""
+    link = f"{CORGI_API_URL}/{model_name}?ofuri={ofuri}"
+    return link if not related_type else f"{link}&type={related_type}"
+
+
+def get_model_id_link(model_name: str, uuid_or_build_id, manifest=False) -> str:
+    """Generic method to get an ID-based link for an arbitrary Model subclass."""
+    link = f"{CORGI_API_URL}/{model_name}/{uuid_or_build_id}"
+    return link if not manifest else f"{link}/manifest"
+
+
+def get_product_data_list(
+    model_class, model_name: str, name_list: list[str]
+) -> list[dict[str, str]]:
+    """Generic method to get a list of {name, link, ofuri} data for a ProductModel subclass."""
+    data_list = []
+    for name in name_list:
+        data = {"name": name}
+        obj = model_class.objects.filter(name=name).first()
+        if obj:
+            data["link"] = get_model_ofuri_link(model_name, obj.ofuri)
+            data["ofuri"] = obj.ofuri
+        data_list.append(data)
+    return data_list
+
+
+def get_product_data_list_by_ofuri(
+    model_class, model_name: str, ofuri_list: list[str]
+) -> list[dict[str, str]]:
+    """Special method to get a list of {ofuri, link, name} data for a ProductModel subclass.
+    Filters by ofuri instead of name."""
+    data_list = []
+    for ofuri in ofuri_list:
+        data = {"ofuri": ofuri}
+        obj = model_class.objects.filter(ofuri=ofuri).first()
+        if obj:
+            data["link"] = get_model_ofuri_link(model_name, ofuri)
+            data["name"] = obj.name
+        data_list.append(data)
+    return data_list
+
+
+def get_product_relations(instance_name: str) -> list[dict[str, str]]:
+    """Generic method to get a distinct list of PCR IDs and types for a ProductModel subclass."""
+    related_pcrs = ProductComponentRelation.objects.filter(product_ref=instance_name).distinct(
+        "external_system_id"
+    )
+    relations = [
+        {"type": pcr.type, "external_system_id": pcr.external_system_id} for pcr in related_pcrs
+    ]
+    return relations
+
 
 class TagSerializer(serializers.Serializer):
     name = serializers.SlugField(allow_blank=False)
@@ -31,24 +109,13 @@ class SoftwareBuildSerializer(serializers.ModelSerializer):
     link = serializers.SerializerMethodField()
     components = serializers.SerializerMethodField()
 
-    def get_link(self, instance):
-        request = self.context.get("request")
-        if request and "HTTP_HOST" in request.META:
-            return f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/builds/{instance.build_id}"  # noqa
-        return None
+    @staticmethod
+    def get_link(instance: SoftwareBuild) -> str:
+        return get_model_id_link("builds", instance.build_id)
 
-    def get_components(self, instance):
-        request = self.context.get("request")
-        components = list()
-        for purl in instance.components:
-            if request and "HTTP_HOST" in request.META:
-                components.append(
-                    {
-                        "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/components?purl={quote(purl)}",  # noqa
-                        "purl": purl,
-                    }
-                )
-        return components
+    @staticmethod
+    def get_components(instance: SoftwareBuild) -> list[dict[str, str]]:
+        return get_component_data_list(instance.components)
 
     class Meta:
         model = SoftwareBuild
@@ -70,11 +137,9 @@ class SoftwareBuildSummarySerializer(serializers.ModelSerializer):
 
     link = serializers.SerializerMethodField()
 
-    def get_link(self, instance):
-        request = self.context.get("request")
-        if request and "HTTP_HOST" in request.META:
-            return f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/builds/{instance.build_id}"  # noqa
-        return None
+    @staticmethod
+    def get_link(instance: SoftwareBuild) -> str:
+        return get_model_id_link("builds", instance.build_id)
 
     class Meta:
         model = SoftwareBuild
@@ -95,135 +160,42 @@ class ComponentSerializer(serializers.ModelSerializer):
     sources = serializers.SerializerMethodField()
     upstreams = serializers.SerializerMethodField()
 
-    def get_link(self, instance):
-        request = self.context.get("request")
-        if request and "HTTP_HOST" in request.META:
-            return f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/components?purl={quote(instance.purl)}"  # noqa
-        return None
+    @staticmethod
+    def get_link(instance: Component) -> str:
+        return get_component_purl_link(instance.purl)
 
-    def get_products(self, instance):
-        request = self.context.get("request")
-        p = list()
-        for ofuri in instance.products:
-            if Product.objects.filter(ofuri=ofuri).exists():
-                obj = Product.objects.get(ofuri=ofuri)
-                p.append(
-                    {
-                        "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/products?ofuri={ofuri}",  # noqa
-                        "ofuri": ofuri,
-                        "name": obj.name,
-                    }
-                )
-            else:
-                p.append(
-                    {
-                        "ofuri": ofuri,
-                    }
-                )
-        return p
+    @staticmethod
+    def get_products(instance: Component) -> list[dict[str, str]]:
+        return get_product_data_list_by_ofuri(Product, "products", instance.products)
 
-    def get_product_versions(self, instance):
-        request = self.context.get("request")
-        p = list()
-        for ofuri in instance.product_versions:
-            if ProductVersion.objects.filter(ofuri=ofuri).exists():
-                obj = ProductVersion.objects.get(ofuri=ofuri)
-                p.append(
-                    {
-                        "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/product_versions?ofuri={ofuri}",  # noqa
-                        "ofuri": ofuri,
-                        "name": obj.name,
-                    }
-                )
-            else:
-                p.append(
-                    {
-                        "ofuri": ofuri,
-                    }
-                )
-        return p
+    @staticmethod
+    def get_product_versions(instance: Component) -> list[dict[str, str]]:
+        return get_product_data_list_by_ofuri(
+            ProductVersion, "product_versions", instance.product_versions
+        )
 
-    def get_product_streams(self, instance):
-        request = self.context.get("request")
-        p = list()
-        for ofuri in instance.product_streams:
-            if ProductStream.objects.filter(ofuri=ofuri).exists():
-                obj = ProductStream.objects.get(ofuri=ofuri)
-                p.append(
-                    {
-                        "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/product_streams?ofuri={ofuri}",  # noqa
-                        "ofuri": ofuri,
-                        "name": obj.name,
-                    }
-                )
-            else:
-                p.append(
-                    {
-                        "ofuri": ofuri,
-                    }
-                )
-        return p
+    @staticmethod
+    def get_product_streams(instance: Component) -> list[dict[str, str]]:
+        return get_product_data_list_by_ofuri(
+            ProductStream, "product_streams", instance.product_streams
+        )
 
-    def get_product_variants(self, instance):
-        request = self.context.get("request")
-        p = list()
-        for pname in instance.product_variants:
-            if ProductVariant.objects.filter(name=pname).exists():
-                obj = ProductVariant.objects.get(name=pname)
-                p.append(
-                    {
-                        "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/product_variants?ofuri={obj.ofuri}",  # noqa
-                        "ofuri": obj.ofuri,
-                        "name": pname,
-                    }
-                )
-            else:
-                p.append(
-                    {
-                        "name": pname,
-                    }
-                )
-        return p
+    # Above 3 are special - they filter on ofuri= instead of name=
+    @staticmethod
+    def get_product_variants(instance: Component) -> list[dict[str, str]]:
+        return get_product_data_list(ProductVariant, "product_variants", instance.product_variants)
 
-    def get_provides(self, instance):
-        request = self.context.get("request")
-        components = list()
-        for purl in instance.provides:
-            if request:
-                if request and "HTTP_HOST" in request.META:
-                    components.append(
-                        {
-                            "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/components?purl={quote(purl)}",  # noqa
-                            "purl": purl,
-                        }
-                    )
-        return components
+    @staticmethod
+    def get_provides(instance: Component) -> list[dict[str, str]]:
+        return get_component_data_list(instance.provides)
 
-    def get_sources(self, instance):
-        request = self.context.get("request")
-        components = list()
-        for purl in instance.sources:
-            if request and "HTTP_HOST" in request.META:
-                components.append(
-                    {
-                        "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/components?purl={quote(purl)}",  # noqa
-                        "purl": purl,
-                    }
-                )
-        return components
+    @staticmethod
+    def get_sources(instance: Component) -> list[dict[str, str]]:
+        return get_component_data_list(instance.sources)
 
-    def get_upstreams(self, instance):
-        request = self.context.get("request")
-        components = list()
-        for purl in instance.upstreams:
-            if request and "HTTP_HOST" in request.META:
-                components.append(
-                    {
-                        "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/components?purl={quote(purl)}",  # noqa
-                        "purl": purl,
-                    }
-                )
-        return components
+    @staticmethod
+    def get_upstreams(instance: Component) -> list[dict[str, str]]:
+        return get_component_data_list(instance.upstreams)
 
     class Meta:
         model = Component
@@ -272,134 +244,42 @@ class ComponentDetailSerializer(serializers.ModelSerializer):
     sources = serializers.SerializerMethodField()
     upstreams = serializers.SerializerMethodField()
 
-    def get_products(self, instance):
-        request = self.context.get("request")
-        p = list()
-        for ofuri in instance.products:
-            if Product.objects.filter(ofuri=ofuri).exists():
-                obj = Product.objects.get(ofuri=ofuri)
-                p.append(
-                    {
-                        "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/products?ofuri={ofuri}",  # noqa
-                        "ofuri": ofuri,
-                        "name": obj.name,
-                    }
-                )
-            else:
-                p.append(
-                    {
-                        "ofuri": ofuri,
-                    }
-                )
-        return p
+    @staticmethod
+    def get_products(instance: Component) -> list[dict[str, str]]:
+        return get_product_data_list_by_ofuri(Product, "products", instance.products)
 
-    def get_product_versions(self, instance):
-        request = self.context.get("request")
-        p = list()
-        for ofuri in instance.product_versions:
-            if ProductVersion.objects.filter(ofuri=ofuri).exists():
-                obj = ProductVersion.objects.get(ofuri=ofuri)
-                p.append(
-                    {
-                        "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/product_versions?ofuri={ofuri}",  # noqa
-                        "ofuri": ofuri,
-                        "name": obj.name,
-                    }
-                )
-            else:
-                p.append(
-                    {
-                        "ofuri": ofuri,
-                    }
-                )
-        return p
+    @staticmethod
+    def get_product_versions(instance: Component) -> list[dict[str, str]]:
+        return get_product_data_list_by_ofuri(
+            ProductVersion, "product_versions", instance.product_versions
+        )
 
-    def get_product_streams(self, instance):
-        request = self.context.get("request")
-        p = list()
-        for ofuri in instance.product_streams:
-            if ProductStream.objects.filter(ofuri=ofuri).exists():
-                obj = ProductStream.objects.get(ofuri=ofuri)
-                p.append(
-                    {
-                        "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/product_streams?ofuri={ofuri}",  # noqa
-                        "ofuri": ofuri,
-                        "name": obj.name,
-                    }
-                )
-            else:
-                p.append(
-                    {
-                        "ofuri": ofuri,
-                    }
-                )
-        return p
+    @staticmethod
+    def get_product_streams(instance: Component) -> list[dict[str, str]]:
+        return get_product_data_list_by_ofuri(
+            ProductStream, "product_streams", instance.product_streams
+        )
 
-    def get_product_variants(self, instance):
-        request = self.context.get("request")
-        p = list()
-        for pname in instance.product_variants:
-            if ProductVariant.objects.filter(name=pname).exists():
-                obj = ProductVariant.objects.get(name=pname)
-                p.append(
-                    {
-                        "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/product_variants?ofuri={obj.ofuri}",  # noqa
-                        "ofuri": obj.ofuri,
-                        "name": pname,
-                    }
-                )
-            else:
-                p.append(
-                    {
-                        "name": pname,
-                    }
-                )
-        return p
+    # Above 3 are special - they filter on ofuri= instead of name=
+    @staticmethod
+    def get_product_variants(instance: Component) -> list[dict[str, str]]:
+        return get_product_data_list(ProductVariant, "product_variants", instance.product_variants)
 
-    def get_link(self, instance):
-        request = self.context.get("request")
-        if request and "HTTP_HOST" in request.META:
-            return f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/components?purl={quote(instance.purl)}"  # noqa
-        return None
+    @staticmethod
+    def get_link(instance: Component) -> str:
+        return get_component_purl_link(instance.purl)
 
-    def get_provides(self, instance):
-        request = self.context.get("request")
-        components = list()
-        for purl in instance.provides:
-            if request and "HTTP_HOST" in request.META:
-                components.append(
-                    {
-                        "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/components?purl={quote(purl)}",  # noqa
-                        "purl": purl,
-                    }
-                )
-        return components
+    @staticmethod
+    def get_provides(instance: Component) -> list[dict[str, str]]:
+        return get_component_data_list(instance.provides)
 
-    def get_sources(self, instance):
-        request = self.context.get("request")
-        components = list()
-        for purl in instance.sources:
-            if request and "HTTP_HOST" in request.META:
-                components.append(
-                    {
-                        "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/components?purl={quote(purl)}",  # noqa
-                        "purl": purl,
-                    }
-                )
-        return components
+    @staticmethod
+    def get_sources(instance: Component) -> list[dict[str, str]]:
+        return get_component_data_list(instance.sources)
 
-    def get_upstreams(self, instance):
-        request = self.context.get("request")
-        components = list()
-        for purl in instance.upstreams:
-            if request and "HTTP_HOST" in request.META:
-                components.append(
-                    {
-                        "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/components?purl={quote(purl)}",  # noqa
-                        "purl": purl,
-                    }
-                )
-        return components
+    @staticmethod
+    def get_upstreams(instance: Component) -> list[dict[str, str]]:
+        return get_component_data_list(instance.upstreams)
 
     class Meta:
         model = Component
@@ -438,11 +318,9 @@ class ComponentListSerializer(serializers.ModelSerializer):
 
     link = serializers.SerializerMethodField()
 
-    def get_link(self, instance):
-        request = self.context.get("request")
-        if request and "HTTP_HOST" in request.META:
-            return f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/components?purl={quote(instance.purl)}"  # noqa
-        return None
+    @staticmethod
+    def get_link(instance: Component) -> str:
+        return get_component_purl_link(instance.purl)
 
     class Meta:
         model = Component
@@ -464,95 +342,36 @@ class ProductSerializer(serializers.ModelSerializer):
     product_streams = serializers.SerializerMethodField()
     product_variants = serializers.SerializerMethodField()
 
-    def get_link(self, instance):
-        request = self.context.get("request")
-        if request and "HTTP_HOST" in request.META:
-            return f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/products?ofuri={instance.ofuri}"  # noqa
-        return None
-
-    def get_product_versions(self, instance):
-        request = self.context.get("request")
-        p = list()
-        for pname in instance.product_versions:
-            if ProductVersion.objects.filter(name=pname).exists():
-                obj = ProductVersion.objects.get(name=pname)
-                p.append(
-                    {
-                        "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/product_versions?ofuri={obj.ofuri}",  # noqa
-                        "ofuri": obj.ofuri,
-                        "name": pname,
-                    }
-                )
-            else:
-                p.append(
-                    {
-                        "name": pname,
-                    }
-                )
-        return p
-
-    def get_product_streams(self, instance):
-        request = self.context.get("request")
-        p = list()
-        for pname in instance.product_streams:
-            if ProductStream.objects.filter(name=pname).exists():
-                obj = ProductStream.objects.get(name=pname)
-                p.append(
-                    {
-                        "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/product_streams?ofuri={obj.ofuri}",  # noqa
-                        "ofuri": obj.ofuri,
-                        "name": pname,
-                    }
-                )
-            else:
-                p.append(
-                    {
-                        "name": pname,
-                    }
-                )
-        return p
-
-    def get_product_variants(self, instance):
-        request = self.context.get("request")
-        p = list()
-        for pname in instance.product_variants:
-            if ProductVariant.objects.filter(name=pname).exists():
-                obj = ProductVariant.objects.get(name=pname)
-                p.append(
-                    {
-                        "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/product_variants?ofuri={obj.ofuri}",  # noqa
-                        "ofuri": obj.ofuri,
-                        "name": pname,
-                    }
-                )
-            else:
-                p.append(
-                    {
-                        "name": pname,
-                    }
-                )
-        return p
-
-    def get_components(self, instance):
-        request = self.context.get("request")
-        if request and "HTTP_HOST" in request.META:
-            return f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/components?ofuri={instance.ofuri}"  # noqa
-        return None
-
-    def get_upstreams(self, instance):
-        request = self.context.get("request")
-        if request and "HTTP_HOST" in request.META:
-            return f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/components?ofuri={instance.ofuri}&type=UPSTREAM"  # noqa
-        return None
-
-    def get_builds(self, instance):
-        request = self.context.get("request")
-        if request and "HTTP_HOST" in request.META:
-            return f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/builds?ofuri={instance.ofuri}"  # noqa
-        return None
+    @staticmethod
+    def get_link(instance: Product) -> str:
+        return get_model_ofuri_link("products", instance.ofuri)
 
     @staticmethod
-    def get_build_count(instance):
+    def get_product_versions(instance: Product) -> list[dict[str, str]]:
+        return get_product_data_list(ProductVersion, "product_versions", instance.product_versions)
+
+    @staticmethod
+    def get_product_streams(instance: Product) -> list[dict[str, str]]:
+        return get_product_data_list(ProductStream, "product_streams", instance.product_streams)
+
+    @staticmethod
+    def get_product_variants(instance: Product) -> list[dict[str, str]]:
+        return get_product_data_list(ProductVariant, "product_variants", instance.product_variants)
+
+    @staticmethod
+    def get_components(instance: Product) -> str:
+        return get_model_ofuri_link("components", instance.ofuri)
+
+    @staticmethod
+    def get_upstreams(instance: Product) -> str:
+        return get_model_ofuri_link("components", instance.ofuri, related_type="UPSTREAM")
+
+    @staticmethod
+    def get_builds(instance: Product) -> str:
+        return get_model_ofuri_link("builds", instance.ofuri)
+
+    @staticmethod
+    def get_build_count(instance: Product) -> int:
         return instance.builds.count()
 
     class Meta:
@@ -589,101 +408,40 @@ class ProductVersionSerializer(serializers.ModelSerializer):
     product_streams = serializers.SerializerMethodField()
     product_variants = serializers.SerializerMethodField()
 
-    def get_link(self, instance):
-        request = self.context.get("request")
-        if request and "HTTP_HOST" in request.META:
-            return f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/product_versions?ofuri={instance.ofuri}"  # noqa
-        return None
-
-    def get_products(self, instance):
-        request = self.context.get("request")
-        p = list()
-        for pname in instance.products:
-            if Product.objects.filter(name=pname).exists():
-                obj = Product.objects.get(name=pname)
-                p.append(
-                    {
-                        "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/products?ofuri={obj.ofuri}",  # noqa
-                        "ofuri": obj.ofuri,
-                        "name": pname,
-                    }
-                )
-            else:
-                p.append(
-                    {
-                        "name": pname,
-                    }
-                )
-        return p
-
-    def get_product_streams(self, instance):
-        request = self.context.get("request")
-        p = list()
-        for pname in instance.product_streams:
-            if ProductStream.objects.filter(name=pname).exists():
-                obj = ProductStream.objects.get(name=pname)
-                p.append(
-                    {
-                        "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/product_streams?ofuri={obj.ofuri}",  # noqa
-                        "ofuri": obj.ofuri,
-                        "name": pname,
-                    }
-                )
-            else:
-                p.append(
-                    {
-                        "name": pname,
-                    }
-                )
-        return p
-
-    def get_product_variants(self, instance):
-        request = self.context.get("request")
-        p = list()
-        for pname in instance.product_variants:
-            if ProductVariant.objects.filter(name=pname).exists():
-                obj = ProductVariant.objects.get(name=pname)
-                p.append(
-                    {
-                        "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/product_variants?ofuri={obj.ofuri}",  # noqa
-                        "ofuri": obj.ofuri,
-                        "name": pname,
-                    }
-                )
-            else:
-                p.append(
-                    {
-                        "name": pname,
-                    }
-                )
-        return p
-
-    def get_components(self, instance):
-        request = self.context.get("request")
-        if request and "HTTP_HOST" in request.META:
-            return f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/components?ofuri={instance.ofuri}"  # noqa
-        return None
-
-    def get_upstreams(self, instance):
-        request = self.context.get("request")
-        if request and "HTTP_HOST" in request.META:
-            return f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/components?ofuri={instance.ofuri}&type=UPSTREAM"  # noqa
-        return None
-
-    def get_manifest(self, instance):
-        request = self.context.get("request")
-        if request and "HTTP_HOST" in request.META:
-            return f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/product_versions/{instance.uuid}/manifest"  # noqa
-        return None
-
-    def get_builds(self, instance):
-        request = self.context.get("request")
-        if request and "HTTP_HOST" in request.META:
-            return f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/builds?ofuri={instance.ofuri}"  # noqa
-        return None
+    @staticmethod
+    def get_link(instance: ProductVersion) -> str:
+        return get_model_ofuri_link("product_versions", instance.ofuri)
 
     @staticmethod
-    def get_build_count(instance):
+    def get_products(instance: ProductVersion) -> list[dict[str, str]]:
+        return get_product_data_list(Product, "products", instance.products)
+
+    @staticmethod
+    def get_product_streams(instance: ProductVersion) -> list[dict[str, str]]:
+        return get_product_data_list(ProductStream, "product_streams", instance.product_streams)
+
+    @staticmethod
+    def get_product_variants(instance: ProductVersion) -> list[dict[str, str]]:
+        return get_product_data_list(ProductVariant, "product_variants", instance.product_variants)
+
+    @staticmethod
+    def get_components(instance: ProductVersion) -> str:
+        return get_model_ofuri_link("components", instance.ofuri)
+
+    @staticmethod
+    def get_upstreams(instance: ProductVersion) -> str:
+        return get_model_ofuri_link("components", instance.ofuri, related_type="UPSTREAM")
+
+    @staticmethod
+    def get_manifest(instance: ProductVersion) -> str:
+        return get_model_id_link("product_versions", instance.uuid, manifest=True)
+
+    @staticmethod
+    def get_builds(instance: ProductVersion) -> str:
+        return get_model_ofuri_link("builds", instance.ofuri)
+
+    @staticmethod
+    def get_build_count(instance: ProductVersion) -> int:
         return instance.builds.count()
 
     class Meta:
@@ -723,115 +481,44 @@ class ProductStreamSerializer(serializers.ModelSerializer):
 
     relations = serializers.SerializerMethodField()
 
-    def get_link(self, instance):
-        request = self.context.get("request")
-        if request and "HTTP_HOST" in request.META:
-            return f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/product_streams?ofuri={instance.ofuri}"  # noqa
-        return None
-
-    def get_products(self, instance):
-        request = self.context.get("request")
-        p = list()
-        for pname in instance.products:
-            if Product.objects.filter(name=pname).exists():
-                obj = Product.objects.get(name=pname)
-                p.append(
-                    {
-                        "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/products?ofuri={obj.ofuri}",  # noqa
-                        "ofuri": obj.ofuri,
-                        "name": pname,
-                    }
-                )
-            else:
-                p.append(
-                    {
-                        "name": pname,
-                    }
-                )
-        return p
-
-    def get_product_versions(self, instance):
-        request = self.context.get("request")
-        p = list()
-        for pname in instance.product_versions:
-            if ProductVersion.objects.filter(name=pname).exists():
-                obj = ProductVersion.objects.get(name=pname)
-                p.append(
-                    {
-                        "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/product_versions?ofuri={obj.ofuri}",  # noqa
-                        "ofuri": obj.ofuri,
-                        "name": pname,
-                    }
-                )
-            else:
-                p.append(
-                    {
-                        "name": pname,
-                    }
-                )
-        return p
-
-    def get_product_variants(self, instance):
-        request = self.context.get("request")
-        p = list()
-        for pname in instance.product_variants:
-            if ProductVariant.objects.filter(name=pname).exists():
-                obj = ProductVariant.objects.get(name=pname)
-                p.append(
-                    {
-                        "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/product_variants?ofuri={obj.ofuri}",  # noqa
-                        "ofuri": obj.ofuri,
-                        "name": pname,
-                    }
-                )
-            else:
-                p.append(
-                    {
-                        "name": pname,
-                    }
-                )
-        return p
-
-    def get_components(self, instance):
-        request = self.context.get("request")
-        if request and "HTTP_HOST" in request.META:
-            return f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/components?ofuri={instance.ofuri}"  # noqa
-        return None
-
-    def get_upstreams(self, instance):
-        request = self.context.get("request")
-        if request and "HTTP_HOST" in request.META:
-            return f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/components?ofuri={instance.ofuri}&type=UPSTREAM"  # noqa
-        return None
-
-    def get_manifest(self, instance):
-        request = self.context.get("request")
-        if request and "HTTP_HOST" in request.META:
-            return f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/product_streams/{instance.uuid}/manifest"  # noqa
-        return None
-
-    def get_builds(self, instance):
-        request = self.context.get("request")
-        if request and "HTTP_HOST" in request.META:
-            return f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/builds?ofuri={instance.ofuri}"  # noqa
-        return None
+    @staticmethod
+    def get_link(instance: ProductStream) -> str:
+        return get_model_ofuri_link("product_streams", instance.ofuri)
 
     @staticmethod
-    def get_relations(instance):
-        relations = list()
-        for external_system_id in (
-            ProductComponentRelation.objects.filter(product_ref=instance.name)
-            .distinct()
-            .values_list("external_system_id", flat=True)
-        ):
-            pcr = ProductComponentRelation.objects.filter(
-                external_system_id=external_system_id
-            ).first()
-            relations.append({"type": pcr.type, "external_system_id": pcr.external_system_id})
-        return relations
+    def get_products(instance: ProductStream) -> list[dict[str, str]]:
+        return get_product_data_list(Product, "products", instance.products)
 
     @staticmethod
-    def get_build_count(instance):
+    def get_product_versions(instance: ProductStream) -> list[dict[str, str]]:
+        return get_product_data_list(ProductVersion, "product_versions", instance.product_versions)
+
+    @staticmethod
+    def get_product_variants(instance: ProductStream) -> list[dict[str, str]]:
+        return get_product_data_list(ProductVariant, "product_variants", instance.product_variants)
+
+    @staticmethod
+    def get_components(instance: ProductVersion) -> str:
+        return get_model_ofuri_link("components", instance.ofuri)
+
+    @staticmethod
+    def get_upstreams(instance: ProductStream) -> str:
+        return get_model_ofuri_link("components", instance.ofuri, related_type="UPSTREAM")
+
+    @staticmethod
+    def get_manifest(instance: ProductStream) -> str:
+        return get_model_id_link("product_streams", instance.uuid, manifest=True)
+
+    @staticmethod
+    def get_builds(instance: ProductStream) -> str:
+        return get_model_ofuri_link("builds", instance.ofuri)
+
+    @staticmethod
+    def get_relations(instance: ProductStream) -> list[dict[str, str]]:
+        return get_product_relations(instance.name)
+
+    @staticmethod
+    def get_build_count(instance: ProductStream) -> int:
         return instance.builds.count()
 
     class Meta:
@@ -858,7 +545,6 @@ class ProductStreamSerializer(serializers.ModelSerializer):
             "products",
             "product_versions",
             "product_variants",
-            "builds",
             "channels",
             "meta_attr",
         ]
@@ -879,115 +565,44 @@ class ProductVariantSerializer(serializers.ModelSerializer):
 
     relations = serializers.SerializerMethodField()
 
-    def get_link(self, instance):
-        request = self.context.get("request")
-        if request and "HTTP_HOST" in request.META:
-            return f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/product_variants?ofuri={instance.ofuri}"  # noqa
-        return None
-
-    def get_products(self, instance):
-        request = self.context.get("request")
-        p = list()
-        for pname in instance.products:
-            if Product.objects.filter(name=pname).exists():
-                obj = Product.objects.get(name=pname)
-                p.append(
-                    {
-                        "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/products?ofuri={obj.ofuri}",  # noqa
-                        "ofuri": obj.ofuri,
-                        "name": pname,
-                    }
-                )
-            else:
-                p.append(
-                    {
-                        "name": pname,
-                    }
-                )
-        return p
-
-    def get_product_versions(self, instance):
-        request = self.context.get("request")
-        p = list()
-        for pname in instance.product_versions:
-            if ProductVersion.objects.filter(name=pname).exists():
-                obj = ProductVersion.objects.get(name=pname)
-                p.append(
-                    {
-                        "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/product_versions?ofuri={obj.ofuri}",  # noqa
-                        "ofuri": obj.ofuri,
-                        "name": pname,
-                    }
-                )
-            else:
-                p.append(
-                    {
-                        "name": pname,
-                    }
-                )
-        return p
-
-    def get_product_streams(self, instance):
-        request = self.context.get("request")
-        p = list()
-        for pname in instance.product_streams:
-            if ProductStream.objects.filter(name=pname).exists():
-                obj = ProductStream.objects.get(name=pname)
-                p.append(
-                    {
-                        "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/product_streams?ofuri={obj.ofuri}",  # noqa
-                        "ofuri": obj.ofuri,
-                        "name": pname,
-                    }
-                )
-            else:
-                p.append(
-                    {
-                        "name": pname,
-                    }
-                )
-        return p
-
-    def get_components(self, instance):
-        request = self.context.get("request")
-        if request and "HTTP_HOST" in request.META:
-            return f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/components?ofuri={instance.ofuri}"  # noqa
-        return None
-
-    def get_upstreams(self, instance):
-        request = self.context.get("request")
-        if request and "HTTP_HOST" in request.META:
-            return f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/components?ofuri={instance.ofuri}&type=UPSTREAM"  # noqa
-        return None
-
-    def get_manifest(self, instance):
-        request = self.context.get("request")
-        if request and "HTTP_HOST" in request.META:
-            return f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/product_variants/{instance.uuid}/manifest"  # noqa
-        return None
-
-    def get_builds(self, instance):
-        request = self.context.get("request")
-        if request and "HTTP_HOST" in request.META:
-            return f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/builds?ofuri={instance.ofuri}"  # noqa
-        return None
+    @staticmethod
+    def get_link(instance: ProductVariant) -> str:
+        return get_model_ofuri_link("product_variants", instance.ofuri)
 
     @staticmethod
-    def get_relations(instance):
-        relations = list()
-        for external_system_id in (
-            ProductComponentRelation.objects.filter(product_ref=instance.name)
-            .distinct()
-            .values_list("external_system_id", flat=True)
-        ):
-            pcr = ProductComponentRelation.objects.filter(
-                external_system_id=external_system_id
-            ).first()
-            relations.append({"type": pcr.type, "external_system_id": pcr.external_system_id})
-        return relations
+    def get_products(instance: ProductVariant) -> list[dict[str, str]]:
+        return get_product_data_list(Product, "products", instance.products)
 
     @staticmethod
-    def get_build_count(instance):
+    def get_product_versions(instance: ProductVariant) -> list[dict[str, str]]:
+        return get_product_data_list(ProductVersion, "product_versions", instance.product_versions)
+
+    @staticmethod
+    def get_product_streams(instance: ProductVariant) -> list[dict[str, str]]:
+        return get_product_data_list(ProductStream, "product_streams", instance.product_streams)
+
+    @staticmethod
+    def get_components(instance: ProductVersion) -> str:
+        return get_model_ofuri_link("components", instance.ofuri)
+
+    @staticmethod
+    def get_upstreams(instance: ProductVersion) -> str:
+        return get_model_ofuri_link("components", instance.ofuri, related_type="UPSTREAM")
+
+    @staticmethod
+    def get_manifest(instance: ProductVersion) -> str:
+        return get_model_id_link("product_variants", instance.uuid, manifest=True)
+
+    @staticmethod
+    def get_builds(instance: ProductVariant) -> str:
+        return get_model_ofuri_link("builds", instance.ofuri)
+
+    @staticmethod
+    def get_relations(instance: ProductVariant) -> list[dict[str, str]]:
+        return get_product_relations(instance.name)
+
+    @staticmethod
+    def get_build_count(instance: ProductVariant) -> int:
         return instance.builds.count()
 
     class Meta:

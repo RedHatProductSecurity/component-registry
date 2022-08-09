@@ -47,6 +47,8 @@ from .serializers import (
     ProductVersionSerializer,
     RelationSerializer,
     SoftwareBuildSerializer,
+    get_component_purl_link,
+    get_model_ofuri_link,
 )
 
 logger = logging.getLogger(__name__)
@@ -62,6 +64,7 @@ def healthy(request: Request) -> Response:
 class StatusView(ReadOnlyModelViewSet):
 
     queryset = SoftwareBuild.objects.all()
+    serializer_class = SoftwareBuildSerializer
 
     @extend_schema(
         request=None,
@@ -110,10 +113,9 @@ class StatusView(ReadOnlyModelViewSet):
             }
         },
     )
-    def list(self, request):
+    def list(self, request, *args, **kwargs):
         """View for api/v1/status"""
 
-        db_size = ""
         with connection.cursor() as cursor:
             cursor.execute("SELECT pg_size_pretty(pg_database_size(current_database()));")
             db_size = cursor.fetchone()
@@ -151,20 +153,18 @@ class StatusView(ReadOnlyModelViewSet):
         )
 
 
-def recursive_component_node_to_dict(request, node, componenttype):
+def recursive_component_node_to_dict(node, componenttype):
     result = {}
     if node.type in componenttype:
         result = {
             "purl": node.purl,
             # "node_id": node.pk,
             "node_type": node.type,
-            "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/components?purl={node.obj.purl}",  # noqa
+            "link": get_component_purl_link(node.obj.purl),
             # "uuid": node.obj.uuid,
             "description": node.obj.description,
         }
-    children = [
-        recursive_component_node_to_dict(request, c, componenttype) for c in node.get_children()
-    ]
+    children = [recursive_component_node_to_dict(c, componenttype) for c in node.get_children()]
     if children:
         result["deps"] = children
     return result
@@ -175,12 +175,11 @@ class ComponentTaxonomyView(APIView):
 
     def get(self, request, *args, **kwargs):
         """ """
-        root_nodes = cache_tree_children(ComponentNode.objects.all())
+        root_nodes = cache_tree_children(ComponentNode.objects.get_queryset())
         dicts = []
         for n in root_nodes:
             dicts.append(
                 recursive_component_node_to_dict(
-                    request,
                     n,
                     [
                         ComponentNode.ComponentNodeType.SOURCE,
@@ -191,7 +190,7 @@ class ComponentTaxonomyView(APIView):
         return Response(dicts)
 
 
-def recursive_product_node_to_dict(request, node):
+def recursive_product_node_to_dict(node):
     product_type = ""
     child_product_type = ""
     if node.level == 0:
@@ -209,11 +208,11 @@ def recursive_product_node_to_dict(request, node):
     if node.level == 4:
         product_type = "channels"
     result = {
-        "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/{product_type}?ofuri={node.obj.ofuri}",  # noqa
+        "link": get_model_ofuri_link(product_type, node.obj.ofuri),
         "ofuri": node.obj.ofuri,
         "name": node.obj.name,
     }
-    children = [recursive_product_node_to_dict(request, c) for c in node.get_children()]
+    children = [recursive_product_node_to_dict(c) for c in node.get_children()]
 
     if children:
         result[child_product_type] = children
@@ -225,10 +224,10 @@ class ProductTaxonomyView(APIView):
 
     def get(self, request, *args, **kwargs):
         """ """
-        root_nodes = cache_tree_children(ProductNode.objects.all())
+        root_nodes = cache_tree_children(ProductNode.objects.get_queryset())
         dicts = []
         for n in root_nodes:
-            dicts.append(recursive_product_node_to_dict(request, n))
+            dicts.append(recursive_product_node_to_dict(n))
         return Response(dicts)
 
 
@@ -255,29 +254,35 @@ class ProductView(ProductDataView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
 
-    def list(self, request):
+    def list(self, request, *args, **kwargs):
         req = self.request
         ofuri = req.query_params.get("ofuri")
-        if ofuri:
-            p = Product.objects.get(ofuri=ofuri)
-            response = Response(status=302)
-            response["Location"] = f"/api/{CORGI_API_VERSION}/products/{p.uuid}"
-            return response
-        return super().list(request)
+        if not ofuri:
+            return super().list(request)
+        p = Product.objects.filter(ofuri=ofuri).first()
+        if not p:
+            return Response(status=404)
+        response = Response(status=302)
+        response["Location"] = f"/api/{CORGI_API_VERSION}/products/{p.uuid}"
+        return response
 
     @action(methods=["get"], detail=True)
     def manifest(self, request, uuid=None):
-        manifest = json.loads(self.queryset.get(uuid=uuid).manifest)
+        obj = self.queryset.filter(uuid=uuid).first()
+        if not obj:
+            return Response(status=404)
+        manifest = json.loads(obj.manifest)
         return Response(manifest)
 
     @action(methods=["get"], detail=True)
     def taxonomy(self, request, uuid=None):
-        root_nodes = cache_tree_children(
-            self.queryset.get(uuid=uuid).pnodes.all().get_descendants(include_self=True)
-        )
+        obj = self.queryset.filter(uuid=uuid).first()
+        if not obj:
+            return Response(status=404)
+        root_nodes = cache_tree_children(obj.pnodes.get_descendants(include_self=True))
         dicts = []
         for n in root_nodes:
-            dicts.append(recursive_product_node_to_dict(request, n))
+            dicts.append(recursive_product_node_to_dict(n))
         return Response(dicts[0])
 
 
@@ -287,26 +292,32 @@ class ProductVersionView(ProductDataView):
     queryset = ProductVersion.objects.all()
     serializer_class = ProductVersionSerializer
 
-    def list(self, request):
+    def list(self, request, *args, **kwargs):
         req = self.request
         ofuri = req.query_params.get("ofuri")
-        if ofuri:
-            pv = ProductVersion.objects.get(ofuri=ofuri)
-            response = Response(status=302)
-            response["Location"] = f"/api/{CORGI_API_VERSION}/product_versions/{pv.uuid}"
-            return response
-        return super().list(request)
+        if not ofuri:
+            return super().list(request)
+        pv = ProductVersion.objects.filter(ofuri=ofuri).first()
+        if not pv:
+            return Response(status=404)
+        response = Response(status=302)
+        response["Location"] = f"/api/{CORGI_API_VERSION}/product_versions/{pv.uuid}"
+        return response
 
     @action(methods=["get"], detail=True)
     def manifest(self, request, uuid=None):
-        manifest = json.loads(self.queryset.get(uuid=uuid).manifest)
+        obj = self.queryset.filter(uuid=uuid).first()
+        if not obj:
+            return Response(status=404)
+        manifest = json.loads(obj.manifest)
         return Response(manifest)
 
     @action(methods=["get"], detail=True)
     def taxonomy(self, request, uuid=None):
-        root_nodes = cache_tree_children(
-            self.queryset.get(uuid=uuid).pnodes.all().get_descendants(include_self=True)
-        )
+        obj = self.queryset.filter(uuid=uuid).first()
+        if not obj:
+            return Response(status=404)
+        root_nodes = cache_tree_children(obj.pnodes.get_descendants(include_self=True))
         dicts = []
         for n in root_nodes:
             dicts.append(recursive_product_node_to_dict(n))
@@ -319,26 +330,32 @@ class ProductStreamView(ProductDataView):
     queryset = ProductStream.objects.all()
     serializer_class = ProductStreamSerializer
 
-    def list(self, request):
+    def list(self, request, *args, **kwargs):
         req = self.request
         ofuri = req.query_params.get("ofuri")
-        if ofuri:
-            ps = ProductStream.objects.get(ofuri=ofuri)
-            response = Response(status=302)
-            response["Location"] = f"/api/{CORGI_API_VERSION}/product_streams/{ps.uuid}"
-            return response
-        return super().list(request)
+        if not ofuri:
+            return super().list(request)
+        ps = ProductStream.objects.filter(ofuri=ofuri).first()
+        if not ps:
+            return Response(status=404)
+        response = Response(status=302)
+        response["Location"] = f"/api/{CORGI_API_VERSION}/product_streams/{ps.uuid}"
+        return response
 
     @action(methods=["get"], detail=True)
     def manifest(self, request, uuid=None):
-        manifest = json.loads(self.queryset.get(uuid=uuid).manifest)
+        obj = self.queryset.filter(uuid=uuid).first()
+        if not obj:
+            return Response(status=404)
+        manifest = json.loads(obj.manifest)
         return Response(manifest)
 
     @action(methods=["get"], detail=True)
     def taxonomy(self, request, uuid=None):
-        root_nodes = cache_tree_children(
-            self.queryset.get(uuid=uuid).pnodes.all().get_descendants(include_self=True)
-        )
+        obj = self.queryset.filter(uuid=uuid).first()
+        if not obj:
+            return Response(status=404)
+        root_nodes = cache_tree_children(obj.pnodes.get_descendants(include_self=True))
         dicts = []
         for n in root_nodes:
             dicts.append(recursive_product_node_to_dict(n))
@@ -351,26 +368,32 @@ class ProductVariantView(ProductDataView):
     queryset = ProductVariant.objects.all()
     serializer_class = ProductVariantSerializer
 
-    def list(self, request):
+    def list(self, request, *args, **kwargs):
         req = self.request
         ofuri = req.query_params.get("ofuri")
-        if ofuri:
-            pv = ProductVariant.objects.get(ofuri=ofuri)
-            response = Response(status=302)
-            response["Location"] = f"/api/{CORGI_API_VERSION}/product_variants/{pv.uuid}"
-            return response
-        return super().list(request)
+        if not ofuri:
+            return super().list(request)
+        pv = ProductVariant.objects.filter(ofuri=ofuri).first()
+        if not pv:
+            return Response(status=404)
+        response = Response(status=302)
+        response["Location"] = f"/api/{CORGI_API_VERSION}/product_variants/{pv.uuid}"
+        return response
 
     @action(methods=["get"], detail=True)
     def manifest(self, request, uuid=None):
-        manifest = json.loads(self.queryset.get(uuid=uuid).manifest)
+        obj = self.queryset.filter(uuid=uuid).first()
+        if not obj:
+            return Response(status=404)
+        manifest = json.loads(obj.manifest)
         return Response(manifest)
 
     @action(methods=["get"], detail=True)
     def taxonomy(self, request, uuid=None):
-        root_nodes = cache_tree_children(
-            self.queryset.get(uuid=uuid).pnodes.all().get_descendants(include_self=True)
-        )
+        obj = self.queryset.filter(uuid=uuid).first()
+        if not obj:
+            return Response(status=404)
+        root_nodes = cache_tree_children(obj.pnodes.get_descendants(include_self=True))
         dicts = []
         for n in root_nodes:
             dicts.append(recursive_product_node_to_dict(n))
@@ -391,6 +414,7 @@ class ComponentView(ReadOnlyModelViewSet, TagViewMixin):
     """View for api/v1/components"""
 
     queryset = Component.objects.all()
+    serializer_class = ComponentSerializer
     search_fields = ["name", "description", "release", "version", "meta_attr"]
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend, filters.SearchFilter]
     filterset_class = ComponentFilter
@@ -399,32 +423,31 @@ class ComponentView(ReadOnlyModelViewSet, TagViewMixin):
     def get_serializer_class(self):
         if self.action == "retrieve":
             return ComponentDetailSerializer
-        return ComponentSerializer
+        return self.serializer_class
 
-    def list(self, request):
+    def list(self, request, *args, **kwargs):
         req = self.request
         # Note - purl url param needs to be url encoded a they are a uri.
         purl = req.query_params.get("purl")
-        if purl:
-            if Component.objects.filter(purl=purl).exists():
-                component = Component.objects.get(purl=purl)
-                response = Response(status=302)
-                response["Location"] = f"/api/{CORGI_API_VERSION}/components/{component.uuid}"
-                return response
-            else:
-                return Response(status=404)
-        return super().list(request)
+        if not purl:
+            return super().list(request)
+        component = Component.objects.filter(purl=purl).first()
+        if not component:
+            return Response(status=404)
+        response = Response(status=302)
+        response["Location"] = f"/api/{CORGI_API_VERSION}/components/{component.uuid}"
+        return response
 
     @action(methods=["get"], detail=True)
     def provides(self, request, uuid=None):
-        root_nodes = cache_tree_children(
-            self.queryset.get(uuid=uuid).cnodes.all().get_descendants(include_self=True)
-        )
+        obj = self.queryset.filter(uuid=uuid).first()
+        if not obj:
+            return Response(status=404)
+        root_nodes = cache_tree_children(obj.cnodes.get_descendants(include_self=True))
         dicts = []
         for n in root_nodes:
             dicts.append(
                 recursive_component_node_to_dict(
-                    request,
                     n,
                     [
                         ComponentNode.ComponentNodeType.PROVIDES,
@@ -436,14 +459,14 @@ class ComponentView(ReadOnlyModelViewSet, TagViewMixin):
 
     @action(methods=["get"], detail=True)
     def taxonomy(self, request, uuid=None):
-        root_nodes = cache_tree_children(
-            self.queryset.get(uuid=uuid).cnodes.all().get_descendants(include_self=True)
-        )
+        obj = self.queryset.filter(uuid=uuid).first()
+        if not obj:
+            return Response(status=404)
+        root_nodes = cache_tree_children(obj.cnodes.get_descendants(include_self=True))
         dicts = []
         for n in root_nodes:
             dicts.append(
                 recursive_component_node_to_dict(
-                    request,
                     n,
                     [
                         ComponentNode.ComponentNodeType.SOURCE,
@@ -463,66 +486,53 @@ class AppStreamLifeCycleView(ReadOnlyModelViewSet):
     serializer_class = AppStreamLifeCycleSerializer
 
 
-def coverage_report_node_to_dict(request, node):
-    product_type = ""
-    child_product_type = ""
+def coverage_report_node_to_dict(node):
+    """Recursively generate a coverage report for a node and all its children"""
     if node.level == 0:
         product_type = "products"
         child_product_type = "product_versions"
-    if node.level == 1:
+    elif node.level == 1:
         product_type = "product_versions"
         child_product_type = "product_streams"
-    if node.level == 2:
+    elif node.level == 2:
         product_type = "product_streams"
         child_product_type = "product_variants"
-    if node.level == 3:
+    elif node.level == 3:
         product_type = "product_variants"
         child_product_type = "channels"
-    if node.obj.builds.exists():
-        last_build = node.obj.builds.order_by("created_at").first()
-        if SoftwareBuild.objects.filter(build_id=last_build).exists():
-            last_build_date = SoftwareBuild.objects.get(build_id=last_build).created_at
-            result = {
-                "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/{product_type}?ofuri={node.obj.ofuri}",  # noqa
-                "ofuri": node.obj.ofuri,
-                "name": node.obj.name,
-            }
-            if node.level < 3:
-                result.update(
-                    {
-                        "coverage": node.obj.coverage,
-                        "build_count": node.obj.builds.count(),
-                        "last_build_dt": str(last_build_date),
-                        "component_count": node.obj.components.count(),
-                    }
-                )
-            else:
-                result.update(
-                    {
-                        "build_count": node.obj.builds.count(),
-                        "last_build_dt": str(last_build_date),
-                        "component_count": node.obj.components.count(),
-                    }
-                )
-
-            children = [coverage_report_node_to_dict(request, c) for c in node.get_children()]
-
-            if children:
-                result[child_product_type] = children
-            return result
     else:
-        return {
-            "link": f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/{product_type}?ofuri={node.obj.ofuri}",  # noqa
-            "ofuri": node.obj.ofuri,
-            "name": node.obj.name,
-        }
+        raise ValueError("Node level too high!")
+
+    last_build_id = node.obj.builds.order_by("created_at").first()
+    last_build = SoftwareBuild.objects.filter(build_id=last_build_id).first()
+    result = {
+        "link": get_model_ofuri_link(product_type, node.obj.ofuri),
+        "ofuri": node.obj.ofuri,
+        "name": node.obj.name,
+    }
+    if not last_build_id or not last_build:
+        return result
+
+    result["build_count"] = node.obj.builds.count()
+    result["last_build_dt"] = str(last_build.created_at)
+    result["component_count"] = node.obj.components.count()
+
+    if node.level < 3:
+        result["coverage"] = node.obj.coverage
+
+    children = [coverage_report_node_to_dict(c) for c in node.get_children()]
+
+    if children:
+        result[child_product_type] = children
+    return result
 
 
 class CoverageReportView(ReadOnlyModelViewSet):
 
     queryset = Product.objects.all()
+    serializer_class = ProductSerializer
 
-    def list(self, request):
+    def list(self, request, *args, **kwargs):
         """View for api/v1/reports/coverage"""
 
         include_missing = request.query_params.get("include_missing")
@@ -531,10 +541,10 @@ class CoverageReportView(ReadOnlyModelViewSet):
 
         for p in self.queryset:
             if p.coverage or include_missing:
-                root_nodes = cache_tree_children(p.pnodes.all().get_descendants(include_self=True))
+                root_nodes = cache_tree_children(p.pnodes.get_descendants(include_self=True))
                 dicts = []
                 for n in root_nodes:
-                    dicts.append(coverage_report_node_to_dict(request, n))
+                    dicts.append(coverage_report_node_to_dict(n))
                 if dicts:
                     results.append(dicts[0])
         return Response(results)
@@ -548,7 +558,7 @@ class RelationsView(ReadOnlyModelViewSet, TagViewMixin):
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend, filters.SearchFilter]
     lookup_url_kwarg = "uuid"
 
-    def list(self, request):
+    def list(self, request, *args, **kwargs):
         results = []
 
         # group all relations by external_system_id/type
@@ -568,14 +578,14 @@ class RelationsView(ReadOnlyModelViewSet, TagViewMixin):
                 pv = ProductVariant.objects.filter(name=related_pcr.product_ref).first()
                 if pv:
                     ofuri = pv.ofuri
-                    ofuri_link = f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/product_variants?ofuri={ofuri}"  # noqa
+                    ofuri_link = get_model_ofuri_link("product_variants", ofuri)
                     build_count = pv.builds.count()
 
-            if pcr_type == ProductComponentRelation.Type.COMPOSE:
+            elif pcr_type == ProductComponentRelation.Type.COMPOSE:
                 ps = ProductStream.objects.filter(name=related_pcr.product_ref).first()
                 if ps:
                     ofuri = ps.ofuri
-                    ofuri_link = f"{request.scheme}://{request.META['HTTP_HOST']}/api/{CORGI_API_VERSION}/product_streams?ofuri={ofuri}"  # noqa
+                    ofuri_link = get_model_ofuri_link("product_streams", ofuri)
                     build_count = ps.builds.count()
                     expected_build_count = (
                         related_set.values_list("build_id", flat=True).distinct().count()

@@ -37,7 +37,6 @@ services:
       args:
         - PIP_INDEX_URL=${PIP_INDEX_URL}
         - PIP_REQUIREMENT=./requirements/dev.txt
-        - PRODSEC_EMAIL=${PRODSEC_EMAIL}
         - ROOT_CA_URL=${ROOT_CA_URL}
     image: corgi
     depends_on: ["corgi-db"]

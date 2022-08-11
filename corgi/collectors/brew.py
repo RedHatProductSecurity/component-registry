@@ -260,7 +260,7 @@ class Brew:
         # for their client without having the know the actual image location.
         # See https://github.com/opencontainers/image-spec/blob/main/image-index.md
         if any(item == "" for item in [name, version, release]):
-            name, release, version = Brew.split_nvr(nvr)
+            name, version, release = Brew.split_nvr(nvr)
         return {
             "type": "container_image",
             "namespace": "redhat",

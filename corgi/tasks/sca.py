@@ -145,7 +145,7 @@ def _archive_source(source_url: str, package_type: str) -> Tuple[Optional[Path],
 
     git_remote = f"{url.scheme}://{url.netloc}{url.path}"
     package_name = url.path.rsplit("/", 1)[-1]
-    local_distgit_path = Path(f"{settings.DISTGIT_DIR}/{package_type}/{package_name}.git")
+
     target_path = Path(f"{settings.SCA_SCRATCH_DIR}/{package_type}/{package_name}")
     target_path.mkdir(exist_ok=True, parents=True)
     target_file = target_path / f"{url.fragment}.tar"
@@ -153,44 +153,26 @@ def _archive_source(source_url: str, package_type: str) -> Tuple[Optional[Path],
         # Perhaps another task is already processing, save cpu by bailing out
         return target_file, package_name
 
-    if local_distgit_path.exists():
-        logger.info(
-            "Creating archive %s from local distgit dir %s", target_file, local_distgit_path
-        )
-        _call_git_archive(
-            ["/usr/bin/git", "archive", "--format=tar", url.fragment],
-            target_file,
-            target_path,
-            cwd=local_distgit_path,
-        )
-    else:
-        logger.info("Fetching %s to %s", git_remote, target_file)
-        _call_git_archive(
-            ["/usr/bin/git", "archive", "--format=tar", f"--remote={git_remote}", url.fragment],
-            target_file,
-            target_path,
-        )
+    logger.info("Fetching %s to %s", git_remote, target_file)
+    _call_git_archive(
+        ["/usr/bin/git", "archive", "--format=tar", f"--remote={git_remote}", url.fragment],
+        target_file,
+        target_path,
+    )
 
     return target_file, package_name
 
 
-def _call_git_archive(git_archive_command, target_file, target_path, cwd=""):
+def _call_git_archive(git_archive_command, target_file, target_path):
     # for now git_remote and url.fragment are sanitized via url parsing and
     # coming from Brew.
     # We might consider more adding more sanitization if we accept ad-hoc source for scans
     try:
         with target_file.open("x") as target:
-            if cwd:
-                subprocess.check_call(  # nosec B603
-                    git_archive_command,
-                    stdout=target,
-                    cwd=cwd,
-                )
-            else:
-                subprocess.check_call(  # nosec B603
-                    git_archive_command,
-                    stdout=target,
-                )
+            subprocess.check_call(  # nosec B603
+                git_archive_command,
+                stdout=target,
+            )
 
     except CalledProcessError as e:
         logger.error("Error downloading raw source: %s", e)
@@ -234,16 +216,14 @@ def _download_lookaside_sources(
         # https://<host>/repo/rpms/containernetworking-plugins/v0.8.6.tar.gz/md5/
         # 85eddf3d872418c1c9d990ab8562cc20/v0.8.6.tar.gz
         lookaside_download_url = f"{settings.LOOKASIDE_CACHE_BASE_URL}/{lookaside_path}"
-        # eg. /opt/lookaside/rpms/containernetworking-plugins/v0.8.6.tar.gz/md5/
+        # eg. /tmp/rpms/containernetworking-plugins/v0.8.6.tar.gz/md5/
         # 85eddf3d872418c1c9d990ab8562cc20/v0.8.6.tar.gz
-        lookaside_filepath = Path(f"{settings.LOOKASIDE_DIR}/{lookaside_path}")
         target_filepath = Path(f"{settings.SCA_SCRATCH_DIR}/{lookaside_path}")
-        # When running in PSI cluster the lookaside is pre-mounted to lookaside_filepath
-        if not lookaside_filepath.exists():
+        if not target_filepath.exists():
             _download_source(lookaside_download_url, target_filepath)
         else:
-            logger.info("%s already exists, not downloading", lookaside_filepath)
-        downloaded_sources.append(lookaside_filepath)
+            logger.info("%s already exists, not downloading", target_filepath)
+        downloaded_sources.append(target_filepath)
     return downloaded_sources
 
 

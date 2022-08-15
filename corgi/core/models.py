@@ -809,7 +809,7 @@ class Component(TimeStampedModel):
                 else:
                     roots.append(root)
             except MultipleObjectsReturned:
-                logger.info(
+                logger.warning(
                     "Component %s returned multiple objects when returning get_roots", self.purl
                 )
         return list(set(roots))
@@ -920,7 +920,7 @@ class Component(TimeStampedModel):
                 if source:
                     sources.append(source.purl)
             except MultipleObjectsReturned:
-                logger.info(
+                logger.warning(
                     "Component %s returned multiple objects when returning sources", self.purl
                 )
         return list(set(sources))

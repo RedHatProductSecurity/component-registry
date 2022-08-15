@@ -2,5 +2,6 @@ bandit
 black
 detect-secrets
 flake8
+flake8-django
 isort
 radon

@@ -31,15 +31,13 @@ def test_parse_components():
 
 
 archive_source_test_data = [
-    # We've created test/data/rpms/nodejs.git to simulate prod/stage where that dir exists.
-    # In that case, the git archive command should change to that directory by invoking with cwd arg
     (
         f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
         "/rpms/nodejs#3cbed2be4171502499d0d89bea1ead91690af7d2",
         "nodejs",
         "rpms",
         "tests/data/rpms/nodejs/3cbed2be4171502499d0d89bea1ead91690af7d2.tar",
-        "",
+        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}/rpms/nodejs",
     ),
     (
         f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
@@ -64,10 +62,7 @@ def test_archive_source(
 ):
     target_file, package_name = _archive_source(source_url, package_type)
     mock_git_archive.assert_called_once()
-    if remote_name:
-        assert f"--remote={remote_name}" in mock_git_archive.call_args.args[0]
-    else:
-        assert "cwd" in mock_git_archive.call_args.kwargs
+    assert f"--remote={remote_name}" in mock_git_archive.call_args.args[0]
     assert package_name == package_name
     expected_target_file = PosixPath(expected_filename)
     assert target_file == expected_target_file

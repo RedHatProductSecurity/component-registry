@@ -5,7 +5,13 @@ from django.utils import dateformat, timezone
 
 from config.celery import app
 from corgi.collectors.brew import Brew, BrewBuildTypeNotSupported
-from corgi.core.models import Component, ComponentNode, SoftwareBuild
+from corgi.core.models import (
+    Component,
+    ComponentNode,
+    ProductComponentRelation,
+    ProductStream,
+    SoftwareBuild,
+)
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 from corgi.tasks.errata_tool import load_errata
 from corgi.tasks.sca import software_composition_analysis
@@ -14,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 @app.task(autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def slow_fetch_brew_build(build_id: int):
+def slow_fetch_brew_build(build_id: int, save_product: bool = True):
     logger.info("Fetch brew build called with build id: %s", build_id)
     if SoftwareBuild.objects.filter(build_id=build_id).count() > 0:
         logger.info("Already processed build_id %s", build_id)
@@ -54,26 +60,23 @@ def slow_fetch_brew_build(build_id: int):
     for c in build.get("components", []):
         save_component(c, root_node, softwarebuild)
 
+    # Once we have the full component tree loaded
+    softwarebuild.save_component_taxonomy()
+    # We don't call save_product_taxonomy by default to allow async call of load_errata task
+    # See CORGI-21
+    if save_product:
+        softwarebuild.save_product_taxonomy()
+
     # for builds with errata tags set ProductComponentRelation
     # get_component_data always calls _extract_advisory_ids to set tags, but list may be empty
     if not build_meta["errata_tags"]:
         logger.info("no errata tags")
     else:
         if isinstance(build_meta["errata_tags"], str):
-            build_ids = load_errata([build_meta["errata_tags"]])
+            load_errata.delay(build_meta["errata_tags"])
         else:
-            build_ids = load_errata(build_meta["errata_tags"])
-        # Calculate and print the percentage of builds for the errata
-        if len(build_ids) > 0:
-            processed_builds = SoftwareBuild.objects.filter(build_id__in=build_ids).count()
-            percentage_complete = int(processed_builds / len(build_ids) * 100)
-            logger.info(
-                "Processed %i%% of builds in %s", percentage_complete, build_meta["errata_tags"]
-            )
-
-    # once all build's components are ingested we must update component taxonomy
-    softwarebuild.save_component_taxonomy()
-    softwarebuild.save_product_taxonomy()
+            for e in build_meta["errata_tags"]:
+                load_errata.delay(e)
 
     if "nested_builds" in build:
         logger.info("Fetching brew builds for %s", build["nested_builds"])
@@ -155,15 +158,17 @@ def save_component(component, parent, softwarebuild=None):
 
 def save_srpm(softwarebuild, build_data) -> ComponentNode:
     obj, created = Component.objects.get_or_create(
-        type=Component.Type.SRPM,
         name=build_data["meta"].get("name"),
+        type=Component.Type.SRPM,
+        arch=build_data["meta"].get("arch", ""),
         version=build_data["meta"].get("version", ""),
         release=build_data["meta"].get("release", ""),
-        arch=build_data["meta"].get("arch", ""),
-        license=build_data["meta"].get("license", ""),
-        description=build_data["meta"].get("description", ""),
-        software_build=softwarebuild,
-        meta_attr=build_data["meta"],
+        defaults={
+            "license": build_data["meta"].get("license", ""),
+            "description": build_data["meta"].get("description", ""),
+            "software_build": softwarebuild,
+            "meta_attr": build_data["meta"],
+        },
     )
     node, _ = obj.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE,
@@ -200,15 +205,16 @@ def process_image_components(image):
 
 
 def save_container(softwarebuild, build_data) -> ComponentNode:
-
     obj, created = Component.objects.get_or_create(
-        type=Component.Type.CONTAINER_IMAGE,
         name=build_data["meta"]["name"],
+        type=Component.Type.CONTAINER_IMAGE,
+        arch="noarch",
         version=build_data["meta"]["version"],
         release=build_data["meta"]["release"],
-        arch="noarch",
-        software_build=softwarebuild,
-        meta_attr=build_data["meta"],
+        defaults={
+            "software_build": softwarebuild,
+            "meta_attr": build_data["meta"],
+        },
     )
     root_node, _ = obj.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE,
@@ -232,13 +238,15 @@ def save_container(softwarebuild, build_data) -> ComponentNode:
     if "image_components" in build_data:
         for image in build_data["image_components"]:
             obj, created = Component.objects.get_or_create(
-                type=Component.Type.CONTAINER_IMAGE,
                 name=image["meta"].pop("name"),
+                type=Component.Type.CONTAINER_IMAGE,
+                arch=image["meta"].pop("arch"),
                 version=image["meta"].pop("version"),
                 release=image["meta"].pop("release"),
-                arch=image["meta"].pop("arch"),
-                software_build=softwarebuild,
-                meta_attr=image["meta"],
+                defaults={
+                    "software_build": softwarebuild,
+                    "meta_attr": image["meta"],
+                },
             )
             image_arch_node, _ = obj.cnodes.get_or_create(
                 type=ComponentNode.ComponentNodeType.PROVIDES,
@@ -278,15 +286,17 @@ def recurse_components(component, parent):
 
 def save_module(softwarebuild, build_data) -> ComponentNode:
     obj, created = Component.objects.get_or_create(
-        type=Component.Type.RHEL_MODULE,
         name=build_data["meta"]["name"],
+        type=Component.Type.RHEL_MODULE,
+        arch=build_data["meta"].get("arch", ""),
         version=build_data["meta"].get("version", ""),
         release=build_data["meta"].get("release", ""),
-        arch=build_data["meta"].get("arch", ""),
-        license=build_data["meta"].get("license", ""),
-        description=build_data["meta"].get("description", ""),
-        software_build=softwarebuild,
-        meta_attr=build_data["meta"]["components"],
+        defaults={
+            "license": build_data["meta"].get("license", ""),
+            "description": build_data["meta"].get("description", ""),
+            "software_build": softwarebuild,
+            "meta_attr": build_data["meta"]["components"],
+        },
     )
     node, _ = obj.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE,
@@ -296,3 +306,21 @@ def save_module(softwarebuild, build_data) -> ComponentNode:
     # TODO: recurse components from build_data["meta"]["components"]
 
     return node
+
+
+def load_brew_tags() -> None:
+    for ps in ProductStream.objects.all():
+        brew = Brew()
+        for brew_tag, inherit in ps.brew_tags.items():
+            builds = brew.get_builds_with_tag(brew_tag, inherit)
+            no_of_created = 0
+            for build in builds:
+                _, created = ProductComponentRelation.objects.get_or_create(
+                    external_system_id=brew_tag,
+                    product_ref=ps.name,
+                    build_id=build,
+                    defaults={"type": ProductComponentRelation.Type.BREW_TAG},
+                )
+                if created:
+                    no_of_created += 1
+            logger.info("Saving %s new builds for %s", no_of_created, brew_tag)

@@ -1,0 +1,15 @@
+{
+    "header": {
+        "type": "productmd.modules",
+        "version": "1.2"
+    },
+    "payload": {
+        "compose": {
+            "date": "20210503",
+            "id": "RHEL-8.4.0-20210503.1",
+            "respin": 1,
+            "type": "production"
+        },
+        "modules": {}
+    }
+}

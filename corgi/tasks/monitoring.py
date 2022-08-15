@@ -9,8 +9,9 @@ from django_celery_beat.models import CrontabSchedule, IntervalSchedule, Periodi
 from django_celery_results.models import TaskResult
 
 from config.celery import app
+from config.utils import running_dev
 
-from .common import get_last_success_for_task, running_local
+from .common import get_last_success_for_task
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +62,7 @@ def email_failed_tasks():
     """Send email about failed Celery tasks within past 24 hours to Corgi developers who like spam
     If it failed to send, try again after 15 minutes, then 30 minutes, then give up"""
     # If a dev env runs more than 24 hours, and it's somehow able to send email, don't spam people.
-    if running_local():
+    if running_dev():
         return
 
     failed_tasks_threshold = get_last_success_for_task("corgi.tasks.monitoring.email_failed_tasks")
@@ -85,7 +86,7 @@ def email_failed_tasks():
     email = EmailMessage(
         subject=subject,
         body=failed_tasks,
-        to=settings.FAILED_CELERY_TASK_SUBSCRIBERS,
+        to=settings.ADMINS,
         from_email=settings.SERVER_EMAIL,
     )
     email.send()

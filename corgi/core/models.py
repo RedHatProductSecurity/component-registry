@@ -6,6 +6,7 @@ from collections import defaultdict
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
+from django.core.exceptions import MultipleObjectsReturned
 from django.db import models
 from django.db.models import Q, QuerySet
 from mptt.models import MPTTModel, TreeForeignKey
@@ -205,7 +206,12 @@ class SoftwareBuild(TimeStampedModel):
 
         stream_ids = list(
             ProductComponentRelation.objects.filter(build_id=self.build_id)
-            .filter(type=ProductComponentRelation.Type.COMPOSE)
+            .filter(
+                type__in=[
+                    ProductComponentRelation.Type.COMPOSE,
+                    ProductComponentRelation.Type.BREW_TAG,
+                ]
+            )
             .values_list("product_ref", flat=True)
             .distinct()
         )
@@ -218,7 +224,6 @@ class SoftwareBuild(TimeStampedModel):
             for d in component.cnodes.all().get_descendants(include_self=True):
                 if not d.obj:
                     continue
-                d.obj.product_variants = d.obj.get_product_variants()
                 for a in ["products", "product_versions", "product_streams"]:
                     # Since we're only setting the product details for a specific build id we need
                     # to ensure we are only updating, not replacing the existing product details.
@@ -255,6 +260,7 @@ class ProductModel(models.Model):
     lifecycle_url = models.CharField(max_length=1024, default="")
 
     # Override each of the below on that model, e.g. products = None on the Product model
+    pnodes = GenericRelation(ProductNode)  # Needed to avoid a mypy warning
     products = fields.ArrayField(models.CharField(max_length=200), default=list)
     product_versions = fields.ArrayField(models.CharField(max_length=200), default=list)
     product_streams = fields.ArrayField(models.CharField(max_length=200), default=list)
@@ -338,7 +344,7 @@ class ProductModel(models.Model):
         )
 
     @property
-    def coverage(self):
+    def coverage(self) -> int:
         if not self.pnodes.exists():
             return 0
         pnode_children = self.pnodes.first().get_children()
@@ -442,6 +448,13 @@ class ProductVersionTag(Tag):
 class ProductStream(ProductModel, TimeStampedModel):
 
     cpe = models.CharField(max_length=1000, default="")
+
+    # NOTE brew_tags and yum_repositories values shouldn't be exposed outside of Red Hat
+    brew_tags = models.JSONField(default=dict)
+    yum_repositories = fields.ArrayField(models.CharField(max_length=200), default=list)
+
+    composes = models.JSONField(default=dict)
+    active = models.BooleanField(default=False)
 
     product_streams = None  # type: ignore
     pnodes = GenericRelation(ProductNode, related_query_name="product_stream")
@@ -561,6 +574,8 @@ class ProductComponentRelation(TimeStampedModel):
     class Type(models.TextChoices):
         ERRATA = "ERRATA"
         COMPOSE = "COMPOSE"
+        BREW_TAG = "BREW_TAG"
+        YUM_REPO = "YUM_REPO"
 
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     type = models.CharField(choices=Type.choices, max_length=50)
@@ -581,7 +596,10 @@ class ProductComponentRelation(TimeStampedModel):
                 fields=("external_system_id", "product_ref", "build_id"),
             ),
         ]
-        indexes = [models.Index(fields=("external_system_id", "product_ref", "build_id"))]
+        indexes = [
+            models.Index(fields=("external_system_id", "product_ref", "build_id")),
+            models.Index(fields=("type", "build_id")),
+        ]
 
 
 def get_product_streams_from_variants(variant_ids: list[str]):
@@ -762,29 +780,39 @@ class Component(TimeStampedModel):
     @property
     def get_roots(self) -> list[ComponentNode]:
         """Return component root entities."""
-        roots = []
-
+        roots: list[ComponentNode] = []
+        # If a component does have not have a softwarebuild that means it's not built at Red Hat
+        # therefore it doesn't need it's upstream's listed. If we start using the get_roots property
+        # for functions other that get_upstreams we might to revisit this check
+        if not self.software_build:
+            return roots
         for cnode in self.cnodes.all():
-            root = cnode.get_root()
-            if root.obj.type == Component.Type.CONTAINER_IMAGE:
-                # TODO if we change the CONTAINER->RPM ComponentNode.type to something other than
-                # 'PROVIDES' we would check for that type here to prevent 'hardcoding' the
-                # container -> rpm relationship here.
+            try:
+                root = cnode.get_root()
+                if root.obj.type == Component.Type.CONTAINER_IMAGE:
+                    # TODO if we change the CONTAINER->RPM ComponentNode.type to something other than # noqa
+                    # 'PROVIDES' we would check for that type here to prevent 'hardcoding' the
+                    # container -> rpm relationship here.
 
-                # RPMs are included as children of Containers as well as SRPMs
-                # We don't want to include Containers in the RPMs roots.
-                # Partly because RPMs in containers can have unprocesses SRPMs
-                # And partly because we use roots to find upstream components,
-                # and it's not true to say that rpms share upstreams with containers
-                rpm_desendant = False
-                for ancestor in cnode.get_ancestors(include_self=True):
-                    if ancestor.obj.type == Component.Type.RPM:
-                        rpm_desendant = True
-                if not rpm_desendant:
+                    # RPMs are included as children of Containers as well as SRPMs
+                    # We don't want to include Containers in the RPMs roots.
+                    # Partly because RPMs in containers can have unprocesses SRPMs
+                    # And partly because we use roots to find upstream components,
+                    # and it's not true to say that rpms share upstreams with containers
+                    rpm_desendant = False
+                    for ancestor in cnode.get_ancestors(include_self=True):
+                        if ancestor.obj.type == Component.Type.RPM:
+                            rpm_desendant = True
+                            break
+                    if not rpm_desendant:
+                        roots.append(root)
+                else:
                     roots.append(root)
-            else:
-                roots.append(root)
-        return roots
+            except MultipleObjectsReturned:
+                logger.info(
+                    "Component %s returned multiple objects when returning get_roots", self.purl
+                )
+        return list(set(roots))
 
     @property
     def build_meta(self):
@@ -872,25 +900,6 @@ class Component(TimeStampedModel):
                     channels.append(descendant.obj.name)
         return list(set(channels))
 
-    # TODO remove this? Force the use of SoftwareBuild.save_product_taxnonomy instead
-    def save_product_taxonomy(self):
-        variant_ids = self.get_product_variants()
-        stream_ids = self.get_product_streams()
-
-        if not variant_ids and not stream_ids:
-            return []
-
-        product_details = get_product_details(variant_ids, stream_ids)
-
-        # Since we have all variant ids for this component, we can replace any existing product
-        # details
-        self.products = list(set(product_details["products"]))
-        self.product_versions = list(set(product_details["product_versions"]))
-        self.product_streams = list(set(product_details["product_streams"]))
-        self.channels = self.get_channels()
-        self.product_variants = list(set(variant_ids))
-        self.save()
-
     def get_provides(self, include_dev=True):
         """return all descendants with PROVIDES ComponentNode type"""
         provides = []
@@ -901,10 +910,20 @@ class Component(TimeStampedModel):
             provides.append(descendant.purl)
         return list(set(provides))
 
-    def get_source(self):
+    def get_source(self) -> list:
         """return all root nodes"""
         # this uses the mptt get_root function, not the get_root property defined on Component
-        return [cnode.get_root().purl for cnode in self.cnodes.all()]
+        sources = []
+        for cnode in self.cnodes.all():
+            try:
+                source = cnode.get_root()
+                if source:
+                    sources.append(source.purl)
+            except MultipleObjectsReturned:
+                logger.info(
+                    "Component %s returned multiple objects when returning sources", self.purl
+                )
+        return list(set(sources))
 
     def get_upstreams(self):
         """return upstreams component ancestors in family trees"""
@@ -915,11 +934,11 @@ class Component(TimeStampedModel):
         for root in roots:
             # For SRRPM/RPMS, and noarch containers, these are the cnodes we want.
             source_children = [
-                c for c in root.get_children() if c.type == ComponentNode.ComponentNodeType.SOURCE
+                c for c in root.get_children().filter(type=ComponentNode.ComponentNodeType.SOURCE)
             ]
             # Cachito builds nest components under the relevant source component for that
-            # container build, eg. buildID=1911112. In that case we need to walk up the tree from
-            # the current node to find its relevant source
+            # container build, eg. buildID=1911112. In that case we need to walk up the
+            # tree from the current node to find its relevant source
             if (
                 root.obj.type == Component.Type.CONTAINER_IMAGE
                 and root.obj.arch == "noarch"

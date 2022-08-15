@@ -34,7 +34,7 @@ class Command(BaseCommand):
             errata_ids = options["errata_ids"]
             for erratum_id in errata_ids:
                 self.stdout.write(self.style.SUCCESS(f"Loading Errata {erratum_id}"))
-                load_errata([erratum_id])
+                load_errata(erratum_id)
         elif options["repos"]:
             update_variant_repos()
         else:

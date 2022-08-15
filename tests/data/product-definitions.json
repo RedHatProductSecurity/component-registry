@@ -1,0 +1,1109 @@
+{
+  "contacts": {},
+  "cc_groups": {},
+  "ps_update_streams": {
+    "openshift-4.10.z": {
+      "yum_repositories": [
+        "http://rhsm-pulp.corp.redhat.com/content/dist/layered/rhel8/aarch64/rhocp/4.10/os/",
+        "http://rhsm-pulp.corp.redhat.com/content/dist/layered/rhel8/ppc64le/rhocp/4.10/os/",
+        "http://rhsm-pulp.corp.redhat.com/content/dist/layered/rhel8/s390x/rhocp/4.10/os/",
+        "http://rhsm-pulp.corp.redhat.com/content/dist/layered/rhel8/x86_64/rhocp/4.10/os/",
+        "http://rhsm-pulp.corp.redhat.com/content/dist/rhel/server/7/7Server/x86_64/ose/4.10/os/"
+      ],
+      "target_release": "4.10.z",
+      "version": "4.10",
+      "brew_tags": [
+        {
+          "tag": "rhaos-4.10-rhel-7-container-released",
+          "inherit": false
+        },
+        {
+          "tag": "rhaos-4.10-rhel-8-container-released",
+          "inherit": false
+        }
+      ],
+      "pp_label": "openshift-4.10"
+    },
+    "rhacm-2.4.z": {
+      "version": "rhacm-2.4.z",
+      "flags": [
+        "rhacm-2.4.z"
+      ],
+      "brew_tags": [
+        {
+          "tag": "rhacm-2.4-rhel-7-container-released",
+          "inherit": true
+        },
+        {
+          "tag": "rhacm-2.4-rhel-8-container-released",
+          "inherit": true
+        }
+      ],
+      "pp_label": "rhacm-2.4"
+    },
+    "rhel-8.6.0": {
+      "additional_fields": {
+        "bugzilla": {
+          "cf_internal_target_release": "8.6.0"
+        }
+      },
+      "rhsa_sla_applicable": false,
+      "pp_label": "rhel-8-6.0",
+      "version": "8.6",
+      "flags": [
+        "release",
+        "blocker"
+      ],
+      "composes": [
+        {
+          "url": "http://download-node-02.eng.bos.redhat.com/rhel-8/rel-eng/RHEL-8/latest-RHEL-8.6.0/compose",
+          "variants": [
+            "AppStream",
+            "BaseOS",
+            "HighAvailability",
+            "NFV",
+            "RT",
+            "ResilientStorage",
+            "SAP",
+            "SAPHANA"
+          ]
+        },
+        {
+          "url": "http://download-node-02.eng.bos.redhat.com/rhel-8/rel-eng/Supp-8/latest-Supp-8.6.0-RHEL-8/compose",
+          "variants": [
+            "Supplementary"
+          ]
+        }
+      ],
+      "keywords": [
+        "ZStream"
+      ]
+    },
+    "rhel-8.6.0.z": {
+      "additional_fields": {
+        "bugzilla": {
+          "cf_zstream_target_release": "8.6.0"
+        }
+      },
+      "pp_label": "rhel-8-6.0",
+      "version": "8.6",
+      "flags": [
+        "release",
+        "zstream"
+      ],
+      "keywords": [
+        "ZStream"
+      ],
+      "errata_info": [
+        {
+          "product_name": "RHEL",
+          "product_versions": [
+            {
+              "variants": [
+                "AppStream-8.6.0.Z.MAIN.EUS",
+                "BaseOS-8.6.0.Z.MAIN.EUS",
+                "HighAvailability-8.6.0.Z.MAIN.EUS",
+                "ResilientStorage-8.6.0.Z.MAIN.EUS",
+                "RT-8.6.0.Z.MAIN.EUS",
+                "NFV-8.6.0.Z.MAIN.EUS",
+                "Supplementary-8.6.0.Z.MAIN.EUS",
+                "SAP-8.6.0.Z.MAIN.EUS",
+                "SAPHANA-8.6.0.Z.MAIN.EUS",
+                "Hidden-8.6.0.Z.MAIN.EUS"
+              ],
+              "name": "RHEL-8.6.0.Z.MAIN+EUS"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "ps_modules": {
+    "rhel-8": {
+      "component_cc": {},
+      "bts": {
+        "groups": {
+          "public": [
+            "redhat"
+          ],
+          "embargoed": [
+            "security",
+            "qe_staff"
+          ]
+        },
+        "name": "bugzilla",
+        "key": "Red Hat Enterprise Linux 8"
+      },
+      "allow_defer": false,
+      "private_trackers_allowed": true,
+      "default_cc": [],
+      "eus_ps_update_streams": [],
+      "lifecycle_defs": {
+        "product": "RHEL",
+        "version": "8"
+      },
+      "risk": null,
+      "aus_ps_update_streams": [],
+      "default_ps_update_streams": [
+        "rhel-8.6.0.z"
+      ],
+      "components": {
+        "override": {}
+      },
+      "checklist": null,
+      "special_handling_features": [
+        "set_prodsec_priority",
+        "set_cf_deadline",
+        "ubi_packages"
+      ],
+      "active_ps_update_streams": [
+        "rhel-8.6.0.z"
+      ],
+      "opengrok": false,
+      "ps_update_streams": [
+        "rhel-8.6.0",
+        "rhel-8.6.0.z"
+      ],
+      "autofile_trackers": false,
+      "lifecycle": {
+        "supported_until": null,
+        "supported_from": "2019-05-07"
+      },
+      "private_tracker_cc": [],
+      "cpe": [
+        "cpe:/o:redhat:enterprise_linux:8",
+        "cpe:/a:redhat:enterprise_linux:8"
+      ],
+      "manifest": true,
+      "unacked_ps_update_stream": "rhel-8",
+      "public_description": "Red Hat Enterprise Linux 8",
+      "exceptions": []
+    },
+    "rhacm-2": {
+      "exceptions": [],
+      "public_description": "Red Hat Advanced Cluster Management for Kubernetes 2",
+      "bts": {
+        "groups": {
+          "public": [
+            "devel",
+            "qe_staff"
+          ],
+          "embargoed": [
+            "security",
+            "qe_staff"
+          ]
+        },
+        "name": "bugzilla",
+        "key": "Red Hat Advanced Cluster Management for Kubernetes"
+      },
+      "components": {
+        "default": "Secure Engineering"
+      },
+      "default_cc": [],
+      "cpe": [
+        "cpe:/a:redhat:acm:2"
+      ],
+      "allow_defer": false,
+      "component_cc": {
+      },
+      "active_ps_update_streams": [
+        "rhacm-2.4.z"
+      ],
+      "private_trackers_allowed": true,
+      "unacked_ps_update_stream": "rhacm-2",
+      "special_handling_features": [
+        "set_prodsec_priority",
+        "set_cf_deadline"
+      ],
+      "default_ps_update_streams": [
+        "rhacm-2.4.z"
+      ],
+      "opengrok": false,
+      "ps_update_streams": [
+        "rhacm-2.4.z"
+      ],
+      "checklist": null,
+      "autofile_trackers": false,
+      "manifest": true,
+      "lifecycle": {
+        "supported_until": null,
+        "supported_from": "2020-07-30"
+      },
+      "risk": null
+    },
+    "openshift-4": {
+      "comment_templates": {
+        "templates": {
+          "golang": "This is a special tracker bug for tracking the rebuild of all container images built with Go. The 'openshift-golang-builder-container' is not a released container image. Please move this bug to MODIFIED once all container images are rebuilt with a version of openshift-golang-builder-container that includes the CVE(s) fix(es).\n Please refer to the Deadline and/or Due Date fields of this bug for SLAs."
+        },
+        "template_overrides": {
+          "ps_component_template_overrides": {
+            "openshift-golang-builder-container": "golang"
+          }
+        }
+      },
+      "exceptions": [],
+      "base_product_cpes": [
+        "cpe:/o:redhat:enterprise_linux:8::baseos",
+        "cpe:/o:redhat:enterprise_linux:8::appstream",
+        "cpe:/o:redhat:enterprise_linux:8::fastdatapath",
+        "cpe:/o:redhat:enterprise_linux:8::nfv",
+        "cpe:/a:redhat:rhel_extras_rt:8"
+      ],
+      "public_description": "Red Hat OpenShift Container Platform 4",
+      "bts": {
+        "groups": {
+          "public": [
+            "redhat",
+            "qe_staff"
+          ],
+          "embargoed": [
+            "security",
+            "qe_staff",
+            "team ocp_embargoes"
+          ]
+        },
+        "name": "bugzilla",
+        "key": "OpenShift Container Platform"
+      },
+      "components": {
+        "default": "Security",
+        "override": {}
+      },
+      "default_cc": [],
+      "cpe": [
+        "cpe:/a:redhat:openshift:4"
+      ],
+      "allow_defer": false,
+      "component_cc": {
+        "openshift-enterprise-hyperkube-container": []
+      },
+      "active_ps_update_streams": [
+        "openshift-4.10.z"
+      ],
+      "private_trackers_allowed": true,
+      "unacked_ps_update_stream": "openshift-4",
+      "default_ps_update_streams": [
+        "openshift-4.10.z"
+      ],
+      "opengrok": false,
+      "ps_update_streams": [
+        "openshift-4.10.z"
+      ],
+      "checklist": null,
+      "autofile_trackers": false,
+      "manifest": true,
+      "lifecycle": {
+        "supported_until": null,
+        "supported_from": "2019-06-04"
+      },
+      "risk": null
+    }
+  },
+  "ps_products": {
+    "rhel": {
+      "name": "Red Hat Enterprise Linux",
+      "errata_product_tags": [
+        "RHEL",
+        "RHEL-EXTRAS",
+        "RHEL-HPN",
+        "RHEL-SAP",
+        "RHEL-V2VWin",
+        "LACD",
+        "OracleJava",
+        "RHEL-ALT"
+      ],
+      "team": "automatic_rule",
+      "business_unit": "Core RHEL",
+      "lifecycle_url": "https://access.redhat.com/support/policy/updates/errata/",
+      "ps_modules": [
+        "rhel-8"
+      ]
+    },
+    "rhacm": {
+      "name": "Red Hat Advanced Cluster Management for Kubernetes",
+      "errata_product_tags": [
+        "RHACM"
+      ],
+      "team": "management",
+      "business_unit": "Management",
+      "lifecycle_url": "https://access.redhat.com/support/policy/updates/advanced-cluster-manager",
+      "ps_modules": [
+        "rhacm-2"
+      ]
+    },
+    "openshift": {
+      "name": "OpenShift Container Platform",
+      "errata_product_tags": [
+        "RHOSE",
+        "RHOL"
+      ],
+      "team": "cloudplatform",
+      "business_unit": "Cloud Platform",
+      "lifecycle_url": "https://access.redhat.com/support/policy/updates/openshift/",
+      "ps_modules": [
+        "openshift-4"
+      ]
+    }
+  },
+  "cc_list_aliases": {
+    "+ceph": [
+      "amctagga",
+      "sostapov",
+      "gmeno",
+      "aoconnor",
+      "bniver",
+      "mbenjamin",
+      "mhackett",
+      "vereddy",
+      "flucifre"
+    ],
+    "+virtio-win": [
+      "vrozenfe",
+      "ailan",
+      "knoel"
+    ],
+    "+rhint-serv": [
+      "ewittman",
+      "pantinor",
+      "jpavlik"
+    ],
+    "+topological-inventory": [
+      "kaycoth"
+    ],
+    "+certificate_system": [
+      "cfu",
+      "edewata",
+      "mharmsen",
+      "jmagne",
+      "dsirrine"
+    ],
+    "+logging": [
+      "ptsiraki",
+      "jcantril"
+    ],
+    "+php": [
+      "rcollet",
+      "jorton"
+    ],
+    "+rhint-dbz": [
+      "gmorling",
+      "jpechane",
+      "jpavlik"
+    ],
+    "+kube": [
+      "sttts",
+      "joelsmith"
+    ],
+    "+database-as-a-service": [
+      "jary",
+      "ikanias",
+      "rravi",
+      "drieden"
+    ],
+    "+openjdk": [
+      "ahughes",
+      "jvanek"
+    ],
+    "+subscription-watch": [
+      "kaycoth"
+    ],
+    "+realtime-kernel": [
+      "bhu",
+      "williams",
+      "lgoncalv",
+      "jlelli",
+      "kcarcia",
+      "chwhite",
+      "swood",
+      "jwyatt",
+      "tyberry",
+      "debarbos"
+    ],
+    "+malware-detection": [
+      "dkuc",
+      "fjansen@redhat.com"
+    ],
+    "+management-platform": [
+      "kaycoth",
+      "caswilli"
+    ],
+    "+mrg-m": [
+      "rrajasek",
+      "jross",
+      "mcressma",
+      "esammons"
+    ],
+    "+rpm": [
+      "pmatilai",
+      "ffesti"
+    ],
+    "+eventing": [
+      "vkrizan",
+      "sthirugn"
+    ],
+    "+virt-triage": [
+      "jferlan",
+      "ddepaula"
+    ],
+    "+cnv": [
+      "fdeutsch"
+    ],
+    "+sam1": [
+      "bkearney",
+      "tomckay",
+      "cbillett"
+    ],
+    "+kvm": [
+      "jmaloy",
+      "knoel",
+      "mrezanin",
+      "jen",
+      "pbonzini",
+      "mst"
+    ],
+    "+kpatch": [
+      "bhu",
+      "jpoimboe",
+      "joe.lawrence",
+      "ycote",
+      "ctoe"
+    ],
+    "+vulnerability-for-ocp": [
+      "tkaspare"
+    ],
+    "+sat6": [
+      "bbuckingham",
+      "bcourt",
+      "btotty",
+      "ehelms",
+      "jsherril",
+      "lzap",
+      "mhulan",
+      "mmccune",
+      "myarboro",
+      "nmoumoul",
+      "orabin",
+      "pcreech",
+      "rchan"
+    ],
+    "+sat5": [
+      "bkearney",
+      "tlestach"
+    ],
+    "+bxms": [
+      "tzimanyi",
+      "alazarot",
+      "anstephe",
+      "etirelli",
+      "jstastny",
+      "rrajasek",
+      "emingora",
+      "mnovotny",
+      "rguimara",
+      "kverlaen",
+      "ibek",
+      "jrokos"
+    ],
+    "+openshift-data-federation": [
+      "sajmoham",
+      "anbehl",
+      "napaul"
+    ],
+    "+libvirt": [
+      "jdenemar",
+      "eblake",
+      "berrange",
+      "pkrempa",
+      "jsuchane",
+      "knoel"
+    ],
+    "+insights-essentials": [
+      "fjansen@redhat.com"
+    ],
+    "+rhsso": [
+      "sthorger",
+      "pdrozd",
+      "aboyko",
+      "abstractj",
+      "pskopek"
+    ],
+    "+ansible-automation-analytics": [
+      "kaycoth",
+      "jwong@redhat.com",
+      "kshier"
+    ],
+    "+eap": [
+      "lgao",
+      "thjenkin",
+      "rsvoboda",
+      "cdewolf",
+      "dlofthou",
+      "bmaxwell",
+      "vdosoudi",
+      "bbaranow",
+      "pmackay",
+      "msvehla",
+      "iweiss",
+      "msochure",
+      "smaestri",
+      "asoldano",
+      "bstansbe",
+      "nwallace",
+      "dkreling",
+      "rstancel",
+      "mosmerov",
+      "fjuma"
+    ],
+    "+quayio": [
+      "bdettelb@redhat.com"
+    ],
+    "+epp": [
+      "theute",
+      "bdawidow",
+      "mweiler",
+      "jpallich"
+    ],
+    "+aro": [
+      "vkumar",
+      "jburrell"
+    ],
+    "+jbcs": [
+      "jclere",
+      "csutherl",
+      "mturk",
+      "szappis",
+      "peholase",
+      "plodge"
+    ],
+    "+mozilla": [
+      "stransky",
+      "jhorak",
+      "erack",
+      "tpopela"
+    ],
+    "+ose": [
+      "bmontgom",
+      "eparis",
+      "jburrell",
+      "nstielau",
+      "sponnaga"
+    ],
+    "+package-evolution": [
+      "kaycoth",
+      "tmeszaro"
+    ],
+    "+nodejs": [
+      "zsvetlik"
+    ],
+    "+ansible-on-clouds": [
+      "tfister",
+      "stcannon"
+    ],
+    "+vulnerability-engine": [
+      "kaycoth",
+      "psegedy",
+      "tsasak"
+    ],
+    "+maistra": [
+      "rcernich",
+      "ovanders@redhat.com",
+      "jwendell"
+    ],
+    "+rhoar": [
+      "bgeorges",
+      "avibelli",
+      "rruss",
+      "mszynkie",
+      "pgallagh",
+      "lthon",
+      "dkreling",
+      "peholase"
+    ],
+    "+rhint-camel-quarkus": [
+      "jnethert",
+      "fmongiar"
+    ],
+    "+nss": [
+      "dueno"
+    ],
+    "+amq-on": [
+      "mokumar",
+      "rgodfrey",
+      "jross"
+    ],
+    "+compliance": [
+      "kaycoth",
+      "vmugicag",
+      "dhalasz",
+      "vkrizan",
+      "sthirugn"
+    ],
+    "+rhel-default": [],
+    "+nvidia-gpu-add-on": [
+      "sdayan",
+      "mresvani",
+      "fdupont"
+    ],
+    "+ews": [
+      "jclere",
+      "csutherl",
+      "szappis",
+      "peholase",
+      "mmadzin"
+    ],
+    "+cfme": [
+      "roliveri",
+      "gtanzill",
+      "jfrey",
+      "gmccullo",
+      "jhardy",
+      "obarenbo",
+      "akarol",
+      "smallamp",
+      "simaishi",
+      "dmetzger"
+    ],
+    "+aap1": [
+      "notting",
+      "gblomqui",
+      "rpetrell",
+      "mabashia",
+      "smcdonal",
+      "cmeyers",
+      "davidn",
+      "chousekn",
+      "jhardy",
+      "osapryki",
+      "tkuratom",
+      "bcoca",
+      "sdoran",
+      "jcammara",
+      "jobarker",
+      "relrod"
+    ],
+    "+mw-openjdk": [
+      "ahughes",
+      "jdowland",
+      "mtorre",
+      "dfitzmau",
+      "sraghupu",
+      "ncbaratta"
+    ],
+    "+rhods": [
+      "jkoehler"
+    ],
+    "+rhint-all": [
+      "acunning",
+      "janstey",
+      "pantinor",
+      "peholase"
+    ],
+    "+directory_server": [],
+    "+amq-all": [
+      "mokumar",
+      "jross"
+    ],
+    "+automation-service-catalog": [
+      "kaycoth",
+      "jwong@redhat.com",
+      "kshier"
+    ],
+    "+policies": [
+      "kaycoth"
+    ],
+    "+image-builder": [
+      "kaycoth"
+    ],
+    "+quarkus": [
+      "sdouglas",
+      "sbiarozk",
+      "cescoffi",
+      "gsmet",
+      "dandread",
+      "rsvoboda",
+      "probinso",
+      "hamadhan"
+    ],
+    "+rhosak": [
+      "rgodfrey",
+      "gzaronik",
+      "dffrench",
+      "ngough"
+    ],
+    "+ccx": [
+      "kaycoth"
+    ],
+    "+rhmi-cc": [
+      "crarobin@redhat.com",
+      "jmadigan@redhat.com",
+      "ngough@redhat.com",
+      "pamccart@redhat.com"
+    ],
+    "+fifi": [
+      "kaycoth"
+    ],
+    "+cost-management": [
+      "kaycoth"
+    ],
+    "+tower": [
+      "notting",
+      "gblomqui",
+      "rpetrell",
+      "mabashia",
+      "smcdonal",
+      "cmeyers"
+    ],
+    "+openstack": [
+      "eglynn",
+      "jjoyce",
+      "lhh",
+      "mburns",
+      "mgarciac",
+      "spower"
+    ],
+    "+amq-ic": [
+      "mokumar",
+      "mcressma",
+      "ansmith"
+    ],
+    "+samba": [
+      "pfilipen",
+      "abokovoy",
+      "anoopcs"
+    ],
+    "+devtools-compilers": [
+      "jpadman",
+      "bodavis",
+      "mnewsome"
+    ],
+    "+rosa-cli": [
+      "jeder",
+      "vkarehfa",
+      "jaharrin",
+      "jburrell"
+    ],
+    "+fuse": [
+      "acunning",
+      "janstey",
+      "gmalinko",
+      "jpavlik"
+    ],
+    "+jdv": [
+      "jschatte",
+      "jolee",
+      "jstastny"
+    ],
+    "+ossm": [
+      "rcernich",
+      "ovanders@redhat.com",
+      "jwendell"
+    ],
+    "+jaeger": [
+      "mwringe",
+      "ploffay"
+    ],
+    "+drift": [
+      "kaycoth",
+      "micjohns",
+      "sthirugn"
+    ],
+    "+amq-b": [
+      "mokumar",
+      "ataylor",
+      "rkieley"
+    ],
+    "+3amp": [
+      "amasferr",
+      "amackenz",
+      "tjochec",
+      "mkudlej"
+    ],
+    "+rhcam": [
+      "jmatthew",
+      "jmontleo",
+      "slucidi",
+      "sseago",
+      "dymurray",
+      "ibolton",
+      "dwhatley"
+    ],
+    "+rhai": [
+      "lgamliel",
+      "alazar",
+      "rfreiman",
+      "mfilanov"
+    ],
+    "+ansible-automation-hub": [
+      "kaycoth",
+      "jwong@redhat.com",
+      "kshier"
+    ],
+    "+mrg": [
+      "esammons",
+      "mcressma",
+      "iboverma",
+      "williams",
+      "bhu",
+      "jross"
+    ],
+    "+quarkus-registry": [
+      "ggastald",
+      "sbiarozk"
+    ],
+    "+rhint-camel-spring-boot": [
+      "gmalinko",
+      "jpoth",
+      "ldemasi"
+    ],
+    "+amq-st": [
+      "mokumar",
+      "mmclaugh",
+      "jscholz"
+    ],
+    "+ossrvls": [
+      "mwessend",
+      "rhuss",
+      "lball",
+      "rrajasek"
+    ],
+    "+stf": [
+      "eglynn",
+      "jjoyce",
+      "lmadsen",
+      "mburns",
+      "mgarciac",
+      "mrunge",
+      "spower"
+    ],
+    "+rhint-dv": [
+      "rareddy",
+      "jschatte"
+    ],
+    "+oadp": [
+      "jmatthew",
+      "whayutin",
+      "dymurray"
+    ],
+    "+rhui": [
+      "bkearney"
+    ],
+    "+amq-cl": [
+      "mokumar",
+      "jross"
+    ],
+    "+rhmap": [
+      "trepel",
+      "drusso",
+      "jshepher",
+      "jmadigan",
+      "pwright",
+      "dffrench",
+      "ngough",
+      "cmacedo",
+      "cbyrne"
+    ],
+    "+bootloader": [
+      "rharwood",
+      "pjones",
+      "jaredz",
+      "mlewando",
+      "pjanda",
+      "pkotvan"
+    ],
+    "+systemd": [
+      "lnykryn",
+      "lpoetter",
+      "msekleta",
+      "zjedrzej"
+    ],
+    "+cryostat": [
+      "ebaron",
+      "eaguilar",
+      "aazores",
+      "sfroberg",
+      "jkang",
+      "jpallich"
+    ],
+    "+fedora-kernel": [
+      "jwboyer",
+      "jforbes"
+    ],
+    "+developer-sandboxes": [
+      "mkleinhe"
+    ],
+    "+xen": [
+      "drjones",
+      "imammedo",
+      "pbonzini",
+      "mrezanin",
+      "vkuznets",
+      "ailan",
+      "knoel"
+    ],
+    "+fdp": [
+      "echaudro",
+      "fleitner",
+      "rkhan"
+    ],
+    "+ciam": [
+      "ahenning",
+      "aboyko",
+      "pskopek@redhat.com",
+      "sguilhen"
+    ],
+    "+ansible": [
+      "tkuratom",
+      "bcoca",
+      "sdoran",
+      "jcammara",
+      "jobarker",
+      "relrod"
+    ],
+    "+cloud-redhat-com-mgrs": [
+      "gmccullo@redhat.com",
+      "cmoore",
+      "kaycoth",
+      "caswilli",
+      "lphiri"
+    ],
+    "+quay": [
+      "bdettelb"
+    ],
+    "+rhev-m": [
+      "michal.skrivanek",
+      "sbonazzo",
+      "mperina"
+    ],
+    "+rhapi": [
+      "mokumar",
+      "ansmith",
+      "mcressma"
+    ],
+    "+rhint-camel-k": [
+      "janstey",
+      "pantinor",
+      "peholase",
+      "balejosg"
+    ],
+    "+jon": [
+      "theute",
+      "spinder",
+      "loleary"
+    ],
+    "+patch": [
+      "kaycoth",
+      "tkaspare"
+    ],
+    "+edge-fleet-management": [
+      "tcarlin"
+    ],
+    "+sources": [
+      "kaycoth"
+    ],
+    "+advisor": [
+      "kaycoth"
+    ],
+    "+rhacm": [
+      "njean",
+      "gparvin",
+      "jramanat",
+      "stcannon",
+      "pahickey"
+    ],
+    "+spice": [
+      "dblechte"
+    ],
+    "+kernel": [
+      "acaringi",
+      "brdeoliv",
+      "dvlasenk",
+      "fhrbata",
+      "hkrzesin",
+      "jstancek",
+      "nmurray",
+      "rvrbovsk",
+      "dhoward",
+      "bhu",
+      "jshortt",
+      "ptalbert",
+      "walters",
+      "jarod",
+      "jforbes",
+      "kcarcia",
+      "scweaver",
+      "jfaracco",
+      "lzampier",
+      "joe.lawrence"
+    ],
+    "+rdo-dist": [
+      "amoralej"
+    ]
+  },
+  "ps_components": {
+    "systemd": {
+      "rhsa_sla": {
+        "product_applicability": "is_blacklist"
+      }
+    },
+    "java-1.7.0-openjdk": {
+      "rhsa_sla": {
+        "product_applicability": "is_blacklist"
+      }
+    },
+    "tomcat": {
+      "rhsa_sla": {
+        "product_applicability": "is_blacklist"
+      }
+    },
+    "bind": {
+      "rhsa_sla": {
+        "product_applicability": "is_blacklist"
+      }
+    },
+    "glibc": {
+      "rhsa_sla": {
+        "product_applicability": "is_blacklist"
+      }
+    },
+    "openssl": {
+      "rhsa_sla": {
+        "ps_products": [
+          "eap",
+          "jbews"
+        ],
+        "product_applicability": "is_blacklist"
+      }
+    },
+    "yum": {
+      "rhsa_sla": {
+        "product_applicability": "is_blacklist"
+      }
+    },
+    "java-1.8.0-openjdk": {
+      "rhsa_sla": {
+        "product_applicability": "is_blacklist"
+      }
+    },
+    "openssh": {
+      "rhsa_sla": {
+        "product_applicability": "is_blacklist"
+      }
+    },
+    "java-1.6.0-openjdk": {
+      "rhsa_sla": {
+        "product_applicability": "is_blacklist"
+      }
+    },
+    "nss": {
+      "rhsa_sla": {
+        "product_applicability": "is_blacklist"
+      }
+    },
+    "bash": {
+      "rhsa_sla": {
+        "product_applicability": "is_blacklist"
+      }
+    }
+  }
+}

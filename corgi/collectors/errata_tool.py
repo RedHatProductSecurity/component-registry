@@ -57,17 +57,18 @@ class ErrataTool:
         products = self.get_paged("api/v1/products", page_data_attr="data")
         for product in products:
             et_product, created = CollectorErrataProduct.objects.get_or_create(
-                et_id=product["id"],
                 name=product["attributes"]["name"],
-                short_name=product["attributes"]["short_name"],
+                defaults={
+                    "et_id": product["id"],
+                    "short_name": product["attributes"]["short_name"],
+                },
             )
             if created:
                 logger.info("Created ET Product: %s", et_product.short_name)
             for product_version in product["relationships"]["product_versions"]:
                 et_product_version, created = CollectorErrataProductVersion.objects.get_or_create(
-                    et_id=product_version["id"],
                     name=product_version["name"],
-                    defaults={"product": et_product},
+                    defaults={"et_id": product_version["id"], "product": et_product},
                 )
                 if created:
                     logger.info("Created ET ProductVersion: %s", et_product_version.name)
@@ -81,8 +82,8 @@ class ErrataTool:
 
         variants = self.get_paged("api/v1/variants", page_data_attr="data")
         for variant in variants:
+            product_version_id = variant["attributes"]["relationships"]["product_version"]["id"]
             try:
-                product_version_id = variant["attributes"]["relationships"]["product_version"]["id"]
                 et_product_version = CollectorErrataProductVersion.objects.get(
                     et_id=product_version_id
                 )
@@ -90,10 +91,10 @@ class ErrataTool:
                 logger.warning("Did not find product version with id %s", product_version_id)
                 continue
             et_product_variant, created = CollectorErrataProductVariant.objects.get_or_create(
-                et_id=variant["id"],
                 name=variant["attributes"]["name"],
                 defaults={
                     "cpe": variant["attributes"]["cpe"],
+                    "et_id": variant["id"],
                     "product_version": et_product_version,
                 },
             )
@@ -210,7 +211,8 @@ class ErrataTool:
 
     # https://stackoverflow.com/questions/28225552/
     # is-there-a-recursive-version-of-the-dict-get-built-in/52260663#52260663
-    def get_from_dict(self, data, keys):
+    @staticmethod
+    def get_from_dict(data, keys):
         """Iterate nested dictionary"""
         try:
             return reduce(dict.get, keys, data)

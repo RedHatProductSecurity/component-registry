@@ -13,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="component",
             name="related_url",
-            field=models.CharField(default="", max_length=1024, null=True),
+            field=models.CharField(default="", max_length=1024, null=True),  # noqa: DJ01
         ),
     ]

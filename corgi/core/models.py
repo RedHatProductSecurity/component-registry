@@ -675,7 +675,7 @@ class Component(TimeStampedModel):
     # The filename of the source rpm package, or similar, from the meta_attr / build system
     filename = models.TextField(default="")
 
-    related_url = models.CharField(max_length=1024, default="", null=True)
+    related_url = models.CharField(max_length=1024, default="", null=True)  # noqa: DJ01
 
     data_score = models.IntegerField(default=0)
     data_report = fields.ArrayField(models.CharField(max_length=200), default=list)

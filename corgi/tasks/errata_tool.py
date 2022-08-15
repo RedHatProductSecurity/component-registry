@@ -24,7 +24,7 @@ def load_et_products() -> None:
     autoretry_for=RETRYABLE_ERRORS,
     retry_kwargs=RETRY_KWARGS,
 )
-def load_errata(erratum_name):
+def slow_load_errata(erratum_name):
     et = ErrataTool()
     if not erratum_name.isdigit():
         erratum_id = et.normalize_erratum_id(erratum_name)

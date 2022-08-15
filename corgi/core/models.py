@@ -790,7 +790,7 @@ class Component(TimeStampedModel):
             try:
                 root = cnode.get_root()
                 if root.obj.type == Component.Type.CONTAINER_IMAGE:
-                    # TODO if we change the CONTAINER->RPM ComponentNode.type to something other than # noqa
+                    # TODO if we change the CONTAINER->RPM ComponentNode.type to something besides
                     # 'PROVIDES' we would check for that type here to prevent 'hardcoding' the
                     # container -> rpm relationship here.
 

@@ -73,7 +73,7 @@ class Brew:
 
         for value in task_request:
             # Check if the value in the task_request is a git URL
-            if isinstance(value, str) and re.match(r"git(\+https?|\+ssh)?://", value):
+            if isinstance(value, str) and re.match(r"git(?:\+https?|\+ssh)?://", value):
                 return value
             # Look for a dictionary in task_request that may include certain keys that hold the URL
             elif isinstance(value, dict):
@@ -277,10 +277,11 @@ class Brew:
     @staticmethod
     def split_nvr(nvr):
         nvr_parts = nvr.rsplit("-", maxsplit=2)
-        if len(nvr_parts) == 3:
-            name = nvr_parts[0]
-            version = nvr_parts[1]
-            release = nvr_parts[2]
+        if not len(nvr_parts) == 3:
+            raise ValueError(f"NVR {nvr} had invalid length after splitting: {len(nvr_parts)}")
+        name = nvr_parts[0]
+        version = nvr_parts[1]
+        release = nvr_parts[2]
         return name, version, release
 
     def get_container_build_data(self, build_id: int, build_info: dict) -> dict:
@@ -350,9 +351,9 @@ class Brew:
                     for source in remote_sources_v:
                         if "archives" in source:
                             archives = source["archives"]
-                            json = self._build_archive_dl_url(archives[0], build_info)
+                            json_data = self._build_archive_dl_url(archives[0], build_info)
                             tar = self._build_archive_dl_url(archives[1], build_info)
-                            remote_sources[source["url"]] = (json, tar)
+                            remote_sources[source["url"]] = (json_data, tar)
                         else:
                             logger.warning(
                                 "Expected to find archives in remote-source dict, only found %s",
@@ -450,7 +451,8 @@ class Brew:
         elif archive["type_name"] == "json":
             remote_sources[cachito_url] = tuple([remote_sources_url, existing_coords[1]])
 
-    def extract_common_key(self, filename):
+    @staticmethod
+    def extract_common_key(filename):
         without_prefix = filename.removeprefix("remote-source-")
         return without_prefix.split(".", 1)[0]
 
@@ -599,7 +601,8 @@ class Brew:
                 remaining_deps.remove(dep)
         return filtered, remaining_deps
 
-    def get_maven_build_data(self, build_id: int, build_info: dict, build_type_info: dict) -> dict:
+    @staticmethod
+    def get_maven_build_data(build_info: dict, build_type_info: dict) -> dict:
         component = {
             "type": "maven",
             "namespace": "redhat",
@@ -623,24 +626,25 @@ class Brew:
                 advisory_ids.add(match.group())
         return list(advisory_ids)
 
-    def get_module_build_data(self, build_id: int, build_info: dict, build_type_info: dict) -> dict:
+    @staticmethod
+    def get_module_build_data(build_info: dict) -> dict:
 
         modulemd_yaml = build_info["extra"]["typeinfo"]["module"].get("modulemd_str", "")
-        modulemd = None
-        if modulemd_yaml:
-            modulemd = yaml.safe_load(modulemd_yaml)
+        if not modulemd_yaml:
+            raise ValueError("Cannot get module build data, modulemd_yaml is undefined")
+        modulemd = yaml.safe_load(modulemd_yaml)
         module = {
             "type": "module",
             "namespace": "redhat",
             "meta": {
                 "nvr": build_info["nvr"],
                 "name": build_info["name"],
-                "version": modulemd["data"].get("version", ""),  # type: ignore
-                "license": " OR ".join(modulemd["data"]["license"].get("module", "")),  # type: ignore # noqa
+                "version": modulemd["data"].get("version", ""),
+                "license": " OR ".join(modulemd["data"]["license"].get("module", "")),
                 "release": build_info["release"],
                 # "arch": build_info["arch"],
                 "epoch": build_info["epoch"],
-                "components": modulemd["data"]["components"],  # type: ignore
+                "components": modulemd["data"]["components"],
             },
             "analysis_meta": {
                 "source": [],
@@ -694,9 +698,9 @@ class Brew:
         elif build_type == self.RPM_BUILD_TYPE:
             component = self.get_rpm_build_data(build_id)
         elif build_type == self.MAVEN_BUILD_TYPE:
-            component = self.get_maven_build_data(build_id, build, build_type_info)
+            component = self.get_maven_build_data(build, build_type_info)
         elif build_type == self.MODULE_BUILD_TYPE:
-            component = self.get_module_build_data(build_id, build, build_type_info)
+            component = self.get_module_build_data(build)
         elif build_type == self.WIN_BUILD_TYPE:
             component = {}
         else:

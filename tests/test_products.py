@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from unittest.mock import patch
 
 import pytest
@@ -9,50 +10,91 @@ from corgi.collectors.models import (
     CollectorErrataProductVariant,
     CollectorErrataProductVersion,
 )
+from corgi.collectors.rhel_compose import RhelCompose
 from corgi.core.models import Product, ProductComponentRelation, ProductStream
 from corgi.tasks.prod_defs import update_products
-from corgi.tasks.rhel_compose import load_composes, save_compose
+from corgi.tasks.rhel_compose import save_compose
 
 pytestmark = pytest.mark.unit
 
-PRODUCT_DEFINITIONS_CASSETTE = "test_products.yaml"
+base_url = os.getenv("CORGI_TEST_DOWNLOAD_URL")
 
 
-@pytest.mark.vcr()
-@patch("corgi.tasks.rhel_compose.save_compose.delay")
-def test_load_composes(mock_delay):
-    ProductStream.objects.create(name="rhel-7.6.z")
-    ProductStream.objects.create(name="rhel-8.4.0.z")
-    load_composes()
-    mock_delay.assert_any_call(
-        "rhel-7.6.z",
-        (
-            "RHEL-7.6-20181010.0",
-            f"{os.getenv('CORGI_TEST_DOWNLOAD_URL')}"  # Comma not missing, joined with below
-            "/rhel-7/rel-eng/RHEL-7/RHEL-7.6-20181010.0/compose/metadata/",
-        ),
+def test_fetch_compose_data(requests_mock):
+    compose_url = (
+        f"{os.getenv('CORGI_TEST_DOWNLOAD_URL')}/rhel-8/rel-eng/RHEL-8/latest-RHEL-8.6.0/compose"
     )
-    mock_delay.assert_any_call(
-        "rhel-8.4.0.z",
-        (
-            "RHEL-8.4.0-RC-1.2",
-            f"{os.getenv('CORGI_TEST_DOWNLOAD_URL')}"  # Comma not missing, joined with below
-            "/rhel-8/rel-eng/RHEL-8/RHEL-8.4.0-RC-1.2/compose/metadata/",
-        ),
+    for path in ["composeinfo", "rpms", "osbs", "modules"]:
+        with open(f"tests/data/compose/RHEL-8.6.0-20220420.3/{path}.json") as compose:
+            requests_mock.get(f"{compose_url}/metadata/{path}.json", text=compose.read())
+
+    compose_data = RhelCompose.fetch_compose_data(compose_url, ["BaseOS", "SAPHANA"])
+    expected = (
+        "RHEL-8.6.0-20220420.3",
+        datetime(2022, 4, 20, 0, 0),
+        [
+            "curl-7.61.1-22.el8.aarch64.rpm",
+            "curl-7.61.1-22.el8.src.rpm",
+            "curl-debuginfo-7.61.1-22.el8.aarch64.rpm",
+            "curl-debugsource-7.61.1-22.el8.aarch64.rpm",
+            "libcurl-7.61.1-22.el8.aarch64.rpm",
+            "libcurl-debuginfo-7.61.1-22.el8.aarch64.rpm",
+            "libcurl-devel-7.61.1-22.el8.aarch64.rpm",
+            "libcurl-minimal-7.61.1-22.el8.aarch64.rpm",
+            "libcurl-minimal-debuginfo-7.61.1-22.el8.aarch64.rpm",
+            "curl-7.61.1-22.el8.ppc64le.rpm",
+            "curl-7.61.1-22.el8.src.rpm",
+            "curl-debuginfo-7.61.1-22.el8.ppc64le.rpm",
+            "curl-debugsource-7.61.1-22.el8.ppc64le.rpm",
+            "libcurl-7.61.1-22.el8.ppc64le.rpm",
+            "libcurl-debuginfo-7.61.1-22.el8.ppc64le.rpm",
+            "libcurl-devel-7.61.1-22.el8.ppc64le.rpm",
+            "libcurl-minimal-7.61.1-22.el8.ppc64le.rpm",
+            "libcurl-minimal-debuginfo-7.61.1-22.el8.ppc64le.rpm",
+            "curl-7.61.1-22.el8.s390x.rpm",
+            "curl-7.61.1-22.el8.src.rpm",
+            "curl-debuginfo-7.61.1-22.el8.s390x.rpm",
+            "curl-debugsource-7.61.1-22.el8.s390x.rpm",
+            "libcurl-7.61.1-22.el8.s390x.rpm",
+            "libcurl-debuginfo-7.61.1-22.el8.s390x.rpm",
+            "libcurl-devel-7.61.1-22.el8.s390x.rpm",
+            "libcurl-minimal-7.61.1-22.el8.s390x.rpm",
+            "libcurl-minimal-debuginfo-7.61.1-22.el8.s390x.rpm",
+            "curl-7.61.1-22.el8.src.rpm",
+            "curl-7.61.1-22.el8.x86_64.rpm",
+            "curl-debuginfo-7.61.1-22.el8.i686.rpm",
+            "curl-debuginfo-7.61.1-22.el8.x86_64.rpm",
+            "curl-debugsource-7.61.1-22.el8.i686.rpm",
+            "curl-debugsource-7.61.1-22.el8.x86_64.rpm",
+            "libcurl-7.61.1-22.el8.i686.rpm",
+            "libcurl-7.61.1-22.el8.x86_64.rpm",
+            "libcurl-debuginfo-7.61.1-22.el8.i686.rpm",
+            "libcurl-debuginfo-7.61.1-22.el8.x86_64.rpm",
+            "libcurl-devel-7.61.1-22.el8.i686.rpm",
+            "libcurl-devel-7.61.1-22.el8.x86_64.rpm",
+            "libcurl-minimal-7.61.1-22.el8.i686.rpm",
+            "libcurl-minimal-7.61.1-22.el8.x86_64.rpm",
+            "libcurl-minimal-debuginfo-7.61.1-22.el8.i686.rpm",
+            "libcurl-minimal-debuginfo-7.61.1-22.el8.x86_64.rpm",
+        ],
+        [
+            "compat-sap-c++-10-10.2.1-1.el8.ppc64le.rpm",
+            "compat-sap-c++-10-10.2.1-1.el8.src.rpm",
+            "compat-sap-c++-10-debuginfo-10.2.1-1.el8.ppc64le.rpm",
+            "compat-sap-c++-10-debugsource-10.2.1-1.el8.ppc64le.rpm",
+            "compat-sap-c++-10-10.2.1-1.el8.src.rpm",
+            "compat-sap-c++-10-10.2.1-1.el8.x86_64.rpm",
+            "compat-sap-c++-10-debuginfo-10.2.1-1.el8.x86_64.rpm",
+            "compat-sap-c++-10-debugsource-10.2.1-1.el8.x86_64.rpm",
+        ],
     )
-
-
-save_compose_test_data = [
-    (
-        "rhel-8.4.0.z",
-        (
-            "RHEL-8.4.0-RC-1.2",
-            f"{os.getenv('CORGI_TEST_DOWNLOAD_URL')}"  # Comma not missing, joined with below
-            "/rhel-8/rel-eng/RHEL-8/RHEL-8.4.0-RC-1.2/compose/metadata/",
-        ),
-        1,
-    ),
-]
+    assert compose_data[0] == expected[0]
+    assert compose_data[1] == expected[1]
+    srpms = compose_data[2]["srpms"]
+    curl_srpm = srpms["curl-7.61.1-22.el8"]
+    compat_sap_c = srpms["compat-sap-c++-10-10.2.1-1.el8"]
+    assert expected[2] == curl_srpm
+    assert expected[3] == compat_sap_c
 
 
 class MockBrewResult(object):
@@ -60,34 +102,26 @@ class MockBrewResult(object):
 
 
 @patch("corgi.tasks.rhel_compose._brew_srpm_lookup")
-@pytest.mark.parametrize("stream_name, compose_coords, no_of_relations", save_compose_test_data)
-def test_save_compose(
-    mock_brew_srpm_lookup, stream_name, compose_coords, no_of_relations, requests_mock
-):
+def test_save_compose(mock_brew_srpm_lookup, requests_mock):
+    composes = {
+        f"{os.getenv('CORGI_TEST_DOWNLOAD_URL')}/rhel-8/rel-eng/RHEL-8/RHEL-8.4.0-RC-1.2/compose": [
+            "AppStream"
+        ],
+    }
+    compose_url = next(iter(composes))
     for path in ["composeinfo", "rpms", "osbs", "modules"]:
-        with open(f"tests/data/compose/{compose_coords[0]}/{path}.json") as compose:
-            requests_mock.get(f"{compose_coords[1]}{path}.json", text=compose.read())
+        with open(f"tests/data/compose/RHEL-8.4.0-RC-1.2/{path}.json") as compose:
+            requests_mock.get(f"{compose_url}/metadata/{path}.json", text=compose.read())
     result = MockBrewResult()
     result.result = "1533085"
     mock_brew_srpm_lookup.return_value = [
         ("389-ds-base-1.4.3.16-13.module+el8.4.0+10307+74bbfb4e", result)
     ]
-    product_stream = ProductStream.objects.create(name=stream_name)
-    save_compose(stream_name, compose_coords)
-    relations = ProductComponentRelation.objects.filter(product_ref=product_stream)
-    assert len(relations) == no_of_relations
-    if len(relations) > 0:
-        relation_types = (
-            ProductComponentRelation.objects.all().values_list("type", flat=True).distinct()
-        )
-
-        assert list(relation_types) == [ProductComponentRelation.Type.COMPOSE]
-        relation_sys_ids = (
-            ProductComponentRelation.objects.all()
-            .values_list("external_system_id", flat=True)
-            .distinct()
-        )
-        assert list(relation_sys_ids) == [compose_coords[0]]
+    product_stream = ProductStream.objects.create(name="rhel-8.4.0", composes=composes)
+    save_compose("rhel-8.4.0")
+    relation = ProductComponentRelation.objects.get(product_ref=product_stream)
+    assert relation.type == ProductComponentRelation.Type.COMPOSE
+    assert relation.external_system_id == "RHEL-8.4.0-20210503.1"
 
 
 def test_products(requests_mock):

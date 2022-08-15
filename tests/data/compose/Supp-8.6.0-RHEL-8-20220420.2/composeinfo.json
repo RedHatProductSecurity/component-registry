@@ -1,0 +1,112 @@
+{
+    "header": {
+        "type": "productmd.composeinfo",
+        "version": "1.2"
+    },
+    "payload": {
+        "base_product": {
+            "name": "Red Hat Enterprise Linux",
+            "short": "RHEL",
+            "type": "ga",
+            "version": "8"
+        },
+        "compose": {
+            "date": "20220420",
+            "final": true,
+            "id": "Supp-8.6.0-RHEL-8-20220420.2",
+            "label": "RC-1.0",
+            "respin": 2,
+            "type": "production"
+        },
+        "release": {
+            "internal": false,
+            "is_layered": true,
+            "name": "Supplementary",
+            "short": "Supp",
+            "type": "ga",
+            "version": "8.6.0"
+        },
+        "variants": {
+            "Supplementary": {
+                "arches": [
+                    "aarch64",
+                    "ppc64le",
+                    "s390x",
+                    "x86_64"
+                ],
+                "id": "Supplementary",
+                "name": "Supplementary",
+                "paths": {
+                    "debug_packages": {
+                        "aarch64": "Supplementary/aarch64/debug/tree/Packages",
+                        "ppc64le": "Supplementary/ppc64le/debug/tree/Packages",
+                        "s390x": "Supplementary/s390x/debug/tree/Packages",
+                        "x86_64": "Supplementary/x86_64/debug/tree/Packages"
+                    },
+                    "debug_repository": {
+                        "aarch64": "Supplementary/aarch64/debug/tree",
+                        "ppc64le": "Supplementary/ppc64le/debug/tree",
+                        "s390x": "Supplementary/s390x/debug/tree",
+                        "x86_64": "Supplementary/x86_64/debug/tree"
+                    },
+                    "debug_tree": {
+                        "aarch64": "Supplementary/aarch64/debug/tree",
+                        "ppc64le": "Supplementary/ppc64le/debug/tree",
+                        "s390x": "Supplementary/s390x/debug/tree",
+                        "x86_64": "Supplementary/x86_64/debug/tree"
+                    },
+                    "isos": {
+                        "aarch64": "Supplementary/aarch64/iso",
+                        "ppc64le": "Supplementary/ppc64le/iso",
+                        "s390x": "Supplementary/s390x/iso",
+                        "x86_64": "Supplementary/x86_64/iso"
+                    },
+                    "os_tree": {
+                        "aarch64": "Supplementary/aarch64/os",
+                        "ppc64le": "Supplementary/ppc64le/os",
+                        "s390x": "Supplementary/s390x/os",
+                        "x86_64": "Supplementary/x86_64/os"
+                    },
+                    "packages": {
+                        "aarch64": "Supplementary/aarch64/os/Packages",
+                        "ppc64le": "Supplementary/ppc64le/os/Packages",
+                        "s390x": "Supplementary/s390x/os/Packages",
+                        "x86_64": "Supplementary/x86_64/os/Packages"
+                    },
+                    "repository": {
+                        "aarch64": "Supplementary/aarch64/os",
+                        "ppc64le": "Supplementary/ppc64le/os",
+                        "s390x": "Supplementary/s390x/os",
+                        "x86_64": "Supplementary/x86_64/os"
+                    },
+                    "source_isos": {
+                        "aarch64": "Supplementary/source/iso",
+                        "ppc64le": "Supplementary/source/iso",
+                        "s390x": "Supplementary/source/iso",
+                        "x86_64": "Supplementary/source/iso"
+                    },
+                    "source_packages": {
+                        "aarch64": "Supplementary/source/tree/Packages",
+                        "ppc64le": "Supplementary/source/tree/Packages",
+                        "s390x": "Supplementary/source/tree/Packages",
+                        "x86_64": "Supplementary/source/tree/Packages"
+                    },
+                    "source_repository": {
+                        "aarch64": "Supplementary/source/tree",
+                        "ppc64le": "Supplementary/source/tree",
+                        "s390x": "Supplementary/source/tree",
+                        "x86_64": "Supplementary/source/tree"
+                    },
+                    "source_tree": {
+                        "aarch64": "Supplementary/source/tree",
+                        "ppc64le": "Supplementary/source/tree",
+                        "s390x": "Supplementary/source/tree",
+                        "x86_64": "Supplementary/source/tree"
+                    }
+                },
+                "type": "variant",
+                "uid": "Supplementary"
+            }
+        }
+    }
+}

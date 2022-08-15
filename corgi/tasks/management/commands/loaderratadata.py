@@ -2,7 +2,7 @@ import sys
 
 from django.core.management.base import BaseCommand, CommandParser
 
-from corgi.tasks.errata_tool import load_errata, update_variant_repos
+from corgi.tasks.errata_tool import slow_load_errata, update_variant_repos
 
 
 class Command(BaseCommand):
@@ -34,7 +34,7 @@ class Command(BaseCommand):
             errata_ids = options["errata_ids"]
             for erratum_id in errata_ids:
                 self.stdout.write(self.style.SUCCESS(f"Loading Errata {erratum_id}"))
-                load_errata(erratum_id)
+                slow_load_errata(erratum_id)
         elif options["repos"]:
             update_variant_repos()
         else:

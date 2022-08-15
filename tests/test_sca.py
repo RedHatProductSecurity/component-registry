@@ -11,7 +11,7 @@ from corgi.tasks.sca import (
     _download_lookaside_sources,
     _get_distgit_sources,
     _scan_remote_sources,
-    software_composition_analysis,
+    slow_software_composition_analysis,
 )
 from tests.factories import ComponentFactory, SoftwareBuildFactory
 
@@ -148,7 +148,7 @@ def test_download_lookaside_sources(
         assert downloaded_sources == []
 
 
-software_composition_analysis_test_data = [
+slow_software_composition_analysis_test_data = [
     # Dummy tar files are prefetch to
     # tests/data/rpms/cri-o/1e52fcdc84be253b5094b942c2fec23d7636d644.tar (with only sources)
     # tests/data/rpms/cri-o/cri-o-41c0779.tar.gz/sha516/<sha256>/cri-o-41c0779.tar.gz (empty file)
@@ -183,11 +183,11 @@ software_composition_analysis_test_data = [
 
 @pytest.mark.parametrize(
     "build_id,package_name,dist_git_source,syft_results,expected_purl",
-    software_composition_analysis_test_data,
+    slow_software_composition_analysis_test_data,
 )
 # mock the syft call to avoid having to have actual source code for the test
 @patch("subprocess.check_output")
-def test_software_composition_analysis(
+def test_slow_software_composition_analysis(
     mock_syft,
     build_id,
     package_name,
@@ -212,7 +212,7 @@ def test_software_composition_analysis(
     assert not Component.objects.filter(purl=expected_purl).exists()
     with open(syft_results, "r") as mock_scan_results:
         mock_syft.return_value = mock_scan_results.read()
-    software_composition_analysis(build_id)
+    slow_software_composition_analysis(build_id)
     assert Component.objects.filter(purl=expected_purl).exists()
     if package_name.endswith("-container"):
         root_component = Component.objects.get(

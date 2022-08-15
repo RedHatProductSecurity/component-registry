@@ -587,7 +587,7 @@ def test_extract_image_components():
 
 
 @pytest.mark.vcr(match_on=["method", "scheme", "host", "port", "path", "body"])
-@patch("corgi.tasks.sca.software_composition_analysis.delay")
+@patch("corgi.tasks.sca.slow_software_composition_analysis.delay")
 def test_fetch_rpm_build(mock_sca):
     slow_fetch_brew_build(1705913)
     srpm = Component.objects.get(name="cockpit", type=Component.Type.SRPM)
@@ -652,5 +652,6 @@ def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_send):
         any_order=True,
     )
 
-    # Verify that load_errata didn't try to fetch the only build in this errata again
+    # Verify that slow_load_errata didn't try to fetch the only build in this errata again
+    # TODO: Below should be a method call(), but changing it makes tests fail
     mock_send.assert_not_called

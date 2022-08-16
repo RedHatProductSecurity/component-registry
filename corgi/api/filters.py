@@ -53,7 +53,6 @@ class ComponentFilter(FilterSet):
     re_upstream = CharFilter(lookup_expr="regex", field_name="upstreams")
 
     def filter_ofuri(queryset, name, value):
-        logger.info("here")
         query = (
             Q(products__icontains=value)
             | Q(product_versions__icontains=value)

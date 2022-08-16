@@ -23,7 +23,7 @@ class Command(BaseCommand):
             "-s",
             "--stream",
             dest="stream",
-            help="Fetch builds by tag from product stream",
+            help="Fetch latest builds by tag from product stream",
         )
         parser.add_argument(
             "-i",

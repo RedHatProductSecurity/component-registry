@@ -3,9 +3,9 @@ import logging
 from typing import Optional
 
 from django.conf import settings
-from proton import Event, SSLDomain  # type: ignore
-from proton.handlers import MessagingHandler  # type: ignore
-from proton.reactor import Container, Selector  # type: ignore
+from proton import Event, SSLDomain
+from proton.handlers import MessagingHandler
+from proton.reactor import Container, Selector
 
 from corgi.tasks.brew import slow_fetch_brew_build
 

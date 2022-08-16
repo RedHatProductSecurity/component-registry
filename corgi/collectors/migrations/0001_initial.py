@@ -74,7 +74,7 @@ class Migration(migrations.Migration):
                 ),
                 ("et_id", models.IntegerField(unique=True)),
                 ("name", models.TextField(unique=True)),
-                ("cpe", models.TextField(null=True)),
+                ("cpe", models.TextField(null=True)),  # noqa: DJ01
                 (
                     "product_version",
                     models.ForeignKey(

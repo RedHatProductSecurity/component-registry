@@ -322,7 +322,5 @@ APP_STREAMS_LIFE_CYCLE_URL = os.getenv("CORGI_APP_STREAMS_LIFE_CYCLE_URL", "")
 # Manifest hints url
 MANIFEST_HINTS_URL = os.getenv("CORGI_MANIFEST_HINTS_URL")
 
-DISTGIT_DIR = os.getenv("CORGI_DISTGIT_DIR", "/opt/distgit")
 LOOKASIDE_CACHE_BASE_URL = f"https://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}/repo"
-LOOKASIDE_DIR = os.getenv("CORGI_LOOKASIDE_DIR", "/opt/lookaside")
 SCA_SCRATCH_DIR = os.getenv("CORGI_SCA_SCATCH_DIR", "/tmp")

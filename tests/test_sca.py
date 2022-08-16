@@ -11,7 +11,7 @@ from corgi.tasks.sca import (
     _download_lookaside_sources,
     _get_distgit_sources,
     _scan_remote_sources,
-    software_composition_analysis,
+    slow_software_composition_analysis,
 )
 from tests.factories import ComponentFactory, SoftwareBuildFactory
 
@@ -31,15 +31,13 @@ def test_parse_components():
 
 
 archive_source_test_data = [
-    # We've created test/data/rpms/nodejs.git to simulate prod/stage where that dir exists.
-    # In that case, the git archive command should change to that directory by invoking with cwd arg
     (
         f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
         "/rpms/nodejs#3cbed2be4171502499d0d89bea1ead91690af7d2",
         "nodejs",
         "rpms",
         "tests/data/rpms/nodejs/3cbed2be4171502499d0d89bea1ead91690af7d2.tar",
-        "",
+        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}/rpms/nodejs",
     ),
     (
         f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
@@ -64,10 +62,7 @@ def test_archive_source(
 ):
     target_file, package_name = _archive_source(source_url, package_type)
     mock_git_archive.assert_called_once()
-    if remote_name:
-        assert f"--remote={remote_name}" in mock_git_archive.call_args.args[0]
-    else:
-        assert "cwd" in mock_git_archive.call_args.kwargs
+    assert f"--remote={remote_name}" in mock_git_archive.call_args.args[0]
     assert package_name == package_name
     expected_target_file = PosixPath(expected_filename)
     assert target_file == expected_target_file
@@ -148,7 +143,7 @@ def test_download_lookaside_sources(
         assert downloaded_sources == []
 
 
-software_composition_analysis_test_data = [
+slow_software_composition_analysis_test_data = [
     # Dummy tar files are prefetch to
     # tests/data/rpms/cri-o/1e52fcdc84be253b5094b942c2fec23d7636d644.tar (with only sources)
     # tests/data/rpms/cri-o/cri-o-41c0779.tar.gz/sha516/<sha256>/cri-o-41c0779.tar.gz (empty file)
@@ -183,11 +178,11 @@ software_composition_analysis_test_data = [
 
 @pytest.mark.parametrize(
     "build_id,package_name,dist_git_source,syft_results,expected_purl",
-    software_composition_analysis_test_data,
+    slow_software_composition_analysis_test_data,
 )
 # mock the syft call to avoid having to have actual source code for the test
 @patch("subprocess.check_output")
-def test_software_composition_analysis(
+def test_slow_software_composition_analysis(
     mock_syft,
     build_id,
     package_name,
@@ -212,7 +207,7 @@ def test_software_composition_analysis(
     assert not Component.objects.filter(purl=expected_purl).exists()
     with open(syft_results, "r") as mock_scan_results:
         mock_syft.return_value = mock_scan_results.read()
-    software_composition_analysis(build_id)
+    slow_software_composition_analysis(build_id)
     assert Component.objects.filter(purl=expected_purl).exists()
     if package_name.endswith("-container"):
         root_component = Component.objects.get(

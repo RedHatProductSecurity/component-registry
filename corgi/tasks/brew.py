@@ -312,7 +312,8 @@ def load_brew_tags() -> None:
     for ps in ProductStream.objects.all():
         brew = Brew()
         for brew_tag, inherit in ps.brew_tags.items():
-            builds = brew.get_builds_with_tag(brew_tag, inherit)
+            # Always load all builds in tag when saving relations
+            builds = brew.get_builds_with_tag(brew_tag, inherit=inherit, latest=False)
             no_of_created = 0
             for build in builds:
                 _, created = ProductComponentRelation.objects.get_or_create(

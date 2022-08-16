@@ -1,6 +1,6 @@
 import requests
 from django.conf import settings
-from requests_gssapi import HTTPSPNEGOAuth  # type: ignore
+from requests_gssapi import HTTPSPNEGOAuth
 
 
 class ProdDefs:

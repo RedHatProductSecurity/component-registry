@@ -675,7 +675,7 @@ class Component(TimeStampedModel):
     # The filename of the source rpm package, or similar, from the meta_attr / build system
     filename = models.TextField(default="")
 
-    related_url = models.CharField(max_length=1024, default="", null=True)
+    related_url = models.CharField(max_length=1024, default="", null=True)  # noqa: DJ01
 
     data_score = models.IntegerField(default=0)
     data_report = fields.ArrayField(models.CharField(max_length=200), default=list)
@@ -790,7 +790,7 @@ class Component(TimeStampedModel):
             try:
                 root = cnode.get_root()
                 if root.obj.type == Component.Type.CONTAINER_IMAGE:
-                    # TODO if we change the CONTAINER->RPM ComponentNode.type to something other than # noqa
+                    # TODO if we change the CONTAINER->RPM ComponentNode.type to something besides
                     # 'PROVIDES' we would check for that type here to prevent 'hardcoding' the
                     # container -> rpm relationship here.
 

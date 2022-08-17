@@ -29,8 +29,15 @@ def load_et_products() -> None:
     autoretry_for=RETRYABLE_ERRORS,
     retry_kwargs=RETRY_KWARGS,
 )
-def load_errata(erratum_name):
-    if get_task_complete(f"load_errata:{erratum_name}"):
+def load_errata(erratum_name, force_process=False):
+    # If force_process is true we do all the steps in this task again:
+    # 1. Save ProductComponentRelations
+    # 2. Fetch brew builds
+    # 3. Save product taxonomy
+    if force_process:
+        set_task_complete(f"load_errata:{erratum_name}", False)
+
+    elif get_task_complete(f"load_errata:{erratum_name}"):
         logger.info("Already completed load_errata for %s", erratum_name)
         return
 
@@ -51,7 +58,7 @@ def load_errata(erratum_name):
         .distinct()
     )
     # Convert them to ints for use in queries and tasks
-    # We don't store them as int because another build system not use ints
+    # We don't store them as int because another build system may not use ints
     relation_int_build_ids = set([int(b_id) for b_id in relation_build_ids])
 
     # Check is we have software builds for all of them.
@@ -88,6 +95,9 @@ def load_errata(erratum_name):
             # once all build's components are ingested we must save product taxonomy
             sb = SoftwareBuild.objects.get(build_id=b)
             sb.save_product_taxonomy()
+        # Note this makes a permanent record in Redis and needs to removed before this task can
+        # be processed again with the same erratum_name. Use force_process true option to clear it,
+        # Or delete the redis persistent storage
         set_task_complete(f"load_errata:{erratum_name}")
 
     # Check if we are only part way through loading the errata

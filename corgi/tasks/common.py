@@ -65,9 +65,9 @@ def _get_redis():
     return app.broker_connection().default_channel.client
 
 
-def set_task_complete(key: str):
+def set_task_complete(key: str, is_complete: bool = True):
     conn = _get_redis()
-    conn.set(key, int(True))
+    conn.set(key, int(is_complete))
 
 
 def get_task_complete(key: str) -> bool:

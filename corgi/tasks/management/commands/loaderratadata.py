@@ -33,8 +33,10 @@ class Command(BaseCommand):
         if options["errata_ids"]:
             errata_ids = options["errata_ids"]
             for erratum_id in errata_ids:
-                self.stdout.write(self.style.SUCCESS(f"Loading Errata {erratum_id}"))
-                load_errata(erratum_id)
+                self.stdout.write(self.style.SUCCESS(f"Force loading Errata {erratum_id}"))
+                # If we are calling this command directly always make sure
+                # we process the errata, even if it's been fully processed before.
+                load_errata(erratum_id, force_process=True)
         elif options["repos"]:
             update_variant_repos()
         else:

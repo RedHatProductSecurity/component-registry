@@ -200,8 +200,8 @@ class SoftwareBuild(TimeStampedModel):
         variant_ids = list(
             ProductComponentRelation.objects.filter(build_id=self.build_id)
             .filter(type=ProductComponentRelation.Type.ERRATA)
-            .values_list("product_ref", flat=True)
             .distinct()
+            .values_list("product_ref", flat=True)
         )
 
         stream_ids = list(
@@ -212,26 +212,30 @@ class SoftwareBuild(TimeStampedModel):
                     ProductComponentRelation.Type.BREW_TAG,
                 ]
             )
-            .values_list("product_ref", flat=True)
             .distinct()
+            .values_list("product_ref", flat=True)
         )
 
         product_details = get_product_details(variant_ids, stream_ids)
 
+        components = set()
         for component in Component.objects.filter(software_build__build_id=self.build_id):
             # This is needed for container image builds which pull in components not
             # built at Red Hat, and therefore not assigned a build_id
             for d in component.cnodes.all().get_descendants(include_self=True):
                 if not d.obj:
                     continue
-                for a in ["products", "product_versions", "product_streams"]:
-                    # Since we're only setting the product details for a specific build id we need
-                    # to ensure we are only updating, not replacing the existing product details.
-                    interim_set = set(getattr(d.obj, a))
-                    interim_set.update(product_details[a])
-                    setattr(d.obj, a, list(interim_set))
-                d.obj.channels = d.obj.get_channels()
-                d.obj.save()
+                components.add(d.obj)
+
+        for component in list(components):
+            for a in ["products", "product_versions", "product_streams"]:
+                # Since we're only setting the product details for a specific build id we need
+                # to ensure we are only updating, not replacing the existing product details.
+                interim_set = set(getattr(component, a))
+                interim_set.update(product_details[a])
+                setattr(component, a, list(interim_set))
+            component.channels = component.get_channels()
+            component.save()
 
         return None
 
@@ -913,17 +917,16 @@ class Component(TimeStampedModel):
     def get_source(self) -> list:
         """return all root nodes"""
         # this uses the mptt get_root function, not the get_root property defined on Component
-        sources = []
+        sources = set()
+
         for cnode in self.cnodes.all():
-            try:
-                source = cnode.get_root()
-                if source:
-                    sources.append(source.purl)
-            except MultipleObjectsReturned:
-                logger.warning(
-                    "Component %s returned multiple objects when returning sources", self.purl
-                )
-        return list(set(sources))
+            if cnode.is_root_node():
+                sources.add(cnode.obj.purl)
+            else:
+                for ancestor in cnode.get_ancestors():
+                    if ancestor.is_root_node():
+                        sources.add(ancestor.obj.purl)
+        return list(sources)
 
     def get_upstreams(self):
         """return upstreams component ancestors in family trees"""

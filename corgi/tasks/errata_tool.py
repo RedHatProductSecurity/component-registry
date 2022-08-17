@@ -29,10 +29,11 @@ def load_et_products() -> None:
     autoretry_for=RETRYABLE_ERRORS,
     retry_kwargs=RETRY_KWARGS,
 )
-def slow_load_errata(erratum_name):
-    if get_task_complete(f"slow_load_errata:{erratum_name}"):
-        logger.info("Already completed slow_load_errata for %s", erratum_name)
+def load_errata(erratum_name):
+    if get_task_complete(f"load_errata:{erratum_name}"):
+        logger.info("Already completed load_errata for %s", erratum_name)
         return
+
     et = ErrataTool()
     if not erratum_name.isdigit():
         erratum_id = et.normalize_erratum_id(erratum_name)
@@ -87,7 +88,7 @@ def slow_load_errata(erratum_name):
             # once all build's components are ingested we must save product taxonomy
             sb = SoftwareBuild.objects.get(build_id=b)
             sb.save_product_taxonomy()
-        set_task_complete(f"slow_load_errata:{erratum_name}")
+        set_task_complete(f"load_errata:{erratum_name}")
 
     # Check if we are only part way through loading the errata
     if no_of_processed_builds < len(relation_int_build_ids):

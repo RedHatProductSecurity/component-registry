@@ -13,7 +13,7 @@ from corgi.core.models import (
     SoftwareBuild,
 )
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
-from corgi.tasks.errata_tool import slow_load_errata
+from corgi.tasks.errata_tool import load_errata
 from corgi.tasks.sca import slow_software_composition_analysis
 
 logger = logging.getLogger(__name__)
@@ -62,7 +62,7 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True):
 
     # Once we have the full component tree loaded
     softwarebuild.save_component_taxonomy()
-    # We don't call save_product_taxonomy by default to allow async call of slow_load_errata task
+    # We don't call save_product_taxonomy by default to allow async call of load_errata task
     # See CORGI-21
     if save_product:
         softwarebuild.save_product_taxonomy()
@@ -73,10 +73,10 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True):
         logger.info("no errata tags")
     else:
         if isinstance(build_meta["errata_tags"], str):
-            slow_load_errata.delay(build_meta["errata_tags"])
+            load_errata.delay(build_meta["errata_tags"])
         else:
             for e in build_meta["errata_tags"]:
-                slow_load_errata.delay(e)
+                load_errata.delay(e)
 
     if "nested_builds" in build:
         logger.info("Fetching brew builds for %s", build["nested_builds"])

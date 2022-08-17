@@ -9,7 +9,7 @@ from corgi.core.models import (
     ProductNode,
     ProductVariant,
 )
-from corgi.tasks.errata_tool import slow_load_errata, update_variant_repos
+from corgi.tasks.errata_tool import load_errata, update_variant_repos
 
 from .factories import ProductVariantFactory
 
@@ -188,8 +188,10 @@ def test_save_product_component_for_errata(
     )
     requests_mock.get(build_list_url, text=build_list)
     mock_get_complete.return_value = False
-    slow_load_errata(erratum_id)
+
+    load_errata(erratum_id)
+
     pcr = ProductComponentRelation.objects.filter(external_system_id=erratum_id)
     assert len(pcr) == no_of_objs
     assert mock_send.call_count == no_of_objs
-    assert mock_get_complete.called_with(f"slow_load_errata:{erratum_id}")
+    assert mock_get_complete.called_with(f"load_errata:{erratum_id}")

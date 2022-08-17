@@ -20,9 +20,9 @@ logger = logging.getLogger(__name__)
 
 
 @app.task(autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def slow_fetch_brew_build(build_id: int, save_product: bool = True):
+def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_process: bool = False):
     logger.info("Fetch brew build called with build id: %s", build_id)
-    if SoftwareBuild.objects.filter(build_id=build_id).count() > 0:
+    if not force_process and SoftwareBuild.objects.filter(build_id=build_id).count() > 0:
         logger.info("Already processed build_id %s", build_id)
         return
     else:
@@ -42,7 +42,7 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True):
             "meta_attr": build_meta,
         },
     )
-    if not created:
+    if not force_process and not created:
         # If another task starts while this task is downloading data this can result in processing
         # the same build twice, let's just bail out here to save cpu
         logger.warning("SoftwareBuild with build_id %s already existed, not reprocessing", build_id)

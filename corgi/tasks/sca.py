@@ -53,7 +53,7 @@ def save_component(component: dict[str, Any], parent: ComponentNode):
     return created
 
 
-@app.task
+@app.task(soft_time_limit=1800)
 def slow_software_composition_analysis(build_id: int):
     logger.info("Started software composition analysis for %s", build_id)
     software_build = SoftwareBuild.objects.get(build_id=build_id)

@@ -32,16 +32,12 @@ logger.addHandler(handler)
 
 # get args
 parser = argparse.ArgumentParser()
-parser.add_argument("corgi_url", nargs="?")
+parser.add_argument("corgi_url", default="http://localhost:8000", nargs="?")
 args = parser.parse_args()
 
 logger.info("smoke-test: start")
 
-session = None
-if args.corgi_url is None:
-    session = corgi_bindings.new_session(corgi_server_uri="http://localhost:8000", verify_ssl=False)
-else:
-    session = corgi_bindings.new_session(corgi_server_uri=args.corgi_url, verify_ssl=False)
+session = corgi_bindings.new_session(corgi_server_uri=args.corgi_url, verify_ssl=False)
 
 # check specific streams [corgi ofuri, deptopia id]
 stream_corpus = [

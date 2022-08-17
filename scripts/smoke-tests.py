@@ -28,7 +28,7 @@ logger.addHandler(handler)
 
 # get args
 parser = argparse.ArgumentParser()
-parser.add_argument("corgi_url", nargs="?")
+parser.add_argument("corgi_url", default="http://localhost:8000", nargs="?")
 args = parser.parse_args()
 
 logger.info("smoke-test: start")
@@ -43,11 +43,7 @@ response = requests.get(f"{args.corgi_url}/api/v1/non-existent-endpoint")
 assert response.status_code == 404
 
 logger.info("smoke-test: access REST API")
-session = None
-if args.corgi_url is None:
-    session = corgi_bindings.new_session(corgi_server_uri="http://localhost:8000")
-else:
-    session = corgi_bindings.new_session(corgi_server_uri=f"{args.corgi_url}")
+session = corgi_bindings.new_session(corgi_server_uri=f"{args.corgi_url}")
 
 status = session.status()
 products = session.products.retrieve_list()

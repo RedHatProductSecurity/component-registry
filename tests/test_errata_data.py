@@ -177,16 +177,19 @@ errata_details = [
 ]
 
 
+@patch("corgi.tasks.errata_tool.get_task_complete")
 @patch("config.celery.app.send_task")
 @pytest.mark.parametrize("erratum_id, build_list, no_of_objs", errata_details)
 def test_save_product_component_for_errata(
-    mock_send, erratum_id, build_list, no_of_objs, requests_mock
+    mock_send, mock_get_complete, erratum_id, build_list, no_of_objs, requests_mock
 ):
     build_list_url = (
         f"{os.getenv('CORGI_ERRATA_TOOL_URL')}/api/v1/erratum/{erratum_id}/builds_list.json"
     )
     requests_mock.get(build_list_url, text=build_list)
+    mock_get_complete.return_value = False
     slow_load_errata(erratum_id)
     pcr = ProductComponentRelation.objects.filter(external_system_id=erratum_id)
     assert len(pcr) == no_of_objs
     assert mock_send.call_count == no_of_objs
+    assert mock_get_complete.called_with(f"slow_load_errata:{erratum_id}")

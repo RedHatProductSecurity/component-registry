@@ -10,7 +10,12 @@ from corgi.core.models import (
     ProductVariant,
     SoftwareBuild,
 )
-from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
+from corgi.tasks.common import (
+    RETRY_KWARGS,
+    RETRYABLE_ERRORS,
+    get_task_complete,
+    set_task_complete,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +30,9 @@ def load_et_products() -> None:
     retry_kwargs=RETRY_KWARGS,
 )
 def slow_load_errata(erratum_name):
+    if get_task_complete(f"slow_load_errata:{erratum_name}"):
+        logger.info("Already completed slow_load_errata for %s", erratum_name)
+        return
     et = ErrataTool()
     if not erratum_name.isdigit():
         erratum_id = et.normalize_erratum_id(erratum_name)
@@ -79,6 +87,7 @@ def slow_load_errata(erratum_name):
             # once all build's components are ingested we must save product taxonomy
             sb = SoftwareBuild.objects.get(build_id=b)
             sb.save_product_taxonomy()
+        set_task_complete(f"slow_load_errata:{erratum_name}")
 
     # Check if we are only part way through loading the errata
     if no_of_processed_builds < len(relation_int_build_ids):

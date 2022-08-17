@@ -7,6 +7,8 @@ from django_celery_results.models import TaskResult
 from psycopg2.errors import InterfaceError as Psycopg2InterfaceError
 from requests.exceptions import RequestException
 
+from config.celery import app
+
 BACKOFF_KWARGS = {"max_tries": 5, "jitter": None}
 
 # InterfaceError is "connection already closed" or some other connection-level error
@@ -57,3 +59,17 @@ def get_last_success_for_task(task_name):
     return (
         last_success - timedelta(minutes=30) if last_success else timezone.now() - timedelta(days=3)
     )
+
+
+def _get_redis():
+    return app.broker_connection().default_channel.client
+
+
+def set_task_complete(key: str):
+    conn = _get_redis()
+    conn.set(key, int(True))
+
+
+def get_task_complete(key: str) -> bool:
+    conn = _get_redis()
+    return bool(conn.get(key))

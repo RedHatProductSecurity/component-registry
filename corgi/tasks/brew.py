@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 @app.task(autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_process: bool = False):
     logger.info("Fetch brew build called with build id: %s", build_id)
-    if not force_process and SoftwareBuild.objects.filter(build_id=build_id).count() > 0:
+    if not force_process and SoftwareBuild.objects.filter(build_id=build_id).exists():
         logger.info("Already processed build_id %s", build_id)
         return
     else:

@@ -18,11 +18,10 @@ services:
       POSTGRESQL_ADMIN_PASSWORD: "secret"
     volumes:
       - corgi-pg-data:/var/lib/pgsql/data/
-      - ${PWD}/etc/pg:/pg:z
-      - ${PWD}/scripts/setup_pg.sh:/opt/app-root/src/scripts/setup_pg.sh:z
+      # Config files in below directory are automatically loaded by postgres at startup
+      - ${PWD}/etc/pg:/opt/app-root/src/postgresql-cfg:z
     ports:
       - "5433:5432"
-    command: ./scripts/setup_pg.sh
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -d corgi-db"]
       interval: "60s"

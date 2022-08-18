@@ -2,6 +2,7 @@ import logging
 from datetime import timedelta
 
 from celery.signals import beat_init
+from celery_singleton import clear_locks as singleton_clear_locks
 from django.conf import settings
 from django.core.mail import EmailMessage
 from django.utils import timezone
@@ -39,6 +40,9 @@ def setup_periodic_tasks(sender, **kwargs):
         PeriodicTask.objects.get_or_create(
             name=task, task=f"corgi.tasks.{module}.{task}", defaults={"interval": interval}
         )
+
+    # Ensure celery_singleton is not still blocking new tasks if the pod did not shut down cleanly.
+    singleton_clear_locks(app)
 
     # Wipe old schedules
     CrontabSchedule.objects.all().delete()

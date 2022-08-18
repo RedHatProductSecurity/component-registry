@@ -224,9 +224,15 @@ CELERY_RESULT_BACKEND = "django-db"
 CELERY_RESULT_BACKEND_ALWAYS_RETRY = True
 CELERY_RESULT_BACKEND_MAX_RETRIES = 2
 CELERY_DEFAULT_RATE_LIMIT = "8/m"
+
 # Set a global 15-minute task timeout. Override this on individual tasks by decorating them with:
 # @app.task(soft_time_limit=<TIME_IN_SECONDS>)
 CELERY_TASK_SOFT_TIME_LIMIT = 900
+# CELERY_SINGLETON_LOCK_EXPIRY and redis visibility timeout must never be less than the below value
+CELERY_LONGEST_SOFT_TIME_LIMIT = 1800
+# Expire locks after 30 minutes, which is the longest task time limit.
+# https://github.com/steinitzu/celery-singleton#app-configuration
+CELERY_SINGLETON_LOCK_EXPIRY = CELERY_LONGEST_SOFT_TIME_LIMIT
 
 CELERY_WORKER_CONCURRENCY = 1  # defaults to CPU core count, which breaks in OpenShift
 

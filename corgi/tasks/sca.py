@@ -10,12 +10,14 @@ from subprocess import CalledProcessError  # nosec B404
 from typing import IO, Any, Optional, Tuple
 
 import requests
+from celery_singleton import Singleton
 from django.conf import settings
 from requests import Response
 
 from config.celery import app
 from corgi.collectors.syft import Syft
 from corgi.core.models import Component, ComponentNode, SoftwareBuild
+from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 
 LOOKASIDE_REGEX_SOURCE_PATTERNS = [
     # https://regex101.com/r/xYoHtX/1
@@ -53,7 +55,12 @@ def save_component(component: dict[str, Any], parent: ComponentNode):
     return created
 
 
-@app.task(soft_time_limit=1800)
+@app.task(
+    base=Singleton,
+    autoretry_for=RETRYABLE_ERRORS,
+    retry_kwargs=RETRY_KWARGS,
+    soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
+)
 def slow_software_composition_analysis(build_id: int):
     logger.info("Started software composition analysis for %s", build_id)
     software_build = SoftwareBuild.objects.get(build_id=build_id)

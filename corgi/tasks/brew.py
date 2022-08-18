@@ -309,6 +309,7 @@ def save_module(softwarebuild, build_data) -> ComponentNode:
     return node
 
 
+@app.task
 def load_brew_tags() -> None:
     for ps in ProductStream.objects.all():
         brew = Brew()

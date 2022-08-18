@@ -32,11 +32,7 @@ def save_errata_product_taxonomy(erratum_id: int):
         sb.save_product_taxonomy()
 
 
-@app.task(
-    base=Singleton,
-    autoretry_for=RETRYABLE_ERRORS,
-    retry_kwargs=RETRY_KWARGS,
-)
+@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def slow_load_errata(erratum_name):
     et = ErrataTool()
     if not erratum_name.isdigit():

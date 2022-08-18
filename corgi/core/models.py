@@ -222,7 +222,7 @@ class SoftwareBuild(TimeStampedModel):
         for component in Component.objects.filter(software_build__build_id=self.build_id):
             # This is needed for container image builds which pull in components not
             # built at Red Hat, and therefore not assigned a build_id
-            for d in component.cnodes.all().get_descendants(include_self=True):
+            for d in component.cnodes.get_queryset().get_descendants(include_self=True):
                 if not d.obj:
                     continue
                 components.add(d.obj)
@@ -919,7 +919,7 @@ class Component(TimeStampedModel):
         # this uses the mptt get_root function, not the get_root property defined on Component
         sources = set()
 
-        for cnode in self.cnodes.all():
+        for cnode in self.cnodes.get_queryset():
             if cnode.is_root_node():
                 sources.add(cnode.obj.purl)
             else:

@@ -1,6 +1,7 @@
 import logging
 import re
 
+from celery_singleton import Singleton
 from django.utils import dateformat, timezone
 
 from config.celery import app
@@ -19,7 +20,7 @@ from corgi.tasks.sca import slow_software_composition_analysis
 logger = logging.getLogger(__name__)
 
 
-@app.task(autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
+@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_process: bool = False):
     logger.info("Fetch brew build called with build id: %s", build_id)
     if not force_process and SoftwareBuild.objects.filter(build_id=build_id).exists():

@@ -1,4 +1,5 @@
 celery[redis]
+celery-singleton
 django
 django-celery-beat
 django-celery-results

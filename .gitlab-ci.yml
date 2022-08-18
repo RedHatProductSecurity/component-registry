@@ -7,7 +7,7 @@ stages:
 
 include:
   - project: 'product-security/dev/component-registry-ops'
-    ref: cd-from-tags
+    ref: "$CORGI_OPS_BRANCH"
     file: '/templates/gitlab/ansible-run.yml'
 
 .common_ci_setup: &common_ci_setup

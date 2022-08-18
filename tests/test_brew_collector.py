@@ -617,9 +617,10 @@ def test_fetch_rpm_build(mock_sca):
 
 
 @pytest.mark.vcr(match_on=["method", "scheme", "host", "port", "path", "body"])
-@patch("config.celery.app.send_task")
+@patch("corgi.tasks.brew.slow_software_composition_analysis.delay")
+@patch("corgi.tasks.brew.slow_load_errata.delay")
 @patch("corgi.tasks.brew.slow_fetch_brew_build.delay")
-def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_send):
+def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, mock_sca):
     slow_fetch_brew_build(1781353)
     image_index = Component.objects.get(
         name="subctl-container", type=Component.Type.CONTAINER_IMAGE, arch="noarch"
@@ -654,4 +655,5 @@ def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_send):
 
     # Verify that slow_load_errata didn't try to fetch the only build in this errata again
     # TODO: Below should be a method call(), but changing it makes tests fail
-    mock_send.assert_not_called
+    mock_load_errata.assert_not_called
+    mock_sca.assert_called_with(1781353)

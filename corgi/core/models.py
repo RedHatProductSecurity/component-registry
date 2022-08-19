@@ -190,7 +190,7 @@ class SoftwareBuild(TimeStampedModel):
         """it is only possible to update ('materialize') component taxonomy when all
         components (from a build) have loaded"""
         for component in Component.objects.filter(software_build__build_id=self.build_id):
-            for cnode in component.cnodes.all():
+            for cnode in component.cnodes.get_queryset():
                 for d in cnode.get_descendants(include_self=True):
                     d.obj.save_component_taxonomy()
         return None
@@ -397,7 +397,7 @@ class Product(ProductModel, TimeStampedModel):
     @property
     def cpes(self):
         cpes = []
-        for p in self.pnodes.all().get_descendants():
+        for p in self.pnodes.get_queryset().get_descendants():
             if hasattr(p.obj, "cpe"):
                 cpes.append(p.obj.cpe)
         return list(set(cpes))
@@ -429,7 +429,7 @@ class ProductVersion(ProductModel, TimeStampedModel):
     @property
     def cpes(self):
         cpes = []
-        for p in self.pnodes.all().get_descendants():
+        for p in self.pnodes.get_queryset().get_descendants():
             if hasattr(p.obj, "cpe"):
                 cpes.append(p.obj.cpe)
         return list(set(cpes))
@@ -620,7 +620,7 @@ def get_product_details(variant_ids: list[str], stream_ids: list[str]) -> dict[s
     product_streams = ProductStream.objects.filter(name__in=stream_ids)
     product_details = defaultdict(set)
     for product_stream in product_streams:
-        for ancestor in product_stream.pnodes.all().get_ancestors(include_self=True):
+        for ancestor in product_stream.pnodes.get_queryset().get_ancestors(include_self=True):
             if type(ancestor.obj) is Product:
                 product_details["products"].add(ancestor.obj.ofuri)
             if type(ancestor.obj) is ProductVersion:
@@ -790,7 +790,7 @@ class Component(TimeStampedModel):
         # for functions other that get_upstreams we might to revisit this check
         if not self.software_build:
             return roots
-        for cnode in self.cnodes.all():
+        for cnode in self.cnodes.get_queryset():
             try:
                 root = cnode.get_root()
                 if root.obj.type == Component.Type.CONTAINER_IMAGE:
@@ -866,7 +866,7 @@ class Component(TimeStampedModel):
     def get_product_variants(self):
         build_ids = [
             a.obj.software_build.build_id
-            for a in self.cnodes.all().get_ancestors(include_self=True)
+            for a in self.cnodes.get_queryset().get_ancestors(include_self=True)
             if a.obj.software_build
         ]
         return list(
@@ -879,7 +879,7 @@ class Component(TimeStampedModel):
     def get_product_streams(self):
         build_ids = [
             a.obj.software_build.build_id
-            for a in self.cnodes.all().get_ancestors(include_self=True)
+            for a in self.cnodes.get_queryset().get_ancestors(include_self=True)
             if a.obj.software_build
         ]
         return list(
@@ -899,7 +899,7 @@ class Component(TimeStampedModel):
         product_variants = ProductVariant.objects.filter(query)
         channels = []
         for product_variant in product_variants:
-            for descendant in product_variant.pnodes.all().get_descendants():
+            for descendant in product_variant.pnodes.get_queryset().get_descendants():
                 if type(descendant.obj) in [Channel]:
                     channels.append(descendant.obj.name)
         return list(set(channels))
@@ -910,7 +910,7 @@ class Component(TimeStampedModel):
         type_list = [ComponentNode.ComponentNodeType.PROVIDES]
         if include_dev:
             type_list.append(ComponentNode.ComponentNodeType.PROVIDES_DEV)
-        for descendant in self.cnodes.all().get_descendants().filter(type__in=type_list):
+        for descendant in self.cnodes.get_queryset().get_descendants().filter(type__in=type_list):
             provides.append(descendant.purl)
         return list(set(provides))
 
@@ -950,7 +950,7 @@ class Component(TimeStampedModel):
                 upstreams.extend(
                     [
                         a.purl
-                        for a in self.cnodes.all().get_ancestors(include_self=True)
+                        for a in self.cnodes.get_queryset().get_ancestors(include_self=True)
                         if a.type == ComponentNode.ComponentNodeType.SOURCE
                         and a.obj.type == Component.Type.UPSTREAM
                     ]

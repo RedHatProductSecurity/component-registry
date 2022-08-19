@@ -32,7 +32,8 @@ logger.addHandler(handler)
 
 # get args
 parser = argparse.ArgumentParser()
-parser.add_argument("corgi_url", default="http://localhost:8000", nargs="?")
+parser.add_argument("--deptopia_url")
+parser.add_argument("corgi_url", default="http://localhost:8000")
 args = parser.parse_args()
 
 logger.info("smoke-test: start")
@@ -58,7 +59,7 @@ for stream_ofuri, deptopia_id in stream_corpus:
     logger.info(f"reconciliation: check product_stream: {stream_ofuri}.")
 
     response = requests.get(
-        f"https://web-deptopia.apps.ocp4.prod.psi.redhat.com/api/v1/products/id/{deptopia_id}/builds",  # noqa
+        f"{args.deptopia_url}/api/v1/products/id/{deptopia_id}/builds",  # noqa
         verify=False,
     )
     response.raise_for_status()

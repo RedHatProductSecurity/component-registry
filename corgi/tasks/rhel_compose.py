@@ -1,5 +1,7 @@
 import logging
 
+from celery_singleton import Singleton
+
 from config.celery import app
 from corgi.collectors.brew import Brew
 from corgi.collectors.rhel_compose import RhelCompose
@@ -16,7 +18,7 @@ def save_composes() -> None:
         save_compose.delay(stream.name)
 
 
-@app.task(autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
+@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def save_compose(stream_name) -> None:
     brew = Brew()
     logger.info("Called save compose with %s", stream_name)

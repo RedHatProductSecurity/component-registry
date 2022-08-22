@@ -22,8 +22,8 @@ def load_et_products() -> None:
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def save_errata_product_taxonomy(erratum_id: int):
-    logger.info(f"Save errata product taxonomy called with {erratum_id}")
+def slow_save_errata_product_taxonomy(erratum_id: int):
+    logger.info(f"slow_save_errata_product_taxonomy called for {erratum_id}")
     relation_build_ids = _get_relation_build_ids(erratum_id)
     for b in relation_build_ids:
         logger.info("Saving product taxonomy for build %s", b)
@@ -70,8 +70,8 @@ def slow_load_errata(erratum_name):
     # If the number of relations was more than 0 check if we've processed all the builds
     # in the errata
     elif len(relation_build_ids) == no_of_processed_builds:
-        logger.info("Calling save_errata_product_taxonomy")
-        save_errata_product_taxonomy.delay(erratum_id)
+        logger.info(f"Calling slow_save_errata_product_taxonomy for {erratum_id}")
+        slow_save_errata_product_taxonomy.delay(erratum_id)
 
     # Check if we are only part way through loading the errata
     if no_of_processed_builds < len(relation_build_ids):

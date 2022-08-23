@@ -1,6 +1,7 @@
 import logging
 import re
 
+from celery_singleton import Singleton
 from django.core.exceptions import MultipleObjectsReturned
 from django.db import transaction
 
@@ -14,6 +15,7 @@ from corgi.core.models import (
     ProductVariant,
     ProductVersion,
 )
+from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 
 logger = logging.getLogger(__name__)
 # Find a substring that looks like a version (e.g. "3", "3.5", "3-5", "1.2.z") at the end of a
@@ -21,7 +23,7 @@ logger = logging.getLogger(__name__)
 RE_VERSION_LIKE_STRING = re.compile(r"\d[\dz.-]*$|$")
 
 
-@app.task
+@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def update_products() -> None:
     """Fetch product definitions and update the entire product data and tree model.
 
@@ -37,8 +39,8 @@ def update_products() -> None:
     TODO: investigate whether we need to delete removed definitions from prod-defs.
     TODO: investigate whether we need to update_or_create ProductNodes
     """
+    products = ProdDefs.load_product_definitions()
     with transaction.atomic():
-        products = ProdDefs.load_product_definitions()
         for pd_product in products:
             pd_product_versions = pd_product.pop("product_versions", [])
 

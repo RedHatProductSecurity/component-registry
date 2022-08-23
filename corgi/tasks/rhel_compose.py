@@ -11,7 +11,7 @@ from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 logger = logging.getLogger(__name__)
 
 
-@app.task
+@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def save_composes() -> None:
     logger.info("Setting up relations for all streams with composes")
     for stream in ProductStream.objects.exclude(composes__exact={}):

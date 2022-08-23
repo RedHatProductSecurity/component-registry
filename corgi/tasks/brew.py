@@ -310,7 +310,7 @@ def save_module(softwarebuild, build_data) -> ComponentNode:
     return node
 
 
-@app.task
+@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def load_brew_tags() -> None:
     for ps in ProductStream.objects.all():
         brew = Brew()

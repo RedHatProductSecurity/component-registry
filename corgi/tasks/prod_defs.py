@@ -146,7 +146,7 @@ def update_products() -> None:
                                     et_pv.name,
                                     brew_tag,
                                 )
-                                for et_variant in et_pv.variants.all():
+                                for et_variant in et_pv.variants.get_queryset():
                                     logger.info(
                                         "Assigning Variant %s to product stream %s",
                                         et_variant.name,
@@ -206,11 +206,11 @@ def update_products() -> None:
     with transaction.atomic():
         # Note - Once product taxonomy has been fully loaded we can materialise
         # relationships in product entities.
-        for product_variant in ProductVariant.objects.all():
+        for product_variant in ProductVariant.objects.get_queryset():
             product_variant.save_product_taxonomy()
-        for product_stream in ProductStream.objects.all():
+        for product_stream in ProductStream.objects.get_queryset():
             product_stream.save_product_taxonomy()
-        for product_version in ProductVersion.objects.all():
+        for product_version in ProductVersion.objects.get_queryset():
             product_version.save_product_taxonomy()
-        for product in Product.objects.all():
+        for product in Product.objects.get_queryset():
             product.save_product_taxonomy()

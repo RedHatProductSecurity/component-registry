@@ -45,8 +45,8 @@ def setup_periodic_tasks(sender, **kwargs):
     clear_locks(app)
 
     # Wipe old schedules
-    CrontabSchedule.objects.all().delete()
-    IntervalSchedule.objects.all().delete()
+    CrontabSchedule.objects.get_queryset().delete()
+    IntervalSchedule.objects.get_queryset().delete()
 
     # Daily tasks, scheduled to a specific hour. For some reason, using hours=24 may not run the
     # task at all: https://github.com/celery/django-celery-beat/issues/221

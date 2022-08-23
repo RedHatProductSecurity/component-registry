@@ -114,7 +114,7 @@ def update_variant_repos() -> None:
     """
     variant_to_repo_map: dict = ErrataTool().variant_cdn_repo_mapping()
     with transaction.atomic():
-        for pv in ProductVariant.objects.all():
+        for pv in ProductVariant.objects.get_queryset():
             if pv.name not in variant_to_repo_map:
                 logger.error("Product Variant '%s' does not exist in Errata Tool", pv.name)
                 continue

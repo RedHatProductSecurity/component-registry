@@ -312,7 +312,7 @@ def save_module(softwarebuild, build_data) -> ComponentNode:
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def load_brew_tags() -> None:
-    for ps in ProductStream.objects.all():
+    for ps in ProductStream.objects.get_queryset():
         brew = Brew()
         for brew_tag, inherit in ps.brew_tags.items():
             # Always load all builds in tag when saving relations

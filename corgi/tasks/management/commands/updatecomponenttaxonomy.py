@@ -29,7 +29,7 @@ class Command(BaseCommand):
                     "updating all builds component taxonomies",
                 )
             )
-            builds = SoftwareBuild.objects.all()
+            builds = SoftwareBuild.objects.get_queryset()
         for sb in builds:
             self.stdout.write(
                 self.style.SUCCESS(

@@ -30,7 +30,7 @@ class TagViewMixin(GenericViewSet):
         """Delete a tag from a build."""
         obj = self.get_object()
         if not request.data:
-            obj.tags.all().delete()
+            obj.tags.get_queryset().delete()
             return Response(data={"text": "All tags deleted."})
 
         serializer = TagSerializer(data=request.data)

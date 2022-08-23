@@ -72,7 +72,7 @@ class ErrataTool:
                 )
                 if created:
                     logger.info("Created ET ProductVersion: %s", et_product_version.name)
-        for pv in CollectorErrataProductVersion.objects.all():
+        for pv in CollectorErrataProductVersion.objects.get_queryset():
             pv_details = self.get(f"api/v1/products/{pv.product.et_id}/product_versions/{pv.et_id}")
             brew_tags = [t.removesuffix("-candidate") for t in pv_details["data"]["brew_tags"]]
             if pv.brew_tags != brew_tags:

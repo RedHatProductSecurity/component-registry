@@ -228,12 +228,12 @@ class SoftwareBuild(TimeStampedModel):
                 components.add(d.obj)
 
         for component in list(components):
-            for a in ["products", "product_versions", "product_streams"]:
+            for attr in ("products", "product_versions", "product_streams"):
                 # Since we're only setting the product details for a specific build id we need
                 # to ensure we are only updating, not replacing the existing product details.
-                interim_set = set(getattr(component, a))
-                interim_set.update(product_details[a])
-                setattr(component, a, list(interim_set))
+                interim_set = set(getattr(component, attr))
+                interim_set.update(product_details[attr])
+                setattr(component, attr, list(interim_set))
             component.channels = component.get_channels()
             component.save()
 
@@ -828,7 +828,7 @@ class Component(TimeStampedModel):
         if not self.software_build:
             return []
         component_name = ""
-        if self.type in [Component.Type.RPM, Component.Type.SRPM]:
+        if self.type in (Component.Type.RPM, Component.Type.SRPM):
             component_name = f"{self.nevra}.rpm"
         errata_qs = (
             ProductComponentRelation.objects.filter(
@@ -900,7 +900,7 @@ class Component(TimeStampedModel):
         channels = []
         for product_variant in product_variants:
             for descendant in product_variant.pnodes.get_queryset().get_descendants():
-                if type(descendant.obj) in [Channel]:
+                if isinstance(descendant.obj, Channel):
                     channels.append(descendant.obj.name)
         return list(set(channels))
 

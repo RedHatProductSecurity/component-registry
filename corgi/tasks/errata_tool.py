@@ -102,7 +102,7 @@ def _get_relation_build_ids(erratum_id: int) -> set[int]:
     )
     # Convert them to ints for use in queries and tasks
     # We don't store them as int because another build system not use ints
-    return set([int(b_id) for b_id in relation_build_ids])  # type: ignore
+    return set(int(b_id) for b_id in relation_build_ids if b_id is not None)
 
 
 @app.task

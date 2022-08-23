@@ -11,7 +11,7 @@ import pkgutil as _pkgutil
 # 2. Discover, import, and introspect all the methods
 # 3. Add names that are Celery tasks to globals(), AKA this namespace
 
-for _loader, _module_name, _is_pkg in _pkgutil.walk_packages([__file__.replace("/tasks.py", "")]):
+for _loader, _module_name, _is_pkg in _pkgutil.walk_packages((__file__.replace("/tasks.py", ""),)):
     if _is_pkg or _module_name == "tasks":
         # Skip subpackages / management commands and self
         continue

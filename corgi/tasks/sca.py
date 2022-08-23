@@ -202,7 +202,7 @@ def _download_lookaside_sources(
         return []
     source_content = lookaside_source.readlines()
 
-    lookaside_source_regexes = [re.compile(p) for p in LOOKASIDE_REGEX_SOURCE_PATTERNS]
+    lookaside_source_regexes = tuple(re.compile(p) for p in LOOKASIDE_REGEX_SOURCE_PATTERNS)
     downloaded_sources: list[Path] = []
     for line in source_content:
         for regex in lookaside_source_regexes:

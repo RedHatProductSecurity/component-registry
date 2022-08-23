@@ -28,39 +28,41 @@ def save_compose(stream_name) -> None:
         compose_id, compose_created_date, compose_data = RhelCompose.fetch_compose_data(
             compose_url, variants
         )
-        if "srpms" in compose_data:
-            srpms = compose_data["srpms"].keys()
-            find_build_id_calls = _brew_srpm_lookup(brew, srpms)
-            for srpm, call in find_build_id_calls:
-                build_id = call.result
-                if not build_id:
-                    for filename in compose_data["srpms"][srpm]:
-                        logger.debug(
-                            "Didn't find build with NVR %s, using rpm filename: %s",
-                            srpm,
-                            filename,
-                        )
-                        rpm_data = brew.koji_session.getRPM(filename)
-                        if not rpm_data:
-                            # Try the next srpm rpm filename
-                            continue
-                        build_id = rpm_data["build_id"]
-                        # found the build_id, stop iterating filenames
-                        break
-                _, created = ProductComponentRelation.objects.get_or_create(
-                    external_system_id=compose_id,
-                    product_ref=stream_name,
-                    build_id=build_id,
-                    defaults={"type": ProductComponentRelation.Type.COMPOSE},
-                )
-                if created:
-                    no_of_relations += 1
+        if "srpms" not in compose_data:
+            continue
+        srpms = compose_data["srpms"].keys()
+        find_build_id_calls = _brew_srpm_lookup(brew, srpms)
+        for srpm, call in find_build_id_calls:
+            build_id = call.result
+            if not build_id:
+                for filename in compose_data["srpms"][srpm]:
+                    logger.debug(
+                        "Didn't find build with NVR %s, using rpm filename: %s",
+                        srpm,
+                        filename,
+                    )
+                    rpm_data = brew.koji_session.getRPM(filename)
+                    if not rpm_data:
+                        # Try the next srpm rpm filename
+                        continue
+                    build_id = rpm_data["build_id"]
+                    # found the build_id, stop iterating filenames
+                    break
+            # TODO: What if build_id still not found?
+            _, created = ProductComponentRelation.objects.get_or_create(
+                external_system_id=compose_id,
+                product_ref=stream_name,
+                build_id=build_id,
+                defaults={"type": ProductComponentRelation.Type.COMPOSE},
+            )
+            if created:
+                no_of_relations += 1
     logger.info("Created %s new relations for stream %s", no_of_relations, stream_name)
 
 
-def _brew_srpm_lookup(brew, srpms):
-    with brew.koji_session.multicall() as m:
-        find_build_id_calls = [(srpm, m.findBuildID(srpm)) for srpm in srpms]
+def _brew_srpm_lookup(brew, srpms) -> tuple:
+    with brew.koji_session.multicall() as multicall:
+        find_build_id_calls = tuple((srpm, multicall.findBuildID(srpm)) for srpm in srpms)
     return find_build_id_calls
 
 

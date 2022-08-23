@@ -1,6 +1,6 @@
 import requests
 from django.conf import settings
-from yaml import CLoader as Loader
+from yaml import CSafeLoader as Loader
 from yaml import load
 
 

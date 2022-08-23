@@ -62,7 +62,7 @@ def test_archive_source(
 ):
     target_file, package_name = _archive_source(source_url, package_type)
     mock_git_archive.assert_called_once()
-    assert f"--remote={remote_name}" in mock_git_archive.call_args.args[0]
+    assert remote_name == mock_git_archive.call_args.args[0]
     assert package_name == package_name
     expected_target_file = PosixPath(expected_filename)
     assert target_file == expected_target_file

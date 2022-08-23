@@ -4,10 +4,9 @@ import re
 import shutil
 import subprocess  # nosec B404
 import tarfile
-import urllib
 from pathlib import Path
-from subprocess import CalledProcessError  # nosec B404
 from typing import IO, Any, Optional, Tuple
+from urllib.parse import urlparse
 
 import requests
 from celery_singleton import Singleton
@@ -105,7 +104,7 @@ def _scan_remote_sources(root_component, root_node):
         if "remote_source_archive" in upstream_node.obj.meta_attr:
             # Download source to scratch
             remote_source_archive = upstream_node.obj.meta_attr["remote_source_archive"]
-            url = urllib.parse.urlparse(remote_source_archive)
+            url = urlparse(remote_source_archive)
             filename = url.path.rsplit("/", 1)[-1]
             target_filepath = Path(
                 f"{settings.SCA_SCRATCH_DIR}/containers/{root_component.nvr}/{filename}"
@@ -140,15 +139,11 @@ def _get_distgit_sources(source_url: str, package_type: str) -> list[Path]:
 
 def _archive_source(source_url: str, package_type: str) -> Tuple[Optional[Path], str]:
     # (scheme, netloc, path, parameters, query, fragment)
-    try:
-        url = urllib.parse.urlparse(source_url)
-    except ValueError as e:
-        logger.error("Invalid url passed to archive_source %s", e)
-        return None, ""
+    url = urlparse(source_url)
 
-    if url.scheme != "git":
-        logger.error("Cannot download raw source for anything but git protocol")
-        return None, ""
+    # We only support git, git+https, git+ssh
+    if not url.scheme.startswith("git"):
+        raise ValueError("Cannot download raw source for anything but git protocol")
 
     git_remote = f"{url.scheme}://{url.netloc}{url.path}"
     package_name = url.path.rsplit("/", 1)[-1]
@@ -161,30 +156,27 @@ def _archive_source(source_url: str, package_type: str) -> Tuple[Optional[Path],
         return target_file, package_name
 
     logger.info("Fetching %s to %s", git_remote, target_file)
-    _call_git_archive(
-        ["/usr/bin/git", "archive", "--format=tar", f"--remote={git_remote}", url.fragment],
-        target_file,
-        target_path,
-    )
+    _call_git_archive(git_remote, url.fragment, target_file)
 
     return target_file, package_name
 
 
-def _call_git_archive(git_archive_command, target_file, target_path):
+def _call_git_archive(git_remote: str, url_fragment: str, target_file: Path) -> None:
     # for now git_remote and url.fragment are sanitized via url parsing and
     # coming from Brew.
     # We might consider more adding more sanitization if we accept ad-hoc source for scans
-    try:
-        with target_file.open("x") as target:
-            subprocess.check_call(  # nosec B603
-                git_archive_command,
-                stdout=target,
-            )
-
-    except CalledProcessError as e:
-        logger.error("Error downloading raw source: %s", e)
-    except FileExistsError:
-        logger.warning("File exits %s", target_path)
+    git_archive_command = (
+        "/usr/bin/git",
+        "archive",
+        "--format=tar",
+        f"--remote={git_remote}",
+        url_fragment,
+    )
+    with target_file.open("x") as target:
+        subprocess.check_call(  # nosec B603
+            git_archive_command,
+            stdout=target,
+        )
 
 
 def _download_lookaside_sources(
@@ -205,6 +197,7 @@ def _download_lookaside_sources(
     lookaside_source_regexes = tuple(re.compile(p) for p in LOOKASIDE_REGEX_SOURCE_PATTERNS)
     downloaded_sources: list[Path] = []
     for line in source_content:
+        match = None
         for regex in lookaside_source_regexes:
             match = regex.search(line.decode("UTF-8"))
             if match:

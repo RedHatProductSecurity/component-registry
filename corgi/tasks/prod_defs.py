@@ -2,7 +2,6 @@ import logging
 import re
 
 from celery_singleton import Singleton
-from django.core.exceptions import MultipleObjectsReturned
 from django.db import transaction
 
 from config.celery import app
@@ -167,19 +166,13 @@ def update_products() -> None:
                                             }
                                         },
                                     )
-                                    try:
-                                        ProductNode.objects.get_or_create(
-                                            object_id=product_variant.pk,
-                                            defaults={
-                                                "parent": product_stream_node,
-                                                "obj": product_variant,
-                                            },
-                                        )
-                                    except MultipleObjectsReturned:
-                                        logger.warning(
-                                            "ProductNode %s returned multiple objects when attempting get or create",  # noqa
-                                            product_variant.pk,
-                                        )
+                                    ProductNode.objects.get_or_create(
+                                        object_id=product_variant.pk,
+                                        defaults={
+                                            "parent": product_stream_node,
+                                            "obj": product_variant,
+                                        },
+                                    )
                     for et_product in errata_info:
                         et_product_name = et_product.pop("product_name")
                         et_product_versions = et_product.pop("product_versions")

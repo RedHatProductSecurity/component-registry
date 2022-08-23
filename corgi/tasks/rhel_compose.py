@@ -48,7 +48,12 @@ def save_compose(stream_name) -> None:
                     build_id = rpm_data["build_id"]
                     # found the build_id, stop iterating filenames
                     break
-            # TODO: What if build_id still not found?
+                # if no filenames had RPM data
+                if not build_id:
+                    raise ValueError(
+                        f"When saving compose for {stream_name}'s {compose_id},"
+                        f"no filenames had RPM data for {srpm}"
+                    )
             _, created = ProductComponentRelation.objects.get_or_create(
                 external_system_id=compose_id,
                 product_ref=stream_name,

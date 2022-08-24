@@ -79,9 +79,10 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
             for e in build_meta["errata_tags"]:
                 slow_load_errata.delay(e)
 
-    if "nested_builds" in build:
-        logger.info("Fetching brew builds for %s", build["nested_builds"])
-        [slow_fetch_brew_build.delay(build_id) for build_id in build["nested_builds"]]
+    build_ids = build.get("nested_builds", ())
+    logger.info("Fetching brew builds for %s", build_ids)
+    for b_id in build_ids:
+        slow_fetch_brew_build.delay(b_id)
 
     logger.info("Requesting software composition analysis for %s", build_id)
     slow_software_composition_analysis.delay(build_id)
@@ -109,7 +110,7 @@ def save_component(component, parent, softwarebuild=None):
         node_type = ComponentNode.ComponentNodeType.PROVIDES_DEV
 
     component_version = meta.pop("version", "")
-    if component_type in ["GO-PACKAGE", "GOMOD"]:
+    if component_type in ("GO-PACKAGE", "GOMOD"):
         component_type = Component.Type.GOLANG
 
     elif component_type == "PIP":
@@ -281,8 +282,8 @@ def recurse_components(component, parent):
         logger.warning(f"Failed to create ComponentNode for component: {component}")
     else:
         if "components" in component:
-            for c in component["components"]:
-                save_component(c, parent)
+            for child in component["components"]:
+                save_component(child, parent)
 
 
 def save_module(softwarebuild, build_data) -> ComponentNode:
@@ -309,9 +310,9 @@ def save_module(softwarebuild, build_data) -> ComponentNode:
     return node
 
 
-@app.task
+@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def load_brew_tags() -> None:
-    for ps in ProductStream.objects.all():
+    for ps in ProductStream.objects.get_queryset():
         brew = Brew()
         for brew_tag, inherit in ps.brew_tags.items():
             # Always load all builds in tag when saving relations

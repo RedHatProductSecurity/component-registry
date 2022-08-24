@@ -63,7 +63,7 @@ def healthy(request: Request) -> Response:
 
 class StatusView(ReadOnlyModelViewSet):
 
-    queryset = SoftwareBuild.objects.all()
+    queryset = SoftwareBuild.objects.get_queryset()
     serializer_class = SoftwareBuildSerializer
 
     @extend_schema(
@@ -131,23 +131,23 @@ class StatusView(ReadOnlyModelViewSet):
                     "count": self.queryset.count(),
                 },
                 "components": {
-                    "count": Component.objects.all().count(),
+                    "count": Component.objects.get_queryset().count(),
                 },
-                "relations": {"count": ProductComponentRelation.objects.all().count()},
+                "relations": {"count": ProductComponentRelation.objects.get_queryset().count()},
                 "products": {
-                    "count": Product.objects.all().count(),
+                    "count": Product.objects.get_queryset().count(),
                 },
                 "product_versions": {
-                    "count": ProductVersion.objects.all().count(),
+                    "count": ProductVersion.objects.get_queryset().count(),
                 },
                 "product_streams": {
-                    "count": ProductStream.objects.all().count(),
+                    "count": ProductStream.objects.get_queryset().count(),
                 },
                 "product_variants": {
-                    "count": ProductVariant.objects.all().count(),
+                    "count": ProductVariant.objects.get_queryset().count(),
                 },
                 "channels": {
-                    "count": Channel.objects.all().count(),
+                    "count": Channel.objects.get_queryset().count(),
                 },
             }
         )
@@ -234,7 +234,7 @@ class ProductTaxonomyView(APIView):
 class SoftwareBuildView(ReadOnlyModelViewSet, TagViewMixin):
     """View for api/v1/builds"""
 
-    queryset = SoftwareBuild.objects.all()
+    queryset = SoftwareBuild.objects.get_queryset()
     serializer_class = SoftwareBuildSerializer
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend, filters.SearchFilter]
     filterset_class = SoftwareBuildFilter
@@ -251,7 +251,7 @@ class ProductDataView(ReadOnlyModelViewSet, TagViewMixin):
 class ProductView(ProductDataView):
     """View for api/v1/products"""
 
-    queryset = Product.objects.all()
+    queryset = Product.objects.get_queryset()
     serializer_class = ProductSerializer
 
     def list(self, request, *args, **kwargs):
@@ -289,7 +289,7 @@ class ProductView(ProductDataView):
 class ProductVersionView(ProductDataView):
     """View for api/v1/product_versions"""
 
-    queryset = ProductVersion.objects.all()
+    queryset = ProductVersion.objects.get_queryset()
     serializer_class = ProductVersionSerializer
 
     def list(self, request, *args, **kwargs):
@@ -327,7 +327,7 @@ class ProductVersionView(ProductDataView):
 class ProductStreamView(ProductDataView):
     """View for api/v1/product_streams"""
 
-    queryset = ProductStream.objects.all()
+    queryset = ProductStream.objects.get_queryset()
     serializer_class = ProductStreamSerializer
 
     def list(self, request, *args, **kwargs):
@@ -365,7 +365,7 @@ class ProductStreamView(ProductDataView):
 class ProductVariantView(ProductDataView):
     """View for api/v1/product_variants"""
 
-    queryset = ProductVariant.objects.all()
+    queryset = ProductVariant.objects.get_queryset()
     serializer_class = ProductVariantSerializer
 
     def list(self, request, *args, **kwargs):
@@ -403,7 +403,7 @@ class ProductVariantView(ProductDataView):
 class ChannelView(ReadOnlyModelViewSet):
     """View for api/v1/channels"""
 
-    queryset = Channel.objects.all()
+    queryset = Channel.objects.get_queryset()
     serializer_class = ChannelSerializer
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend, filters.SearchFilter]
     filterset_class = ChannelFilter
@@ -413,7 +413,7 @@ class ChannelView(ReadOnlyModelViewSet):
 class ComponentView(ReadOnlyModelViewSet, TagViewMixin):
     """View for api/v1/components"""
 
-    queryset = Component.objects.all()
+    queryset = Component.objects.get_queryset()
     serializer_class = ComponentSerializer
     search_fields = ["name", "description", "release", "version", "meta_attr"]
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend, filters.SearchFilter]
@@ -482,7 +482,7 @@ class ComponentView(ReadOnlyModelViewSet, TagViewMixin):
 class AppStreamLifeCycleView(ReadOnlyModelViewSet):
     """View for api/v1/lifecycles"""
 
-    queryset = AppStreamLifeCycle.objects.all()
+    queryset = AppStreamLifeCycle.objects.get_queryset()
     serializer_class = AppStreamLifeCycleSerializer
 
 
@@ -529,7 +529,7 @@ def coverage_report_node_to_dict(node):
 
 class CoverageReportView(ReadOnlyModelViewSet):
 
-    queryset = Product.objects.all()
+    queryset = Product.objects.get_queryset()
     serializer_class = ProductSerializer
 
     def list(self, request, *args, **kwargs):
@@ -553,7 +553,7 @@ class CoverageReportView(ReadOnlyModelViewSet):
 class RelationsView(ReadOnlyModelViewSet, TagViewMixin):
     """View for api/v1/relations"""
 
-    queryset = ProductComponentRelation.objects.all()
+    queryset = ProductComponentRelation.objects.get_queryset()
     serializer_class = RelationSerializer
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend, filters.SearchFilter]
     lookup_url_kwarg = "uuid"

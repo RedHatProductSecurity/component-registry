@@ -2,7 +2,7 @@ import logging
 from datetime import timedelta
 
 from celery.signals import beat_init
-from celery_singleton import clear_locks as singleton_clear_locks
+from celery_singleton import Singleton, clear_locks
 from django.conf import settings
 from django.core.mail import EmailMessage
 from django.utils import timezone
@@ -42,11 +42,11 @@ def setup_periodic_tasks(sender, **kwargs):
         )
 
     # Ensure celery_singleton is not still blocking new tasks if the pod did not shut down cleanly.
-    singleton_clear_locks(app)
+    clear_locks(app)
 
     # Wipe old schedules
-    CrontabSchedule.objects.all().delete()
-    IntervalSchedule.objects.all().delete()
+    CrontabSchedule.objects.get_queryset().delete()
+    IntervalSchedule.objects.get_queryset().delete()
 
     # Daily tasks, scheduled to a specific hour. For some reason, using hours=24 may not run the
     # task at all: https://github.com/celery/django-celery-beat/issues/221
@@ -61,7 +61,7 @@ def setup_periodic_tasks(sender, **kwargs):
     # upsert_cron_task("monitoring", "expire_task_results", hour=13, minute=0)
 
 
-@app.task(autoretry_for=(Exception,), retry_backoff=900, retry_jitter=False)
+@app.task(base=Singleton, autoretry_for=(Exception,), retry_backoff=900, retry_jitter=False)
 def email_failed_tasks():
     """Send email about failed Celery tasks within past 24 hours to Corgi developers who like spam
     If it failed to send, try again after 15 minutes, then 30 minutes, then give up"""

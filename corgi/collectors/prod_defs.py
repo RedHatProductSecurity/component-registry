@@ -42,6 +42,6 @@ class ProdDefs:
                         product_stream["active"] = False
                     product_version["product_streams"].append(product_stream)
                 product_versions.append(product_version)
-                product["product_versions"] = product_versions
+            product["product_versions"] = product_versions
 
         return products

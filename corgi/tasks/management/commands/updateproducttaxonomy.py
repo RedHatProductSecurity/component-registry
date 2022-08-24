@@ -13,11 +13,11 @@ class Command(BaseCommand):
                 "updating all product entity taxonomies",
             )
         )
-        for product_variant in ProductVariant.objects.all():
+        for product_variant in ProductVariant.objects.get_queryset():
             product_variant.save_product_taxonomy()
-        for product_stream in ProductStream.objects.all():
+        for product_stream in ProductStream.objects.get_queryset():
             product_stream.save_product_taxonomy()
-        for product_version in ProductVersion.objects.all():
+        for product_version in ProductVersion.objects.get_queryset():
             product_version.save_product_taxonomy()
-        for product in Product.objects.all():
+        for product in Product.objects.get_queryset():
             product.save_product_taxonomy()

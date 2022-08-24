@@ -259,7 +259,7 @@ class Brew:
         # point of view they are transparent in that the client will always pull the correct arch
         # for their client without having the know the actual image location.
         # See https://github.com/opencontainers/image-spec/blob/main/image-index.md
-        if any(item == "" for item in [name, version, release]):
+        if any(item == "" for item in (name, version, release)):
             name, version, release = Brew.split_nvr(nvr)
         return {
             "type": "container_image",
@@ -418,7 +418,7 @@ class Brew:
                 remote_source.pkg_managers,
             )
             for pkg_type in remote_source.pkg_managers:
-                if pkg_type in ["npm", "pip", "yarn"]:
+                if pkg_type in ("npm", "pip", "yarn"):
                     provides, remote_source.packages = self._extract_provides(
                         remote_source.packages, pkg_type
                     )
@@ -711,10 +711,10 @@ class Brew:
 
     def get_builds_with_tag(
         self, brew_tag: str, inherit: bool = False, latest: bool = True
-    ) -> list[int]:
+    ) -> tuple:
         try:
             builds = self.koji_session.listTagged(brew_tag, inherit=inherit, latest=latest)
-            return [b["build_id"] for b in builds]
+            return tuple(b["build_id"] for b in builds)
         except koji.GenericError as exc:
             logger.warning("Couldn't find brew builds with tag %s: %s", brew_tag, exc)
-        return []
+            return tuple()

@@ -16,7 +16,7 @@ from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 logger = logging.getLogger(__name__)
 
 
-@app.task
+@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def load_et_products() -> None:
     ErrataTool().load_et_products()
 
@@ -102,11 +102,10 @@ def _get_relation_build_ids(erratum_id: int) -> set[int]:
     )
     # Convert them to ints for use in queries and tasks
     # We don't store them as int because another build system not use ints
-    return set([int(b_id) for b_id in relation_build_ids])  # type: ignore
+    return set(int(b_id) for b_id in relation_build_ids if b_id is not None)
 
 
-@app.task
-@transaction.atomic
+@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def update_variant_repos() -> None:
     """Update each existing Product Variant's set of CDN repositories.
 
@@ -114,29 +113,30 @@ def update_variant_repos() -> None:
     can link to the same CDN repo.
     """
     variant_to_repo_map: dict = ErrataTool().variant_cdn_repo_mapping()
-    for pv in ProductVariant.objects.all():
-        if pv.name not in variant_to_repo_map:
-            logger.error("Product Variant '%s' does not exist in Errata Tool", pv.name)
-            continue
+    with transaction.atomic():
+        for pv in ProductVariant.objects.get_queryset():
+            if pv.name not in variant_to_repo_map:
+                logger.error("Product Variant '%s' does not exist in Errata Tool", pv.name)
+                continue
 
-        pv_node = pv.pnodes.first()
-        et_variant_data = variant_to_repo_map[pv.name]
+            pv_node = pv.pnodes.first()
+            et_variant_data = variant_to_repo_map[pv.name]
 
-        pv_channels = []
-        for repo in et_variant_data["repos"]:
-            repo, _ = Channel.objects.get_or_create(
-                name=repo, defaults={"type": Channel.Type.CDN_REPO}
-            )
-            pv_channels.append(repo.name)
-            # TODO: investigate whether we need to delete CDN repos that were removed from a
-            #  Variant between two different runs of this task.
-            #
-            # Create a Product Node for each CDN repo linked to a Variant. This means that one
-            # CDN repo (since we run get_or_create above) can be linked to multiple product nodes,
-            # each linked to a different Variant.
-            repo.pnodes.get_or_create(parent=pv_node)
+            pv_channels = []
+            for repo in et_variant_data["repos"]:
+                repo, _ = Channel.objects.get_or_create(
+                    name=repo, defaults={"type": Channel.Type.CDN_REPO}
+                )
+                pv_channels.append(repo.name)
+                # TODO: investigate whether we need to delete CDN repos that were removed from a
+                #  Variant between two different runs of this task.
+                #
+                # Create a Product Node for each CDN repo linked to a Variant. This means that one
+                # CDN repo (since we run get_or_create above) can be linked to
+                # multiple product nodes, each linked to a different Variant.
+                repo.pnodes.get_or_create(parent=pv_node)
 
-        # Update list of channels for this Variant so that we don't have to call the more expensive
-        # save_product_taxonomy() method just to update channels.
-        pv.channels = pv_channels
-        pv.save()
+            # Update list of channels for this Variant so that we don't have to call
+            # the more expensive save_product_taxonomy() method just to update channels.
+            pv.channels = pv_channels
+            pv.save()

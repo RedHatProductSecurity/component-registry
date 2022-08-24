@@ -42,7 +42,7 @@ class UMBReceiverHandler(MessagingHandler):
 
         # Ack messages manually so that we can ensure we successfully acted upon a message when
         # it was received.
-        self.auto_accept = True  # False
+        self.auto_accept = True
 
     def on_start(self, event: Event):
         recv_opts = [self.selector] if self.selector is not None else []

@@ -129,7 +129,7 @@ def scan_files(anchor_node, sources):
 
 def _get_distgit_sources(source_url: str, package_type: str) -> list[Path]:
     distgit_sources: list[Path] = []
-    raw_source, package_name = _archive_source(source_url, package_type)
+    raw_source, package_name = _clone_source(source_url, package_type)
     if not raw_source or not package_name:
         return []
     distgit_sources.append(raw_source)
@@ -137,7 +137,7 @@ def _get_distgit_sources(source_url: str, package_type: str) -> list[Path]:
     return distgit_sources
 
 
-def _archive_source(source_url: str, package_type: str) -> Tuple[Optional[Path], str]:
+def _clone_source(source_url: str, package_type: str) -> Tuple[Optional[Path], str]:
     # (scheme, netloc, path, parameters, query, fragment)
     url = urlparse(source_url)
 
@@ -147,36 +147,17 @@ def _archive_source(source_url: str, package_type: str) -> Tuple[Optional[Path],
 
     git_remote = f"{url.scheme}://{url.netloc}{url.path}"
     package_name = url.path.rsplit("/", 1)[-1]
+    commit = url.fragment
 
     target_path = Path(f"{settings.SCA_SCRATCH_DIR}/{package_type}/{package_name}")
-    target_path.mkdir(exist_ok=True, parents=True)
-    target_file = target_path / f"{url.fragment}.tar"
-    if target_file.exists():
-        # Perhaps another task is already processing, save cpu by bailing out
-        return target_file, package_name
 
-    logger.info("Fetching %s to %s", git_remote, target_file)
-    _call_git_archive(git_remote, url.fragment, target_file)
+    # Allow existing directory error to cause parent task to fail
+    target_path.mkdir(parents=True)
 
-    return target_file, package_name
-
-
-def _call_git_archive(git_remote: str, url_fragment: str, target_file: Path) -> None:
-    # for now git_remote and url.fragment are sanitized via url parsing and
-    # coming from Brew.
-    # We might consider more adding more sanitization if we accept ad-hoc source for scans
-    git_archive_command = (
-        "/usr/bin/git",
-        "archive",
-        "--format=tar",
-        f"--remote={git_remote}",
-        url_fragment,
-    )
-    with target_file.open("x") as target:
-        subprocess.check_call(  # nosec B603
-            git_archive_command,
-            stdout=target,
-        )
+    logger.info("Fetching %s to %s", git_remote, target_path)
+    subprocess.check_call(["/usr/bin/git", "clone", git_remote, target_path])
+    subprocess.check_call(["/usr/bin/git", "checkout", commit], cwd=target_path)
+    return target_path, package_name
 
 
 def _download_lookaside_sources(

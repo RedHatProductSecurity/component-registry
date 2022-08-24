@@ -1,13 +1,14 @@
 import os
+import shutil
 from pathlib import Path, PosixPath
-from unittest.mock import patch
+from unittest.mock import patch, call
 
 import pytest
 
 from corgi.collectors.syft import Syft
 from corgi.core.models import Component, ComponentNode
 from corgi.tasks.sca import (
-    _archive_source,
+    _clone_source,
     _download_lookaside_sources,
     _get_distgit_sources,
     _scan_remote_sources,
@@ -33,52 +34,62 @@ def test_parse_components():
 archive_source_test_data = [
     (
         f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
-        "/rpms/nodejs#3cbed2be4171502499d0d89bea1ead91690af7d2",
+        "/rpms/nodejs",
+        "3cbed2be4171502499d0d89bea1ead91690af7d2",
         "nodejs",
         "rpms",
-        "tests/data/rpms/nodejs/3cbed2be4171502499d0d89bea1ead91690af7d2.tar",
-        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}/rpms/nodejs",
+        "tests/data/rpms/nodejs",
+        True
     ),
     (
         f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
-        "/containers/openshift-enterprise-console#f95972ce68d2850ae20c10fbf87182a17fa24b19",
+        "/containers/openshift-enterprise-console",
+        "f95972ce68d2850ae20c10fbf87182a17fa24b19",
         "openshift-enterprise-console",
         "containers",
-        "tests/data/containers/openshift-enterprise-console/"
-        "f95972ce68d2850ae20c10fbf87182a17fa24b19.tar",
-        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
-        "/containers/openshift-enterprise-console",
+        "tests/data/containers/openshift-enterprise-console",
+        False
     ),
 ]
 
 
 @pytest.mark.parametrize(
-    "source_url,package_name,package_type,expected_filename,remote_name",
+    "source_url,commit,package_name,package_type,expected_path,path_exists",
     archive_source_test_data,
 )
-@patch("corgi.tasks.sca._call_git_archive")
-def test_archive_source(
-    mock_git_archive, source_url, package_name, package_type, expected_filename, remote_name
+@patch("subprocess.check_call")
+def test_clone_source(
+    mock_subprocess, source_url, commit, package_name, package_type, expected_path, path_exists
 ):
-    target_file, package_name = _archive_source(source_url, package_type)
-    mock_git_archive.assert_called_once()
-    assert remote_name == mock_git_archive.call_args.args[0]
-    assert package_name == package_name
-    expected_target_file = PosixPath(expected_filename)
-    assert target_file == expected_target_file
-    assert not expected_target_file.exists()
+    # This prevents multiple runs of this test from having different results because
+    # we mkdir the directory prior to the clone
+    if not path_exists:
+        shutil.rmtree(expected_path, ignore_errors=True)
+        _clone_source(f"{source_url}#{commit}", package_type)
+        print(mock_subprocess.call_arg_list)
+        mock_subprocess.assert_has_calls(
+            [
+                call(["/usr/bin/git", "clone", source_url, PosixPath(expected_path)]),
+                call(["/usr/bin/git", "checkout", commit], cwd=PosixPath(expected_path)),
+            ]
+        )
+    else:
+        with pytest.raises(FileExistsError):
+            _clone_source(f"{source_url}#{commit}", package_type)
+        mock_subprocess.assert_not_called()
 
 
 @patch("subprocess.check_call")
 @patch("corgi.tasks.sca._download_lookaside_sources")
-def test_get_distgit_sources(mock_git_archive, mock_download_lookaside_sources):
-    expected_path = "tests/data/rpms/cri-o/1e52fcdc84be253b5094b942c2fec23d7636d644.tar"
+def test_get_distgit_sources(mock_check_call, mock_download_lookaside_sources):
+    expected_path = "tests/data/rpms/cri-o"
     _ = _get_distgit_sources(
         f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
         "/rpms/cri-o#1e52fcdc84be253b5094b942c2fec23d7636d644",
         "rpms",
     )
-    mock_git_archive.assert_called_with(PosixPath(expected_path), "cri-o", "rpms")
+    print(mock_check_call.call_arg_list)
+    mock_check_call.assert_called_with(PosixPath(expected_path), "cri-o", "rpms")
 
 
 download_lookaside_test_data = [

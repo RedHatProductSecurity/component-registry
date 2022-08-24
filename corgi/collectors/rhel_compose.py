@@ -21,7 +21,7 @@ class RhelCompose:
             "container_images": [],
             "rhel_modules": [],
         }
-        compose_url += "/metadata/"
+        compose_url = compose_url.rstrip("/") + "/metadata/"
         logger.info("Fetching compose data from %s", compose_url)
 
         # Fetch general compose info file to extract the date timestamp the compose was created

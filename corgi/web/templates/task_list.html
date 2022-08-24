@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block title %}Tasks{% endblock %}
+
+{% block body %}
+<div class="container-fluid container-cards-pf">
+  <div class="row row-cards-pf">
+    <div class="col-md-12">
+      <div class="card-pf">
+        <div class="card-pf-body">
+          <h1 class="card-pf-title">
+            <span style="padding-right: 0.5em">Tasks</span>
+            {% if running %}
+            <span class="label label-info">Queued (fast): {{ fast_queue_len }}</span>
+            <span class="label label-info">Queued (slow): {{ slow_queue_len }}</span>
+            {% endif %}
+          </h1>
+          <table class="table">
+            <thead>
+              <tr>
+                 <th>Name</th>
+                {% if running %}
+                  <th>Args</th>
+                  <th>Kwargs</th>
+                  <th>Status</th>
+                  <th>Queue</th>
+                  <th>Started</th>
+                {% else %}
+                  <th>Description</th>
+                {% endif %}
+              </tr>
+            </thead>
+            <tbody>
+            {% for task in tasks %}
+              <tr>
+                <td><a href="/tasks/{{ task.name }}">{{ task.name }}</a></td>
+                {% if running %}
+                  <td>{{ task.args }}</td>
+                  <td>{{ task.kwargs }}</td>
+                  <td>{{ task.status }}</td>
+                  <td>{{ task.delivery_info.routing_key }}</td>
+                  <td>{{ task.time_start }}</td>
+                {% else %}
+                  <td>{{ task.description }}</td>
+                {% endif %}
+              </tr>
+            {% empty %}
+              <tr><td>No Tasks found...</td></tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

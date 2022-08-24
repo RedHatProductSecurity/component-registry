@@ -1,0 +1,39 @@
+{% extends 'base.html' %}{% load humanize %}
+
+{% block title %}Home{% endblock %}
+
+{% block body %}
+<div class="container-fluid container-cards-pf">
+  <div class="row row-cards-pf">
+    <div class="col-xs-6 col-sm-4 col-md-4">
+      <div class="card-pf">
+        <div class="card-pf-body">
+          <h1 class="card-pf-title">
+            Cached Data
+          </h1>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Resource</th>
+                <th>Count</th>
+              </tr>
+            </thead>
+            <tbody>
+            {% for resource, count in counts %}
+              <tr>
+                <td>{{ resource }}</td>
+                <td>{{ count|intcomma }}</td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td>No data cached...</td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div><!-- /row -->
+  </div><!-- /container -->
+</div>
+{% endblock %}

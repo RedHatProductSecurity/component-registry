@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block title %}Tasks{% endblock %}
+
+{% block body %}
+<div class="container-fluid container-cards-pf">
+  <div class="row row-cards-pf">
+    <div class="col-xs-10 col-sm-8 col-md-8">
+      <div class="card-pf">
+        <div class="card-pf-body">
+          <h1 class="card-pf-title">
+            <b>{{ task_name }}</b>
+          </h1>
+          <p>{{ task_doc|safe }}</p>
+          <br>
+          <form action="/tasks/{{ task_name }}" method="post">
+            {% csrf_token %}
+            {% if form %}
+              <div class="form-group">
+                {{ form }}
+              </div>
+            {% endif %}
+            <input type="submit" class="btn btn-sm btn-primary" value="Schedule">
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

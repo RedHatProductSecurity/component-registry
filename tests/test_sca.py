@@ -96,16 +96,15 @@ download_lookaside_test_data = [
     (
         # $BREW_URL/buildinfo?buildID=1210605
         # spec file removed
-        "tests/data/rpms/containernetworking-plugins/containernetworking-plugins-v0.8.6-source.tar",
+        "tests/data/rpms/containernetworking-plugins",
         "containernetworking-plugins",
         "rpms",
         "v0.8.6.tar.gz",
         "md5/85eddf3d872418c1c9d990ab8562cc20/",
     ),
     (
-        # Nothing gets downloaded because the sources file in the distgit archive is empty
-        "tests/data/containers/openshift-enterprise-hyperkube/"  # joined with below
-        "20f817be5fafe03bdbfff4a3bc561166bfb14013.tar",
+        # Nothing gets downloaded because the sources file in the distgit source is empty
+        "tests/data/containers/openshift-enterprise-hyperkube",
         "openshift-enterprise-hyperkube",
         "containers",
         None,
@@ -114,8 +113,7 @@ download_lookaside_test_data = [
     (
         # buildID=2096033
         # Dummy distgit archive with all but 'sources' file removed
-        "tests/data/containers/metrics-schema-installer/"  # joined with below
-        "98012f1be90440f90612dc50f2c916e84466d913.tar",
+        "tests/data/containers/metrics-schema-installer",
         "metrics-schema-installer",
         "containers",
         "hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar",
@@ -125,13 +123,13 @@ download_lookaside_test_data = [
 
 
 @pytest.mark.parametrize(
-    "test_data_file,package_name,package_type,expected_filename,expected_path",
+    "test_sources,package_name,package_type,expected_filename,expected_path",
     download_lookaside_test_data,
 )
 def test_download_lookaside_sources(
-    test_data_file, package_name, package_type, expected_filename, expected_path, requests_mock
+    test_sources, package_name, package_type, expected_filename, expected_path, requests_mock
 ):
-    distgit_source_archive = Path(test_data_file)
+    distgit_source_archive = Path(test_sources)
     expected_url = (
         f"https://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}/repo/{package_type}/{package_name}/"
         f"{expected_filename}/{expected_path}{expected_filename}"
@@ -143,13 +141,11 @@ def test_download_lookaside_sources(
     )
     if expected_filename:
         full_expected_filename = (
-            f"tests/data/{package_type}/{package_name}/{expected_filename}/"
+            f"tests/data/lookaside/{package_type}/{package_name}/{expected_filename}/"
             f"{expected_path}/{expected_filename}"
         )
         assert downloaded_sources == [PosixPath(full_expected_filename)]
-        for source in downloaded_sources:
-            if source != test_data_file:
-                os.remove(source)
+        shutil.rmtree("tests/data/lookaside")
     else:
         assert downloaded_sources == []
 

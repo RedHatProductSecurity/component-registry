@@ -24,6 +24,7 @@ LOOKASIDE_REGEX_SOURCE_PATTERNS = [
     # https://regex101.com/r/mjtKif/1
     r"^(?P<alg>[A-Z0-9]*) \((?P<file>[a-zA-Z0-9.-]*)\) = (?P<hash>[a-f0-9]*)",
 ]
+lookaside_source_regexes = tuple(re.compile(p) for p in LOOKASIDE_REGEX_SOURCE_PATTERNS)
 logger = logging.getLogger(__name__)
 
 
@@ -161,26 +162,21 @@ def _clone_source(source_url: str, package_type: str) -> Tuple[Optional[Path], s
 
 
 def _download_lookaside_sources(
-    distgit_archive: Path, package_name: str, package_type: str
+    distgit_sources: Path, package_name: str, package_type: str
 ) -> list[Path]:
-    source_tar = tarfile.open(distgit_archive)
-    source_tarinfo = get_tarinfo(source_tar, "sources")
-    if source_tarinfo is None:
-        logger.warning("Didn't find sources file in %s", distgit_archive)
+    lookaside_source = distgit_sources / "sources"
+    if not lookaside_source.exists():
+        logger.warning("No lookaside sources in %s", distgit_sources)
         return []
 
-    lookaside_source: Optional[IO[bytes]] = source_tar.extractfile(source_tarinfo)
-    if lookaside_source is None:
-        logger.warning("Couldn't extract anything from %s", source_tarinfo)
-        return []
-    source_content = lookaside_source.readlines()
+    with open(lookaside_source, "r") as source_content_file:
+        source_content = source_content_file.readlines()
 
-    lookaside_source_regexes = tuple(re.compile(p) for p in LOOKASIDE_REGEX_SOURCE_PATTERNS)
     downloaded_sources: list[Path] = []
     for line in source_content:
         match = None
         for regex in lookaside_source_regexes:
-            match = regex.search(line.decode("UTF-8"))
+            match = regex.search(line)
             if match:
                 break  # lookaside source regex loop
         if not match:
@@ -197,9 +193,9 @@ def _download_lookaside_sources(
         # https://<host>/repo/rpms/containernetworking-plugins/v0.8.6.tar.gz/md5/
         # 85eddf3d872418c1c9d990ab8562cc20/v0.8.6.tar.gz
         lookaside_download_url = f"{settings.LOOKASIDE_CACHE_BASE_URL}/{lookaside_path}"
-        # eg. /tmp/rpms/containernetworking-plugins/v0.8.6.tar.gz/md5/
+        # eg. /tmp/lookaside/rpms/containernetworking-plugins/v0.8.6.tar.gz/md5/
         # 85eddf3d872418c1c9d990ab8562cc20/v0.8.6.tar.gz
-        target_filepath = Path(f"{settings.SCA_SCRATCH_DIR}/{lookaside_path}")
+        target_filepath = Path(f"{settings.SCA_SCRATCH_DIR}/lookaside/{lookaside_path}")
         if not target_filepath.exists():
             _download_source(lookaside_download_url, target_filepath)
         else:

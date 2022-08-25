@@ -14,6 +14,12 @@ class Syft:
     def scan_files(cls, target_files: list[Path]) -> list[dict[str, Any]]:
         scan_results: list[dict[str, Any]] = []
         for target_file in target_files:
+            if target_file.is_file():
+                scheme = "file"
+            elif target_file.is_dir():
+                scheme = "dir"
+            else:
+                raise ValueError("Target file %s is not a file or a directory", target_file)
             # Exclude vendor directories as they sometimes produce extraneous results.
             # For now target_file is sanitized via url parsing and coming from Brew.
             # We might consider more adding more sanitization if we accept ad-hoc source for scans
@@ -24,7 +30,7 @@ class Syft:
                     "-q",
                     "-o=syft-json",
                     "--exclude=**/vendor/**",
-                    f"file:{target_file}",
+                    f"{scheme}:{target_file}",
                 ],
                 text=True,
             )

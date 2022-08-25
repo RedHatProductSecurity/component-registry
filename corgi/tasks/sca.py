@@ -5,7 +5,7 @@ import shutil
 import subprocess  # nosec B404
 import tarfile
 from pathlib import Path
-from typing import IO, Any, Optional, Tuple
+from typing import Any, Optional, Tuple
 from urllib.parse import urlparse
 
 import requests
@@ -156,8 +156,8 @@ def _clone_source(source_url: str, package_type: str) -> Tuple[Optional[Path], s
     target_path.mkdir(parents=True)
 
     logger.info("Fetching %s to %s", git_remote, target_path)
-    subprocess.check_call(["/usr/bin/git", "clone", git_remote, target_path])
-    subprocess.check_call(["/usr/bin/git", "checkout", commit], cwd=target_path)
+    subprocess.check_call(["/usr/bin/git", "clone", git_remote, target_path])  # nosec B603
+    subprocess.check_call(["/usr/bin/git", "checkout", commit], cwd=target_path)  # nosec B603
     return target_path, package_name
 
 
@@ -182,20 +182,23 @@ def _download_lookaside_sources(
         if not match:
             continue  # source content loop
         lookaside_source_matches = match.groupdict()
-        lookaside_source_filename = lookaside_source_matches.get("file")
-        lookaside_source_checksum = lookaside_source_matches.get("hash")
+        lookaside_source_filename = lookaside_source_matches.get("file", "")
+        lookaside_source_checksum = lookaside_source_matches.get("hash", "")
         lookaside_hash_algorith = lookaside_source_matches.get("alg", "md5").lower()
-        lookaside_path = (
-            f"{package_type}/{package_name}/{lookaside_source_filename}/"
-            f"{lookaside_hash_algorith}/{lookaside_source_checksum}/"
-            f"{lookaside_source_filename}"
+        lookaside_path_base: Path = Path(
+            package_type + "/" + package_name + "/" + lookaside_source_filename
+        )
+        lookaside_path = Path.joinpath(
+            lookaside_path_base,
+            lookaside_hash_algorith,
+            lookaside_source_checksum,
+            lookaside_source_filename,
         )
         # https://<host>/repo/rpms/containernetworking-plugins/v0.8.6.tar.gz/md5/
         # 85eddf3d872418c1c9d990ab8562cc20/v0.8.6.tar.gz
         lookaside_download_url = f"{settings.LOOKASIDE_CACHE_BASE_URL}/{lookaside_path}"
-        # eg. /tmp/lookaside/rpms/containernetworking-plugins/v0.8.6.tar.gz/md5/
-        # 85eddf3d872418c1c9d990ab8562cc20/v0.8.6.tar.gz
-        target_filepath = Path(f"{settings.SCA_SCRATCH_DIR}/lookaside/{lookaside_path}")
+        # eg. /tmp/lookaside/rpms/containernetworking-plugins/v0.8.6.tar.gz
+        target_filepath = Path(f"{settings.SCA_SCRATCH_DIR}/lookaside/{lookaside_path_base}")
         if not target_filepath.exists():
             _download_source(lookaside_download_url, target_filepath)
         else:

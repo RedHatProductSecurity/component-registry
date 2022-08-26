@@ -137,8 +137,17 @@ class ComponentNode(MPTTModel, TimeStampedModel):
         level_attr = "level"
 
     class Meta:
+        constraints = [
+            # Add unique constraint + index so get_or_create behaves atomically
+            # Otherwise duplicate rows may be inserted into DB
+            models.UniqueConstraint(
+                name="unique_cnode_get_or_create",
+                fields=("type", "parent", "purl"),
+            ),
+        ]
         indexes = [
-            # Add index on foreign-key fields here, to speed up iterating over pnodes
+            models.Index(fields=("type", "parent", "purl")),
+            # Add index on foreign-key fields here, to speed up iterating over cnodes
             # GenericForeignKey doesn't get these by default, only ForeignKey
             models.Index(fields=("content_type", "object_id")),
         ]

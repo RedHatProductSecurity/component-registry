@@ -217,7 +217,9 @@ def test_slow_software_composition_analysis(
         root_component = ComponentFactory(
             type=Component.Type.SRPM, software_build=sb, name=package_name
         )
-    root_component.cnodes.get_or_create(type=ComponentNode.ComponentNodeType.SOURCE, parent=None)
+    root_component.cnodes.get_or_create(
+        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=root_component.purl
+    )
     assert not Component.objects.filter(purl=expected_purl).exists()
     with open(syft_results, "r") as mock_scan_results:
         mock_syft.return_value = mock_scan_results.read()
@@ -287,14 +289,14 @@ def test_scan_remote_sources(
         type=Component.Type.CONTAINER_IMAGE, name=package_name, arch="noarch"
     )
     root_node, _ = root_component.cnodes.get_or_create(
-        type=ComponentNode.ComponentNodeType.SOURCE, parent=None
+        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=root_component.purl
     )
     remote_source = ComponentFactory(
         type=Component.Type.UPSTREAM,
         meta_attr={"remote_source_archive": mock_remote_source_tar_url},
     )
     container_source_cnode, _ = remote_source.cnodes.get_or_create(
-        type=ComponentNode.ComponentNodeType.SOURCE, parent=root_node
+        type=ComponentNode.ComponentNodeType.SOURCE, parent=root_node, purl=remote_source.purl
     )
     root_component.save_component_taxonomy()
     requests_mock.get(mock_remote_source_tar_url, text="")

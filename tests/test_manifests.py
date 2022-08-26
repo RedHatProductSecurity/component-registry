@@ -33,7 +33,9 @@ def test_product_manifest_properties():
 
     build = SoftwareBuildFactory(build_id=1)
     component = ComponentFactory(software_build=build)
-    _, _ = component.cnodes.get_or_create(type=ComponentNode.ComponentNodeType.SOURCE, parent=None)
+    _, _ = component.cnodes.get_or_create(
+        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=component.purl
+    )
     ProductComponentRelationFactory(
         build_id="1", product_ref="1", type=ProductComponentRelation.Type.ERRATA
     )

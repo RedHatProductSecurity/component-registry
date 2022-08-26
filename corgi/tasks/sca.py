@@ -5,7 +5,7 @@ import shutil
 import subprocess  # nosec B404
 import tarfile
 from pathlib import Path
-from typing import IO, Any, Optional, Tuple
+from typing import Any, Optional, Tuple
 from urllib.parse import urlparse
 
 import requests
@@ -24,6 +24,7 @@ LOOKASIDE_REGEX_SOURCE_PATTERNS = [
     # https://regex101.com/r/mjtKif/1
     r"^(?P<alg>[A-Z0-9]*) \((?P<file>[a-zA-Z0-9.-]*)\) = (?P<hash>[a-f0-9]*)",
 ]
+lookaside_source_regexes = tuple(re.compile(p) for p in LOOKASIDE_REGEX_SOURCE_PATTERNS)
 logger = logging.getLogger(__name__)
 
 
@@ -129,7 +130,7 @@ def scan_files(anchor_node, sources):
 
 def _get_distgit_sources(source_url: str, package_type: str) -> list[Path]:
     distgit_sources: list[Path] = []
-    raw_source, package_name = _archive_source(source_url, package_type)
+    raw_source, package_name = _clone_source(source_url, package_type)
     if not raw_source or not package_name:
         return []
     distgit_sources.append(raw_source)
@@ -137,7 +138,7 @@ def _get_distgit_sources(source_url: str, package_type: str) -> list[Path]:
     return distgit_sources
 
 
-def _archive_source(source_url: str, package_type: str) -> Tuple[Optional[Path], str]:
+def _clone_source(source_url: str, package_type: str) -> Tuple[Optional[Path], str]:
     # (scheme, netloc, path, parameters, query, fragment)
     url = urlparse(source_url)
 
@@ -147,78 +148,57 @@ def _archive_source(source_url: str, package_type: str) -> Tuple[Optional[Path],
 
     git_remote = f"{url.scheme}://{url.netloc}{url.path}"
     package_name = url.path.rsplit("/", 1)[-1]
+    commit = url.fragment
 
     target_path = Path(f"{settings.SCA_SCRATCH_DIR}/{package_type}/{package_name}")
-    target_path.mkdir(exist_ok=True, parents=True)
-    target_file = target_path / f"{url.fragment}.tar"
-    if target_file.exists():
-        # Perhaps another task is already processing, save cpu by bailing out
-        return target_file, package_name
 
-    logger.info("Fetching %s to %s", git_remote, target_file)
-    _call_git_archive(git_remote, url.fragment, target_file)
+    # Allow existing directory error to cause parent task to fail
+    target_path.mkdir(parents=True)
 
-    return target_file, package_name
-
-
-def _call_git_archive(git_remote: str, url_fragment: str, target_file: Path) -> None:
-    # for now git_remote and url.fragment are sanitized via url parsing and
-    # coming from Brew.
-    # We might consider more adding more sanitization if we accept ad-hoc source for scans
-    git_archive_command = (
-        "/usr/bin/git",
-        "archive",
-        "--format=tar",
-        f"--remote={git_remote}",
-        url_fragment,
-    )
-    with target_file.open("x") as target:
-        subprocess.check_call(  # nosec B603
-            git_archive_command,
-            stdout=target,
-        )
+    logger.info("Fetching %s to %s", git_remote, target_path)
+    subprocess.check_call(["/usr/bin/git", "clone", git_remote, target_path])  # nosec B603
+    subprocess.check_call(["/usr/bin/git", "checkout", commit], cwd=target_path)  # nosec B603
+    return target_path, package_name
 
 
 def _download_lookaside_sources(
-    distgit_archive: Path, package_name: str, package_type: str
+    distgit_sources: Path, package_name: str, package_type: str
 ) -> list[Path]:
-    source_tar = tarfile.open(distgit_archive)
-    source_tarinfo = get_tarinfo(source_tar, "sources")
-    if source_tarinfo is None:
-        logger.warning("Didn't find sources file in %s", distgit_archive)
+    lookaside_source = distgit_sources / "sources"
+    if not lookaside_source.exists():
+        logger.warning("No lookaside sources in %s", distgit_sources)
         return []
 
-    lookaside_source: Optional[IO[bytes]] = source_tar.extractfile(source_tarinfo)
-    if lookaside_source is None:
-        logger.warning("Couldn't extract anything from %s", source_tarinfo)
-        return []
-    source_content = lookaside_source.readlines()
+    with open(lookaside_source, "r") as source_content_file:
+        source_content = source_content_file.readlines()
 
-    lookaside_source_regexes = tuple(re.compile(p) for p in LOOKASIDE_REGEX_SOURCE_PATTERNS)
     downloaded_sources: list[Path] = []
     for line in source_content:
         match = None
         for regex in lookaside_source_regexes:
-            match = regex.search(line.decode("UTF-8"))
+            match = regex.search(line)
             if match:
                 break  # lookaside source regex loop
         if not match:
             continue  # source content loop
         lookaside_source_matches = match.groupdict()
-        lookaside_source_filename = lookaside_source_matches.get("file")
-        lookaside_source_checksum = lookaside_source_matches.get("hash")
+        lookaside_source_filename = lookaside_source_matches.get("file", "")
+        lookaside_source_checksum = lookaside_source_matches.get("hash", "")
         lookaside_hash_algorith = lookaside_source_matches.get("alg", "md5").lower()
-        lookaside_path = (
-            f"{package_type}/{package_name}/{lookaside_source_filename}/"
-            f"{lookaside_hash_algorith}/{lookaside_source_checksum}/"
-            f"{lookaside_source_filename}"
+        lookaside_path_base: Path = Path(
+            package_type + "/" + package_name + "/" + lookaside_source_filename
+        )
+        lookaside_path = Path.joinpath(
+            lookaside_path_base,
+            lookaside_hash_algorith,
+            lookaside_source_checksum,
+            lookaside_source_filename,
         )
         # https://<host>/repo/rpms/containernetworking-plugins/v0.8.6.tar.gz/md5/
         # 85eddf3d872418c1c9d990ab8562cc20/v0.8.6.tar.gz
         lookaside_download_url = f"{settings.LOOKASIDE_CACHE_BASE_URL}/{lookaside_path}"
-        # eg. /tmp/rpms/containernetworking-plugins/v0.8.6.tar.gz/md5/
-        # 85eddf3d872418c1c9d990ab8562cc20/v0.8.6.tar.gz
-        target_filepath = Path(f"{settings.SCA_SCRATCH_DIR}/{lookaside_path}")
+        # eg. /tmp/lookaside/rpms/containernetworking-plugins/v0.8.6.tar.gz
+        target_filepath = Path(f"{settings.SCA_SCRATCH_DIR}/lookaside/{lookaside_path_base}")
         if not target_filepath.exists():
             _download_source(lookaside_download_url, target_filepath)
         else:

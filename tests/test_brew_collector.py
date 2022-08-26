@@ -542,6 +542,7 @@ def test_save_component():
     root_node, _ = image_component.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
+        purl=image_component.purl,
     )
     rpm_dict = {"type": Component.Type.RPM, "meta": {"name": "myrpm"}}
     save_component(rpm_dict, root_node, software_build)
@@ -555,6 +556,7 @@ def test_save_component():
     root_node, _ = srpm_component.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
+        purl=srpm_component.purl,
     )
     rpm_dict = {"type": Component.Type.RPM, "meta": {"name": "myrpm"}}
     save_component(rpm_dict, root_node, software_build)

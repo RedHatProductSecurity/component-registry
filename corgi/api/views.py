@@ -160,7 +160,7 @@ def recursive_component_node_to_dict(node, componenttype):
             "purl": node.purl,
             # "node_id": node.pk,
             "node_type": node.type,
-            "link": get_component_purl_link(node.obj.purl),
+            "link": get_component_purl_link(node.purl),
             # "uuid": node.obj.uuid,
             "description": node.obj.description,
         }

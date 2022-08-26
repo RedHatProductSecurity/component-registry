@@ -137,7 +137,16 @@ class ComponentNode(MPTTModel, TimeStampedModel):
         level_attr = "level"
 
     class Meta:
+        constraints = [
+            # Add unique constraint + index so get_or_create behaves atomically
+            # Otherwise duplicate rows may be inserted into DB
+            models.UniqueConstraint(
+                name="unique_cnode_get_or_create",
+                fields=("type", "parent", "purl"),
+            ),
+        ]
         indexes = [
+            models.Index(fields=("type", "parent", "purl")),
             # Add index on foreign-key fields here, to speed up iterating over cnodes
             # GenericForeignKey doesn't get these by default, only ForeignKey
             models.Index(fields=("content_type", "object_id")),
@@ -935,11 +944,11 @@ class Component(TimeStampedModel):
 
         for cnode in self.cnodes.get_queryset():
             if cnode.is_root_node():
-                sources.add(cnode.obj.purl)
+                sources.add(cnode.purl)
             else:
                 for ancestor in cnode.get_ancestors():
                     if ancestor.is_root_node():
-                        sources.add(ancestor.obj.purl)
+                        sources.add(ancestor.purl)
         return list(sources)
 
     def get_upstreams(self):

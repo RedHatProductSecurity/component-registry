@@ -50,6 +50,11 @@ def save_component(component: dict[str, Any], parent: ComponentNode):
     node, _ = obj.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=parent,
+        purl=obj.purl,
+        defaults={
+            "object_id": obj.pk,
+            "obj": obj,
+        },
     )
 
     return created

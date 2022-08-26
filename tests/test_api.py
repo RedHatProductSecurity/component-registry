@@ -95,11 +95,11 @@ def test_component_detail_dev(client, api_path):
         type=Component.Type.UPSTREAM, related_url="https://example.org/related"
     )
     upstream_node, _ = upstream.cnodes.get_or_create(
-        type=ComponentNode.ComponentNodeType.SOURCE, parent=None
+        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=upstream.purl
     )
     dev_comp = ComponentFactory(name="dev", type=Component.Type.NPM)
     dev_comp.cnodes.get_or_create(
-        type=ComponentNode.ComponentNodeType.PROVIDES_DEV, parent=upstream_node
+        type=ComponentNode.ComponentNodeType.PROVIDES_DEV, parent=upstream_node, purl=dev_comp.purl
     )
 
     upstream.save_component_taxonomy()

@@ -33,6 +33,13 @@ class ProductNode(MPTTModel, TimeStampedModel):
     class MPTTMeta:
         level_attr = "level"
 
+    class Meta:
+        indexes = [
+            # Add index on foreign-key fields here, to speed up iterating over pnodes
+            # GenericForeignKey doesn't get these by default, only ForeignKey
+            models.Index(fields=("content_type", "object_id")),
+        ]
+
     # Tree-traversal methods for product-related models below.
     #
     # - Each of these methods accepts a single tree node and traverses its ascendants and
@@ -128,6 +135,13 @@ class ComponentNode(MPTTModel, TimeStampedModel):
 
     class MPTTMeta:
         level_attr = "level"
+
+    class Meta:
+        indexes = [
+            # Add index on foreign-key fields here, to speed up iterating over cnodes
+            # GenericForeignKey doesn't get these by default, only ForeignKey
+            models.Index(fields=("content_type", "object_id")),
+        ]
 
     @property
     def name(self):

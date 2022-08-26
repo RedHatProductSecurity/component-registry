@@ -41,8 +41,12 @@ class UMBReceiverHandler(MessagingHandler):
         self.selector = None if selector is None else Selector(selector)
 
         # Ack messages manually so that we can ensure we successfully acted upon a message when
-        # it was received.
-        self.auto_accept = True
+        # it was received. See accept condition logic in the on_message() method.
+        self.auto_accept = False
+
+        # Each message that is accepted also needs to be settled locally. Auto-settle each
+        # message that is accepted automatically (this is the default value).
+        self.auto_settle = True
 
     def on_start(self, event: Event):
         recv_opts = [self.selector] if self.selector is not None else []

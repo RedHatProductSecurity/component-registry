@@ -918,16 +918,16 @@ class Component(TimeStampedModel):
 
     def get_source(self) -> list:
         """return all root nodes"""
-        # this uses the mptt get_root function, not the get_root property defined on Component
         sources = set()
 
-        for cnode in self.cnodes.get_queryset():
-            if cnode.is_root_node():
-                sources.add(cnode.obj.purl)
-            else:
-                for ancestor in cnode.get_ancestors():
-                    if ancestor.is_root_node():
-                        sources.add(ancestor.obj.purl)
+        for cn in (
+            ComponentNode.objects.get_queryset()
+            .filter(purl=self.purl)
+            .get_ancestors()
+            .filter(level=0)
+            .distinct()
+        ):
+            sources.add(cn.purl)
         return list(sources)
 
     def get_upstreams(self):

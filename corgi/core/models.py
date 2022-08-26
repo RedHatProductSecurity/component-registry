@@ -34,7 +34,16 @@ class ProductNode(MPTTModel, TimeStampedModel):
         level_attr = "level"
 
     class Meta:
+        constraints = [
+            # Add unique constraint + index so get_or_create behaves atomically
+            # Otherwise duplicate rows may be inserted into DB
+            models.UniqueConstraint(
+                name="unique_pnode_get_or_create",
+                fields=("object_id", "parent"),
+            ),
+        ]
         indexes = [
+            models.Index(fields=("object_id", "parent")),
             # Add index on foreign-key fields here, to speed up iterating over pnodes
             # GenericForeignKey doesn't get these by default, only ForeignKey
             models.Index(fields=("content_type", "object_id")),

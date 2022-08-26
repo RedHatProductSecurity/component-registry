@@ -61,17 +61,17 @@ def test_cpes():
     ps2 = ProductStreamFactory(name="Ansercaerulescens")
     ps3 = ProductStreamFactory(name="Brantabernicla", cpe="cpe:/o:redhat:Brantabernicla:8")
 
-    node1 = ProductNode.objects.create(parent=None, obj=p1)
+    node1 = ProductNode.objects.create(parent=None, obj=p1, object_id=p1.pk)
     assert node1
-    node2a = ProductNode.objects.create(parent=node1, obj=pv1a)
+    node2a = ProductNode.objects.create(parent=node1, obj=pv1a, object_id=pv1a.pk)
     assert node2a
-    node2b = ProductNode.objects.create(parent=node1, obj=pv1b)
+    node2b = ProductNode.objects.create(parent=node1, obj=pv1b, object_id=pv1b.pk)
     assert node2b
-    node3a = ProductNode.objects.create(parent=node2a, obj=ps1)
+    node3a = ProductNode.objects.create(parent=node2a, obj=ps1, object_id=ps1.pk)
     assert node3a
-    node3b = ProductNode.objects.create(parent=node2b, obj=ps2)
+    node3b = ProductNode.objects.create(parent=node2b, obj=ps2, object_id=ps2.pk)
     assert node3b
-    node3c = ProductNode.objects.create(parent=node2b, obj=ps3)
+    node3c = ProductNode.objects.create(parent=node2b, obj=ps3, object_id=ps3.pk)
     assert node3c
 
     assert pv1a.cpes == ["cpe:/o:redhat:enterprise_linux:9"]
@@ -96,19 +96,19 @@ def test_product_taxonomic_queries():
 
 def relate_product_hierarchy(p1, ps1, ps2, ps3, pv1a, pv1b):
     pvar1 = ProductVariantFactory(name="Base8-test")
-    node1 = ProductNode.objects.create(parent=None, obj=p1)
+    node1 = ProductNode.objects.create(parent=None, obj=p1, object_id=p1.pk)
     assert node1
-    node2a = ProductNode.objects.create(parent=node1, obj=pv1a)
+    node2a = ProductNode.objects.create(parent=node1, obj=pv1a, object_id=pv1a.pk)
     assert node2a
-    node2b = ProductNode.objects.create(parent=node1, obj=pv1b)
+    node2b = ProductNode.objects.create(parent=node1, obj=pv1b, object_id=pv1b.pk)
     assert node2b
-    node3a = ProductNode.objects.create(parent=node2a, obj=ps1)
+    node3a = ProductNode.objects.create(parent=node2a, obj=ps1, object_id=ps1.pk)
     assert node3a
-    node3b = ProductNode.objects.create(parent=node2b, obj=ps2)
+    node3b = ProductNode.objects.create(parent=node2b, obj=ps2, object_id=ps2.pk)
     assert node3b
-    node3c = ProductNode.objects.create(parent=node2b, obj=ps3)
+    node3c = ProductNode.objects.create(parent=node2b, obj=ps3, object_id=ps3.pk)
     assert node3c
-    node4a = ProductNode.objects.create(parent=node3c, obj=pvar1)
+    node4a = ProductNode.objects.create(parent=node3c, obj=pvar1, object_id=pvar1.pk)
     assert node4a
 
     p1.save_product_taxonomy()

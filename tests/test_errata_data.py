@@ -25,7 +25,7 @@ def test_update_variant_repos():
     )
     for variant in variants_to_create:
         pv = ProductVariantFactory.create(name=variant)
-        ProductNode.objects.create(obj=pv, parent=None)
+        ProductNode.objects.create(object_id=pv.pk, obj=pv, parent=None)
 
     update_variant_repos()
 

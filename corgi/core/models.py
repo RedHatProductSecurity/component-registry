@@ -974,7 +974,7 @@ class Component(TimeStampedModel):
                 )
             else:
                 upstreams.update(c.purl for c in source_children)
-        return list(set(upstreams))
+        return list(upstreams)
 
     def save_datascore(self):
         score = 0

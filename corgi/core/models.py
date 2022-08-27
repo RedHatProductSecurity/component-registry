@@ -33,6 +33,13 @@ class ProductNode(MPTTModel, TimeStampedModel):
     class MPTTMeta:
         level_attr = "level"
 
+    class Meta:
+        indexes = [
+            # Add index on foreign-key fields here, to speed up iterating over pnodes
+            # GenericForeignKey doesn't get these by default, only ForeignKey
+            models.Index(fields=("content_type", "object_id")),
+        ]
+
     # Tree-traversal methods for product-related models below.
     #
     # - Each of these methods accepts a single tree node and traverses its ascendants and
@@ -129,6 +136,13 @@ class ComponentNode(MPTTModel, TimeStampedModel):
     class MPTTMeta:
         level_attr = "level"
 
+    class Meta:
+        indexes = [
+            # Add index on foreign-key fields here, to speed up iterating over pnodes
+            # GenericForeignKey doesn't get these by default, only ForeignKey
+            models.Index(fields=("content_type", "object_id")),
+        ]
+
     @property
     def name(self):
         return self.obj.name
@@ -190,7 +204,7 @@ class SoftwareBuild(TimeStampedModel):
         """it is only possible to update ('materialize') component taxonomy when all
         components (from a build) have loaded"""
         for component in Component.objects.filter(software_build__build_id=self.build_id):
-            cnode = component.cnodes.first()
+            cnode = component.cnodes.get_queryset().first()
             for d in cnode.get_descendants(include_self=True):
                 d.obj.save_component_taxonomy()
         return None
@@ -790,7 +804,7 @@ class Component(TimeStampedModel):
         # for functions other that get_upstreams we might to revisit this check
         if not self.software_build:
             return roots
-        cnode = self.cnodes.first()
+        cnode = self.cnodes.get_queryset().first()
         try:
             root = cnode.get_root()
             if root.obj.type == Component.Type.CONTAINER_IMAGE:
@@ -909,7 +923,7 @@ class Component(TimeStampedModel):
         type_list = [ComponentNode.ComponentNodeType.PROVIDES]
         if include_dev:
             type_list.append(ComponentNode.ComponentNodeType.PROVIDES_DEV)
-        first_parent = self.cnodes.first()
+        first_parent = self.cnodes.get_queryset().first()
         if first_parent.get_descendant_count() == 0:
             return []
         for descendant in first_parent.get_descendants().filter(type__in=type_list):
@@ -918,16 +932,17 @@ class Component(TimeStampedModel):
 
     def get_source(self) -> list:
         """return all root nodes"""
-        # this uses the mptt get_root function, not the get_root property defined on Component
         sources = set()
-
-        for cnode in self.cnodes.get_queryset():
-            if cnode.is_root_node():
-                sources.add(cnode.obj.purl)
-            else:
-                for ancestor in cnode.get_ancestors():
-                    if ancestor.is_root_node():
-                        sources.add(ancestor.obj.purl)
+        sources.update(
+            [
+                cn.purl
+                for cn in ComponentNode.objects.get_queryset()
+                .filter(purl=self.purl)
+                .get_ancestors(include_self=True)  # type: ignore
+                .filter(level=0)
+                .distinct()
+            ]
+        )
         return list(sources)
 
     def get_upstreams(self):
@@ -952,7 +967,7 @@ class Component(TimeStampedModel):
                 upstreams.extend(
                     [
                         a.purl
-                        for a in self.cnodes.first().get_ancestors(include_self=True)
+                        for a in self.cnodes.get_queryset().first().get_ancestors(include_self=True)
                         if a.type == ComponentNode.ComponentNodeType.SOURCE
                         and a.obj.type == Component.Type.UPSTREAM
                     ]

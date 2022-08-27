@@ -919,7 +919,7 @@ class Component(TimeStampedModel):
 
     def get_provides(self, include_dev=True):
         """return all descendants with PROVIDES ComponentNode type"""
-        provides = []
+        provides = set()
         type_list = [ComponentNode.ComponentNodeType.PROVIDES]
         if include_dev:
             type_list.append(ComponentNode.ComponentNodeType.PROVIDES_DEV)
@@ -927,8 +927,8 @@ class Component(TimeStampedModel):
         if first_parent.get_descendant_count() == 0:
             return []
         for descendant in first_parent.get_descendants().filter(type__in=type_list):
-            provides.append(descendant.purl)
-        return list(set(provides))
+            provides.add(descendant.purl)
+        return list(provides)
 
     def get_source(self) -> list:
         """return all root nodes"""
@@ -950,7 +950,7 @@ class Component(TimeStampedModel):
         roots = self.get_roots
         if not roots:
             return []
-        upstreams = []
+        upstreams = set()
         for root in roots:
             # For SRRPM/RPMS, and noarch containers, these are the cnodes we want.
             source_children = [
@@ -964,7 +964,7 @@ class Component(TimeStampedModel):
                 and root.obj.arch == "noarch"
                 and len(source_children) > 1
             ):
-                upstreams.extend(
+                upstreams.update(
                     [
                         a.purl
                         for a in self.cnodes.get_queryset().first().get_ancestors(include_self=True)
@@ -973,7 +973,7 @@ class Component(TimeStampedModel):
                     ]
                 )
             else:
-                upstreams.extend(c.purl for c in source_children)
+                upstreams.update(c.purl for c in source_children)
         return list(set(upstreams))
 
     def save_datascore(self):

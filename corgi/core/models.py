@@ -933,14 +933,13 @@ class Component(TimeStampedModel):
     def get_source(self) -> list:
         """return all root nodes"""
         sources = set()
-        [
-            sources.add(cn.purl)  # type: ignore
-            for cn in ComponentNode.objects.get_queryset()
+        sources.update(
+            ComponentNode.objects.get_queryset()  # type: ignore
             .filter(purl=self.purl)
-            .get_ancestors(include_self=True)  # type: ignore
+            .get_ancestors(include_self=True)
             .filter(level=0)
-            .distinct()
-        ]
+            .values_list("purl", flat=True)
+        )
         return list(sources)
 
     def get_upstreams(self):

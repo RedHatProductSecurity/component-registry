@@ -222,9 +222,9 @@ class SoftwareBuild(TimeStampedModel):
         """it is only possible to update ('materialize') component taxonomy when all
         components (from a build) have loaded"""
         for component in Component.objects.filter(software_build__build_id=self.build_id):
-            cnode = component.cnodes.get_queryset().first()
-            for d in cnode.get_descendants(include_self=True):
-                d.obj.save_component_taxonomy()
+            for cnode in component.cnodes.get_queryset():
+                for d in cnode.get_descendants(include_self=True):
+                    d.obj.save_component_taxonomy()
         return None
 
     def save_product_taxonomy(self):
@@ -822,31 +822,31 @@ class Component(TimeStampedModel):
         # for functions other that get_upstreams we might to revisit this check
         if not self.software_build:
             return roots
-        cnode = self.cnodes.get_queryset().first()
-        try:
-            root = cnode.get_root()
-            if root.obj.type == Component.Type.CONTAINER_IMAGE:
-                # TODO if we change the CONTAINER->RPM ComponentNode.type to something besides
-                # 'PROVIDES' we would check for that type here to prevent 'hardcoding' the
-                # container -> rpm relationship here.
-                # RPMs are included as children of Containers as well as SRPMs
-                # We don't want to include Containers in the RPMs roots.
-                # Partly because RPMs in containers can have unprocesses SRPMs
-                # And partly because we use roots to find upstream components,
-                # and it's not true to say that rpms share upstreams with containers
-                rpm_desendant = False
-                for ancestor in cnode.get_ancestors(include_self=True):
-                    if ancestor.obj.type == Component.Type.RPM:
-                        rpm_desendant = True
-                        break
-                if not rpm_desendant:
+        for cnode in self.cnodes.get_queryset():
+            try:
+                root = cnode.get_root()
+                if root.obj.type == Component.Type.CONTAINER_IMAGE:
+                    # TODO if we change the CONTAINER->RPM ComponentNode.type to something besides
+                    # 'PROVIDES' we would check for that type here to prevent 'hardcoding' the
+                    # container -> rpm relationship here.
+                    # RPMs are included as children of Containers as well as SRPMs
+                    # We don't want to include Containers in the RPMs roots.
+                    # Partly because RPMs in containers can have unprocesses SRPMs
+                    # And partly because we use roots to find upstream components,
+                    # and it's not true to say that rpms share upstreams with containers
+                    rpm_desendant = False
+                    for ancestor in cnode.get_ancestors(include_self=True):
+                        if ancestor.obj.type == Component.Type.RPM:
+                            rpm_desendant = True
+                            break
+                    if not rpm_desendant:
+                        roots.append(root)
+                else:
                     roots.append(root)
-            else:
-                roots.append(root)
-        except MultipleObjectsReturned:
-            logger.warning(
-                "Component %s returned multiple objects when returning get_roots", self.purl
-            )
+            except MultipleObjectsReturned:
+                logger.warning(
+                    "Component %s returned multiple objects when returning get_roots", self.purl
+                )
         return list(set(roots))
 
     @property
@@ -941,11 +941,11 @@ class Component(TimeStampedModel):
         type_list = [ComponentNode.ComponentNodeType.PROVIDES]
         if include_dev:
             type_list.append(ComponentNode.ComponentNodeType.PROVIDES_DEV)
-        first_parent = self.cnodes.get_queryset().first()
-        if first_parent.get_descendant_count() == 0:
-            return []
-        for descendant in first_parent.get_descendants().filter(type__in=type_list):
-            provides.add(descendant.purl)
+        for cnode in self.cnodes.get_queryset():
+            if cnode.get_descendant_count() == 0:
+                continue
+            for descendant in cnode.get_descendants().filter(type__in=type_list):
+                provides.add(descendant.purl)
         return list(provides)
 
     def get_source(self) -> list:

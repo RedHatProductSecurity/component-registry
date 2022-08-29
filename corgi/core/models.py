@@ -931,14 +931,13 @@ class Component(TimeStampedModel):
         return list(provides)
 
     def get_source(self) -> list:
-        """return all root nodes"""
-        sources = set()
-        sources.update(
-            ComponentNode.objects.get_queryset()  # type: ignore
-            .filter(purl=self.purl)
+        """return all root components across different component trees"""
+        sources = (
+            self.cnodes.get_queryset()
             .get_ancestors(include_self=True)
-            .filter(level=0)
+            .filter(parent=None)
             .values_list("purl", flat=True)
+            .distinct()
         )
         return list(sources)
 

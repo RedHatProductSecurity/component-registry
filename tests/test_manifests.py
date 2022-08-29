@@ -26,14 +26,16 @@ def test_product_manifest_properties():
     version = ProductVersionFactory(product_variants=["1"])
     stream = ProductStreamFactory(product_variants=["1"])
     variant = ProductVariantFactory(name="1")
-    pnode = ProductNode.objects.create(parent=None, obj=product)
-    pvnode = ProductNode.objects.create(parent=pnode, obj=version)
-    psnode = ProductNode.objects.create(parent=pvnode, obj=stream)
-    _ = ProductNode.objects.create(parent=psnode, obj=variant)
+    pnode = ProductNode.objects.create(parent=None, obj=product, object_id=product.pk)
+    pvnode = ProductNode.objects.create(parent=pnode, obj=version, object_id=version.pk)
+    psnode = ProductNode.objects.create(parent=pvnode, obj=stream, object_id=stream.pk)
+    _ = ProductNode.objects.create(parent=psnode, obj=variant, object_id=variant.pk)
 
     build = SoftwareBuildFactory(build_id=1)
     component = ComponentFactory(software_build=build)
-    _, _ = component.cnodes.get_or_create(type=ComponentNode.ComponentNodeType.SOURCE, parent=None)
+    _, _ = component.cnodes.get_or_create(
+        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=component.purl
+    )
     ProductComponentRelationFactory(
         build_id="1", product_ref="1", type=ProductComponentRelation.Type.ERRATA
     )

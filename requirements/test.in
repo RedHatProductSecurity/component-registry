@@ -2,7 +2,6 @@
 mypy
 django-stubs
 djangorestframework-stubs
-types-requests
 factory-boy
 lxml
 pytest
@@ -11,3 +10,6 @@ pytest-django
 pytest-recording
 pytest-sugar
 requests-mock
+types-Markdown
+types-redis
+types-requests

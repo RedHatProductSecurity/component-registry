@@ -134,7 +134,7 @@ def update_variant_repos() -> None:
                 # Create a Product Node for each CDN repo linked to a Variant. This means that one
                 # CDN repo (since we run get_or_create above) can be linked to
                 # multiple product nodes, each linked to a different Variant.
-                repo.pnodes.get_or_create(parent=pv_node)
+                repo.pnodes.get_or_create(object_id=repo.pk, parent=pv_node, defaults={"obj": repo})
 
             # Update list of channels for this Variant so that we don't have to call
             # the more expensive save_product_taxonomy() method just to update channels.

@@ -48,7 +48,7 @@ class Command(BaseCommand):
             build_ids = get_all_builds()
 
         if not build_ids:
-            self.stderr.write(self.style.ERROR(f"No build IDs found for composes {compose_names}"))
+            self.stderr.write(self.style.ERROR("No build IDs found"))
             sys.exit(1)
 
         self.stdout.write(

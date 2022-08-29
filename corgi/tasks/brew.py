@@ -154,6 +154,11 @@ def save_component(component, parent, softwarebuild=None):
     node, _ = obj.cnodes.get_or_create(
         type=node_type,
         parent=parent,
+        purl=obj.purl,
+        defaults={
+            "object_id": obj.pk,
+            "obj": obj,
+        },
     )
     recurse_components(component, node)
 
@@ -175,6 +180,11 @@ def save_srpm(softwarebuild, build_data) -> ComponentNode:
     node, _ = obj.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
+        purl=obj.purl,
+        defaults={
+            "object_id": obj.pk,
+            "obj": obj,
+        },
     )
     if "url" in build_data["meta"]:
         new_upstream, created = Component.objects.get_or_create(
@@ -193,6 +203,11 @@ def save_srpm(softwarebuild, build_data) -> ComponentNode:
         new_upstream.cnodes.get_or_create(
             type=ComponentNode.ComponentNodeType.SOURCE,
             parent=node,
+            purl=new_upstream.purl,
+            defaults={
+                "object_id": new_upstream.pk,
+                "obj": new_upstream,
+            },
         )
     return node
 
@@ -221,6 +236,11 @@ def save_container(softwarebuild, build_data) -> ComponentNode:
     root_node, _ = obj.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
+        purl=obj.purl,
+        defaults={
+            "object_id": obj.pk,
+            "obj": obj,
+        },
     )
 
     if "upstream_go_modules" in build_data["meta"]:
@@ -235,6 +255,11 @@ def save_container(softwarebuild, build_data) -> ComponentNode:
             new_upstream.cnodes.get_or_create(
                 type=ComponentNode.ComponentNodeType.SOURCE,
                 parent=root_node,
+                purl=new_upstream.purl,
+                defaults={
+                    "object_id": new_upstream.pk,
+                    "obj": new_upstream,
+                },
             )
 
     if "image_components" in build_data:
@@ -253,6 +278,11 @@ def save_container(softwarebuild, build_data) -> ComponentNode:
             image_arch_node, _ = obj.cnodes.get_or_create(
                 type=ComponentNode.ComponentNodeType.PROVIDES,
                 parent=root_node,
+                purl=obj.purl,
+                defaults={
+                    "object_id": obj.pk,
+                    "obj": obj,
+                },
             )
 
             if "rpm_components" in image:
@@ -271,6 +301,11 @@ def save_container(softwarebuild, build_data) -> ComponentNode:
             upstream_node, _ = new_upstream.cnodes.get_or_create(
                 type=ComponentNode.ComponentNodeType.SOURCE,
                 parent=root_node,
+                purl=new_upstream.purl,
+                defaults={
+                    "object_id": new_upstream.pk,
+                    "obj": new_upstream,
+                },
             )
             # Collect the Cachito dependencies
             recurse_components(source, upstream_node)
@@ -303,6 +338,11 @@ def save_module(softwarebuild, build_data) -> ComponentNode:
     node, _ = obj.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
+        purl=obj.purl,
+        defaults={
+            "object_id": obj.pk,
+            "obj": obj,
+        },
     )
     # TODO: add upstream if exists
     # TODO: recurse components from build_data["meta"]["components"]

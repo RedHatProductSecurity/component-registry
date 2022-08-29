@@ -34,7 +34,16 @@ class ProductNode(MPTTModel, TimeStampedModel):
         level_attr = "level"
 
     class Meta:
+        constraints = [
+            # Add unique constraint + index so get_or_create behaves atomically
+            # Otherwise duplicate rows may be inserted into DB
+            models.UniqueConstraint(
+                name="unique_pnode_get_or_create",
+                fields=("object_id", "parent"),
+            ),
+        ]
         indexes = [
+            models.Index(fields=("object_id", "parent")),
             # Add index on foreign-key fields here, to speed up iterating over pnodes
             # GenericForeignKey doesn't get these by default, only ForeignKey
             models.Index(fields=("content_type", "object_id")),
@@ -137,8 +146,17 @@ class ComponentNode(MPTTModel, TimeStampedModel):
         level_attr = "level"
 
     class Meta:
+        constraints = [
+            # Add unique constraint + index so get_or_create behaves atomically
+            # Otherwise duplicate rows may be inserted into DB
+            models.UniqueConstraint(
+                name="unique_cnode_get_or_create",
+                fields=("type", "parent", "purl"),
+            ),
+        ]
         indexes = [
-            # Add index on foreign-key fields here, to speed up iterating over pnodes
+            models.Index(fields=("type", "parent", "purl")),
+            # Add index on foreign-key fields here, to speed up iterating over cnodes
             # GenericForeignKey doesn't get these by default, only ForeignKey
             models.Index(fields=("content_type", "object_id")),
         ]
@@ -932,13 +950,13 @@ class Component(TimeStampedModel):
 
     def get_source(self) -> list:
         """return all root nodes"""
-        sources = set()
-        sources.update(
+        sources = (
             ComponentNode.objects.get_queryset()  # type: ignore
             .filter(purl=self.purl)
             .get_ancestors(include_self=True)
-            .filter(level=0)
+            .filter(parent=None)
             .values_list("purl", flat=True)
+            .distinct()
         )
         return list(sources)
 

@@ -1,7 +1,7 @@
 import os
 import shutil
 from pathlib import Path, PosixPath
-from typing import Optional, Tuple
+from typing import Tuple
 from unittest.mock import call, patch
 
 import pytest
@@ -12,7 +12,7 @@ from corgi.tasks.sca import (
     _clone_source,
     _download_lookaside_sources,
     _get_distgit_sources,
-    _scan_remote_sources,
+    scan_remote_sources,
     slow_software_composition_analysis,
 )
 from tests.factories import ComponentFactory, SoftwareBuildFactory
@@ -38,8 +38,8 @@ archive_source_test_data = [
         "/rpms/nodejs",
         "3cbed2be4171502499d0d89bea1ead91690af7d2",
         "nodejs",
-        "rpms",
-        "tests/data/rpms/nodejs",
+        1,
+        "/tmp/1",
         True,
     ),
     (
@@ -47,27 +47,26 @@ archive_source_test_data = [
         "/containers/openshift-enterprise-console",
         "f95972ce68d2850ae20c10fbf87182a17fa24b19",
         "openshift-enterprise-console",
-        "containers",
-        "tests/data/containers/openshift-enterprise-console",
+        2,
+        "/tmp/2",
         False,
     ),
 ]
 
 
 @pytest.mark.parametrize(
-    "source_url,commit,package_name,package_type,expected_path,path_exists",
+    "source_url,commit,package_name,build_id,expected_path,path_exists",
     archive_source_test_data,
 )
 @patch("subprocess.check_call")
 def test_clone_source(
-    mock_subprocess, source_url, commit, package_name, package_type, expected_path, path_exists
+    mock_subprocess, source_url, commit, package_name, build_id, expected_path, path_exists
 ):
     # This prevents multiple runs of this test from having different results because
     # we mkdir the directory prior to the clone
     if not path_exists:
         shutil.rmtree(expected_path, ignore_errors=True)
-        _clone_source(f"{source_url}#{commit}", package_type)
-        print(mock_subprocess.call_arg_list)
+        _clone_source(f"{source_url}#{commit}", build_id)
         mock_subprocess.assert_has_calls(
             [
                 call(["/usr/bin/git", "clone", source_url, PosixPath(expected_path)]),
@@ -75,23 +74,25 @@ def test_clone_source(
             ]
         )
     else:
+        expected_path_obj = Path(expected_path)
+        if not expected_path_obj.exists():
+            os.mkdir(f"/tmp/{build_id}")
         with pytest.raises(FileExistsError):
-            _clone_source(f"{source_url}#{commit}", package_type)
+            _clone_source(f"{source_url}#{commit}", build_id)
         mock_subprocess.assert_not_called()
 
 
 @patch("subprocess.check_call")
 @patch("corgi.tasks.sca._download_lookaside_sources")
 def test_get_distgit_sources(mock_check_call, mock_download_lookaside_sources):
-    expected_path = "tests/data/rpms/test"
+    shutil.rmtree("/tmp/1")
+    expected_path = "/tmp/1"
     _ = _get_distgit_sources(
         f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
         "/rpms/test#1e52fcdc84be253b5094b942c2fec23d7636d644",
-        "rpms",
+        1,
     )
-    print(mock_check_call.call_arg_list)
-    mock_check_call.assert_called_with(PosixPath(expected_path), "test", "rpms")
-    shutil.rmtree("tests/data/rpms/test")
+    mock_check_call.assert_called_with(PosixPath(expected_path), 1, "rpms", "test")
 
 
 download_lookaside_test_data = [
@@ -138,15 +139,15 @@ def test_download_lookaside_sources(
     )
     print(f"mocking call to {expected_url}")
     requests_mock.get(expected_url, text="resp")
+
     downloaded_sources = _download_lookaside_sources(
-        distgit_source_archive, package_name, package_type
+        distgit_source_archive, 1, package_type, package_name
     )
     if expected_filename:
-        full_expected_filename = (
-            f"tests/data/lookaside/{package_type}/{package_name}/{expected_filename}/"
-        )
+        expected_hash_prefix = expected_path.split("/")[1][:6]
+        full_expected_filename = f"/tmp/lookaside/1/{expected_hash_prefix}-{expected_filename}/"
         assert downloaded_sources == [PosixPath(full_expected_filename)]
-        shutil.rmtree("tests/data/lookaside")
+        shutil.rmtree("/tmp/lookaside/1")
     else:
         assert downloaded_sources == []
 
@@ -157,7 +158,11 @@ slow_software_composition_analysis_test_data = [
     # tests/data/lookaside/rpms/cri-o/cri-o-41c0779.tar.gz (empty file)
     (
         2018747,
+        False,
         "cri-o",
+        "a5afa6-cri-o-41c0779.tar.gz",
+        "rpms/cri-o/cri-o-41c0779.tar.gz/sha512/a5afa6ce06992d3205ae06e1d5a25109c3ef5596bfaaf456f1c"
+        "25f48d4fdb18607f43591dd75cad122fc2d5ddbb00451ad88de9420fa84175d52b010ff2a16ff/"
         "cri-o-41c0779.tar.gz",
         "tests/data/crio-syft.json",
         "pkg:golang/github.com/Microsoft/go-winio@v0.5.1",
@@ -167,14 +172,18 @@ slow_software_composition_analysis_test_data = [
     # These repos have no lookaside cache, so they set an empty lookaside_tarfile
     (
         1890406,
-        "grafana-container",
+        True,
+        "",
+        "",
         "",
         "tests/data/grafana-syft.json",
         "pkg:npm/acorn-globals@4.3.4",
     ),
     (
         1888203,
-        "cnf-tests-container",
+        True,
+        "",
+        "",
         "",
         "tests/data/cnf-tests-syft.json",
         "pkg:pypi/requests@2.26.0",
@@ -182,13 +191,21 @@ slow_software_composition_analysis_test_data = [
 ]
 
 
-def mock_clone(package_name: str, package_type: str) -> Tuple[Optional[Path], str]:
-    package_name = package_name.removesuffix("-container")
-    return Path("tests/data") / package_type / package_name, package_name
+def mock_clone(package_name: str, build_id: int) -> Tuple[Path, str, str]:
+    target_path = Path(f"/tmp/{build_id}")
+    if not target_path.exists():
+        os.mkdir(f"/tmp/{build_id}")
+    # Copy test files into scratch location
+    test_sources = Path(f"tests/data/{build_id}/sources")
+    if test_sources.exists():
+        shutil.copyfile(test_sources, target_path / "sources")
+    # TODO split package_name and package_type out to testdata. Maybe in source url?
+    package_type = "rpms"
+    return target_path, package_type, package_name
 
 
 @pytest.mark.parametrize(
-    "build_id,package_name,lookaside_tarfile,syft_results,expected_purl",
+    "build_id,is_container,package_name,lookaside_file,download_path,syft_results,expected_purl",
     slow_software_composition_analysis_test_data,
 )
 # mock the syft call to avoid having to have actual source code for the test
@@ -198,35 +215,36 @@ def test_slow_software_composition_analysis(
     mock_clone_source,
     mock_syft,
     build_id,
+    is_container,
     package_name,
-    lookaside_tarfile,
+    lookaside_file,
+    download_path,
     syft_results,
     expected_purl,
+    requests_mock,
 ):
-    sb = SoftwareBuildFactory(
-        build_id=build_id,
-        name=package_name,
-        source=package_name,
-    )
-    is_container = package_name.endswith("-container")
+    sb = SoftwareBuildFactory(build_id=build_id, source=package_name)
     if is_container:
         root_component = ComponentFactory(
-            type=Component.Type.CONTAINER_IMAGE, software_build=sb, name=package_name, arch="noarch"
+            type=Component.Type.CONTAINER_IMAGE, software_build=sb, arch="noarch"
         )
     else:
         root_component = ComponentFactory(
-            type=Component.Type.SRPM, software_build=sb, name=package_name
+            type=Component.Type.SRPM,
+            software_build=sb,
         )
     root_component.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=root_component.purl
     )
     assert not Component.objects.filter(purl=expected_purl).exists()
+
+    expected_url = f"https://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}/repo/{download_path}"
+
+    requests_mock.get(expected_url, text="resp")
+
     with open(syft_results, "r") as mock_scan_results:
         mock_syft.return_value = mock_scan_results.read()
     slow_software_composition_analysis(build_id)
-    package_type = "rpms"
-    if is_container:
-        package_type = "containers"
     expected_syft_call_arg_list = [
         call(
             [
@@ -235,12 +253,12 @@ def test_slow_software_composition_analysis(
                 "-q",
                 "-o=syft-json",
                 "--exclude=**/vendor/**",
-                f"dir:tests/data/{package_type}/{package_name.removesuffix('-container')}",
+                f"dir:/tmp/{build_id}",
             ],
             text=True,
         ),
     ]
-    if lookaside_tarfile:
+    if lookaside_file:
         expected_syft_call_arg_list.append(
             call(
                 [
@@ -249,14 +267,14 @@ def test_slow_software_composition_analysis(
                     "-q",
                     "-o=syft-json",
                     "--exclude=**/vendor/**",
-                    f"file:tests/data/lookaside/{package_type}/{package_name}/{lookaside_tarfile}",
+                    f"file:/tmp/lookaside/{build_id}/{lookaside_file}",
                 ],
                 text=True,
             )
         )
     assert mock_syft.call_args_list == expected_syft_call_arg_list
     assert Component.objects.filter(purl=expected_purl).exists()
-    if package_name.endswith("-container"):
+    if is_container:
         root_component = Component.objects.get(
             type=Component.Type.CONTAINER_IMAGE, arch="noarch", software_build=sb
         )
@@ -302,7 +320,7 @@ def test_scan_remote_sources(
     requests_mock.get(mock_remote_source_tar_url, text="")
     with open(syft_results, "r") as mock_scan_results:
         mock_syft.return_value = mock_scan_results.read()
-    _scan_remote_sources(root_component, root_node)
+    scan_remote_sources(root_component.pk)
     mock_syft.assert_called_with(
         [
             "/usr/local/bin/syft",
@@ -310,7 +328,8 @@ def test_scan_remote_sources(
             "-q",
             "-o=syft-json",
             "--exclude=**/vendor/**",
-            "file:tests/data/containers/" f"{root_component.nvr}/{remote_sources_filename}",
+            f"file:/tmp/remote_source/{root_component.software_build.build_id}/"  # join with below
+            f"{remote_sources_filename}",
         ],
         text=True,
     )

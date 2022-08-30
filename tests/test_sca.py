@@ -12,7 +12,6 @@ from corgi.tasks.sca import (
     _clone_source,
     _download_lookaside_sources,
     _get_distgit_sources,
-    scan_remote_sources,
     slow_software_composition_analysis,
 )
 from tests.factories import ComponentFactory, SoftwareBuildFactory
@@ -281,58 +280,3 @@ def test_slow_software_composition_analysis(
     else:
         root_component = Component.objects.get(type=Component.Type.SRPM, software_build=sb)
     assert expected_purl in root_component.provides
-
-
-scan_remote_sources_test_data = [
-    (
-        # buildID=2026282
-        "openshift-enterprise-console-container",
-        "remote-source-cachito-gomod-with-deps.tar.gz",
-        "tests/data/openshift-enterprise-console-syft.json",
-        "pkg:npm/adjust-sourcemap-loader@1.2.0",
-    )
-]
-
-
-@pytest.mark.parametrize(
-    "package_name,remote_sources_filename,syft_results,expected_package",
-    scan_remote_sources_test_data,
-)
-@patch("subprocess.check_output")
-def test_scan_remote_sources(
-    mock_syft, package_name, remote_sources_filename, syft_results, expected_package, requests_mock
-):
-    mock_remote_source_tar_url = f"https://test/{package_name}/{remote_sources_filename}"
-    root_component = ComponentFactory(
-        type=Component.Type.CONTAINER_IMAGE, name=package_name, arch="noarch"
-    )
-    root_node, _ = root_component.cnodes.get_or_create(
-        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=root_component.purl
-    )
-    remote_source = ComponentFactory(
-        type=Component.Type.UPSTREAM,
-        meta_attr={"remote_source_archive": mock_remote_source_tar_url},
-    )
-    container_source_cnode, _ = remote_source.cnodes.get_or_create(
-        type=ComponentNode.ComponentNodeType.SOURCE, parent=root_node, purl=remote_source.purl
-    )
-    root_component.save_component_taxonomy()
-    requests_mock.get(mock_remote_source_tar_url, text="")
-    with open(syft_results, "r") as mock_scan_results:
-        mock_syft.return_value = mock_scan_results.read()
-    scan_remote_sources(root_component.pk)
-    mock_syft.assert_called_with(
-        [
-            "/usr/local/bin/syft",
-            "packages",
-            "-q",
-            "-o=syft-json",
-            "--exclude=**/vendor/**",
-            f"file:/tmp/remote_source/{root_component.software_build.build_id}/"  # join with below
-            f"{remote_sources_filename}",
-        ],
-        text=True,
-    )
-    # This is done once after all Syft.scan_files calls in software_component_analysis task
-    root_component.save_component_taxonomy()
-    assert expected_package in root_component.provides

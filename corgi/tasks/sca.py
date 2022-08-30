@@ -89,9 +89,10 @@ def slow_software_composition_analysis(build_id: int):
 
     distgit_sources = _get_distgit_sources(software_build.source, build_id)
 
-    scan_files(root_node, distgit_sources)
+    _scan_files(root_node, distgit_sources)
 
     software_build.save_component_taxonomy()
+    software_build.save_product_taxonomy()
 
     # clean up source code so that we don't have to deal with reuse and an ever growing disk
     for source in distgit_sources:
@@ -103,42 +104,7 @@ def slow_software_composition_analysis(build_id: int):
     logger.info("Finished software composition analysis for %s", build_id)
 
 
-@app.task(
-    base=Singleton,
-    autoretry_for=RETRYABLE_ERRORS,
-    retry_kwargs=RETRY_KWARGS,
-)
-def scan_remote_sources(component_uuid: str):
-    root_component = Component.objects.get(pk=component_uuid)
-    root_node = root_component.cnodes.first()
-    for upstream in root_component.upstreams:
-        upstream_node = ComponentNode.objects.get(
-            type=ComponentNode.ComponentNodeType.SOURCE, parent=root_node, purl=upstream
-        )
-        # This is potentially quite slow. We could probably make this more efficient by splitting
-        # it off into another task
-        if "remote_source_archive" in upstream_node.obj.meta_attr:
-            # Download source to scratch
-            remote_source_archive = upstream_node.obj.meta_attr["remote_source_archive"]
-            url = urlparse(remote_source_archive)
-            filename = url.path.rsplit("/", 1)[-1]
-            target_filepath = Path(
-                f"{settings.SCA_SCRATCH_DIR}/remote_source/"  # joined with below
-                f"{root_component.software_build.build_id}/{filename}"
-            )
-            # This scans the whole archive without unpacking it. If we find this returns extraneous
-            # results we could probably unpack the archive and scan only the app subdirectory
-            _download_source(remote_source_archive, target_filepath)
-            # Scan source
-            scan_files(upstream_node, [target_filepath])
-            # remove source
-            package_dir = Path(os.path.dirname(target_filepath))
-            shutil.rmtree(package_dir)
-
-    root_component.software_build.save_component_taxonomy()
-
-
-def scan_files(anchor_node, sources):
+def _scan_files(anchor_node, sources):
     new_components = 0
     for component in Syft.scan_files(sources):
         if save_component(component, anchor_node):

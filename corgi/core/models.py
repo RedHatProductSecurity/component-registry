@@ -37,9 +37,17 @@ class ProductNode(MPTTModel, TimeStampedModel):
         constraints = [
             # Add unique constraint + index so get_or_create behaves atomically
             # Otherwise duplicate rows may be inserted into DB
+            # Second constraint needed for case when parent is NULL
+            # https://dba.stackexchange.com/a/9760
             models.UniqueConstraint(
                 name="unique_pnode_get_or_create",
                 fields=("object_id", "parent"),
+                condition=models.Q(parent__isnull=False),
+            ),
+            models.UniqueConstraint(
+                name="unique_pnode_get_or_create_for_null_parent",
+                fields=("object_id",),
+                condition=models.Q(parent__isnull=True),
             ),
         ]
         indexes = [
@@ -149,9 +157,17 @@ class ComponentNode(MPTTModel, TimeStampedModel):
         constraints = [
             # Add unique constraint + index so get_or_create behaves atomically
             # Otherwise duplicate rows may be inserted into DB
+            # Second constraint needed for case when parent is NULL
+            # https://dba.stackexchange.com/a/9760
             models.UniqueConstraint(
                 name="unique_cnode_get_or_create",
                 fields=("type", "parent", "purl"),
+                condition=models.Q(parent__isnull=False),
+            ),
+            models.UniqueConstraint(
+                name="unique_cnode_get_or_create_for_null_parent",
+                fields=("type", "purl"),
+                condition=models.Q(parent__isnull=True),
             ),
         ]
         indexes = [

@@ -104,7 +104,9 @@ def slow_software_composition_analysis(build_id: int):
 
 def _scan_remote_sources(root_component, root_node):
     for upstream in root_component.upstreams:
-        upstream_node = ComponentNode.objects.get(purl=upstream, parent=root_node)
+        upstream_node = ComponentNode.objects.get(
+            type=ComponentNode.ComponentNodeType.SOURCE, parent=root_node, purl=upstream
+        )
         # This is potentially quite slow. We could probably make this more efficient by splitting
         # it off into another task
         if "remote_source_archive" in upstream_node.obj.meta_attr:

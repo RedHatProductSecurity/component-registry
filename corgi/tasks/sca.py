@@ -89,10 +89,9 @@ def slow_software_composition_analysis(build_id: int):
 
     distgit_sources = _get_distgit_sources(software_build.source, build_id)
 
-    _scan_files(root_node, distgit_sources)
-
-    software_build.save_component_taxonomy()
-    software_build.save_product_taxonomy()
+    if _scan_files(root_node, distgit_sources):
+        software_build.save_component_taxonomy()
+        software_build.save_product_taxonomy()
 
     # clean up source code so that we don't have to deal with reuse and an ever growing disk
     for source in distgit_sources:
@@ -104,12 +103,13 @@ def slow_software_composition_analysis(build_id: int):
     logger.info("Finished software composition analysis for %s", build_id)
 
 
-def _scan_files(anchor_node, sources):
+def _scan_files(anchor_node, sources) -> bool:
     new_components = 0
     for component in Syft.scan_files(sources):
         if save_component(component, anchor_node):
             new_components += 1
     logger.info("Detected %s new components using Syft scan", new_components)
+    return bool(new_components)
 
 
 def _get_distgit_sources(source_url: str, build_id: int) -> list[Path]:

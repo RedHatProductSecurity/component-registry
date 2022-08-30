@@ -210,7 +210,9 @@ def mock_clone(package_name: str, build_id: int) -> Tuple[Path, str, str]:
 # mock the syft call to avoid having to have actual source code for the test
 @patch("subprocess.check_output")
 @patch("corgi.tasks.sca._clone_source", side_effect=mock_clone)
+@patch("corgi.core.models.SoftwareBuild.save_product_taxonomy")
 def test_slow_software_composition_analysis(
+    mock_save_prod_tax,
     mock_clone_source,
     mock_syft,
     build_id,
@@ -280,3 +282,4 @@ def test_slow_software_composition_analysis(
     else:
         root_component = Component.objects.get(type=Component.Type.SRPM, software_build=sb)
     assert expected_purl in root_component.provides
+    mock_save_prod_tax.assert_called_once()

@@ -70,6 +70,7 @@ for stream_ofuri, deptopia_id in stream_corpus:
     success = []
     failure = []
     different = []
+    cnt = 0
 
     for deptopia_build in reversed(deptopia_builds["builds"]):
         component_type = None
@@ -105,7 +106,11 @@ for stream_ofuri, deptopia_id in stream_corpus:
                     "FAILURE: %s", deptopia_build["nvr"] + "," + deptopia_build["build_type"]
                 )
                 failure.append(deptopia_build["nvr"])
+        cnt += 1
 
-    logger.info(f"failures:{failure}")
-    logger.info(f"different:{different}")
+    logger.info(f"# success:{len(success)}")
+    logger.info(f"# failures:{len(failure)}")
+    logger.info(f"# different:{len(different)}")
+    logger.info(f"# total:{cnt}")
+    logger.info(f"# coverage:{len(success)/cnt}")
     logger.info(f"reconciliation: done product_stream: {stream_ofuri}.")

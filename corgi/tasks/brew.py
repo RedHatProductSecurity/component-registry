@@ -61,8 +61,6 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
     for c in build.get("components", []):
         save_component(c, root_node, softwarebuild)
 
-    # Once we have the full component tree loaded
-    softwarebuild.save_component_taxonomy()
     # We don't call save_product_taxonomy by default to allow async call of slow_load_errata task
     # See CORGI-21
     if save_product:

@@ -281,5 +281,5 @@ def test_slow_software_composition_analysis(
         )
     else:
         root_component = Component.objects.get(type=Component.Type.SRPM, software_build=sb)
-    assert expected_purl in root_component.provides
+    assert expected_purl in root_component.get_provides()
     mock_save_prod_tax.assert_called_once()

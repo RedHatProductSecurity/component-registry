@@ -32,6 +32,10 @@ class BrewBuildSourceNotFound(Exception):
     pass
 
 
+class BrewBuildNotFound(Exception):
+    pass
+
+
 class Brew:
     """Interface to the Brew API for build data collection.
 
@@ -657,7 +661,7 @@ class Brew:
         logger.info("Retrieving Brew build: %s", build_id)
         build = self.koji_session.getBuild(build_id)
         if not build:
-            raise BrewBuildSourceNotFound(f"Build {build_id} was not found")
+            raise BrewBuildNotFound(f"Build {build_id} was not found")
 
         # Determine build state
         state = build.get("state")

@@ -89,7 +89,8 @@ def slow_software_composition_analysis(build_id: int):
 
     distgit_sources = _get_distgit_sources(software_build.source, build_id)
 
-    if _scan_files(root_node, distgit_sources):
+    no_of_new_components = _scan_files(root_node, distgit_sources)
+    if no_of_new_components > 0:
         software_build.save_component_taxonomy()
         software_build.save_product_taxonomy()
 
@@ -101,15 +102,16 @@ def slow_software_composition_analysis(build_id: int):
             shutil.rmtree(source.parents[0])
 
     logger.info("Finished software composition analysis for %s", build_id)
+    return no_of_new_components
 
 
-def _scan_files(anchor_node, sources) -> bool:
+def _scan_files(anchor_node, sources) -> int:
     new_components = 0
     for component in Syft.scan_files(sources):
         if save_component(component, anchor_node):
             new_components += 1
     logger.info("Detected %s new components using Syft scan", new_components)
-    return bool(new_components)
+    return new_components
 
 
 def _get_distgit_sources(source_url: str, build_id: int) -> list[Path]:

@@ -69,7 +69,7 @@ def test_clone_source(
         mock_subprocess.assert_has_calls(
             [
                 call(["/usr/bin/git", "clone", source_url, PosixPath(expected_path)]),
-                call(["/usr/bin/git", "checkout", commit], cwd=PosixPath(expected_path)),
+                call(["/usr/bin/git", "checkout", commit], cwd=PosixPath(expected_path), stderr=-3),
             ]
         )
     else:

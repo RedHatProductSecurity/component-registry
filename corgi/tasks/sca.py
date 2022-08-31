@@ -146,7 +146,9 @@ def _clone_source(source_url: str, build_id: int) -> Tuple[Path, str, str]:
 
     logger.info("Fetching %s to %s", git_remote, target_path)
     subprocess.check_call(["/usr/bin/git", "clone", git_remote, target_path])  # nosec B603
-    subprocess.check_call(["/usr/bin/git", "checkout", commit], cwd=target_path)  # nosec B603
+    subprocess.check_call(  # nosec B603
+        ["/usr/bin/git", "checkout", commit], cwd=target_path, stderr=subprocess.DEVNULL
+    )
     return target_path, package_type, package_name
 
 

@@ -198,7 +198,7 @@ def mock_clone(package_name: str, build_id: int) -> Tuple[Path, str, str]:
     test_sources = Path(f"tests/data/{build_id}/sources")
     if test_sources.exists():
         shutil.copyfile(test_sources, target_path / "sources")
-    # TODO split package_name and package_type out to testdata. Maybe in source url?
+    # TODO split package_type out to testdata
     package_type = "rpms"
     return target_path, package_type, package_name
 

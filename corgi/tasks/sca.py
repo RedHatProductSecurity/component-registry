@@ -1,5 +1,4 @@
 import logging
-import os
 import re
 import shutil
 import subprocess  # nosec B404
@@ -96,16 +95,21 @@ def slow_software_composition_analysis(build_id: int):
 
     # clean up source code so that we don't have to deal with reuse and an ever growing disk
     for source in distgit_sources:
-        if source.is_dir():
-            shutil.rmtree(source)
-        else:
-            shutil.rmtree(source.parents[0])
+        rm_target = source
+        if source.is_file():
+            rm_target = source.parents[0]
+        # Ignore errors because the dir might already be deleted due to multiples sources
+        # being in the same directory
+        shutil.rmtree(rm_target, ignore_errors=True)
 
     logger.info("Finished software composition analysis for %s", build_id)
     return no_of_new_components
 
 
 def _scan_files(anchor_node, sources) -> int:
+    logger.info(
+        "Scan files called with anchor node: %s, and sources: %s", anchor_node.obj.purl, sources
+    )
     new_components = 0
     for component in Syft.scan_files(sources):
         if save_component(component, anchor_node):
@@ -193,18 +197,17 @@ def _download_lookaside_sources(
             f"{settings.SCA_SCRATCH_DIR}/{LOOKASIDE_SCRATCH_SUBDIR}/{build_id}/"  # joined below
             f"{lookaside_source_checksum[:6]}-{lookaside_path_base}"
         )
-        if not target_filepath.exists():
-            _download_source(lookaside_download_url, target_filepath)
-        else:
-            logger.info("%s already exists, not downloading", target_filepath)
+        _download_source(lookaside_download_url, target_filepath)
         downloaded_sources.append(target_filepath)
     return downloaded_sources
 
 
 def _download_source(download_url, target_filepath):
-    package_dir = Path(os.path.dirname(target_filepath))
-    package_dir.mkdir(exist_ok=True, parents=True)
-    logger.info("Downloading sources from: %s", download_url)
+    package_dir = Path(target_filepath.parents[0])
+    # This can be called multiple times for each source in the lookaside cache. We allow existing
+    # package_dir not to fail in case this is a subsequent file we are downloading
+    package_dir.mkdir(parents=True, exist_ok=True)
+    logger.info("Downloading sources from: %s, to: %s", download_url, target_filepath)
     r: Response = requests.get(download_url)
     target_filepath.open("wb").write(r.content)
 

@@ -235,7 +235,9 @@ class SoftwareBuild(TimeStampedModel):
         return None
 
     def save_component_taxonomy(self):
-        """it is only possible to update ('materialize') component taxonomy when all
+        """Note: this function is no longer invoked and may be removed in the future.
+
+        it is only possible to update ('materialize') component taxonomy when all
         components (from a build) have loaded"""
         for component in Component.objects.filter(software_build__build_id=self.build_id):
             for cnode in component.cnodes.get_queryset():

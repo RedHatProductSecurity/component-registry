@@ -213,7 +213,7 @@ class Migration(migrations.Migration):
                 ("purl", models.CharField(default="", max_length=1024)),
                 ("lft", models.PositiveIntegerField(editable=False)),
                 ("rght", models.PositiveIntegerField(editable=False)),
-                ("tree_id", models.PositiveIntegerField(db_index=True, editable=False)),
+                ("tree_id", models.UUIDField(blank=True, db_index=True, default=uuid.uuid4)),
                 ("level", models.PositiveIntegerField(editable=False)),
             ],
             options={
@@ -481,7 +481,7 @@ class Migration(migrations.Migration):
                 ("object_id", models.UUIDField()),
                 ("lft", models.PositiveIntegerField(editable=False)),
                 ("rght", models.PositiveIntegerField(editable=False)),
-                ("tree_id", models.PositiveIntegerField(db_index=True, editable=False)),
+                ("tree_id", models.UUIDField(blank=True, db_index=True, default=uuid.uuid4)),
                 ("level", models.PositiveIntegerField(editable=False)),
                 (
                     "content_type",

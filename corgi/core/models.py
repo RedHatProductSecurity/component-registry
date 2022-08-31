@@ -32,6 +32,7 @@ class ProductNode(MPTTModel, TimeStampedModel):
 
     class MPTTMeta:
         level_attr = "level"
+        root_node_ordering = False
 
     class Meta:
         constraints = [
@@ -152,6 +153,7 @@ class ComponentNode(MPTTModel, TimeStampedModel):
 
     class MPTTMeta:
         level_attr = "level"
+        root_node_ordering = False
 
     class Meta:
         constraints = [

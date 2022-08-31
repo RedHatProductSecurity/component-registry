@@ -1,5 +1,4 @@
 import logging
-import os
 import re
 import shutil
 import subprocess  # nosec B404
@@ -18,6 +17,7 @@ from corgi.collectors.syft import Syft
 from corgi.core.models import Component, ComponentNode, SoftwareBuild
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 
+LOOKASIDE_SCRATCH_SUBDIR = "lookaside"
 LOOKASIDE_REGEX_SOURCE_PATTERNS = [
     # https://regex101.com/r/xYoHtX/1
     r"^(?P<hash>[a-f0-9]*)[ ]+(?P<file>[a-zA-Z0-9.\-_]*)",
@@ -69,17 +69,15 @@ def save_component(component: dict[str, Any], parent: ComponentNode):
 def slow_software_composition_analysis(build_id: int):
     logger.info("Started software composition analysis for %s", build_id)
     software_build = SoftwareBuild.objects.get(build_id=build_id)
-
     try:
         # Get a matching SRPM first
         root_component = Component.objects.get(
-            software_build=software_build, name=software_build.name, type=Component.Type.SRPM
+            software_build=software_build, type=Component.Type.SRPM
         )
     except Component.DoesNotExist:
         # It might be a container image, else fail the task if neither matched
         root_component = Component.objects.get(
             software_build=software_build,
-            name=software_build.name,
             type=Component.Type.CONTAINER_IMAGE,
             arch="noarch",
         )
@@ -87,65 +85,51 @@ def slow_software_composition_analysis(build_id: int):
     root_node = root_component.cnodes.first()
     if not root_node:
         raise ValueError(f"Didn't find root component node for {root_component.purl}")
-    package_type = "rpms"
-    if root_component.type == Component.Type.CONTAINER_IMAGE:
-        package_type = "containers"
-        _scan_remote_sources(root_component, root_node)
 
-    distgit_sources = _get_distgit_sources(software_build.source, package_type)
+    distgit_sources = _get_distgit_sources(software_build.source, build_id)
 
-    scan_files(root_node, distgit_sources)
+    no_of_new_components = _scan_files(root_node, distgit_sources)
+    if no_of_new_components > 0:
+        software_build.save_component_taxonomy()
+        software_build.save_product_taxonomy()
 
-    software_build.save_component_taxonomy()
-    software_build.save_product_taxonomy()
+    # clean up source code so that we don't have to deal with reuse and an ever growing disk
+    for source in distgit_sources:
+        rm_target = source
+        if source.is_file():
+            rm_target = source.parents[0]
+        # Ignore errors because the dir might already be deleted due to multiples sources
+        # being in the same directory
+        shutil.rmtree(rm_target, ignore_errors=True)
 
     logger.info("Finished software composition analysis for %s", build_id)
+    return no_of_new_components
 
 
-def _scan_remote_sources(root_component, root_node):
-    for upstream in root_component.upstreams:
-        upstream_node = ComponentNode.objects.get(
-            type=ComponentNode.ComponentNodeType.SOURCE, parent=root_node, purl=upstream
-        )
-        # This is potentially quite slow. We could probably make this more efficient by splitting
-        # it off into another task
-        if "remote_source_archive" in upstream_node.obj.meta_attr:
-            # Download source to scratch
-            remote_source_archive = upstream_node.obj.meta_attr["remote_source_archive"]
-            url = urlparse(remote_source_archive)
-            filename = url.path.rsplit("/", 1)[-1]
-            target_filepath = Path(
-                f"{settings.SCA_SCRATCH_DIR}/containers/{root_component.nvr}/{filename}"
-            )
-            # This scans the whole archive without unpacking it. If we find this returns extraneous
-            # results we could probably unpack the archive and scan only the app subdirectory
-            _download_source(remote_source_archive, target_filepath)
-            # Scan source
-            scan_files(upstream_node, [target_filepath])
-            # remove source
-            package_dir = Path(os.path.dirname(target_filepath))
-            shutil.rmtree(package_dir)
-
-
-def scan_files(anchor_node, sources):
+def _scan_files(anchor_node, sources) -> int:
+    logger.info(
+        "Scan files called with anchor node: %s, and sources: %s", anchor_node.obj.purl, sources
+    )
     new_components = 0
     for component in Syft.scan_files(sources):
         if save_component(component, anchor_node):
             new_components += 1
     logger.info("Detected %s new components using Syft scan", new_components)
+    return new_components
 
 
-def _get_distgit_sources(source_url: str, package_type: str) -> list[Path]:
+def _get_distgit_sources(source_url: str, build_id: int) -> list[Path]:
     distgit_sources: list[Path] = []
-    raw_source, package_name = _clone_source(source_url, package_type)
-    if not raw_source or not package_name:
+    raw_source, package_type, package_name = _clone_source(source_url, build_id)
+    if not raw_source:
         return []
     distgit_sources.append(raw_source)
-    distgit_sources.extend(_download_lookaside_sources(raw_source, package_name, package_type))
+    sources = _download_lookaside_sources(raw_source, build_id, package_type, package_name)
+    distgit_sources.extend(sources)
     return distgit_sources
 
 
-def _clone_source(source_url: str, package_type: str) -> Tuple[Optional[Path], str]:
+def _clone_source(source_url: str, build_id: int) -> Tuple[Path, str, str]:
     # (scheme, netloc, path, parameters, query, fragment)
     url = urlparse(source_url)
 
@@ -154,22 +138,26 @@ def _clone_source(source_url: str, package_type: str) -> Tuple[Optional[Path], s
         raise ValueError("Cannot download raw source for anything but git protocol")
 
     git_remote = f"{url.scheme}://{url.netloc}{url.path}"
-    package_name = url.path.rsplit("/", 1)[-1]
+    path_parts = url.path.rsplit("/", 2)
+    package_type = path_parts[1]
+    package_name = path_parts[2]
     commit = url.fragment
 
-    target_path = Path(f"{settings.SCA_SCRATCH_DIR}/{package_type}/{package_name}")
+    target_path = Path(f"{settings.SCA_SCRATCH_DIR}/{build_id}/")
 
     # Allow existing directory error to cause parent task to fail
-    target_path.mkdir(parents=True)
+    target_path.mkdir()
 
     logger.info("Fetching %s to %s", git_remote, target_path)
     subprocess.check_call(["/usr/bin/git", "clone", git_remote, target_path])  # nosec B603
-    subprocess.check_call(["/usr/bin/git", "checkout", commit], cwd=target_path)  # nosec B603
-    return target_path, package_name
+    subprocess.check_call(  # nosec B603
+        ["/usr/bin/git", "checkout", commit], cwd=target_path, stderr=subprocess.DEVNULL
+    )
+    return target_path, package_type, package_name
 
 
 def _download_lookaside_sources(
-    distgit_sources: Path, package_name: str, package_type: str
+    distgit_sources: Path, build_id: int, package_type: str, package_name: str
 ) -> list[Path]:
     lookaside_source = distgit_sources / "sources"
     if not lookaside_source.exists():
@@ -192,9 +180,7 @@ def _download_lookaside_sources(
         lookaside_source_filename = lookaside_source_matches.get("file", "")
         lookaside_source_checksum = lookaside_source_matches.get("hash", "")
         lookaside_hash_algorith = lookaside_source_matches.get("alg", "md5").lower()
-        lookaside_path_base: Path = Path(
-            package_type + "/" + package_name + "/" + lookaside_source_filename
-        )
+        lookaside_path_base: Path = Path(lookaside_source_filename)
         lookaside_path = Path.joinpath(
             lookaside_path_base,
             lookaside_hash_algorith,
@@ -203,21 +189,25 @@ def _download_lookaside_sources(
         )
         # https://<host>/repo/rpms/containernetworking-plugins/v0.8.6.tar.gz/md5/
         # 85eddf3d872418c1c9d990ab8562cc20/v0.8.6.tar.gz
-        lookaside_download_url = f"{settings.LOOKASIDE_CACHE_BASE_URL}/{lookaside_path}"
-        # eg. /tmp/lookaside/rpms/containernetworking-plugins/v0.8.6.tar.gz
-        target_filepath = Path(f"{settings.SCA_SCRATCH_DIR}/lookaside/{lookaside_path_base}")
-        if not target_filepath.exists():
-            _download_source(lookaside_download_url, target_filepath)
-        else:
-            logger.info("%s already exists, not downloading", target_filepath)
+        lookaside_download_url = (
+            f"{settings.LOOKASIDE_CACHE_BASE_URL}/{package_type}/{package_name}/{lookaside_path}"
+        )
+        # eg. /tmp/lookaside/<build_id>/85eddf-v0.8.6.tar.gz
+        target_filepath = Path(
+            f"{settings.SCA_SCRATCH_DIR}/{LOOKASIDE_SCRATCH_SUBDIR}/{build_id}/"  # joined below
+            f"{lookaside_source_checksum[:6]}-{lookaside_path_base}"
+        )
+        _download_source(lookaside_download_url, target_filepath)
         downloaded_sources.append(target_filepath)
     return downloaded_sources
 
 
 def _download_source(download_url, target_filepath):
-    package_dir = Path(os.path.dirname(target_filepath))
-    package_dir.mkdir(exist_ok=True, parents=True)
-    logger.info("Downloading sources from: %s", download_url)
+    package_dir = Path(target_filepath.parents[0])
+    # This can be called multiple times for each source in the lookaside cache. We allow existing
+    # package_dir not to fail in case this is a subsequent file we are downloading
+    package_dir.mkdir(parents=True, exist_ok=True)
+    logger.info("Downloading sources from: %s, to: %s", download_url, target_filepath)
     r: Response = requests.get(download_url)
     target_filepath.open("wb").write(r.content)
 

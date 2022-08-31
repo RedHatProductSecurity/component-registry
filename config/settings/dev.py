@@ -28,6 +28,3 @@ MIDDLEWARE += ["debug_toolbar.middleware.DebugToolbarMiddleware"]  # noqa: F405
 # localhost to INTERNAL_IPS is not sufficient).
 # https://django-debug-toolbar.readthedocs.io/en/latest/configuration.html#toolbar-options
 DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": lambda _: True}
-
-DISTGIT_DIR = os.getenv("CORGI_DISTGIT_DIR", "")  # noqa: F405
-LOOKASIDE_DIR = "/tmp"

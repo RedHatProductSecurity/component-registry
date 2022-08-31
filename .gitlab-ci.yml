@@ -42,16 +42,24 @@ build-image:
   stage: build
   extends:
     - .ansible-build
+# No "except: refs: schedules" here, daily image rebuilds
+# (as part of detect-secrets daily CI job) give us any new security updates
 
 deploy-stage:
   stage: deploy-stage
   extends:
     - .ansible-deploy-stage
+  except:
+    refs:
+      - schedules
 
 deploy-prod:
   stage: deploy-prod
   extends:
     - .ansible-deploy-prod
+  except:
+    refs:
+      - schedules
 
 test:
   stage: test

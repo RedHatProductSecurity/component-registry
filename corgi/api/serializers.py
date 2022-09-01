@@ -187,15 +187,15 @@ class ComponentSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_provides(instance: Component) -> list[dict[str, str]]:
-        return get_component_data_list(instance.provides)
+        return get_component_data_list(instance.get_provides())
 
     @staticmethod
     def get_sources(instance: Component) -> list[dict[str, str]]:
-        return get_component_data_list(instance.sources)
+        return get_component_data_list(instance.get_source())
 
     @staticmethod
     def get_upstreams(instance: Component) -> list[dict[str, str]]:
-        return get_component_data_list(instance.upstreams)
+        return get_component_data_list(instance.get_upstreams())
 
     class Meta:
         model = Component
@@ -271,15 +271,15 @@ class ComponentDetailSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_provides(instance: Component) -> list[dict[str, str]]:
-        return get_component_data_list(instance.provides)
+        return get_component_data_list(instance.get_provides())
 
     @staticmethod
     def get_sources(instance: Component) -> list[dict[str, str]]:
-        return get_component_data_list(instance.sources)
+        return get_component_data_list(instance.get_source())
 
     @staticmethod
     def get_upstreams(instance: Component) -> list[dict[str, str]]:
-        return get_component_data_list(instance.upstreams)
+        return get_component_data_list(instance.get_upstreams())
 
     class Meta:
         model = Component

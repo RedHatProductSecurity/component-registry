@@ -182,7 +182,7 @@ LOGGING = {
     },
     "loggers": {
         "django": {"handlers": ["console"], "level": "WARNING"},
-        "corgi": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
+        "corgi": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }
 

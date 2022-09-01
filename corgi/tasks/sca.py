@@ -90,7 +90,6 @@ def slow_software_composition_analysis(build_id: int):
 
     no_of_new_components = _scan_files(root_node, distgit_sources)
     if no_of_new_components > 0:
-        software_build.save_component_taxonomy()
         software_build.save_product_taxonomy()
 
     # clean up source code so that we don't have to deal with reuse and an ever growing disk

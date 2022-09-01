@@ -76,9 +76,13 @@ def test_update_variant_repos():
         channel = Channel.objects.get(type=Channel.Type.CDN_REPO, name=repo)
         assert channel.pnodes.count() == 2
         assert (
-            channel.pnodes.first().get_ancestors().first().obj.name == "HighAvailability-8.2.0.GA"
+            channel.pnodes.order_by("id").first().get_ancestors().first().obj.name
+            == "HighAvailability-8.2.0.GA"
         )
-        assert channel.pnodes.last().get_ancestors().first().obj.name == "HighAvailability-8.3.0.GA"
+        assert (
+            channel.pnodes.order_by("id").last().get_ancestors().first().obj.name
+            == "HighAvailability-8.3.0.GA"
+        )
 
 
 # id, no_of_obj

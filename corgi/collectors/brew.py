@@ -2,6 +2,7 @@ import itertools
 import json
 import logging
 import re
+from datetime import datetime
 from types import SimpleNamespace
 from typing import Any, Tuple
 from urllib.parse import urlparse
@@ -692,10 +693,18 @@ class Brew:
 
         # Determine build source
         if not build.get("source"):
-            # Sometimes there is no source URL on the build but it can be found in the task
+            # Sometimes there is no source URL on the build, but it can be found in the task
             # request info instead.
             logger.info("Fetching source from task info for %s", build_id)
-            build["source"] = self.get_source_of_build(build)
+            try:
+                build["source"] = self.get_source_of_build(build)
+            except BrewBuildSourceNotFound as exc:
+                # Some older builds do not specify source URLs; the below date was chosen based
+                # on some initial analysis of source-less builds in Brew.
+                if datetime.fromtimestamp(build["completion_ts"]) < datetime(2015, 1, 1):
+                    return {}
+                else:
+                    raise exc
 
         # Add list of Brew tags for this build
         tags = self.koji_session.listTags(build_id)

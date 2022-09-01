@@ -47,12 +47,12 @@ class Brew:
     MAVEN_BUILD_TYPE = "maven"
     WIN_BUILD_TYPE = "win"
     MODULE_BUILD_TYPE = "module"
+
+    # A subset of build types that we are able to analyze right now, others from the listing
+    # above will be added once support for them is added.
     SUPPORTED_BUILD_TYPES = (
         CONTAINER_BUILD_TYPE,
         RPM_BUILD_TYPE,
-        # These builds fail because we don't support Maven (yet?)
-        # MAVEN_BUILD_TYPE,
-        WIN_BUILD_TYPE,
         MODULE_BUILD_TYPE,
     )
 
@@ -701,14 +701,10 @@ class Brew:
             component = self.get_container_build_data(build_id, build)
         elif build_type == self.RPM_BUILD_TYPE:
             component = self.get_rpm_build_data(build_id)
-        elif build_type == self.MAVEN_BUILD_TYPE:
-            component = self.get_maven_build_data(build, build_type_info)
         elif build_type == self.MODULE_BUILD_TYPE:
             component = self.get_module_build_data(build)
-        elif build_type == self.WIN_BUILD_TYPE:
-            component = {}
         else:
-            component = {}
+            return {}
 
         component["build_meta"] = {"build_info": build, "type_info": build_type_info}
         return component

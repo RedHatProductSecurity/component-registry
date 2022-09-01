@@ -670,13 +670,24 @@ class Brew:
 
         # Determine build type
         build_type_info = self.koji_session.getBuildType(build)
+        build_type = next(
+            type_ for type_ in build_type_info.keys() if type_ in self.SUPPORTED_BUILD_TYPES
+        )
         if not any(type_ in self.SUPPORTED_BUILD_TYPES for type_ in build_type_info.keys()):
             raise BrewBuildTypeNotSupported(
                 f"Build {build_id} type is not supported: {build_type_info}"
             )
-        build_type = next(
-            type_ for type_ in build_type_info.keys() if type_ in self.SUPPORTED_BUILD_TYPES
-        )
+        # TODO: refactor Brew.CONTAINER_BUILD_TYPE to be a generic IMAGE_TYPE with image types
+        #  identified in a separate attribute on the build itself.
+        if build_type == self.CONTAINER_BUILD_TYPE:
+            # If this is an "image" type build, it may be building a container image, ISO image,
+            # or other types of images. Check the content generator name to determine where this
+            # image was built, which indicates what type of image it is.
+            if build["cg_name"] != "atomic-reactor":
+                # Container images are built in OSBS, which uses atomic-reactor to build them.
+                raise BrewBuildTypeNotSupported(
+                    f"Image build {build_id} is not supported: {build['cg_name']} content generator used"
+                )
         build["type"] = build_type
 
         # Determine build source

@@ -6,7 +6,6 @@ from collections import defaultdict
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
-from django.core.exceptions import MultipleObjectsReturned
 from django.db import models
 from django.db.models import Q, QuerySet
 from mptt.models import MPTTModel, TreeForeignKey
@@ -32,6 +31,7 @@ class ProductNode(MPTTModel, TimeStampedModel):
 
     class MPTTMeta:
         level_attr = "level"
+        root_node_ordering = False
 
     class Meta:
         constraints = [
@@ -152,6 +152,7 @@ class ComponentNode(MPTTModel, TimeStampedModel):
 
     class MPTTMeta:
         level_attr = "level"
+        root_node_ordering = False
 
     class Meta:
         constraints = [
@@ -841,30 +842,25 @@ class Component(TimeStampedModel):
         if not self.software_build:
             return roots
         for cnode in self.cnodes.get_queryset():
-            try:
-                root = cnode.get_root()
-                if root.obj.type == Component.Type.CONTAINER_IMAGE:
-                    # TODO if we change the CONTAINER->RPM ComponentNode.type to something besides
-                    # 'PROVIDES' we would check for that type here to prevent 'hardcoding' the
-                    # container -> rpm relationship here.
-                    # RPMs are included as children of Containers as well as SRPMs
-                    # We don't want to include Containers in the RPMs roots.
-                    # Partly because RPMs in containers can have unprocesses SRPMs
-                    # And partly because we use roots to find upstream components,
-                    # and it's not true to say that rpms share upstreams with containers
-                    rpm_desendant = False
-                    for ancestor in cnode.get_ancestors(include_self=True):
-                        if ancestor.obj.type == Component.Type.RPM:
-                            rpm_desendant = True
-                            break
-                    if not rpm_desendant:
-                        roots.append(root)
-                else:
+            root = cnode.get_root()
+            if root.obj.type == Component.Type.CONTAINER_IMAGE:
+                # TODO if we change the CONTAINER->RPM ComponentNode.type to something besides
+                # 'PROVIDES' we would check for that type here to prevent 'hardcoding' the
+                # container -> rpm relationship here.
+                # RPMs are included as children of Containers as well as SRPMs
+                # We don't want to include Containers in the RPMs roots.
+                # Partly because RPMs in containers can have unprocesses SRPMs
+                # And partly because we use roots to find upstream components,
+                # and it's not true to say that rpms share upstreams with containers
+                rpm_descendant = False
+                for ancestor in cnode.get_ancestors(include_self=True):
+                    if ancestor.obj.type == Component.Type.RPM:
+                        rpm_descendant = True
+                        break
+                if not rpm_descendant:
                     roots.append(root)
-            except MultipleObjectsReturned:
-                logger.warning(
-                    "Component %s returned multiple objects when returning get_roots", self.purl
-                )
+            else:
+                roots.append(root)
         return list(set(roots))
 
     @property

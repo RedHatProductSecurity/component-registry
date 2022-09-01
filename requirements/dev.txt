@@ -266,9 +266,8 @@ django-js-asset==2.0.0 \
     #   -r requirements/base.txt
     #   -r requirements/test.txt
     #   django-mptt
-django-mptt==0.13.4 \
-    --hash=sha256:75745b621ae31d97957ed924155a750dfa8cacd9543799ada2d713fd6bc3f5c7 \
-    --hash=sha256:80c9fb34df7796a4e5af0cb6b8ade3697555b1aa438bd07a01f32b3ab5202b63
+django-mptt @ https://github.com/RedHatProductSecurity/django-mptt/archive/25d49a400d349740c5295e4301f29a98ae025a07.zip \
+    --hash=sha256:5aa8e633264c7526b55bd49d41330de17f3b4281649dfdb071014dfcb020df95
     # via
     #   -r requirements/base.txt
     #   -r requirements/test.txt

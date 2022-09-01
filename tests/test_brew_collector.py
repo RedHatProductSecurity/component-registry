@@ -72,14 +72,15 @@ build_corpus = [
         "image",
     ),
     # org.apache.cxf-cxf: brew buildID=1796072
-    (
-        1796072,
-        os.getenv("CORGI_TEST_CODE_URL"),
-        "redhat",
-        "org.apache.cxf-cxf",
-        "",
-        "maven",
-    ),
+    # TODO: uncomment when Maven build type is supported
+    # (
+    #     1796072,
+    #     os.getenv("CORGI_TEST_CODE_URL"),
+    #     "redhat",
+    #     "org.apache.cxf-cxf",
+    #     "",
+    #     "maven",
+    # ),
     # nodejs: brew buildID=1700497
     (
         1700497,
@@ -116,8 +117,9 @@ def test_get_component_data(build_id, build_source, build_ns, build_name, licens
     c = Brew().get_component_data(build_id)
     if build_type == "module":
         assert list(c.keys()) == ["type", "namespace", "meta", "analysis_meta", "build_meta"]
-    elif build_type == "maven":
-        assert list(c.keys()) == ["type", "namespace", "meta", "build_meta"]
+    # TODO: uncomment when Maven build type is supported
+    # elif build_type == "maven":
+    #     assert list(c.keys()) == ["type", "namespace", "meta", "build_meta"]
     elif build_type == "image":
         assert list(c.keys()) == [
             "type",

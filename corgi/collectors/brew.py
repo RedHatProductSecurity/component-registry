@@ -687,7 +687,8 @@ class Brew:
             if build["cg_name"] != "atomic-reactor":
                 # Container images are built in OSBS, which uses atomic-reactor to build them.
                 raise BrewBuildTypeNotSupported(
-                    f"Image build {build_id} is not supported: {build['cg_name']} content generator used"
+                    f"Image build {build_id} is not supported: "
+                    f"{build['cg_name']} content generator used"
                 )
         build["type"] = build_type
 
@@ -702,6 +703,10 @@ class Brew:
                 # Some older builds do not specify source URLs; the below date was chosen based
                 # on some initial analysis of source-less builds in Brew.
                 if datetime.fromtimestamp(build["completion_ts"]) < datetime(2015, 1, 1):
+                    logger.error(
+                        f"Build {build_id} has no associated source URL but is too old "
+                        f"to process; returning an empty component."
+                    )
                     return {}
                 else:
                     raise exc
@@ -724,7 +729,9 @@ class Brew:
         elif build_type == self.MODULE_BUILD_TYPE:
             component = self.get_module_build_data(build)
         else:
-            return {}
+            raise BrewBuildTypeNotSupported(
+                f"Build {build_id} of type {build_type} is not supported"
+            )
 
         component["build_meta"] = {"build_info": build, "type_info": build_type_info}
         return component

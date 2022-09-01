@@ -29,17 +29,21 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
     else:
         logger.info("Fetching brew build with build_id: %s", build_id)
 
-    build = Brew().get_component_data(build_id)
-    build_meta = build["build_meta"]["build_info"]
+    component = Brew().get_component_data(build_id)
+    if not component:
+        logger.info("No data fetched for build %s from Brew, exiting...", build_id)
+        return
+
+    build_meta = component["build_meta"]["build_info"]
     build_meta["corgi_ingest_start_dt"] = dateformat.format(timezone.now(), "Y-m-d H:i:s")
     build_meta["corgi_ingest_status"] = "INPROGRESS"
 
     softwarebuild, created = SoftwareBuild.objects.get_or_create(
-        build_id=build["build_meta"]["build_info"]["build_id"],
+        build_id=component["build_meta"]["build_info"]["build_id"],
         defaults={
             "type": SoftwareBuild.Type.BREW,
-            "name": build["meta"]["name"],
-            "source": build["build_meta"]["build_info"]["source"],
+            "name": component["meta"]["name"],
+            "source": component["build_meta"]["build_info"]["source"],
             "meta_attr": build_meta,
         },
     )
@@ -49,16 +53,18 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
         logger.warning("SoftwareBuild with build_id %s already existed, not reprocessing", build_id)
         return
 
-    if build["type"] == "rpm":
-        root_node = save_srpm(softwarebuild, build)
-    elif build["type"] == "image":
-        root_node = save_container(softwarebuild, build)
-    elif build["type"] == "module":
-        root_node = save_module(softwarebuild, build)
+    if component["type"] == "rpm":
+        root_node = save_srpm(softwarebuild, component)
+    elif component["type"] == "image":
+        root_node = save_container(softwarebuild, component)
+    elif component["type"] == "module":
+        root_node = save_module(softwarebuild, component)
     else:
-        raise BrewBuildTypeNotSupported(f"Build {build_id} type is not supported: {build['type']}")
+        raise BrewBuildTypeNotSupported(
+            f"Build {build_id} type is not supported: {component['type']}"
+        )
 
-    for c in build.get("components", []):
+    for c in component.get("components", []):
         save_component(c, root_node, softwarebuild)
 
     # We don't call save_product_taxonomy by default to allow async call of slow_load_errata task
@@ -77,7 +83,8 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
             for e in build_meta["errata_tags"]:
                 slow_load_errata.delay(e)
 
-    build_ids = build.get("nested_builds", ())
+    build_ids = component.get("nested_builds", ())
+    logger.info("Fetching brew builds for %s", build_ids)
     for b_id in build_ids:
         logger.info("Requesting fetch of nested build: %s", b_id)
         slow_fetch_brew_build.delay(b_id)

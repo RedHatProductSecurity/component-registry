@@ -195,6 +195,9 @@ DATABASES = {
         "PASSWORD": os.getenv("CORGI_DB_PASSWORD", "test"),
         "HOST": os.getenv("CORGI_DB_HOST", "localhost"),
         "PORT": os.getenv("CORGI_DB_PORT", "5432"),
+        # Prefer password authentication even if a valid Kerberos ticket exists on the system.
+        # See: https://www.postgresql.org/docs/devel/libpq-connect.html#LIBPQ-CONNECT-GSSENCMODE
+        "OPTIONS": {"gssencmode": "disable"},
     }
 }
 

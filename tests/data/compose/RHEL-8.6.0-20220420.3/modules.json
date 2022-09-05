@@ -10,6 +10,16 @@
             "respin": 3,
             "type": "production"
         },
-        "modules": {}
+        "modules": {
+            "BaseOS": {
+                "x86_64": {
+                    "389-ds:1.4:8060020220204145416:ce3e8c9c": {
+                        "rpms": [
+                            "389-ds-base:0-1.4.3.28-6.module+el8.6.0+14129+983ceada.x86_64"
+                        ]
+                    }
+                }
+            }
+        }
     }
 }

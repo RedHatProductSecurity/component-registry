@@ -3,7 +3,6 @@ import logging
 from celery_singleton import Singleton
 
 from config.celery import app
-from corgi.collectors.brew import Brew
 from corgi.collectors.rhel_compose import RhelCompose
 from corgi.core.models import ProductComponentRelation, ProductStream
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
@@ -20,7 +19,6 @@ def save_composes() -> None:
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def save_compose(stream_name) -> None:
-    brew = Brew()
     logger.info("Called save compose with %s", stream_name)
     ps = ProductStream.objects.get(name=stream_name)
     no_of_relations = 0
@@ -28,47 +26,25 @@ def save_compose(stream_name) -> None:
         compose_id, compose_created_date, compose_data = RhelCompose.fetch_compose_data(
             compose_url, variants
         )
-        if "srpms" not in compose_data:
-            continue
-        srpms = compose_data["srpms"].keys()
-        find_build_id_calls = _brew_srpm_lookup(brew, srpms)
-        for srpm, call in find_build_id_calls:
-            build_id = call.result
-            if not build_id:
-                for filename in compose_data["srpms"][srpm]:
-                    logger.debug(
-                        "Didn't find build with NVR %s, using rpm filename: %s",
-                        srpm,
-                        filename,
-                    )
-                    rpm_data = brew.koji_session.getRPM(filename)
-                    if not rpm_data:
-                        # Try the next srpm rpm filename
-                        continue
-                    build_id = rpm_data["build_id"]
-                    # found the build_id, stop iterating filenames
-                    break
-                # if no filenames had RPM data
-                if not build_id:
-                    raise ValueError(
-                        f"When saving compose for {stream_name}'s {compose_id},"
-                        f"no filenames had RPM data for {srpm}"
-                    )
-            _, created = ProductComponentRelation.objects.get_or_create(
-                external_system_id=compose_id,
-                product_ref=stream_name,
-                build_id=build_id,
-                defaults={"type": ProductComponentRelation.Type.COMPOSE},
-            )
-            if created:
-                no_of_relations += 1
+        for key in "srpms", "rhel_modules":
+            no_of_relations += _create_relations(compose_data, key, compose_id, stream_name)
     logger.info("Created %s new relations for stream %s", no_of_relations, stream_name)
 
 
-def _brew_srpm_lookup(brew, srpms) -> tuple:
-    with brew.koji_session.multicall() as multicall:
-        find_build_id_calls = tuple((srpm, multicall.findBuildID(srpm)) for srpm in srpms)
-    return find_build_id_calls
+def _create_relations(compose_data, key, compose_id, stream_name) -> int:
+    no_of_relations = 0
+    if key not in compose_data:
+        return no_of_relations
+    for build_id in compose_data[key]:
+        _, created = ProductComponentRelation.objects.get_or_create(
+            external_system_id=compose_id,
+            product_ref=stream_name,
+            build_id=build_id,
+            defaults={"type": ProductComponentRelation.Type.COMPOSE},
+        )
+        if created:
+            no_of_relations += 1
+    return no_of_relations
 
 
 def get_builds_by_compose(compose_names):

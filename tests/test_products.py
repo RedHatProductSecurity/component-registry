@@ -1,11 +1,13 @@
 import os
-from datetime import datetime
 from unittest.mock import patch
 
 import pytest
 from django.conf import settings
 
 from corgi.collectors.models import (
+    CollectorComposeRhelModule,
+    CollectorComposeRPM,
+    CollectorComposeSRPM,
     CollectorErrataProduct,
     CollectorErrataProductVariant,
     CollectorErrataProductVersion,
@@ -20,89 +22,74 @@ pytestmark = pytest.mark.unit
 base_url = os.getenv("CORGI_TEST_DOWNLOAD_URL")
 
 
-def test_fetch_compose_data(requests_mock):
+@patch("corgi.collectors.brew.Brew.brew_srpm_lookup")
+@patch("corgi.collectors.brew.Brew.brew_rpm_lookup")
+def test_fetch_module_data(mock_brew_rpm_lookup, mock_brew_srpm_lookup, requests_mock):
     compose_url = (
-        f"{os.getenv('CORGI_TEST_DOWNLOAD_URL')}/rhel-8/rel-eng/RHEL-8/latest-RHEL-8.6.0/compose"
+        f"{os.getenv('CORGI_TEST_DOWNLOAD_URL')}"
+        f"/rhel-8/rel-eng/RHEL-8/latest-RHEL-8.6.0/compose/metadata/"
     )
-    for path in ["composeinfo", "rpms", "osbs", "modules"]:
-        with open(f"tests/data/compose/RHEL-8.6.0-20220420.3/{path}.json") as compose:
-            requests_mock.get(f"{compose_url}/metadata/{path}.json", text=compose.read())
+    with open("tests/data/compose/RHEL-8.6.0-20220420.3/modules.json") as compose:
+        requests_mock.get(f"{compose_url}modules.json", text=compose.read())
 
-    compose_data = RhelCompose.fetch_compose_data(compose_url, ["BaseOS", "SAPHANA"])
-    expected = (
-        "RHEL-8.6.0-20220420.3",
-        datetime(2022, 4, 20, 0, 0),
-        [
-            "curl-7.61.1-22.el8.aarch64.rpm",
-            "curl-7.61.1-22.el8.src.rpm",
-            "curl-debuginfo-7.61.1-22.el8.aarch64.rpm",
-            "curl-debugsource-7.61.1-22.el8.aarch64.rpm",
-            "libcurl-7.61.1-22.el8.aarch64.rpm",
-            "libcurl-debuginfo-7.61.1-22.el8.aarch64.rpm",
-            "libcurl-devel-7.61.1-22.el8.aarch64.rpm",
-            "libcurl-minimal-7.61.1-22.el8.aarch64.rpm",
-            "libcurl-minimal-debuginfo-7.61.1-22.el8.aarch64.rpm",
-            "curl-7.61.1-22.el8.ppc64le.rpm",
-            "curl-7.61.1-22.el8.src.rpm",
-            "curl-debuginfo-7.61.1-22.el8.ppc64le.rpm",
-            "curl-debugsource-7.61.1-22.el8.ppc64le.rpm",
-            "libcurl-7.61.1-22.el8.ppc64le.rpm",
-            "libcurl-debuginfo-7.61.1-22.el8.ppc64le.rpm",
-            "libcurl-devel-7.61.1-22.el8.ppc64le.rpm",
-            "libcurl-minimal-7.61.1-22.el8.ppc64le.rpm",
-            "libcurl-minimal-debuginfo-7.61.1-22.el8.ppc64le.rpm",
-            "curl-7.61.1-22.el8.s390x.rpm",
-            "curl-7.61.1-22.el8.src.rpm",
-            "curl-debuginfo-7.61.1-22.el8.s390x.rpm",
-            "curl-debugsource-7.61.1-22.el8.s390x.rpm",
-            "libcurl-7.61.1-22.el8.s390x.rpm",
-            "libcurl-debuginfo-7.61.1-22.el8.s390x.rpm",
-            "libcurl-devel-7.61.1-22.el8.s390x.rpm",
-            "libcurl-minimal-7.61.1-22.el8.s390x.rpm",
-            "libcurl-minimal-debuginfo-7.61.1-22.el8.s390x.rpm",
-            "curl-7.61.1-22.el8.src.rpm",
-            "curl-7.61.1-22.el8.x86_64.rpm",
-            "curl-debuginfo-7.61.1-22.el8.i686.rpm",
-            "curl-debuginfo-7.61.1-22.el8.x86_64.rpm",
-            "curl-debugsource-7.61.1-22.el8.i686.rpm",
-            "curl-debugsource-7.61.1-22.el8.x86_64.rpm",
-            "libcurl-7.61.1-22.el8.i686.rpm",
-            "libcurl-7.61.1-22.el8.x86_64.rpm",
-            "libcurl-debuginfo-7.61.1-22.el8.i686.rpm",
-            "libcurl-debuginfo-7.61.1-22.el8.x86_64.rpm",
-            "libcurl-devel-7.61.1-22.el8.i686.rpm",
-            "libcurl-devel-7.61.1-22.el8.x86_64.rpm",
-            "libcurl-minimal-7.61.1-22.el8.i686.rpm",
-            "libcurl-minimal-7.61.1-22.el8.x86_64.rpm",
-            "libcurl-minimal-debuginfo-7.61.1-22.el8.i686.rpm",
-            "libcurl-minimal-debuginfo-7.61.1-22.el8.x86_64.rpm",
-        ],
-        [
-            "compat-sap-c++-10-10.2.1-1.el8.ppc64le.rpm",
-            "compat-sap-c++-10-10.2.1-1.el8.src.rpm",
-            "compat-sap-c++-10-debuginfo-10.2.1-1.el8.ppc64le.rpm",
-            "compat-sap-c++-10-debugsource-10.2.1-1.el8.ppc64le.rpm",
-            "compat-sap-c++-10-10.2.1-1.el8.src.rpm",
-            "compat-sap-c++-10-10.2.1-1.el8.x86_64.rpm",
-            "compat-sap-c++-10-debuginfo-10.2.1-1.el8.x86_64.rpm",
-            "compat-sap-c++-10-debugsource-10.2.1-1.el8.x86_64.rpm",
-        ],
+    rpm_result = MockBrewResult()
+    rpm_result.result = {"build_id": 1875692}
+    mock_brew_rpm_lookup.return_value = [
+        ("389-ds-base-1.4.3.28-6.module+el8.6.0+14129+983ceada.x86_64", rpm_result)
+    ]
+
+    srpm_result = MockBrewResult()
+    srpm_result.result = 1875729
+    mock_brew_srpm_lookup.return_value = [("389-ds-1.4-8060020220204145416.ce3e8c9c", srpm_result)]
+
+    assert CollectorComposeRhelModule.objects.all().count() == 0
+    assert CollectorComposeSRPM.objects.all().count() == 0
+    assert CollectorComposeRPM.objects.all().count() == 0
+
+    module_srpms = RhelCompose._fetch_module_data(compose_url, ["BaseOS", "SAPHANA"])
+    assert 1875729 in list(module_srpms)
+    rhel_module = CollectorComposeRhelModule.objects.get(
+        nvr="389-ds-1.4-8060020220204145416.ce3e8c9c"
     )
-    assert compose_data[0] == expected[0]
-    assert compose_data[1] == expected[1]
-    srpms = compose_data[2]["srpms"]
-    curl_srpm = srpms["curl-7.61.1-22.el8"]
-    compat_sap_c = srpms["compat-sap-c++-10-10.2.1-1.el8"]
-    assert expected[2] == curl_srpm
-    assert expected[3] == compat_sap_c
+    assert rhel_module.build_id == 1875729
+    srpm = CollectorComposeSRPM.objects.get(build_id=1875692)
+    assert srpm
+
+    rpm = CollectorComposeRPM.objects.get(
+        nvr="389-ds-base-1.4.3.28-6.module+el8.6.0+14129+983ceada.x86_64"
+    )
+    assert rpm
+    assert rpm.rhel_module == rhel_module
+    assert rpm.srpm == srpm
+
+
+@patch("corgi.collectors.brew.Brew.brew_srpm_lookup")
+def test_fetch_rpm_data(mock_brew_srpm_lookup, requests_mock):
+    compose_url = (
+        f"{os.getenv('CORGI_TEST_DOWNLOAD_URL')}"
+        f"/rhel-8/rel-eng/RHEL-8/RHEL-8.4.0-RC-1.2/compose/metadata"
+    )
+    with open("tests/data/compose/RHEL-8.4.0-RC-1.2/rpms.json") as module_data:
+        requests_mock.get(f"{compose_url}rpms.json", text=module_data.read())
+    result = MockBrewResult()
+    result.result = "1533085"
+    mock_brew_srpm_lookup.return_value = [
+        ("389-ds-base-1.4.3.16-13.module+el8.4.0+10307+74bbfb4e", result)
+    ]
+    srpms = RhelCompose._fetch_rpm_data(compose_url, ["AppStream"])
+    assert "1533085" in list(srpms)
 
 
 class MockBrewResult(object):
     pass
 
 
-@patch("corgi.tasks.rhel_compose._brew_srpm_lookup")
-def test_save_compose(mock_brew_srpm_lookup, requests_mock):
+def mock_fetch_rpm_data(compose_url, variants):
+    yield "1533085"
+
+
+@patch("corgi.collectors.rhel_compose.RhelCompose._fetch_rpm_data", new=mock_fetch_rpm_data)
+def test_save_compose(requests_mock):
     composes = {
         f"{os.getenv('CORGI_TEST_DOWNLOAD_URL')}/rhel-8/rel-eng/RHEL-8/RHEL-8.4.0-RC-1.2/compose": [
             "AppStream"
@@ -112,11 +99,6 @@ def test_save_compose(mock_brew_srpm_lookup, requests_mock):
     for path in ["composeinfo", "rpms", "osbs", "modules"]:
         with open(f"tests/data/compose/RHEL-8.4.0-RC-1.2/{path}.json") as compose:
             requests_mock.get(f"{compose_url}/metadata/{path}.json", text=compose.read())
-    result = MockBrewResult()
-    result.result = "1533085"
-    mock_brew_srpm_lookup.return_value = [
-        ("389-ds-base-1.4.3.16-13.module+el8.4.0+10307+74bbfb4e", result)
-    ]
     product_stream = ProductStream.objects.create(name="rhel-8.4.0", composes=composes)
     save_compose("rhel-8.4.0")
     relation = ProductComponentRelation.objects.get(product_ref=product_stream)

@@ -761,3 +761,13 @@ class Brew:
         except koji.GenericError as exc:
             logger.warning("Couldn't find brew builds with tag %s: %s", brew_tag, exc)
             return tuple()
+
+    def brew_srpm_lookup(self, srpms) -> tuple:
+        with self.koji_session.multicall() as multicall:
+            find_build_id_calls = tuple((srpm, multicall.findBuildID(srpm)) for srpm in srpms)
+        return find_build_id_calls
+
+    def brew_rpm_lookup(self, rpms) -> tuple:
+        with self.koji_session.multicall() as multicall:
+            find_build_id_calls = tuple((rpm, multicall.getRPM(rpm)) for rpm in rpms)
+        return find_build_id_calls

@@ -337,7 +337,7 @@ def save_module(softwarebuild, build_data) -> ComponentNode:
             "license": build_data["meta"].get("license", ""),
             "description": build_data["meta"].get("description", ""),
             "software_build": softwarebuild,
-            "meta_attr": build_data["meta"]["components"],
+            "meta_attr": build_data["meta"]["meta_attr"],
         },
     )
     node, _ = obj.cnodes.get_or_create(

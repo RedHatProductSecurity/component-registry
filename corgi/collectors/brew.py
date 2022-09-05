@@ -638,18 +638,25 @@ class Brew:
         if not modulemd_yaml:
             raise ValueError("Cannot get module build data, modulemd_yaml is undefined")
         modulemd = yaml.safe_load(modulemd_yaml)
+        meta_attr = {
+            "stream": modulemd["data"]["stream"],
+            "context": modulemd["data"]["context"],
+            "components": modulemd["data"]["components"],
+            "rpms": modulemd["data"]["xmd"]["mbs"]["rpms"],
+        }
         module = {
             "type": "module",
             "namespace": "redhat",
             "meta": {
                 "nvr": build_info["nvr"],
                 "name": build_info["name"],
-                "version": modulemd["data"].get("version", ""),
+                "version": build_info["version"],
                 "license": " OR ".join(modulemd["data"]["license"].get("module", "")),
                 "release": build_info["release"],
                 # "arch": build_info["arch"],
                 "epoch": build_info["epoch"],
-                "components": modulemd["data"]["components"],
+                "description": modulemd["data"]["description"],
+                "meta_attr": meta_attr,
             },
             "analysis_meta": {
                 "source": [],

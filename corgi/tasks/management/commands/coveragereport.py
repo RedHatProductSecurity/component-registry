@@ -11,8 +11,6 @@ class Command(BaseCommand):
         self.stdout.write("ofuri, #builds, #components")
         self.stdout.write("---------------------------------------")
         for ps in ProductStream.objects.all():
-            if ps.builds.count() > 0:
-                component_count = Component.objects.filter(
-                    product_streams__icontains=ps.ofuri
-                ).count()
+            component_count = Component.objects.filter(product_streams__icontains=ps.ofuri).count()
+            if ps.builds.count() > 0 or component_count > 0:
                 self.stdout.write(f"{ps.ofuri}, {ps.builds.count()}, {component_count}")

@@ -36,5 +36,4 @@ class Command(BaseCommand):
                     f"updating {sb.build_id}: {sb.name}",
                 )
             )
-            sb.save_component_taxonomy()
             sb.save_product_taxonomy()

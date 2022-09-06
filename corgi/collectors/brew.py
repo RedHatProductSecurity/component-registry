@@ -1,6 +1,7 @@
 import itertools
 import json
 import logging
+import os
 import re
 from datetime import datetime
 from types import SimpleNamespace
@@ -56,6 +57,9 @@ class Brew:
         RPM_BUILD_TYPE,
         MODULE_BUILD_TYPE,
     )
+
+    # A list of component names, for which build analysis will be skipped.
+    COMPONENT_EXCLUDES = json.loads(os.getenv("CORGI_COMPONENT_EXCLUDES", "[]"))
 
     def __init__(self):
         self.koji_session = self.get_koji_session()
@@ -675,6 +679,10 @@ class Brew:
         state = build.get("state")
         if state != koji.BUILD_STATES["COMPLETE"]:
             raise BrewBuildInvalidState(f"Build {build_id} state is {state}; skipping!")
+
+        if build["name"] in self.COMPONENT_EXCLUDES:
+            logger.info(f"Skipping processing build {build_id} ({build['name']})")
+            return {}
 
         # Determine build type
         build_type_info = self.koji_session.getBuildType(build)

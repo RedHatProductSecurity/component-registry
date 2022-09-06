@@ -327,6 +327,8 @@ def recurse_components(component, parent):
 
 
 def save_module(softwarebuild, build_data) -> ComponentNode:
+    meta_attr = build_data["meta"]["meta_attr"]
+    meta_attr.update(build_data["analysis_meta"])
     obj, created = Component.objects.get_or_create(
         name=build_data["meta"]["name"],
         type=Component.Type.RHEL_MODULE,
@@ -337,7 +339,7 @@ def save_module(softwarebuild, build_data) -> ComponentNode:
             "license": build_data["meta"].get("license", ""),
             "description": build_data["meta"].get("description", ""),
             "software_build": softwarebuild,
-            "meta_attr": build_data["meta"]["meta_attr"],
+            "meta_attr": meta_attr,
         },
     )
     node, _ = obj.cnodes.get_or_create(

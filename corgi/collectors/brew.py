@@ -652,18 +652,15 @@ class Brew:
             "type": "module",
             "namespace": "redhat",
             "meta": {
-                "nvr": build_info["nvr"],
                 "name": build_info["name"],
                 "version": build_info["version"],
                 "license": " OR ".join(modulemd["data"]["license"].get("module", "")),
                 "release": build_info["release"],
-                # "arch": build_info["arch"],
-                "epoch": build_info["epoch"],
                 "description": modulemd["data"]["description"],
                 "meta_attr": meta_attr,
             },
             "analysis_meta": {
-                "source": [],
+                "source": ["koji.getBuild"],
             },
         }
 

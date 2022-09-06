@@ -50,15 +50,13 @@ class CollectorComposeSRPM(models.Model):
         return f"{self.build_id}"
 
 
-# Not every RPM built as part of a SRPM is included in a module
-# Which is why we don't directly related SRPM builds to product_streams using relations table
 class CollectorComposeRPM(models.Model):
+    """Not every RPM built as part of a SRPM is included in a module
+    Which is why we don't directly related SRPM builds to product_streams using relations table"""
 
-    nvr = models.TextField(unique=True)
-    rhel_module = models.ForeignKey(
-        CollectorComposeRhelModule, on_delete=models.CASCADE, related_name="rpms"
-    )
+    nvra = models.TextField(unique=True)
+    rhel_module = models.ManyToManyField(CollectorComposeRhelModule)
     srpm = models.ForeignKey(CollectorComposeSRPM, on_delete=models.CASCADE, related_name="rpms")
 
     def __str__(self):
-        return f"{self.nvr}"
+        return f"{self.nvra}"

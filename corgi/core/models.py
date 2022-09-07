@@ -172,7 +172,9 @@ class ComponentNode(MPTTModel, TimeStampedModel):
             ),
         ]
         indexes = [
-            models.Index(fields=("type", "parent", "purl")),
+            models.Index(fields=["type"]),
+            models.Index(fields=["parent"]),
+            models.Index(fields=["purl"]),
             # Add index on foreign-key fields here, to speed up iterating over cnodes
             # GenericForeignKey doesn't get these by default, only ForeignKey
             models.Index(fields=("content_type", "object_id")),
@@ -964,7 +966,7 @@ class Component(TimeStampedModel):
 
     def get_source(self) -> list:
         """return all root nodes"""
-        sources = (
+        return list(
             ComponentNode.objects.get_queryset()  # type: ignore
             .filter(purl=self.purl)
             .get_ancestors(include_self=True)
@@ -972,7 +974,6 @@ class Component(TimeStampedModel):
             .values_list("purl", flat=True)
             .distinct()
         )
-        return list(sources)
 
     def get_upstreams(self):
         """return upstreams component ancestors in family trees"""

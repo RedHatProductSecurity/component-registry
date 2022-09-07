@@ -172,6 +172,7 @@ class ComponentNode(MPTTModel, TimeStampedModel):
             ),
         ]
         indexes = [
+            models.Index(fields=("type", "parent", "purl")),
             models.Index(fields=["type"]),
             models.Index(fields=["parent"]),
             models.Index(fields=["purl"]),
@@ -656,6 +657,10 @@ class ProductComponentRelation(TimeStampedModel):
         indexes = [
             models.Index(fields=("external_system_id", "product_ref", "build_id")),
             models.Index(fields=("type", "build_id")),
+            models.Index(fields=["external_system_id"]),
+            models.Index(fields=["product_ref"]),
+            models.Index(fields=["build_id"]),
+            models.Index(fields=["type"]),
         ]
 
 
@@ -751,6 +756,9 @@ class Component(TimeStampedModel):
         ]
         indexes = [
             models.Index(fields=("name", "type", "arch", "version", "release")),
+            models.Index(fields=["name"]),
+            models.Index(fields=["type"]),
+            models.Index(fields=["nvr"]),
         ]
 
     def __str__(self) -> str:

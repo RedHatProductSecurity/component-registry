@@ -679,7 +679,8 @@ class Brew:
         # Determine build type
         build_type_info = self.koji_session.getBuildType(build)
         build_type = next(
-            type_ for type_ in build_type_info.keys() if type_ in self.SUPPORTED_BUILD_TYPES
+            (type_ for type_ in build_type_info.keys() if type_ in self.SUPPORTED_BUILD_TYPES),
+            "unknown",
         )
         if not any(type_ in self.SUPPORTED_BUILD_TYPES for type_ in build_type_info.keys()):
             raise BrewBuildTypeNotSupported(

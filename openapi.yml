@@ -84,57 +84,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/SoftwareBuild'
           description: ''
-  /api/v1/builds/{build_id}/tags:
-    post:
-      operationId: v1_builds_tags_create
-      description: View for api/v1/builds
-      parameters:
-      - in: path
-        name: build_id
-        schema:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-        description: A unique value identifying this software build.
-        required: true
-      tags:
-      - v1
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Tag'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/Tag'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/Tag'
-        required: true
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Tag'
-          description: ''
-    delete:
-      operationId: v1_builds_tags_destroy
-      description: Delete a tag from a build.
-      parameters:
-      - in: path
-        name: build_id
-        schema:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-        description: A unique value identifying this software build.
-        required: true
-      tags:
-      - v1
-      responses:
-        '204':
-          description: No response body
   /api/v1/channels:
     get:
       operationId: v1_channels_list
@@ -368,55 +317,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/Component'
           description: ''
-  /api/v1/components/{uuid}/tags:
-    post:
-      operationId: v1_components_tags_create
-      description: View for api/v1/components
-      parameters:
-      - in: path
-        name: uuid
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this Component(<class 'type'>).
-        required: true
-      tags:
-      - v1
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Tag'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/Tag'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/Tag'
-        required: true
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Tag'
-          description: ''
-    delete:
-      operationId: v1_components_tags_destroy
-      description: Delete a tag from a build.
-      parameters:
-      - in: path
-        name: uuid
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this Component(<class 'type'>).
-        required: true
-      tags:
-      - v1
-      responses:
-        '204':
-          description: No response body
   /api/v1/components/{uuid}/taxonomy:
     get:
       operationId: v1_components_taxonomy_retrieve
@@ -594,55 +494,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProductStream'
           description: ''
-  /api/v1/product_streams/{uuid}/tags:
-    post:
-      operationId: v1_product_streams_tags_create
-      description: View for api/v1/product_streams
-      parameters:
-      - in: path
-        name: uuid
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this product stream.
-        required: true
-      tags:
-      - v1
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Tag'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/Tag'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/Tag'
-        required: true
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Tag'
-          description: ''
-    delete:
-      operationId: v1_product_streams_tags_destroy
-      description: Delete a tag from a build.
-      parameters:
-      - in: path
-        name: uuid
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this product stream.
-        required: true
-      tags:
-      - v1
-      responses:
-        '204':
-          description: No response body
   /api/v1/product_streams/{uuid}/taxonomy:
     get:
       operationId: v1_product_streams_taxonomy_retrieve
@@ -774,55 +625,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProductVariant'
           description: ''
-  /api/v1/product_variants/{uuid}/tags:
-    post:
-      operationId: v1_product_variants_tags_create
-      description: View for api/v1/product_variants
-      parameters:
-      - in: path
-        name: uuid
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this product variant.
-        required: true
-      tags:
-      - v1
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Tag'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/Tag'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/Tag'
-        required: true
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Tag'
-          description: ''
-    delete:
-      operationId: v1_product_variants_tags_destroy
-      description: Delete a tag from a build.
-      parameters:
-      - in: path
-        name: uuid
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this product variant.
-        required: true
-      tags:
-      - v1
-      responses:
-        '204':
-          description: No response body
   /api/v1/product_variants/{uuid}/taxonomy:
     get:
       operationId: v1_product_variants_taxonomy_retrieve
@@ -954,55 +756,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProductVersion'
           description: ''
-  /api/v1/product_versions/{uuid}/tags:
-    post:
-      operationId: v1_product_versions_tags_create
-      description: View for api/v1/product_versions
-      parameters:
-      - in: path
-        name: uuid
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this product version.
-        required: true
-      tags:
-      - v1
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Tag'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/Tag'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/Tag'
-        required: true
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Tag'
-          description: ''
-    delete:
-      operationId: v1_product_versions_tags_destroy
-      description: Delete a tag from a build.
-      parameters:
-      - in: path
-        name: uuid
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this product version.
-        required: true
-      tags:
-      - v1
-      responses:
-        '204':
-          description: No response body
   /api/v1/product_versions/{uuid}/taxonomy:
     get:
       operationId: v1_product_versions_taxonomy_retrieve
@@ -1134,55 +887,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/Product'
           description: ''
-  /api/v1/products/{uuid}/tags:
-    post:
-      operationId: v1_products_tags_create
-      description: View for api/v1/products
-      parameters:
-      - in: path
-        name: uuid
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this product.
-        required: true
-      tags:
-      - v1
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Tag'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/Tag'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/Tag'
-        required: true
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Tag'
-          description: ''
-    delete:
-      operationId: v1_products_tags_destroy
-      description: Delete a tag from a build.
-      parameters:
-      - in: path
-        name: uuid
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this product.
-        required: true
-      tags:
-      - v1
-      responses:
-        '204':
-          description: No response body
   /api/v1/products/{uuid}/taxonomy:
     get:
       operationId: v1_products_taxonomy_retrieve
@@ -1257,55 +961,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/Relation'
           description: ''
-  /api/v1/relations/{uuid}/tags:
-    post:
-      operationId: v1_relations_tags_create
-      description: View for api/v1/relations
-      parameters:
-      - in: path
-        name: uuid
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this product component relation.
-        required: true
-      tags:
-      - v1
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Tag'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/Tag'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/Tag'
-        required: true
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Tag'
-          description: ''
-    delete:
-      operationId: v1_relations_tags_destroy
-      description: Delete a tag from a build.
-      parameters:
-      - in: path
-        name: uuid
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this product component relation.
-        required: true
-      tags:
-      - v1
-      responses:
-        '204':
-          description: No response body
   /api/v1/reports/coverage:
     get:
       operationId: v1_reports_coverage_list

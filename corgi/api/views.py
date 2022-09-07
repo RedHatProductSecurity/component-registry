@@ -35,7 +35,6 @@ from .filters import (
     ProductDataFilter,
     SoftwareBuildFilter,
 )
-from .mixins import TagViewMixin
 from .serializers import (
     AppStreamLifeCycleSerializer,
     ChannelSerializer,
@@ -231,7 +230,7 @@ class ProductTaxonomyView(APIView):
         return Response(dicts)
 
 
-class SoftwareBuildView(ReadOnlyModelViewSet, TagViewMixin):
+class SoftwareBuildView(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled until auth is added
     """View for api/v1/builds"""
 
     queryset = SoftwareBuild.objects.get_queryset()
@@ -241,7 +240,7 @@ class SoftwareBuildView(ReadOnlyModelViewSet, TagViewMixin):
     lookup_url_kwarg = "build_id"
 
 
-class ProductDataView(ReadOnlyModelViewSet, TagViewMixin):
+class ProductDataView(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled until auth is added
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend, filters.SearchFilter]
     search_fields = ["name", "description", "meta_attr"]
     filterset_class = ProductDataFilter
@@ -410,7 +409,7 @@ class ChannelView(ReadOnlyModelViewSet):
     lookup_url_kwarg = "uuid"
 
 
-class ComponentView(ReadOnlyModelViewSet, TagViewMixin):
+class ComponentView(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled until auth is added
     """View for api/v1/components"""
 
     queryset = Component.objects.get_queryset()
@@ -550,7 +549,7 @@ class CoverageReportView(ReadOnlyModelViewSet):
         return Response(results)
 
 
-class RelationsView(ReadOnlyModelViewSet, TagViewMixin):
+class RelationsView(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled until auth is added
     """View for api/v1/relations"""
 
     queryset = ProductComponentRelation.objects.get_queryset()

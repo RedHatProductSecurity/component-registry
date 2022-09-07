@@ -134,6 +134,7 @@ def test_component_does_not_exist(client, api_path):
     assert response.status_code == 404
 
 
+@pytest.mark.skip(reason="Disabled until auth for write endpoints is implemented")
 def test_component_tags_create(client, api_path):
     c1 = ComponentFactory(name="curl", tag__name="t0", tag__value="v0")
     response = client.post(
@@ -150,6 +151,7 @@ def test_component_tags_create(client, api_path):
     assert extract_tag_tuples(response.json()["tags"]) == {("t0", "v0"), ("t1", "v1"), ("t2", "")}
 
 
+@pytest.mark.skip(reason="Disabled until auth for write endpoints is implemented")
 def test_component_tags_duplicate(client, api_path):
     c1 = ComponentFactory(name="curl", tag__name="t0", tag__value="v0")
     response = client.post(
@@ -159,6 +161,7 @@ def test_component_tags_duplicate(client, api_path):
     assert response.json()["error"] == "Tag already exists."
 
 
+@pytest.mark.skip(reason="Disabled until auth for write endpoints is implemented")
 def test_component_tags_delete(client, api_path):
     component = ComponentFactory(name="curl", tag=None)
     ComponentTagFactory(component=component, name="t0", value="v0")

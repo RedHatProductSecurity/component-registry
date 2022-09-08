@@ -18,7 +18,23 @@ from .views import (
     StatusView,
 )
 
-router = routers.DefaultRouter(trailing_slash=False)
+
+class ComponentRegistryAPI(routers.APIRootView):
+    """
+    Component Registry API root
+    """
+
+    # The title of this class is what gets used in the web page header at /api/v1; the doc string
+    # is the description of the view.
+
+    pass
+
+
+class ComponentRegistryRouter(routers.DefaultRouter):
+    APIRootView = ComponentRegistryAPI
+
+
+router = ComponentRegistryRouter(trailing_slash=False)
 router.register(r"builds", SoftwareBuildView)
 router.register(r"components", ComponentView)
 router.register(r"lifecycles", AppStreamLifeCycleView)

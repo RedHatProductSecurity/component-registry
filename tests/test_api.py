@@ -66,6 +66,7 @@ def test_product_data_detail(model, endpoint_name, client, api_path):
     assert response.json()["count"] == 1
 
 
+@pytest.mark.skip(reason="Disabled until channel data is integrated into core")
 def test_channel_detail(client, api_path):
     p1 = ChannelFactory(name="Repo1")
 
@@ -326,6 +327,7 @@ def test_filter_component_tags(client, api_path):
     assert response.json()["count"] == 0
 
 
+@pytest.mark.skip(reason="Disabled until appstream lifecycle data is integrated into core")
 def test_lifecycle_detail(client, api_path):
     response = client.get(f"{api_path}/lifecycles")
     assert response.status_code == 200

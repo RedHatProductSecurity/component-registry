@@ -976,7 +976,7 @@ class Component(TimeStampedModel):
         """return all root nodes"""
         return list(
             ComponentNode.objects.get_queryset()  # type: ignore
-            .filter(purl=self.purl, type=ComponentNode.ComponentNodeType.SOURCE)
+            .filter(purl=self.purl)
             .get_ancestors(include_self=True)
             .filter(parent=None)
             .values_list("purl", flat=True)

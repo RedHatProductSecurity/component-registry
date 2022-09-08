@@ -129,7 +129,7 @@ class SoftwareBuildSerializer(serializers.ModelSerializer):
             "created_at",
             "last_changed",
             "components",
-            "meta_attr",
+            # "meta_attr",
         ]
 
 
@@ -310,7 +310,7 @@ class ComponentDetailSerializer(serializers.ModelSerializer):
             "sources",
             "provides",
             "upstreams",
-            "meta_attr",
+            # "meta_attr",
         ]
 
 
@@ -391,8 +391,8 @@ class ProductSerializer(serializers.ModelSerializer):
             "product_versions",
             "product_streams",
             "product_variants",
-            "channels",
-            "meta_attr",
+            # "channels",
+            # "meta_attr",
         ]
 
 
@@ -461,8 +461,8 @@ class ProductVersionSerializer(serializers.ModelSerializer):
             "products",
             "product_streams",
             "product_variants",
-            "channels",
-            "meta_attr",
+            # "channels",
+            # "meta_attr",
         ]
 
 
@@ -545,8 +545,8 @@ class ProductStreamSerializer(serializers.ModelSerializer):
             "products",
             "product_versions",
             "product_variants",
-            "channels",
-            "meta_attr",
+            # "channels",
+            # "meta_attr",
         ]
 
 
@@ -623,8 +623,8 @@ class ProductVariantSerializer(serializers.ModelSerializer):
             "products",
             "product_versions",
             "product_streams",
-            "channels",
-            "meta_attr",
+            # "channels",
+            # "meta_attr",
         ]
 
 

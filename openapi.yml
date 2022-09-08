@@ -84,70 +84,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/SoftwareBuild'
           description: ''
-  /api/v1/channels:
-    get:
-      operationId: v1_channels_list
-      description: View for api/v1/channels
-      parameters:
-      - name: limit
-        required: false
-        in: query
-        description: Number of results to return per page.
-        schema:
-          type: integer
-      - in: query
-        name: name
-        schema:
-          type: string
-      - name: offset
-        required: false
-        in: query
-        description: The initial index from which to return the results.
-        schema:
-          type: integer
-      - name: search
-        required: false
-        in: query
-        description: A search term.
-        schema:
-          type: string
-      - in: query
-        name: type
-        schema:
-          type: string
-          enum:
-          - CDN_REPO
-          - CONTAINER_REGISTRY
-      tags:
-      - v1
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PaginatedChannelList'
-          description: ''
-  /api/v1/channels/{uuid}:
-    get:
-      operationId: v1_channels_retrieve
-      description: View for api/v1/channels
-      parameters:
-      - in: path
-        name: uuid
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this channel.
-        required: true
-      tags:
-      - v1
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Channel'
-          description: ''
   /api/v1/components:
     get:
       operationId: v1_components_list
@@ -337,52 +273,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Component'
-          description: ''
-  /api/v1/lifecycles:
-    get:
-      operationId: v1_lifecycles_list
-      description: View for api/v1/lifecycles
-      parameters:
-      - name: limit
-        required: false
-        in: query
-        description: Number of results to return per page.
-        schema:
-          type: integer
-      - name: offset
-        required: false
-        in: query
-        description: The initial index from which to return the results.
-        schema:
-          type: integer
-      tags:
-      - v1
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PaginatedAppStreamLifeCycleList'
-          description: ''
-  /api/v1/lifecycles/{id}:
-    get:
-      operationId: v1_lifecycles_retrieve
-      description: View for api/v1/lifecycles
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this app stream life cycle.
-        required: true
-      tags:
-      - v1
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AppStreamLifeCycle'
           description: ''
   /api/v1/product_streams:
     get:
@@ -963,50 +853,12 @@ paths:
           description: ''
   /api/v1/reports/coverage:
     get:
-      operationId: v1_reports_coverage_list
-      description: View for api/v1/reports/coverage
-      parameters:
-      - name: limit
-        required: false
-        in: query
-        description: Number of results to return per page.
-        schema:
-          type: integer
-      - name: offset
-        required: false
-        in: query
-        description: The initial index from which to return the results.
-        schema:
-          type: integer
-      tags:
-      - v1
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PaginatedProductList'
-          description: ''
-  /api/v1/reports/coverage/{uuid}:
-    get:
       operationId: v1_reports_coverage_retrieve
-      parameters:
-      - in: path
-        name: uuid
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this product.
-        required: true
       tags:
       - v1
       responses:
         '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Product'
-          description: ''
+          description: No response body
   /api/v1/schema:
     get:
       operationId: v1_schema_retrieve
@@ -1050,7 +902,6 @@ paths:
   /api/v1/status:
     get:
       operationId: v1_status_list
-      description: View for api/v1/status
       parameters:
       - name: limit
         required: false
@@ -1143,147 +994,8 @@ paths:
                             count:
                               type: integer
           description: ''
-  /api/v1/status/{build_id}:
-    get:
-      operationId: v1_status_retrieve
-      parameters:
-      - in: path
-        name: build_id
-        schema:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-        description: A unique value identifying this software build.
-        required: true
-      tags:
-      - v1
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SoftwareBuild'
-          description: ''
-  /api/v1/taxonomy/components:
-    get:
-      operationId: v1_taxonomy_components_retrieve
-      description: return all components in component taxonomy
-      tags:
-      - v1
-      responses:
-        '200':
-          description: No response body
-  /api/v1/taxonomy/products:
-    get:
-      operationId: v1_taxonomy_products_retrieve
-      description: return all product nodes in product taxonomy
-      tags:
-      - v1
-      responses:
-        '200':
-          description: No response body
 components:
   schemas:
-    AppStreamLifeCycle:
-      type: object
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        last_changed:
-          type: string
-          format: date-time
-          readOnly: true
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
-        name:
-          type: string
-        type:
-          $ref: '#/components/schemas/AppStreamLifeCycleTypeEnum'
-        lifecycle:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-        acg:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-        start_date:
-          type: string
-          format: date
-          nullable: true
-        end_date:
-          type: string
-          format: date
-          nullable: true
-        product:
-          type: string
-        initial_product_version:
-          type: string
-        stream:
-          type: string
-        source:
-          $ref: '#/components/schemas/SourceEnum'
-        private:
-          type: boolean
-        meta_attr:
-          type: object
-          additionalProperties: {}
-      required:
-      - acg
-      - created_at
-      - id
-      - initial_product_version
-      - last_changed
-      - lifecycle
-      - name
-      - private
-      - product
-      - source
-      - stream
-    AppStreamLifeCycleTypeEnum:
-      enum:
-      - module
-      - package
-      - scl
-      type: string
-    Channel:
-      type: object
-      properties:
-        uuid:
-          type: string
-          format: uuid
-          readOnly: true
-        last_changed:
-          type: string
-          format: date-time
-          readOnly: true
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
-        name:
-          type: string
-        type:
-          $ref: '#/components/schemas/ChannelTypeEnum'
-        description:
-          type: string
-        meta_attr:
-          type: object
-          additionalProperties: {}
-      required:
-      - created_at
-      - last_changed
-      - name
-      - type
-      - uuid
-    ChannelTypeEnum:
-      enum:
-      - CDN_REPO
-      - CONTAINER_REGISTRY
-      type: string
     Component:
       type: object
       properties:
@@ -1521,9 +1233,6 @@ components:
             additionalProperties:
               type: string
           readOnly: true
-        meta_attr:
-          type: object
-          additionalProperties: {}
       required:
       - description
       - epoch
@@ -1543,46 +1252,6 @@ components:
       - upstreams
       - uuid
       - version
-    PaginatedAppStreamLifeCycleList:
-      type: object
-      properties:
-        count:
-          type: integer
-          example: 123
-        next:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?offset=400&limit=100
-        previous:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?offset=200&limit=100
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/AppStreamLifeCycle'
-    PaginatedChannelList:
-      type: object
-      properties:
-        count:
-          type: integer
-          example: 123
-        next:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?offset=400&limit=100
-        previous:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?offset=200&limit=100
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/Channel'
     PaginatedComponentList:
       type: object
       properties:
@@ -1778,14 +1447,6 @@ components:
             additionalProperties:
               type: string
           readOnly: true
-        channels:
-          type: array
-          items:
-            type: string
-            maxLength: 200
-        meta_attr:
-          type: object
-          additionalProperties: {}
       required:
       - build_count
       - builds
@@ -1879,14 +1540,6 @@ components:
             additionalProperties:
               type: string
           readOnly: true
-        channels:
-          type: array
-          items:
-            type: string
-            maxLength: 200
-        meta_attr:
-          type: object
-          additionalProperties: {}
       required:
       - build_count
       - builds
@@ -1966,14 +1619,6 @@ components:
             additionalProperties:
               type: string
           readOnly: true
-        channels:
-          type: array
-          items:
-            type: string
-            maxLength: 200
-        meta_attr:
-          type: object
-          additionalProperties: {}
       required:
       - build_count
       - builds
@@ -2043,14 +1688,6 @@ components:
             additionalProperties:
               type: string
           readOnly: true
-        channels:
-          type: array
-          items:
-            type: string
-            maxLength: 200
-        meta_attr:
-          type: object
-          additionalProperties: {}
       required:
       - build_count
       - builds
@@ -2140,9 +1777,6 @@ components:
             additionalProperties:
               type: string
           readOnly: true
-        meta_attr:
-          type: object
-          additionalProperties: {}
       required:
       - build_id
       - components
@@ -2175,14 +1809,6 @@ components:
       - name
       - source
       - type
-    SourceEnum:
-      enum:
-      - default
-      - previous_release
-      - prp
-      - confirmed
-      - override
-      type: string
     Tag:
       type: object
       properties:

@@ -33,7 +33,7 @@ def save_component(component: dict[str, Any], parent: ComponentNode):
     if component["type"] not in Component.Type:
         logger.warning("Tried to save component with unknown type: ", component["type"])
 
-    # Use all fields from Compoennt index and uniquness contrainst
+    # Use all fields from Component index and uniqueness constraint
     obj, created = Component.objects.get_or_create(
         type=component["type"],
         name=meta.pop("name", ""),

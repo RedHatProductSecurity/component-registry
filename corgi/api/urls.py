@@ -3,11 +3,9 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework import routers
 
 from .views import (
-    ComponentTaxonomyView,
     ComponentView,
     CoverageReportViewSet,
     ProductStreamView,
-    ProductTaxonomyView,
     ProductVariantView,
     ProductVersionView,
     ProductView,
@@ -54,7 +52,5 @@ urlpatterns = [
         r"schema/docs",
         SpectacularSwaggerView.as_view(url_name="schema"),
     ),
-    path(r"taxonomy/components", ComponentTaxonomyView.as_view()),
-    path(r"taxonomy/products", ProductTaxonomyView.as_view()),
     path("", include(router.urls)),
 ]

@@ -20,7 +20,6 @@ from corgi.core.models import (
     ComponentNode,
     Product,
     ProductComponentRelation,
-    ProductNode,
     ProductStream,
     ProductVariant,
     ProductVersion,
@@ -162,26 +161,6 @@ def recursive_component_node_to_dict(node, componenttype):
     return result
 
 
-class ComponentTaxonomyView(APIView):
-    """return all components in component taxonomy"""
-
-    def get(self, request, *args, **kwargs):
-        """ """
-        root_nodes = cache_tree_children(ComponentNode.objects.get_queryset())
-        dicts = []
-        for n in root_nodes:
-            dicts.append(
-                recursive_component_node_to_dict(
-                    n,
-                    [
-                        ComponentNode.ComponentNodeType.SOURCE,
-                        ComponentNode.ComponentNodeType.PROVIDES,
-                    ],
-                )
-            )
-        return Response(dicts)
-
-
 def recursive_product_node_to_dict(node):
     product_type = ""
     child_product_type = ""
@@ -209,18 +188,6 @@ def recursive_product_node_to_dict(node):
     if children:
         result[child_product_type] = children
     return result
-
-
-class ProductTaxonomyView(APIView):
-    """return all product nodes in product taxonomy"""
-
-    def get(self, request, *args, **kwargs):
-        """ """
-        root_nodes = cache_tree_children(ProductNode.objects.get_queryset())
-        dicts = []
-        for n in root_nodes:
-            dicts.append(recursive_product_node_to_dict(n))
-        return Response(dicts)
 
 
 class SoftwareBuildView(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled until auth is added

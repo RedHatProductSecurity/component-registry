@@ -491,7 +491,7 @@ class CoverageReportViewSet(GenericViewSet):
         include_missing = request.query_params.get("include_missing")
 
         results = []
-        for p in Product:
+        for p in Product.objects.all():
             if p.coverage or include_missing:
                 root_nodes = cache_tree_children(p.pnodes.all().get_descendants(include_self=True))
                 dicts = []

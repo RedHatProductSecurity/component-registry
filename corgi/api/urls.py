@@ -3,8 +3,6 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework import routers
 
 from .views import (
-    AppStreamLifeCycleView,
-    ChannelView,
     ComponentTaxonomyView,
     ComponentView,
     CoverageReportView,
@@ -37,14 +35,16 @@ class ComponentRegistryRouter(routers.DefaultRouter):
 router = ComponentRegistryRouter(trailing_slash=False)
 router.register(r"builds", SoftwareBuildView)
 router.register(r"components", ComponentView)
-router.register(r"lifecycles", AppStreamLifeCycleView)
+# Comment out until app-stream life cycles are incorporated into data
+# router.register(r"lifecycles", AppStreamLifeCycleView)
 router.register(r"products", ProductView)
 router.register(r"product_versions", ProductVersionView)
 router.register(r"product_streams", ProductStreamView)
 router.register(r"product_variants", ProductVariantView)
-router.register(r"channels", ChannelView)
 router.register(r"status", StatusView, basename="status")
 router.register(r"reports/coverage", CoverageReportView, basename="coverage-reports")
+# Comment out until we start loading Channels and tying them to products/errata
+# router.register(r"channels", ChannelView)
 router.register(r"relations", RelationsView)
 
 urlpatterns = [

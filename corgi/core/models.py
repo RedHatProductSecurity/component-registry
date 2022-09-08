@@ -768,8 +768,7 @@ class Component(TimeStampedModel):
         return str(self.name)
 
     def get_purl(self):
-        if self.type in (Component.Type.RPM, Component.Type.SRPM):
-            # SRPM/RPM
+        if self.type in (Component.Type.RPM, Component.Type.SRPM, Component.Type.RHEL_MODULE):
             evr = ""
             qualifiers = {
                 "arch": self.arch,

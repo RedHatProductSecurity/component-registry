@@ -190,24 +190,24 @@ def recursive_product_node_to_dict(node):
     return result
 
 
-class SoftwareBuildView(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled until auth is added
+class SoftwareBuildViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled until auth is added
     """View for api/v1/builds"""
 
-    queryset = SoftwareBuild.objects.get_queryset()
+    queryset = SoftwareBuild.objects.all()
     serializer_class = SoftwareBuildSerializer
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend, filters.SearchFilter]
     filterset_class = SoftwareBuildFilter
     lookup_url_kwarg = "build_id"
 
 
-class ProductDataView(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled until auth is added
+class ProductDataViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled until auth is added
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend, filters.SearchFilter]
     search_fields = ["name", "description", "meta_attr"]
     filterset_class = ProductDataFilter
     lookup_url_kwarg = "uuid"
 
 
-class ProductView(ProductDataView):
+class ProductViewSet(ProductDataViewSet):
     """View for api/v1/products"""
 
     queryset = Product.objects.get_queryset()
@@ -245,7 +245,7 @@ class ProductView(ProductDataView):
         return Response(dicts[0])
 
 
-class ProductVersionView(ProductDataView):
+class ProductVersionViewSet(ProductDataViewSet):
     """View for api/v1/product_versions"""
 
     queryset = ProductVersion.objects.get_queryset()
@@ -283,7 +283,7 @@ class ProductVersionView(ProductDataView):
         return Response(dicts)
 
 
-class ProductStreamView(ProductDataView):
+class ProductStreamViewSetSet(ProductDataViewSet):
     """View for api/v1/product_streams"""
 
     queryset = ProductStream.objects.get_queryset()
@@ -321,7 +321,7 @@ class ProductStreamView(ProductDataView):
         return Response(dicts)
 
 
-class ProductVariantView(ProductDataView):
+class ProductVariantViewSetSet(ProductDataViewSet):
     """View for api/v1/product_variants"""
 
     queryset = ProductVariant.objects.get_queryset()
@@ -359,7 +359,7 @@ class ProductVariantView(ProductDataView):
         return Response(dicts)
 
 
-class ChannelView(ReadOnlyModelViewSet):
+class ChannelViewSet(ReadOnlyModelViewSet):
     """View for api/v1/channels"""
 
     queryset = Channel.objects.get_queryset()
@@ -369,7 +369,7 @@ class ChannelView(ReadOnlyModelViewSet):
     lookup_url_kwarg = "uuid"
 
 
-class ComponentView(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled until auth is added
+class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled until auth is added
     """View for api/v1/components"""
 
     queryset = Component.objects.get_queryset()
@@ -438,7 +438,7 @@ class ComponentView(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled until 
         return Response(dicts)
 
 
-class AppStreamLifeCycleView(ReadOnlyModelViewSet):
+class AppStreamLifeCycleViewSet(ReadOnlyModelViewSet):
     """View for api/v1/lifecycles"""
 
     queryset = AppStreamLifeCycle.objects.get_queryset()
@@ -502,7 +502,7 @@ class CoverageReportViewSet(GenericViewSet):
         return Response(results)
 
 
-class RelationsView(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled until auth is added
+class RelationsViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled until auth is added
     """View for api/v1/relations"""
 
     queryset = ProductComponentRelation.objects.get_queryset()

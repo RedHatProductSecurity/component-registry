@@ -229,6 +229,9 @@ class SoftwareBuild(TimeStampedModel):
     # Store meta attributes relevant to different build system types.
     meta_attr = models.JSONField(default=dict)
 
+    class Meta:
+        ordering = ["-build_id"]
+
     @property
     def components(self):
         return self.component_set.values_list("purl", flat=True)
@@ -639,15 +642,14 @@ class ProductComponentRelation(TimeStampedModel):
     type = models.CharField(choices=Type.choices, max_length=50)
     meta_attr = models.JSONField(default=dict)
 
-    external_system_id = models.CharField(
-        max_length=200, default=""
-    )  # ex. if Errata this would be errata_id
-    # eg. product_variant for ERRATA, or product_stream for COMPOSE
+    # Ex. if Errata Tool this would be errata_id
+    external_system_id = models.CharField(max_length=200, default="")
+    # E.g. product_variant for ERRATA, or product_stream for COMPOSE
     product_ref = models.CharField(max_length=200, default="")
     build_id = models.CharField(max_length=200, default="")
 
     class Meta:
-        ordering = ("external_system_id",)
+        ordering = ["external_system_id"]
         constraints = [
             models.UniqueConstraint(
                 name="unique_productcomponentrelation",

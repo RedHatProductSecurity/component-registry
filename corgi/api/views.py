@@ -10,8 +10,7 @@ from rest_framework import filters, status
 from rest_framework.decorators import action, api_view
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework.viewsets import ReadOnlyModelViewSet
+from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet
 
 from corgi import __version__
 from corgi.core.models import (
@@ -60,11 +59,7 @@ def healthy(request: Request) -> Response:
     return Response(status=status.HTTP_200_OK)
 
 
-class StatusView(ReadOnlyModelViewSet):
-
-    queryset = SoftwareBuild.objects.get_queryset()
-    serializer_class = SoftwareBuildSerializer
-
+class StatusViewSet(GenericViewSet):
     @extend_schema(
         request=None,
         responses={
@@ -112,9 +107,7 @@ class StatusView(ReadOnlyModelViewSet):
             }
         },
     )
-    def list(self, request, *args, **kwargs):
-        """View for api/v1/status"""
-
+    def list(self, request):
         with connection.cursor() as cursor:
             cursor.execute("SELECT pg_size_pretty(pg_database_size(current_database()));")
             db_size = cursor.fetchone()
@@ -127,26 +120,26 @@ class StatusView(ReadOnlyModelViewSet):
                 "rest_api_version": CORGI_API_VERSION,
                 "db_size": db_size,
                 "builds": {
-                    "count": self.queryset.count(),
+                    "count": SoftwareBuild.objects.count(),
                 },
                 "components": {
-                    "count": Component.objects.get_queryset().count(),
+                    "count": Component.objects.count(),
                 },
-                "relations": {"count": ProductComponentRelation.objects.get_queryset().count()},
+                "relations": {"count": ProductComponentRelation.objects.count()},
                 "products": {
-                    "count": Product.objects.get_queryset().count(),
+                    "count": Product.objects.count(),
                 },
                 "product_versions": {
-                    "count": ProductVersion.objects.get_queryset().count(),
+                    "count": ProductVersion.objects.count(),
                 },
                 "product_streams": {
-                    "count": ProductStream.objects.get_queryset().count(),
+                    "count": ProductStream.objects.count(),
                 },
                 "product_variants": {
-                    "count": ProductVariant.objects.get_queryset().count(),
+                    "count": ProductVariant.objects.count(),
                 },
                 "channels": {
-                    "count": Channel.objects.get_queryset().count(),
+                    "count": Channel.objects.count(),
                 },
             }
         )
@@ -526,21 +519,14 @@ def coverage_report_node_to_dict(node):
     return result
 
 
-class CoverageReportView(ReadOnlyModelViewSet):
-
-    queryset = Product.objects.get_queryset()
-    serializer_class = ProductSerializer
-
-    def list(self, request, *args, **kwargs):
-        """View for api/v1/reports/coverage"""
-
+class CoverageReportViewSet(GenericViewSet):
+    def list(self, request):
         include_missing = request.query_params.get("include_missing")
 
         results = []
-
-        for p in self.queryset:
+        for p in Product:
             if p.coverage or include_missing:
-                root_nodes = cache_tree_children(p.pnodes.get_descendants(include_self=True))
+                root_nodes = cache_tree_children(p.pnodes.all().get_descendants(include_self=True))
                 dicts = []
                 for n in root_nodes:
                     dicts.append(coverage_report_node_to_dict(n))

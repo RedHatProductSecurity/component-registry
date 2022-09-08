@@ -5,7 +5,7 @@ from rest_framework import routers
 from .views import (
     ComponentTaxonomyView,
     ComponentView,
-    CoverageReportView,
+    CoverageReportViewSet,
     ProductStreamView,
     ProductTaxonomyView,
     ProductVariantView,
@@ -13,7 +13,7 @@ from .views import (
     ProductView,
     RelationsView,
     SoftwareBuildView,
-    StatusView,
+    StatusViewSet,
 )
 
 
@@ -41,10 +41,10 @@ router.register(r"products", ProductView)
 router.register(r"product_versions", ProductVersionView)
 router.register(r"product_streams", ProductStreamView)
 router.register(r"product_variants", ProductVariantView)
-router.register(r"status", StatusView, basename="status")
-router.register(r"reports/coverage", CoverageReportView, basename="coverage-reports")
 # Comment out until we start loading Channels and tying them to products/errata
 # router.register(r"channels", ChannelView)
+router.register(r"status", StatusViewSet, basename="status")
+router.register(r"reports/coverage", CoverageReportViewSet, basename="coverage-reports")
 router.register(r"relations", RelationsView)
 
 urlpatterns = [

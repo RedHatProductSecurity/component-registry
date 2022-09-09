@@ -72,7 +72,8 @@ def slow_software_composition_analysis(build_id: int):
     try:
         # Get a matching SRPM first
         root_component = Component.objects.get(
-            software_build=software_build, type=Component.Type.SRPM
+            software_build=software_build,
+            type__in=[Component.Type.SRPM, Component.Type.RHEL_MODULE],
         )
     except Component.DoesNotExist:
         # It might be a container image, else fail the task if neither matched

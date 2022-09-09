@@ -173,84 +173,10 @@ class ComponentSerializer(serializers.ModelSerializer):
         return get_component_purl_link(instance.purl)
 
     @staticmethod
-    def get_products(instance: Component) -> list[dict[str, str]]:
-        return get_product_data_list_by_ofuri(Product, "products", instance.products)
 
-    @staticmethod
-    def get_product_versions(instance: Component) -> list[dict[str, str]]:
-        return get_product_data_list_by_ofuri(
-            ProductVersion, "product_versions", instance.product_versions
-        )
-
-    @staticmethod
-    def get_product_streams(instance: Component) -> list[dict[str, str]]:
-        return get_product_data_list_by_ofuri(
-            ProductStream, "product_streams", instance.product_streams
-        )
-
-    # Above 3 are special - they filter on ofuri= instead of name=
-    @staticmethod
-    def get_product_variants(instance: Component) -> list[dict[str, str]]:
-        return get_product_data_list(ProductVariant, "product_variants", instance.product_variants)
-
-    @staticmethod
-    def get_provides(instance: Component) -> list[dict[str, str]]:
-        return get_component_data_list(instance.get_provides())
-
-    @staticmethod
-    def get_sources(instance: Component) -> list[dict[str, str]]:
-        return get_component_data_list(instance.get_source())
-
-    @staticmethod
-    def get_upstreams(instance: Component) -> list[dict[str, str]]:
-        return get_component_data_list(instance.get_upstreams())
-
-    class Meta:
-        model = Component
-        fields = [
-            "link",
-            "uuid",
-            "type",
-            "purl",
-            "name",
-            "description",
-            "related_url",
-            "tags",
-            "version",
-            "release",
-            "arch",
-            "nvr",
-            "nevra",
-            "epoch",
-            "license",
-            "license_list",
-            "software_build",
-            "errata",
-            "products",
-            "product_versions",
-            "product_streams",
-            "product_variants",
-            # "channels",
-            "sources",
-            "provides",
-            "upstreams",
-            # "meta_attr",
-        ]
-
-
-class ComponentDetailSerializer(serializers.ModelSerializer):
-    software_build = SoftwareBuildSummarySerializer(many=False)
-    tags = TagSerializer(many=True, read_only=True)
-    products = serializers.SerializerMethodField()
-    product_versions = serializers.SerializerMethodField()
-    product_streams = serializers.SerializerMethodField()
-    product_variants = serializers.SerializerMethodField()
-
-    link = serializers.SerializerMethodField()
-
-    provides = serializers.SerializerMethodField()
-    sources = serializers.SerializerMethodField()
-    upstreams = serializers.SerializerMethodField()
+            # All other component types are either not currently supported or have no downloadable
+            # artifacts (e.g. RHEL module builds).
+        return ""
 
     @staticmethod
     def get_products(instance: Component) -> list[dict[str, str]]:
@@ -272,10 +198,6 @@ class ComponentDetailSerializer(serializers.ModelSerializer):
     @staticmethod
     def get_product_variants(instance: Component) -> list[dict[str, str]]:
         return get_product_data_list(ProductVariant, "product_variants", instance.product_variants)
-
-    @staticmethod
-    def get_link(instance: Component) -> str:
-        return get_component_purl_link(instance.purl)
 
     @staticmethod
     def get_provides(instance: Component) -> list[dict[str, str]]:

@@ -327,9 +327,14 @@ def recurse_components(component, parent):
 
 
 def save_module(softwarebuild, build_data) -> ComponentNode:
+    """Upstreams are not created because modules have no related source code. They are a
+    collection of RPMs from other SRPMS. The upstreams can be looked up from all the RPM children.
+    No child components are created here because we don't have enough data in Brew to determine
+    the relationships. We create the relationships using data from RHEL_COMPOSE, or RPM repository
+    See CORGI-200, and CORGI-163"""
     meta_attr = build_data["meta"]["meta_attr"]
     meta_attr.update(build_data["analysis_meta"])
-    obj, created = Component.objects.get_or_create(
+    obj, created = Component.objects.update_or_create(
         name=build_data["meta"]["name"],
         type=Component.Type.RHEL_MODULE,
         arch=build_data["meta"].get("arch", ""),
@@ -351,8 +356,6 @@ def save_module(softwarebuild, build_data) -> ComponentNode:
             "obj": obj,
         },
     )
-    # TODO: add upstream if exists
-    # TODO: recurse components from build_data["meta"]["components"]
 
     return node
 

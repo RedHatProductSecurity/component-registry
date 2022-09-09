@@ -107,11 +107,18 @@ class SoftwareBuildSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
 
     link = serializers.SerializerMethodField()
+    web_url = serializers.SerializerMethodField()
     components = serializers.SerializerMethodField()
 
     @staticmethod
     def get_link(instance: SoftwareBuild) -> str:
         return get_model_id_link("builds", instance.build_id)
+
+    @staticmethod
+    def get_web_url(build: SoftwareBuild) -> str:
+        if build.type == SoftwareBuild.Type.BREW:
+            return f"{settings.BREW_WEB_URL}/brew/buildinfo?buildID={build.build_id}"
+        return ""
 
     @staticmethod
     def get_components(instance: SoftwareBuild) -> list[dict[str, str]]:
@@ -121,6 +128,7 @@ class SoftwareBuildSerializer(serializers.ModelSerializer):
         model = SoftwareBuild
         fields = [
             "link",
+            "web_url",
             "build_id",
             "type",
             "name",

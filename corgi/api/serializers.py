@@ -159,6 +159,8 @@ class ComponentSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
 
     link = serializers.SerializerMethodField()
+    download_url = serializers.SerializerMethodField()
+
     products = serializers.SerializerMethodField()
     product_versions = serializers.SerializerMethodField()
     product_streams = serializers.SerializerMethodField()
@@ -173,6 +175,26 @@ class ComponentSerializer(serializers.ModelSerializer):
         return get_component_purl_link(instance.purl)
 
     @staticmethod
+    def get_download_url(component: Component) -> str:
+        if component.software_build and component.software_build.type == SoftwareBuild.Type.BREW:
+            # RPM ex:
+            # /vol/rhel-7/packages/emacs/24.3/23.el7/ppc64le/emacs-common-24.3-23.el7.ppc64le.rpm
+            if component.type in (Component.Type.RPM, Component.Type.SRPM):
+                return (
+                    f"{settings.BREW_DOWNLOAD_ROOT_URL}/vol/"
+                    f"{component.software_build.meta_attr['volume_name']}/packages/"
+                    f"{component.name}/{component.version}/{component.release}/{component.arch}/"
+                    f"{component.nvr}.{component.arch}.rpm"
+                )
+            # Image ex:
+            # /packages/hco-bundle-registry-container/v4.13.0.rhel9/152/images/docker-image-sha256:bba727643de6be9ad835b23614ecd83b55ef6bcc63a7a67d64588e7241da15b4.x86_64.tar.gz
+            # TODO: ensure all container images store the filename of the image archive they are
+            #  included in. This is not the digest SHA but the config layer SHA.
+            # elif component.type == Component.Type.CONTAINER_IMAGE:
+            #     return (
+            #         f"{settings.BREW_DOWNLOAD_ROOT_URL}/packages/{component.name}/"
+            #         f"{component.version}/{component.release}/images/{component.filename}"
+            #     )
 
             # All other component types are either not currently supported or have no downloadable
             # artifacts (e.g. RHEL module builds).
@@ -215,6 +237,7 @@ class ComponentSerializer(serializers.ModelSerializer):
         model = Component
         fields = [
             "link",
+            "download_url",
             "uuid",
             "type",
             "purl",

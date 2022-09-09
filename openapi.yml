@@ -230,7 +230,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ComponentDetail'
+                $ref: '#/components/schemas/Component'
           description: ''
   /api/v1/components/{uuid}/provides:
     get:
@@ -1002,12 +1002,15 @@ components:
         link:
           type: string
           readOnly: true
+        download_url:
+          type: string
+          readOnly: true
         uuid:
           type: string
           format: uuid
           readOnly: true
         type:
-          $ref: '#/components/schemas/Type1b3Enum'
+          $ref: '#/components/schemas/ComponentTypeEnum'
         purl:
           type: string
           maxLength: 1024
@@ -1107,6 +1110,7 @@ components:
           readOnly: true
       required:
       - description
+      - download_url
       - epoch
       - errata
       - license_list
@@ -1124,134 +1128,19 @@ components:
       - upstreams
       - uuid
       - version
-    ComponentDetail:
-      type: object
-      properties:
-        link:
-          type: string
-          readOnly: true
-        uuid:
-          type: string
-          format: uuid
-          readOnly: true
-        type:
-          $ref: '#/components/schemas/Type1b3Enum'
-        purl:
-          type: string
-          maxLength: 1024
-        name:
-          type: string
-        description:
-          type: string
-        related_url:
-          type: string
-          nullable: true
-          maxLength: 1024
-        tags:
-          type: array
-          items:
-            $ref: '#/components/schemas/Tag'
-          readOnly: true
-        version:
-          type: string
-          maxLength: 1024
-        release:
-          type: string
-          maxLength: 1024
-        arch:
-          type: string
-          maxLength: 1024
-        nvr:
-          type: string
-          maxLength: 1024
-        nevra:
-          type: string
-          maxLength: 1024
-        epoch:
-          type: string
-          readOnly: true
-        license:
-          type: string
-        license_list:
-          type: array
-          items:
-            type: string
-          readOnly: true
-        software_build:
-          $ref: '#/components/schemas/SoftwareBuildSummary'
-        errata:
-          type: array
-          items:
-            type: string
-          readOnly: true
-        products:
-          type: array
-          items:
-            type: object
-            additionalProperties:
-              type: string
-          readOnly: true
-        product_versions:
-          type: array
-          items:
-            type: object
-            additionalProperties:
-              type: string
-          readOnly: true
-        product_streams:
-          type: array
-          items:
-            type: object
-            additionalProperties:
-              type: string
-          readOnly: true
-        product_variants:
-          type: array
-          items:
-            type: object
-            additionalProperties:
-              type: string
-          readOnly: true
-        sources:
-          type: array
-          items:
-            type: object
-            additionalProperties:
-              type: string
-          readOnly: true
-        provides:
-          type: array
-          items:
-            type: object
-            additionalProperties:
-              type: string
-          readOnly: true
-        upstreams:
-          type: array
-          items:
-            type: object
-            additionalProperties:
-              type: string
-          readOnly: true
-      required:
-      - description
-      - epoch
-      - errata
-      - license_list
-      - link
-      - name
-      - product_streams
-      - product_variants
-      - product_versions
-      - products
-      - provides
-      - software_build
-      - sources
-      - tags
-      - type
-      - upstreams
-      - uuid
-      - version
+    ComponentTypeEnum:
+      enum:
+      - CONTAINER_IMAGE
+      - GOLANG
+      - MAVEN
+      - NPM
+      - RHEL_MODULE
+      - RPM
+      - SRPM
+      - PYPI
+      - UNKNOWN
+      - UPSTREAM
+      type: string
     PaginatedComponentList:
       type: object
       properties:
@@ -1747,6 +1636,9 @@ components:
         link:
           type: string
           readOnly: true
+        web_url:
+          type: string
+          readOnly: true
         build_id:
           type: integer
           maximum: 2147483647
@@ -1787,6 +1679,7 @@ components:
       - source
       - tags
       - type
+      - web_url
     SoftwareBuildSummary:
       type: object
       properties:
@@ -1826,19 +1719,6 @@ components:
       required:
       - created_at
       - name
-    Type1b3Enum:
-      enum:
-      - CONTAINER_IMAGE
-      - GOLANG
-      - MAVEN
-      - NPM
-      - RHEL_MODULE
-      - RPM
-      - SRPM
-      - PYPI
-      - UNKNOWN
-      - UPSTREAM
-      type: string
     TypeF2cEnum:
       enum:
       - BREW

@@ -652,18 +652,15 @@ class Brew:
             "type": "module",
             "namespace": "redhat",
             "meta": {
-                "nvr": build_info["nvr"],
                 "name": build_info["name"],
                 "version": build_info["version"],
                 "license": " OR ".join(modulemd["data"]["license"].get("module", "")),
                 "release": build_info["release"],
-                # "arch": build_info["arch"],
-                "epoch": build_info["epoch"],
                 "description": modulemd["data"]["description"],
                 "meta_attr": meta_attr,
             },
             "analysis_meta": {
-                "source": [],
+                "source": ["koji.getBuild"],
             },
         }
 
@@ -761,3 +758,13 @@ class Brew:
         except koji.GenericError as exc:
             logger.warning("Couldn't find brew builds with tag %s: %s", brew_tag, exc)
             return tuple()
+
+    def brew_srpm_lookup(self, srpms) -> tuple:
+        with self.koji_session.multicall() as multicall:
+            find_build_id_calls = tuple((srpm, multicall.findBuildID(srpm)) for srpm in srpms)
+        return find_build_id_calls
+
+    def brew_rpm_lookup(self, rpms) -> tuple:
+        with self.koji_session.multicall() as multicall:
+            find_build_id_calls = tuple((rpm, multicall.getRPM(rpm)) for rpm in rpms)
+        return find_build_id_calls

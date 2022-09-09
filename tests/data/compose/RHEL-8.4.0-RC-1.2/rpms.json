@@ -13,10 +13,9 @@
         "rpms": {
             "AppStream": {
                 "aarch64": {
-                    "389-ds-base-0:1.4.3.16-13.module+el8.4.0+10307+74bbfb4e.src": {
-                   }
-		}
-	    }
+                    "389-ds-base-0:1.4.3.16-13.module+el8.4.0+10307+74bbfb4e.src": {}
+		        }
+	        }
         }
     }
 }

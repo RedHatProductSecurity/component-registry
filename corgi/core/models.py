@@ -167,7 +167,7 @@ class ComponentNode(MPTTModel, TimeStampedModel):
             ),
             models.UniqueConstraint(
                 name="unique_cnode_get_or_create_for_null_parent",
-                fields=("type", "purl"),
+                fields=("type", "parent", "purl"),
                 condition=models.Q(parent__isnull=True),
             ),
         ]
@@ -768,8 +768,7 @@ class Component(TimeStampedModel):
         return str(self.name)
 
     def get_purl(self):
-        if self.type in (Component.Type.RPM, Component.Type.SRPM):
-            # SRPM/RPM
+        if self.type in (Component.Type.RPM, Component.Type.SRPM, Component.Type.RHEL_MODULE):
             evr = ""
             qualifiers = {
                 "arch": self.arch,

@@ -35,7 +35,7 @@ class Command(BaseCommand):
             "-f",
             "--force",
             action="store_true",
-            help="force ingestion, even if it exists",
+            help="Force ingestion even if build exists",
         )
 
     def handle(self, *args, **options) -> None:
@@ -59,10 +59,6 @@ class Command(BaseCommand):
             self.stderr.write(self.style.ERROR("No build IDs or Product Stream specified..."))
             sys.exit(1)
 
-        force_process = False
-        if options["force"]:
-            force_process = True
-
         self.stdout.write(
             self.style.SUCCESS(
                 f"Fetching component data for builds: {', '.join(map(str, build_ids))}"
@@ -71,6 +67,6 @@ class Command(BaseCommand):
 
         for build_id in build_ids:
             if options["inline"]:
-                slow_fetch_brew_build(build_id, force_process=force_process)
+                slow_fetch_brew_build(build_id, force_process=options["force"])
             else:
-                slow_fetch_brew_build.delay(build_id, force_process=force_process)
+                slow_fetch_brew_build.delay(build_id, force_process=options["force"])

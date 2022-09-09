@@ -33,6 +33,12 @@ class Command(BaseCommand):
             action="store_true",
             help="Schedule build for ingestion inline (not in celery)",
         )
+        parser.add_argument(
+            "-f",
+            "--force",
+            action="store_true",
+            help="Force ingestion even if the Compose exists",
+        )
 
     def handle(self, *args, **options) -> None:
         if options["compose_names"]:
@@ -60,6 +66,6 @@ class Command(BaseCommand):
         for build_id in build_ids:
             build_id = int(build_id)
             if options["inline"]:
-                slow_fetch_brew_build(build_id)
+                slow_fetch_brew_build(build_id, force_process=options["force"])
             else:
-                slow_fetch_brew_build.delay(build_id)
+                slow_fetch_brew_build.delay(build_id, force_process=options["force"])

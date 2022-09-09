@@ -36,7 +36,6 @@ from .filters import (
 from .serializers import (
     AppStreamLifeCycleSerializer,
     ChannelSerializer,
-    ComponentDetailSerializer,
     ComponentSerializer,
     ProductSerializer,
     ProductStreamSerializer,
@@ -378,11 +377,6 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend, filters.SearchFilter]
     filterset_class = ComponentFilter
     lookup_url_kwarg = "uuid"
-
-    def get_serializer_class(self):
-        if self.action == "retrieve":
-            return ComponentDetailSerializer
-        return self.serializer_class
 
     def list(self, request, *args, **kwargs):
         req = self.request

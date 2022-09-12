@@ -1,6 +1,5 @@
 import logging
 
-from django.db.models import Q
 from django_filters.rest_framework import CharFilter, Filter, FilterSet
 
 from corgi.core.models import Channel, Component, SoftwareBuild
@@ -53,8 +52,7 @@ class ComponentFilter(FilterSet):
     re_upstream = CharFilter(lookup_expr="regex", field_name="upstreams")
 
     def filter_ofuri(queryset, name, value):
-        query = Q(product_streams__icontains=[value])
-        return queryset.filter(query)
+        return queryset.filter(product_streams__icontains=value)
 
     ofuri = CharFilter(method=filter_ofuri)
 

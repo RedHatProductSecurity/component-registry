@@ -37,6 +37,7 @@ from .filters import (
 from .serializers import (
     AppStreamLifeCycleSerializer,
     ChannelSerializer,
+    ComponentListSerializer,
     ComponentSerializer,
     ProductSerializer,
     ProductStreamSerializer,
@@ -383,6 +384,10 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         # purl are stored with each segment url encoded as per the specification. The purl query
         # param here is url decoded, to ensure special characters such as '@' and '?'
         # are not interpreted as part of the request.
+        ofuri = request.query_params.get("ofuri")
+        if ofuri:
+            self.serializer_class = ComponentListSerializer
+            return super().list(request)
         purl = request.query_params.get("purl")
         if not purl:
             return super().list(request)

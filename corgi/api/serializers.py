@@ -45,7 +45,7 @@ def get_component_purl_link(purl: str) -> str:
 
 def get_model_ofuri_link(model_name: str, ofuri: str, related_type=None) -> str:
     """Generic method to get an ofuri link for an arbitrary Model subclass."""
-    link = f"{CORGI_API_URL}/{model_name}?ofuri={ofuri}"
+    link = f"{CORGI_API_URL}/{model_name}?ofuri={ofuri}&type=SRPM&limit=3000"
     return link if not related_type else f"{link}&type={related_type}"
 
 

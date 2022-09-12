@@ -112,22 +112,25 @@ def update_variant_repos() -> None:
     CDN repos are saved as Channels and are linked to Variants as their children. Multiple Variants
     can link to the same CDN repo.
     """
-    variant_to_repo_map: dict = ErrataTool().variant_cdn_repo_mapping()
+    variant_to_repo_map: dict = ErrataTool().get_variant_cdn_repo_mapping()
     with transaction.atomic():
-        for pv in ProductVariant.objects.get_queryset():
-            if pv.name not in variant_to_repo_map:
-                logger.error("Product Variant '%s' does not exist in Errata Tool", pv.name)
+        for name, et_variant_data in variant_to_repo_map.items():
+            try:
+                pv = ProductVariant.objects.get(name=name)
+            except ProductVariant.DoesNotExist:
+                logger.debug("Product Variant %s from ET not found in models", name)
                 continue
 
             pv_node = pv.pnodes.first()
-            et_variant_data = variant_to_repo_map[pv.name]
 
             pv_channels = []
             for repo in et_variant_data["repos"]:
-                repo, _ = Channel.objects.get_or_create(
+                repo, created = Channel.objects.get_or_create(
                     name=repo, defaults={"type": Channel.Type.CDN_REPO}
                 )
                 pv_channels.append(repo.name)
+                if created:
+                    logger.info("Created new channel %s for variant %s", repo, pv.name)
                 # TODO: investigate whether we need to delete CDN repos that were removed from a
                 #  Variant between two different runs of this task.
                 #

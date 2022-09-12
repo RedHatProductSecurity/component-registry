@@ -158,25 +158,12 @@ class ErrataTool:
 
         return dict(variant_to_component_map)
 
-    # TODO update this to use the ET Models
-    def variant_cdn_repo_mapping(self) -> dict:
+    def save_variant_cdn_repo_mapping(self):
         """Fetches all existing Errata Tool Variants and the CDN repos they are configured with.
 
         Each erratum's builds are mapped against individual Variants that determine which repos
         the content gets pushed to.
         """
-        variants = self.get_paged("api/v1/variants", page_data_attr="data")
-
-        # Index a list of variants by their name so we can add repos to them, and pull out only
-        # data that we need out of them.
-        variants_with_repos = {}
-        for variant in variants:
-            variant_attrs = variant["attributes"]
-            variants_with_repos[variant_attrs["name"]] = {
-                "description": variant_attrs["description"],
-                "cpe": variant_attrs["cpe"],
-                "repos": [],
-            }
 
         for repo in self.get_paged("api/v1/cdn_repos", page_data_attr="data"):
             repo_attrs = repo["attributes"]
@@ -184,15 +171,25 @@ class ErrataTool:
 
             for variant in repo_rels["variants"]:
                 variant_name = variant["name"]
-                if variant_name not in variants_with_repos:
-                    logger.warning(
+                try:
+                    variant_obj = CollectorErrataProductVariant.objects.get(name=variant_name)
+                    variant_obj.repos.append(repo_attrs["name"])
+                except CollectorErrataProductVariant.DoesNotExist:
+                    logger.debug(
                         "Repo %s links to a non-existent variant: %s",
                         repo_attrs["name"],
                         variant_name,
                     )
                     continue
-                variants_with_repos[variant_name]["repos"].append(repo_attrs["name"])
+                logger.info("Linking repo %s to variant %s", repo_attrs["name"], variant_name)
+                variant_obj.save()
 
+    def get_variant_cdn_repo_mapping(self) -> dict:
+        variants_with_repos = {}
+        for variant in CollectorErrataProductVariant.objects.exclude(repos__len=0):
+            variants_with_repos[variant.name] = {
+                "repos": variant.repos,
+            }
         return variants_with_repos
 
     def normalize_erratum_id(self, name: str) -> int:

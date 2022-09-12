@@ -31,6 +31,7 @@ class CollectorErrataProductVariant(CollectorErrataModel):
     product_version = models.ForeignKey(
         CollectorErrataProductVersion, on_delete=models.CASCADE, related_name="variants"
     )
+    repos = fields.ArrayField(models.CharField(max_length=1024), default=list)
 
 
 class CollectorComposeRhelModule(models.Model):

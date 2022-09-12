@@ -233,11 +233,11 @@ The following is a listing of most of the attributes shown above with a descript
 
 - `version`, `release`, `arch`, `nvr`: `nevra`, `epoch`: attributes of a component that combined with the name
   identify it uniquely; `nvr` and `nevra` are frequently-used combinations of these attributes.
--
+
 - `license`: the license string as it is included in the component's spec file.
--
+
 - `license_list`: the license string parsed into its individual components.
--
+
 - `software_build`: a minimal representation of the build that produced this component.
 
 - `errata`: a list of any errata that shipped this component.

@@ -1,7 +1,5 @@
 # Developer Guide
 
-[[_TOC_]]
-
 ## Project Setup
 
 Install and activate a Python virtual environment:
@@ -70,7 +68,7 @@ It is recommended to add all the aforementioned environment variables to your vi
 environment's `venv/bin/activate` script.
 
 In order for the environment variables to be passed into the celery pods started by podman-compose you'll also have to
-add them to a .env file eg.
+add them to a .env file e.g.:
 ```bash
 CORGI_APP_STREAMS_LIFE_CYCLE_URL=<value>
 CORGI_BREW_DOWNLOAD_ROOT_URL=<value>
@@ -83,19 +81,19 @@ CORGI_LOOKASIDE_CACHE_URL=<value>
 
 Build container images:
 ```bash
-> podman-compose build
+podman-compose build
 ```
 
 To start system locally
 ```bash
-> podman-compose up -d
+podman-compose up -d
 ```
 
 The application should be available on http://localhost:8008.
 
-To shut down and clean up: 
+To shut down and clean up:
 ```bash
-> podman-compose down -v  # Also removes data volume
+podman-compose down -v  # Also removes data volume
 ```
 
 ### Running the Development Shell
@@ -106,27 +104,29 @@ Ensure you have environment variables defined as noted in "Project Setup"; then 
 ./manage.py shell
 ```
 
-### Running tests
+### Running Tests
 
 To run the full complement of tests and linters:
-```
+```bash
 tox
 ```
+
 This target should be run before making any commits.
 
 Tox accepts additional arguments, for example to select to run just unit tests:
-```
+```bash
 tox -e corgi -- -m "unit"
 ```
+
 Alternatively, you can always run individual tests:
-```
+```bash
 tox -e corgi -- tests/test_model.py::test_product_model
 ```
 
 By default, `VCR.py` is run with '[record-mode=once](https://vcrpy.readthedocs.io/en/latest/usage.html#once)'
 under `testenv:corgi`. To overwrite/renew existing cassette files, run:
-```
+```bash
 tox -e corgi-vcr-record-rewrite
 ```
 
-Remember to commit and push if there is a newly generated cassette file. 
+Remember to commit and push if there is a newly generated cassette file.

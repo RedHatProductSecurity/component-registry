@@ -592,9 +592,3 @@ class AppStreamLifeCycleSerializer(serializers.ModelSerializer):
     class Meta:
         model = AppStreamLifeCycle
         fields = "__all__"
-
-
-class RelationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ProductComponentRelation
-        fields = "__all__"

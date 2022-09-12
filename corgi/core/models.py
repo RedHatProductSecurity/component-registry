@@ -768,20 +768,34 @@ class Component(TimeStampedModel):
         return str(self.name)
 
     def get_purl(self):
-        if self.type in (Component.Type.RPM, Component.Type.SRPM, Component.Type.RHEL_MODULE):
-            evr = ""
+        if self.type in (Component.Type.RPM, Component.Type.SRPM):
             qualifiers = {
                 "arch": self.arch,
             }
             if self.epoch:
-                evr = f"{self.epoch}:"
                 qualifiers["epoch"] = str(self.epoch)
-            evr = f"{evr}{self.version}-{self.release}"
             return PackageURL(
-                type=self.type,
+                type="rpm",  # Purl defines no type specific to SRPMs
                 namespace=self.Namespace.REDHAT.lower(),
                 name=self.name,
-                version=evr,
+                version=f"{self.version}-{self.release}",
+                qualifiers=qualifiers,
+            )
+        elif self.type == Component.Type.RHEL_MODULE:
+            # Break down RHEL module version into its specific parts:
+            # NSVC = Name, Stream, Version, Context
+            version, _, context = self.release.partition(".")
+            qualifiers = {
+                "stream": self.version,
+                "version": version,
+                "context": context,
+            }
+            return PackageURL(
+                # Purl does not define a type for RHEL/CentOS modules; TODO: propose rpmmod
+                type="rpmmod",
+                namespace=self.Namespace.REDHAT.lower(),
+                name=self.name,
+                version=f"{self.version}-{self.release}",
                 qualifiers=qualifiers,
             )
         elif self.type == Component.Type.CONTAINER_IMAGE:
@@ -803,15 +817,12 @@ class Component(TimeStampedModel):
                 subpath=None,
             )
         elif self.type == Component.Type.UPSTREAM:
-            ns = self.meta_attr.get("url", "")
-            if "//" in ns:
-                ns = ns.split("//")[1]
-                # TODO: below does not use ns??
+            # Upstream components should default to the "generic" purl type and not use any
+            # namespaces. In the future, we may extend this to map to upstream-defined purls.
             return PackageURL(
-                type="upstream",
+                type="generic",
                 name=self.name,
                 version=f"{self.version}",
-                subpath=None,
             )
         else:
             # unknown

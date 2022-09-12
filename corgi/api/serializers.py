@@ -183,8 +183,8 @@ class ComponentSerializer(serializers.ModelSerializer):
                 return (
                     f"{settings.BREW_DOWNLOAD_ROOT_URL}/vol/"
                     f"{component.software_build.meta_attr['volume_name']}/packages/"
-                    f"{component.name}/{component.version}/{component.release}/{component.arch}/"
-                    f"{component.nvr}.{component.arch}.rpm"
+                    f"{component.software_build.name}/{component.version}/{component.release}/"
+                    f"{component.arch}/{component.nvr}.{component.arch}.rpm"
                 )
             # Image ex:
             # /packages/hco-bundle-registry-container/v4.13.0.rhel9/152/images/docker-image-sha256:bba727643de6be9ad835b23614ecd83b55ef6bcc63a7a67d64588e7241da15b4.x86_64.tar.gz

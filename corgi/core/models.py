@@ -190,8 +190,7 @@ class ComponentNode(MPTTModel, TimeStampedModel):
         return self.desc.name
 
     def save(self, *args, **kwargs):
-        if not self.purl:
-            self.purl = self.obj.purl
+        self.purl = self.obj.purl
         super().save(*args, **kwargs)
 
 

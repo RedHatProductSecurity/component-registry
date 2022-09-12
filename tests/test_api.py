@@ -1,3 +1,5 @@
+from urllib.parse import quote
+
 import pytest
 
 from corgi.collectors.appstream_lifecycle import AppStreamLifeCycleCollector
@@ -228,15 +230,36 @@ def test_srpm_detail(client, api_path):
 
 
 def test_rpm_detail(client, api_path):
-    c1 = ComponentFactory(type=Component.Type.RPM, name="curl-7.19.7-35.el6")
+    c1 = ComponentFactory(
+        type=Component.Type.RPM, name="curl", version="7.19.7", release="35.el6", arch="x86_64"
+    )
     response = client.get(f"{api_path}/components?type=RPM")
     assert response.status_code == 200
     response = client.get(f"{api_path}/components/{c1.uuid}")
     assert response.status_code == 200
-    assert response.json()["name"] == "curl-7.19.7-35.el6"
-    response = client.get(f"{api_path}/components?type=RPM&name=curl-7.19.7-35.el6")
+    assert response.json()["nvr"] == "curl-7.19.7-35.el6"
+    response = client.get(f"{api_path}/components?type=RPM&nvr=curl-7.19.7-35.el6")
     assert response.status_code == 200
     assert response.json()["count"] == 1
+    response = client.get(f"{api_path}/components?purl={quote(c1.purl)}")
+    assert response.status_code == 302
+    assert response.headers["Location"] == f"{api_path}/components/{c1.uuid}"
+
+
+def test_purl_reserved(client, api_path):
+    c1 = ComponentFactory(
+        name="dbus-glib-debuginfo",
+        version="0.110",
+        release="13.module+el9.0.0+14622+3cf1e152",
+        type=Component.Type.RPM,
+        arch="x86_64",
+    )
+    response = client.get(
+        f"{api_path}/components?nvr=dbus-glib-debuginfo-0.110-13.module+el9.0.0+14622+3cf1e152"
+    )
+    assert response.status_code == 200
+    response = client.get(f"{api_path}/components?purl={quote(c1.purl)}")
+    assert response.status_code == 302
 
 
 def test_re_name_filter(client, api_path):

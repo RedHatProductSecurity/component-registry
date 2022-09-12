@@ -6,6 +6,7 @@ from django.db import connection
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from mptt.templatetags.mptt_tags import cache_tree_children
+from packageurl import PackageURL
 from rest_framework import filters, status
 from rest_framework.decorators import action, api_view
 from rest_framework.request import Request
@@ -379,11 +380,15 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
     lookup_url_kwarg = "uuid"
 
     def list(self, request, *args, **kwargs):
-        req = self.request
-        # Note - purl url param needs to be url encoded a they are a uri.
-        purl = req.query_params.get("purl")
+        # purl are stored with each segment url encoded as per the specification. The purl query
+        # param here is url decoded, to ensure special characters such as '@' and '?'
+        # are not interpreted as part of the request.
+        purl = request.query_params.get("purl")
         if not purl:
             return super().list(request)
+        # We re-encode the purl here to ensure each segment of the purl is url encoded,
+        # as it's stored in the DB.
+        purl = f"{PackageURL.from_string(purl)}"
         component = Component.objects.filter(purl=purl).first()
         if not component:
             return Response(status=404)

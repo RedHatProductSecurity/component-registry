@@ -798,67 +798,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/Product'
           description: ''
-  /api/v1/relations:
-    get:
-      operationId: v1_relations_list
-      description: View for api/v1/relations
-      parameters:
-      - name: limit
-        required: false
-        in: query
-        description: Number of results to return per page.
-        schema:
-          type: integer
-      - name: offset
-        required: false
-        in: query
-        description: The initial index from which to return the results.
-        schema:
-          type: integer
-      - name: search
-        required: false
-        in: query
-        description: A search term.
-        schema:
-          type: string
-      tags:
-      - v1
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PaginatedRelationList'
-          description: ''
-  /api/v1/relations/{uuid}:
-    get:
-      operationId: v1_relations_retrieve
-      description: View for api/v1/relations
-      parameters:
-      - in: path
-        name: uuid
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this product component relation.
-        required: true
-      tags:
-      - v1
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Relation'
-          description: ''
-  /api/v1/reports/coverage:
-    get:
-      operationId: v1_reports_coverage_retrieve
-      tags:
-      - v1
-      responses:
-        '200':
-          description: No response body
   /api/v1/schema:
     get:
       operationId: v1_schema_retrieve
@@ -1241,26 +1180,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProductVersion'
-    PaginatedRelationList:
-      type: object
-      properties:
-        count:
-          type: integer
-          example: 123
-        next:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?offset=400&limit=100
-        previous:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?offset=200&limit=100
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/Relation'
     PaginatedSoftwareBuildList:
       type: object
       properties:
@@ -1589,47 +1508,6 @@ components:
       - tags
       - upstreams
       - uuid
-    Relation:
-      type: object
-      properties:
-        uuid:
-          type: string
-          format: uuid
-          readOnly: true
-        last_changed:
-          type: string
-          format: date-time
-          readOnly: true
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
-        type:
-          $ref: '#/components/schemas/RelationTypeEnum'
-        meta_attr:
-          type: object
-          additionalProperties: {}
-        external_system_id:
-          type: string
-          maxLength: 200
-        product_ref:
-          type: string
-          maxLength: 200
-        build_id:
-          type: string
-          maxLength: 200
-      required:
-      - created_at
-      - last_changed
-      - type
-      - uuid
-    RelationTypeEnum:
-      enum:
-      - ERRATA
-      - COMPOSE
-      - BREW_TAG
-      - YUM_REPO
-      type: string
     SoftwareBuild:
       type: object
       properties:

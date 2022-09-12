@@ -4,12 +4,10 @@ from rest_framework import routers
 
 from .views import (
     ComponentViewSet,
-    CoverageReportViewSet,
     ProductStreamViewSetSet,
     ProductVariantViewSetSet,
     ProductVersionViewSet,
     ProductViewSet,
-    RelationsViewSet,
     SoftwareBuildViewSet,
     StatusViewSet,
 )
@@ -42,8 +40,9 @@ router.register(r"product_variants", ProductVariantViewSetSet)
 # Comment out until we start loading Channels and tying them to products/errata
 # router.register(r"channels", ChannelView)
 router.register(r"status", StatusViewSet, basename="status")
-router.register(r"reports/coverage", CoverageReportViewSet, basename="coverage-reports")
-router.register(r"relations", RelationsViewSet)
+# Comment out below routes until we better define the user requirements for these endpoints
+# router.register(r"reports/coverage", CoverageReportViewSet, basename="coverage-reports")
+# router.register(r"relations", RelationsViewSet)
 
 urlpatterns = [
     # v1 API

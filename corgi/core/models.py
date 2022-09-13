@@ -808,7 +808,7 @@ class Component(TimeStampedModel):
                 type="container",
                 namespace=self.Namespace.REDHAT.lower(),
                 name=self.name,
-                version=f"{self.version}",
+                version=f"{self.version}-{self.release}",
                 qualifiers={
                     "arch": self.arch,
                     "digest": digest,
@@ -818,17 +818,23 @@ class Component(TimeStampedModel):
         elif self.type == Component.Type.UPSTREAM:
             # Upstream components should default to the "generic" purl type and not use any
             # namespaces. In the future, we may extend this to map to upstream-defined purls.
+            version = self.version
+            if self.release:
+                version = f"{version}-{self.release}"
             return PackageURL(
                 type="generic",
                 name=self.name,
-                version=f"{self.version}",
+                version=version,
             )
         else:
-            # unknown
+            # Unknown
+            version = self.version
+            if self.release:
+                version = f"{version}-{self.release}"
             return PackageURL(
                 type=self.type,
                 name=self.name,
-                version=f"{self.version}",
+                version=version,
             )
 
     def save_component_taxonomy(self):

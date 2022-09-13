@@ -167,7 +167,7 @@ class ComponentNode(MPTTModel, TimeStampedModel):
             ),
             models.UniqueConstraint(
                 name="unique_cnode_get_or_create_for_null_parent",
-                fields=("type", "parent", "purl"),
+                fields=("type", "purl"),
                 condition=models.Q(parent__isnull=True),
             ),
         ]

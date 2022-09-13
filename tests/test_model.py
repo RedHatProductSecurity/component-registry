@@ -1,4 +1,5 @@
 import pytest
+from django.db.utils import IntegrityError
 
 from corgi.core.models import (
     Component,
@@ -291,3 +292,32 @@ def test_get_upstream():
         purl=container_other_nested.purl,
     )
     assert container_other_nested.get_upstreams() == [container_o_source.purl]
+
+
+def test_duplicate_insert_fails():
+    """Test that DB constraints block inserting nodes with same (type, parent, purl)"""
+    component = ComponentFactory()
+    root = ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl="root", obj=component
+    )
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE, parent=root, purl="child", obj=component
+    )
+    with pytest.raises(IntegrityError):
+        # Inserting the same node a second time should fail with an IntegrityError
+        ComponentNode.objects.create(
+            type=ComponentNode.ComponentNodeType.SOURCE, parent=root, purl="child", obj=component
+        )
+
+
+def test_duplicate_insert_fails_for_null_parent():
+    """Test that DB constraints block inserting nodes with same (type, parent=None, purl)"""
+    component = ComponentFactory()
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl="root", obj=component
+    )
+    with pytest.raises(IntegrityError):
+        # Inserting the same node a second time should fail with an IntegrityError
+        ComponentNode.objects.create(
+            type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl="root", obj=component
+        )

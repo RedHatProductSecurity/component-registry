@@ -18,7 +18,9 @@ logger = logging.getLogger(__name__)
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def load_et_products() -> None:
-    ErrataTool().load_et_products()
+    et = ErrataTool()
+    et.load_et_products()
+    et.save_variant_cdn_repo_mapping()
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)

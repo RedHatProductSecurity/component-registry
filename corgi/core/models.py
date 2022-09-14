@@ -516,6 +516,7 @@ class ProductStream(ProductModel, TimeStampedModel):
 
     composes = models.JSONField(default=dict)
     active = models.BooleanField(default=False)
+    et_product_versions = fields.ArrayField(models.CharField(max_length=200), default=list)
 
     product_streams = None  # type: ignore
     pnodes = GenericRelation(ProductNode, related_query_name="product_stream")

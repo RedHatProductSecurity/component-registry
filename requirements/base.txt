@@ -114,9 +114,9 @@ drf-spectacular==0.21.2 \
     --hash=sha256:4ad3a72609640c57a4ff297d498cb0b810a70aca5555c0760b2da9e2f74a45b2 \
     --hash=sha256:aa7a78c8595b63e1ba14906049c770210c8fa34d84b6d1c7dce5c9e334aa2775
     # via -r requirements/base.in
-flower==1.1.0 \
-    --hash=sha256:77be4bece7330893703e8cca3f3baddba356a0019186594a961e3968289da7ec \
-    --hash=sha256:f920ca2902d7539fc180ab15e51f1d918355e5cc23da854ff9d59c6e5a1725b6
+flower==1.2.0 \
+    --hash=sha256:46493c7e8d9ca2167e8a46eb97ae8d280997cb40a81993230124d74f0fe40bac \
+    --hash=sha256:ae2977cf7343c526cf44def8c7e7173db8dedb8249b91ba4b88cfd18e7a2d486
     # via -r requirements/base.in
 gevent==21.12.0 \
     --hash=sha256:0082d8a5d23c35812ce0e716a91ede597f6dd2c5ff508a02a998f73598c59397 \

@@ -787,7 +787,7 @@ class Component(TimeStampedModel):
         """return name"""
         return str(self.name)
 
-    def get_purl(self):
+    def get_purl(self) -> PackageURL:
         if self.type in (Component.Type.RPM, Component.Type.SRPM):
             qualifiers = {
                 "arch": self.arch,
@@ -877,7 +877,7 @@ class Component(TimeStampedModel):
         self.nvr = self.get_nvr()
         self.nevra = self.get_nevra()
         purl = self.get_purl()
-        self.purl = purl.to_string() if purl else ""
+        self.purl = purl.to_string()
         super().save(*args, **kwargs)
 
     @property

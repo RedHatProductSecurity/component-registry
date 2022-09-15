@@ -978,7 +978,7 @@ class Component(TimeStampedModel):
         return list(
             ComponentNode.objects.get_queryset()  # type: ignore
             .filter(purl=self.purl)
-            .get_ancestors(include_self=True)
+            .get_ancestors(include_self=False)
             .filter(parent=None)
             .values_list("purl", flat=True)
             .distinct()

@@ -99,6 +99,45 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
     logger.info("Finished fetching brew build: %s", build_id)
 
 
+@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
+def fetch_modular_build(build_id: str):
+    rhel_module_data = Brew.fetch_rhel_module(int(build_id))
+    # Some compose build_ids in the relations table will be for SRPMs, skip those here
+    if not rhel_module_data:
+        return
+    obj, created = Component.objects.get_or_create(
+        name=rhel_module_data["meta"]["name"],
+        type=Component.Type.RHEL_MODULE,
+        arch=rhel_module_data["meta"].get("arch", ""),
+        version=rhel_module_data["meta"]["version"],
+        release=rhel_module_data["meta"]["release"],
+        defaults={
+            # This gives us an indication as to which task (this or fetch_brew_build)
+            # last processed the module
+            "meta_attr": rhel_module_data["analysis_meta"],
+        },
+    )
+    # This should result in a lookup if fetch_brew_build has already processed this module.
+    # Likewise if fetch_brew_build processes the module subsequently we should not create
+    # a new ComponentNode, instead the same one will be looked up and used as the root node
+    node, _ = obj.cnodes.get_or_create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        purl=obj.purl,
+        defaults={
+            "object_id": obj.pk,
+            "obj": obj,
+        },
+    )
+    for c in rhel_module_data.get("components", []):
+        # Request fetch of the SRPM build_ids here to ensure software_builds are created and linked
+        # to the RPM components. We don't link the SRPM into the tree because some of it's RPMs
+        # might not be included in the module
+        if "brew_build_id" in c:
+            slow_fetch_brew_build.delay(c["brew_build_id"])
+        save_component(c, node)
+
+
 def find_package_file_name(sources: list[str]) -> str:
     """Find a packageFileName for a manifest using a list of source filenames from a build system"""
     for source in sources:
@@ -382,3 +421,9 @@ def load_brew_tags() -> None:
                 if created:
                     no_of_created += 1
             logger.info("Saving %s new builds for %s", no_of_created, brew_tag)
+
+
+def fetch_modular_builds(relations_query, force_process=False):
+    for build_id in relations_query:
+        fetch_modular_build.delay(build_id)
+        slow_fetch_brew_build.delay(int(build_id), force_process)

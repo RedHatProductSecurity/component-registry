@@ -7,6 +7,7 @@ from corgi.collectors.models import (
     CollectorErrataProduct,
     CollectorErrataProductVariant,
     CollectorErrataProductVersion,
+    CollectorRPMRepository,
 )
 from corgi.core.models import (
     Channel,
@@ -21,7 +22,8 @@ from .factories import ProductVariantFactory
 pytestmark = pytest.mark.unit
 
 
-def test_update_variant_repos():
+@patch("config.celery.app.send_task")
+def test_update_variant_repos(mock_setup_pulp_relations):
     sap_variant = "SAP-8.4.0.Z.EUS"
     sap_repos = [
         "rhel-8-for-ppc64le-sap-netweaver-e4s-debug-rpms__8_DOT_4",
@@ -71,7 +73,7 @@ def test_update_variant_repos():
         )
 
 
-def setup_models_for_variant_repos(sap_repos, sap_variant, et_id):
+def setup_models_for_variant_repos(repos, variant, et_id):
     et_product = CollectorErrataProduct.objects.create(
         et_id=et_id, name=f"name-{et_id}", short_name=str(et_id)
     )
@@ -79,9 +81,12 @@ def setup_models_for_variant_repos(sap_repos, sap_variant, et_id):
         et_id=et_id, name=f"name-{et_id}", product=et_product
     )
     CollectorErrataProductVariant.objects.create(
-        name=sap_variant, repos=sap_repos, et_id=et_id, product_version=et_product_version
+        name=variant, repos=repos, et_id=et_id, product_version=et_product_version
     )
-    pv = ProductVariantFactory.create(name=sap_variant)
+    for repo in repos:
+        CollectorRPMRepository.objects.get_or_create(name=repo)
+
+    pv = ProductVariantFactory.create(name=variant)
     ProductNode.objects.create(object_id=pv.pk, obj=pv, parent=None)
 
 

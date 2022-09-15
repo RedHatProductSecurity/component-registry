@@ -5,6 +5,7 @@ from django.db import transaction
 
 from config.celery import app
 from corgi.collectors.errata_tool import ErrataTool
+from corgi.collectors.models import CollectorRPMRepository
 from corgi.core.models import (
     Channel,
     Product,
@@ -117,6 +118,7 @@ def update_variant_repos() -> None:
     CDN repos are saved as Channels and are linked to Variants as their children. Multiple Variants
     can link to the same CDN repo.
     """
+    logger.info("Getting variant to CDN repo mapping from Errata Tool")
     variant_to_repo_map: dict = ErrataTool().get_variant_cdn_repo_mapping()
     with transaction.atomic():
         for name, et_variant_data in variant_to_repo_map.items():
@@ -130,8 +132,18 @@ def update_variant_repos() -> None:
 
             pv_channels = []
             for repo in et_variant_data["repos"]:
-                repo, created = Channel.objects.get_or_create(
-                    name=repo, defaults={"type": Channel.Type.CDN_REPO}
+                # Filter out inactive repos in pulp and get content_set
+                try:
+                    rpm_repo = CollectorRPMRepository.objects.get(name=repo)
+                except CollectorRPMRepository.DoesNotExist:
+                    logger.debug("Not creating Channel for inactive repo %s", repo)
+                    continue
+                repo, created = Channel.objects.update_or_create(
+                    name=repo,
+                    defaults={
+                        "type": Channel.Type.CDN_REPO,
+                        "meta_attr": {"content_set": rpm_repo.content_set},
+                    },
                 )
                 pv_channels.append(repo.name)
                 if created:
@@ -140,7 +152,7 @@ def update_variant_repos() -> None:
                 #  Variant between two different runs of this task.
                 #
                 # Create a Product Node for each CDN repo linked to a Variant. This means that one
-                # CDN repo (since we run get_or_create above) can be linked to
+                # CDN repo (since we run update_or_create above) can be linked to
                 # multiple product nodes, each linked to a different Variant.
                 repo.pnodes.get_or_create(object_id=repo.pk, parent=pv_node, defaults={"obj": repo})
                 repo.save_product_taxonomy()
@@ -155,3 +167,5 @@ def update_variant_repos() -> None:
                 ProductVersion.objects.get(name=product_version).save_product_taxonomy()
             for product in pv.products:
                 Product.objects.get(name=product).save_product_taxonomy()
+
+    app.send_task("corgi.tasks.pulp.setup_pulp_relations")

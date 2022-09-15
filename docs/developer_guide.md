@@ -61,6 +61,9 @@ export CORGI_DOMAIN
 export CORGI_EMAIL_HOST
 export CORGI_SERVER_EMAIL
 export CORGI_UMB_BROKER_URL
+export CORGI_PULP_URL
+export CORGI_PULP_USERNAME
+export CORGI_PULP_PASSWORD
 ```
 
 It is recommended to add all the aforementioned environment variables to your virtual
@@ -76,6 +79,9 @@ CORGI_ERRATA_TOOL_URL=<value>
 CORGI_LOOKASIDE_CACHE_URL=<value>
 CORGI_MANIFEST_HINTS_URL=<value>
 CORGI_PRODSEC_DASHBOARD_URL=<value>
+CORGI_PULP_URL=<value>
+CORGI_PULP_USERNAME=<value>
+CORGI_PULP_PASSWORD=<value>
 ```
 
 Build container images:

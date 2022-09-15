@@ -3,20 +3,18 @@ from unittest.mock import patch
 
 import pytest
 
-from corgi.collectors.models import (
-    CollectorComposeRhelModule,
-    CollectorComposeRPM,
-    CollectorComposeSRPM,
-)
+from corgi.collectors.brew import Brew
+from corgi.collectors.models import CollectorRhelModule, CollectorRPM, CollectorSRPM
 from corgi.collectors.rhel_compose import RhelCompose
 from corgi.core.models import Component, ProductComponentRelation, ProductStream
-from corgi.tasks.rhel_compose import fetch_compose_build, get_all_builds, save_compose
+from corgi.tasks.brew import fetch_modular_build
+from corgi.tasks.rhel_compose import get_all_builds, save_compose
 
 pytestmark = pytest.mark.unit
 
 base_url = os.getenv("CORGI_TEST_DOWNLOAD_URL")
 
-module_build_id = 0
+module_build_id = "0"
 module_nvr = "389-ds-1.4-8060020220204145416.ce3e8c9c"
 srpm_build_id = 1
 rpm_nvr = "389-ds-base-1.4.3.28-6.module+el8.6.0+14129+983ceada.x86_64"
@@ -39,20 +37,18 @@ def test_fetch_module_data(mock_brew_rpm_lookup, mock_brew_srpm_lookup, requests
     srpm_result.result = 1875729
     mock_brew_srpm_lookup.return_value = [("389-ds-1.4-8060020220204145416.ce3e8c9c", srpm_result)]
 
-    assert CollectorComposeRhelModule.objects.all().count() == 0
-    assert CollectorComposeSRPM.objects.all().count() == 0
-    assert CollectorComposeRPM.objects.all().count() == 0
+    assert CollectorRhelModule.objects.all().count() == 0
+    assert CollectorSRPM.objects.all().count() == 0
+    assert CollectorRPM.objects.all().count() == 0
 
     module_srpms = RhelCompose._fetch_module_data(compose_url, ["BaseOS", "SAPHANA"])
     assert 1875729 in list(module_srpms)
-    rhel_module = CollectorComposeRhelModule.objects.get(
-        nvr="389-ds-1.4-8060020220204145416.ce3e8c9c"
-    )
+    rhel_module = CollectorRhelModule.objects.get(nvr="389-ds-1.4-8060020220204145416.ce3e8c9c")
     assert rhel_module.build_id == 1875729
-    srpm = CollectorComposeSRPM.objects.get(build_id=1875692)
+    srpm = CollectorSRPM.objects.get(build_id=1875692)
     assert srpm
 
-    rpm = CollectorComposeRPM.objects.get(
+    rpm = CollectorRPM.objects.get(
         nvra="389-ds-base-1.4.3.28-6.module+el8.6.0+14129+983ceada.x86_64"
     )
     assert rpm
@@ -60,22 +56,23 @@ def test_fetch_module_data(mock_brew_rpm_lookup, mock_brew_srpm_lookup, requests
     assert rpm.srpm == srpm
 
 
-@patch("corgi.tasks.rhel_compose.fetch_compose_build.delay")
-def test_get_all_builds(mock_fetch_compose):
+@patch("corgi.tasks.brew.fetch_modular_build.delay")
+@patch("corgi.tasks.brew.slow_fetch_brew_build.delay")
+def test_get_all_builds(mock_fetch_compose, mock_slow_fetch_brew_build):
     compose_builds = get_all_builds()
     assert not compose_builds
     ProductComponentRelation.objects.create(
         type=ProductComponentRelation.Type.COMPOSE, build_id=module_build_id
     )
     compose_builds = get_all_builds()
-    assert len(compose_builds) == 1
-    assert compose_builds == [module_build_id]
+    assert mock_fetch_compose.called
+    assert mock_slow_fetch_brew_build.called
 
 
 @patch("corgi.tasks.brew.slow_fetch_brew_build.delay")
 def test_fetch_compose_build(mock_fetch_brew):
     modular_rpm = _set_up_rhel_compose()
-    fetch_compose_build(module_build_id)
+    fetch_modular_build(module_build_id)
     module_obj = Component.objects.get(type=Component.Type.RHEL_MODULE)
     assert module_obj
     assert module_obj.nvr == modular_rpm.rhel_module.first().nvr
@@ -89,8 +86,8 @@ def test_fetch_compose_build(mock_fetch_brew):
 
 def test_fetch_rhel_module():
     _set_up_rhel_compose()
-    assert not RhelCompose.fetch_rhel_module(2)
-    rhel_module_component = RhelCompose.fetch_rhel_module(module_build_id)
+    assert not Brew.fetch_rhel_module(2)
+    rhel_module_component = Brew.fetch_rhel_module(int(module_build_id))
     assert rhel_module_component
     assert len(rhel_module_component["components"]) == 1
     assert len(rhel_module_component["nested_builds"]) == 1
@@ -101,12 +98,10 @@ def test_fetch_rhel_module():
     assert rhel_module_component["components"][0]["meta"]["arch"] == "x86_64"
 
 
-def _set_up_rhel_compose() -> CollectorComposeRPM:
-    rhel_module = CollectorComposeRhelModule.objects.create(
-        build_id=module_build_id, nvr=module_nvr
-    )
-    srpm = CollectorComposeSRPM.objects.create(build_id=srpm_build_id)
-    rpm = CollectorComposeRPM.objects.create(nvra=rpm_nvr, srpm=srpm)
+def _set_up_rhel_compose() -> CollectorRPM:
+    rhel_module = CollectorRhelModule.objects.create(build_id=module_build_id, nvr=module_nvr)
+    srpm = CollectorSRPM.objects.create(build_id=srpm_build_id)
+    rpm = CollectorRPM.objects.create(nvra=rpm_nvr, srpm=srpm)
     rpm.rhel_module.set([rhel_module])
     return rpm
 

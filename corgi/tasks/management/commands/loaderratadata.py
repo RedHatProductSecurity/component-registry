@@ -36,6 +36,7 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.SUCCESS(f"Loading Errata {erratum_id}"))
                 slow_load_errata(erratum_id)
         elif options["repos"]:
+            self.stdout.write(self.style.SUCCESS("Loading channels"))
             update_variant_repos()
         else:
             self.stderr.write(self.style.ERROR("No errata IDs or repo flag specified"))

@@ -3,6 +3,11 @@ from unittest.mock import patch
 
 import pytest
 
+from corgi.collectors.models import (
+    CollectorErrataProduct,
+    CollectorErrataProductVariant,
+    CollectorErrataProductVersion,
+)
 from corgi.core.models import (
     Channel,
     ProductComponentRelation,
@@ -16,16 +21,26 @@ from .factories import ProductVariantFactory
 pytestmark = pytest.mark.unit
 
 
-@pytest.mark.vcr
 def test_update_variant_repos():
-    variants_to_create = (
-        "SAP-8.4.0.Z.EUS",
+    sap_variant = "SAP-8.4.0.Z.EUS"
+    sap_repos = [
+        "rhel-8-for-ppc64le-sap-netweaver-e4s-debug-rpms__8_DOT_4",
+        "rhel-8-for-ppc64le-sap-netweaver-e4s-rpms__8_DOT_4",
+    ]
+    ha_variants = (
         "HighAvailability-8.2.0.GA",
         "HighAvailability-8.3.0.GA",
     )
-    for variant in variants_to_create:
-        pv = ProductVariantFactory.create(name=variant)
-        ProductNode.objects.create(object_id=pv.pk, obj=pv, parent=None)
+
+    ha_repos = [
+        "rhel-8-for-aarch64-highavailability-debug-rpms__8",
+        "rhel-8-for-aarch64-highavailability-rpms__8",
+    ]
+    et_id = 0
+    setup_models_for_variant_repos(sap_repos, sap_variant, et_id)
+    for variant in ha_variants:
+        et_id += 1
+        setup_models_for_variant_repos(ha_repos, variant, et_id)
 
     update_variant_repos()
 
@@ -35,23 +50,7 @@ def test_update_variant_repos():
     assert (
         pv.channels
         == [channel_node.obj.name for channel_node in pv_node.get_descendants()]
-        == [
-            "rhel-8-for-ppc64le-sap-netweaver-e4s-debug-rpms__8_DOT_4",
-            "rhel-8-for-ppc64le-sap-netweaver-e4s-rpms__8_DOT_4",
-            "rhel-8-for-ppc64le-sap-netweaver-e4s-source-rpms__8_DOT_4",
-            "rhel-8-for-ppc64le-sap-netweaver-eus-debug-rpms__8_DOT_4",
-            "rhel-8-for-ppc64le-sap-netweaver-eus-rpms__8_DOT_4",
-            "rhel-8-for-ppc64le-sap-netweaver-eus-source-rpms__8_DOT_4",
-            "rhel-8-for-s390x-sap-netweaver-eus-debug-rpms__8_DOT_4",
-            "rhel-8-for-s390x-sap-netweaver-eus-rpms__8_DOT_4",
-            "rhel-8-for-s390x-sap-netweaver-eus-source-rpms__8_DOT_4",
-            "rhel-8-for-x86_64-sap-netweaver-e4s-debug-rpms__8_DOT_4",
-            "rhel-8-for-x86_64-sap-netweaver-e4s-rpms__8_DOT_4",
-            "rhel-8-for-x86_64-sap-netweaver-e4s-source-rpms__8_DOT_4",
-            "rhel-8-for-x86_64-sap-netweaver-eus-debug-rpms__8_DOT_4",
-            "rhel-8-for-x86_64-sap-netweaver-eus-rpms__8_DOT_4",
-            "rhel-8-for-x86_64-sap-netweaver-eus-source-rpms__8_DOT_4",
-        ]
+        == sap_repos
     )
     # Check that every channel for this Product Variant point to only a single Channel Node since
     # this Variant does not share its repos with any of the HA Variants.
@@ -59,20 +58,7 @@ def test_update_variant_repos():
 
     # HA Variants share the same set of repos, so check that one Channel entity exists that links
     # to two separate pnodes whose immediate parents are the Variants themselves.
-    for repo in [
-        "rhel-8-for-aarch64-highavailability-debug-rpms__8",
-        "rhel-8-for-aarch64-highavailability-rpms__8",
-        "rhel-8-for-aarch64-highavailability-source-rpms__8",
-        "rhel-8-for-ppc64le-highavailability-debug-rpms__8",
-        "rhel-8-for-ppc64le-highavailability-rpms__8",
-        "rhel-8-for-ppc64le-highavailability-source-rpms__8",
-        "rhel-8-for-s390x-highavailability-debug-rpms__8",
-        "rhel-8-for-s390x-highavailability-rpms__8",
-        "rhel-8-for-s390x-highavailability-source-rpms__8",
-        "rhel-8-for-x86_64-highavailability-debug-rpms__8",
-        "rhel-8-for-x86_64-highavailability-rpms__8",
-        "rhel-8-for-x86_64-highavailability-source-rpms__8",
-    ]:
+    for repo in ha_repos:
         channel = Channel.objects.get(type=Channel.Type.CDN_REPO, name=repo)
         assert channel.pnodes.count() == 2
         assert (
@@ -83,6 +69,20 @@ def test_update_variant_repos():
             channel.pnodes.order_by("id").last().get_ancestors().first().obj.name
             == "HighAvailability-8.3.0.GA"
         )
+
+
+def setup_models_for_variant_repos(sap_repos, sap_variant, et_id):
+    et_product = CollectorErrataProduct.objects.create(
+        et_id=et_id, name=f"name-{et_id}", short_name=str(et_id)
+    )
+    et_product_version = CollectorErrataProductVersion.objects.create(
+        et_id=et_id, name=f"name-{et_id}", product=et_product
+    )
+    CollectorErrataProductVariant.objects.create(
+        name=sap_variant, repos=sap_repos, et_id=et_id, product_version=et_product_version
+    )
+    pv = ProductVariantFactory.create(name=sap_variant)
+    ProductNode.objects.create(object_id=pv.pk, obj=pv, parent=None)
 
 
 # id, no_of_obj

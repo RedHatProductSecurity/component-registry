@@ -3,6 +3,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework import routers
 
 from .views import (
+    ChannelViewSet,
     ComponentViewSet,
     ProductStreamViewSetSet,
     ProductVariantViewSetSet,
@@ -38,7 +39,7 @@ router.register(r"product_versions", ProductVersionViewSet)
 router.register(r"product_streams", ProductStreamViewSetSet)
 router.register(r"product_variants", ProductVariantViewSetSet)
 # Comment out until we start loading Channels and tying them to products/errata
-# router.register(r"channels", ChannelView)
+router.register(r"channels", ChannelViewSet)
 router.register(r"status", StatusViewSet, basename="status")
 # Comment out below routes until we better define the user requirements for these endpoints
 # router.register(r"reports/coverage", CoverageReportViewSet, basename="coverage-reports")

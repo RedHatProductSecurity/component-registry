@@ -179,6 +179,7 @@ def update_products() -> None:
 
                         for et_product_version in et_product_versions:
                             et_pv_name = et_product_version["name"]
+                            product_stream.et_product_versions.append(et_pv_name)
 
                             for variant in et_product_version["variants"]:
                                 logger.debug(
@@ -202,6 +203,8 @@ def update_products() -> None:
                                         "obj": product_variant,
                                     },
                                 )
+                        # persist et_product_versions plucked from errata_info
+                        product_stream.save()
 
     with transaction.atomic():
         # Note - Once product taxonomy has been fully loaded we can materialise

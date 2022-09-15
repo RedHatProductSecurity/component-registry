@@ -1,6 +1,12 @@
 from django.core.management.base import BaseCommand
 
-from corgi.core.models import Product, ProductStream, ProductVariant, ProductVersion
+from corgi.core.models import (
+    Channel,
+    Product,
+    ProductStream,
+    ProductVariant,
+    ProductVersion,
+)
 
 
 class Command(BaseCommand):
@@ -21,3 +27,5 @@ class Command(BaseCommand):
             product_version.save_product_taxonomy()
         for product in Product.objects.get_queryset():
             product.save_product_taxonomy()
+        for channel in Channel.objects.get_queryset():
+            channel.save_product_taxonomy()

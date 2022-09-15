@@ -7,8 +7,11 @@ from config.celery import app
 from corgi.collectors.errata_tool import ErrataTool
 from corgi.core.models import (
     Channel,
+    Product,
     ProductComponentRelation,
+    ProductStream,
     ProductVariant,
+    ProductVersion,
     SoftwareBuild,
 )
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
@@ -120,7 +123,7 @@ def update_variant_repos() -> None:
             try:
                 pv = ProductVariant.objects.get(name=name)
             except ProductVariant.DoesNotExist:
-                logger.debug("Product Variant %s from ET not found in models", name)
+                logger.warning("Product Variant %s from ET not found in models", name)
                 continue
 
             pv_node = pv.pnodes.first()
@@ -140,8 +143,15 @@ def update_variant_repos() -> None:
                 # CDN repo (since we run get_or_create above) can be linked to
                 # multiple product nodes, each linked to a different Variant.
                 repo.pnodes.get_or_create(object_id=repo.pk, parent=pv_node, defaults={"obj": repo})
+                repo.save_product_taxonomy()
 
             # Update list of channels for this Variant so that we don't have to call
             # the more expensive save_product_taxonomy() method just to update channels.
             pv.channels = pv_channels
             pv.save()
+            for product_stream in pv.product_streams:
+                ProductStream.objects.get(name=product_stream).save_product_taxonomy()
+            for product_version in pv.product_versions:
+                ProductVersion.objects.get(name=product_version).save_product_taxonomy()
+            for product in pv.products:
+                Product.objects.get(name=product).save_product_taxonomy()

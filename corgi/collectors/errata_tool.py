@@ -173,7 +173,6 @@ class ErrataTool:
                 variant_name = variant["name"]
                 try:
                     variant_obj = CollectorErrataProductVariant.objects.get(name=variant_name)
-                    variant_obj.repos.append(repo_attrs["name"])
                 except CollectorErrataProductVariant.DoesNotExist:
                     logger.debug(
                         "Repo %s links to a non-existent variant: %s",
@@ -181,6 +180,9 @@ class ErrataTool:
                         variant_name,
                     )
                     continue
+                uniq_repos = set(variant_obj.repos)
+                uniq_repos.add(repo_attrs["name"])
+                variant_obj.repos = list(uniq_repos)
                 logger.info("Linking repo %s to variant %s", repo_attrs["name"], variant_name)
                 variant_obj.save()
 

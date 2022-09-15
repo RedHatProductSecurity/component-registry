@@ -622,12 +622,32 @@ class Channel(TimeStampedModel):
     description = models.TextField(default="")
     meta_attr = models.JSONField(default=dict)
     pnodes = GenericRelation(ProductNode, related_query_name="channel")
+    products = fields.ArrayField(models.CharField(max_length=200), default=list)
+    product_versions = fields.ArrayField(models.CharField(max_length=200), default=list)
+    product_streams = fields.ArrayField(models.CharField(max_length=200), default=list)
+    product_variants = fields.ArrayField(models.CharField(max_length=200), default=list)
 
     class Meta:
         ordering = ["name"]
 
     def __str__(self) -> str:
         return str(self.name)
+
+    def save_product_taxonomy(self):
+        product_set = set()
+        stream_set = set()
+        variant_set = set()
+        for n in self.pnodes.first().get_ancestors():
+            if type(n.obj) == Product:
+                product_set.add(n.obj.ofuri)
+            elif type(n.obj) == ProductStream:
+                stream_set.add(n.obj.ofuri)
+            elif type(n.obj) == ProductVariant:
+                variant_set.add(n.obj.ofuri)
+        self.products = list(product_set)
+        self.product_streams = list(stream_set)
+        self.product_variants = list(variant_set)
+        self.save()
 
 
 class ProductComponentRelation(TimeStampedModel):

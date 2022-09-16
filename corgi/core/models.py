@@ -190,8 +190,7 @@ class ComponentNode(MPTTModel, TimeStampedModel):
         return self.desc.name
 
     def save(self, *args, **kwargs):
-        if not self.purl:
-            self.purl = self.obj.purl
+        self.purl = self.obj.purl
         super().save(*args, **kwargs)
 
 
@@ -516,6 +515,7 @@ class ProductStream(ProductModel, TimeStampedModel):
 
     composes = models.JSONField(default=dict)
     active = models.BooleanField(default=False)
+    et_product_versions = fields.ArrayField(models.CharField(max_length=200), default=list)
 
     product_streams = None  # type: ignore
     pnodes = GenericRelation(ProductNode, related_query_name="product_stream")
@@ -621,12 +621,32 @@ class Channel(TimeStampedModel):
     description = models.TextField(default="")
     meta_attr = models.JSONField(default=dict)
     pnodes = GenericRelation(ProductNode, related_query_name="channel")
+    products = fields.ArrayField(models.CharField(max_length=200), default=list)
+    product_versions = fields.ArrayField(models.CharField(max_length=200), default=list)
+    product_streams = fields.ArrayField(models.CharField(max_length=200), default=list)
+    product_variants = fields.ArrayField(models.CharField(max_length=200), default=list)
 
     class Meta:
         ordering = ["name"]
 
     def __str__(self) -> str:
         return str(self.name)
+
+    def save_product_taxonomy(self):
+        product_set = set()
+        stream_set = set()
+        variant_set = set()
+        for n in self.pnodes.first().get_ancestors():
+            if type(n.obj) == Product:
+                product_set.add(n.obj.ofuri)
+            elif type(n.obj) == ProductStream:
+                stream_set.add(n.obj.ofuri)
+            elif type(n.obj) == ProductVariant:
+                variant_set.add(n.obj.ofuri)
+        self.products = list(product_set)
+        self.product_streams = list(stream_set)
+        self.product_variants = list(variant_set)
+        self.save()
 
 
 class ProductComponentRelation(TimeStampedModel):
@@ -767,21 +787,35 @@ class Component(TimeStampedModel):
         """return name"""
         return str(self.name)
 
-    def get_purl(self):
-        if self.type in (Component.Type.RPM, Component.Type.SRPM, Component.Type.RHEL_MODULE):
-            evr = ""
+    def get_purl(self) -> PackageURL:
+        if self.type in (Component.Type.RPM, Component.Type.SRPM):
             qualifiers = {
                 "arch": self.arch,
             }
             if self.epoch:
-                evr = f"{self.epoch}:"
                 qualifiers["epoch"] = str(self.epoch)
-            evr = f"{evr}{self.version}-{self.release}"
             return PackageURL(
-                type=self.type,
+                type="rpm",  # Purl defines no type specific to SRPMs
                 namespace=self.Namespace.REDHAT.lower(),
                 name=self.name,
-                version=evr,
+                version=f"{self.version}-{self.release}",
+                qualifiers=qualifiers,
+            )
+        elif self.type == Component.Type.RHEL_MODULE:
+            # Break down RHEL module version into its specific parts:
+            # NSVC = Name, Stream, Version, Context
+            version, _, context = self.release.partition(".")
+            qualifiers = {
+                "stream": self.version,
+                "version": version,
+                "context": context,
+            }
+            return PackageURL(
+                # Purl does not define a type for RHEL/CentOS modules; TODO: propose rpmmod
+                type="rpmmod",
+                namespace=self.Namespace.REDHAT.lower(),
+                name=self.name,
+                version=f"{self.version}-{self.release}",
                 qualifiers=qualifiers,
             )
         elif self.type == Component.Type.CONTAINER_IMAGE:
@@ -795,7 +829,7 @@ class Component(TimeStampedModel):
                 type="container",
                 namespace=self.Namespace.REDHAT.lower(),
                 name=self.name,
-                version=f"{self.version}",
+                version=f"{self.version}-{self.release}",
                 qualifiers={
                     "arch": self.arch,
                     "digest": digest,
@@ -803,22 +837,25 @@ class Component(TimeStampedModel):
                 subpath=None,
             )
         elif self.type == Component.Type.UPSTREAM:
-            ns = self.meta_attr.get("url", "")
-            if "//" in ns:
-                ns = ns.split("//")[1]
-                # TODO: below does not use ns??
+            # Upstream components should default to the "generic" purl type and not use any
+            # namespaces. In the future, we may extend this to map to upstream-defined purls.
+            version = self.version
+            if self.release:
+                version = f"{version}-{self.release}"
             return PackageURL(
-                type="upstream",
+                type="generic",
                 name=self.name,
-                version=f"{self.version}",
-                subpath=None,
+                version=version,
             )
         else:
-            # unknown
+            # Unknown
+            version = self.version
+            if self.release:
+                version = f"{version}-{self.release}"
             return PackageURL(
                 type=self.type,
                 name=self.name,
-                version=f"{self.version}",
+                version=version,
             )
 
     def save_component_taxonomy(self):
@@ -840,7 +877,7 @@ class Component(TimeStampedModel):
         self.nvr = self.get_nvr()
         self.nevra = self.get_nevra()
         purl = self.get_purl()
-        self.purl = purl.to_string() if purl else ""
+        self.purl = purl.to_string()
         super().save(*args, **kwargs)
 
     @property

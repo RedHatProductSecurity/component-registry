@@ -487,6 +487,7 @@ class ProductStreamSerializer(serializers.ModelSerializer):
             "brew_tags",
             "yum_repositories",
             "composes",
+            "et_product_versions",
             "description",
             # "coverage",
             "build_count",
@@ -499,7 +500,7 @@ class ProductStreamSerializer(serializers.ModelSerializer):
             "products",
             "product_versions",
             "product_variants",
-            # "channels",
+            "channels",
             # "meta_attr",
         ]
 
@@ -577,15 +578,37 @@ class ProductVariantSerializer(serializers.ModelSerializer):
             "products",
             "product_versions",
             "product_streams",
-            # "channels",
+            "channels",
             # "meta_attr",
         ]
 
 
 class ChannelSerializer(serializers.ModelSerializer):
+    link = serializers.SerializerMethodField()
+
     class Meta:
         model = Channel
         fields = "__all__"
+
+    @staticmethod
+    def get_link(instance: ProductVariant) -> str:
+        return get_model_id_link("channels", instance.uuid)
+
+    @staticmethod
+    def get_products(instance: Component) -> list[dict[str, str]]:
+        return get_product_data_list_by_ofuri(Product, "products", instance.products)
+
+    @staticmethod
+    def get_product_versions(instance: Component) -> list[dict[str, str]]:
+        return get_product_data_list_by_ofuri(
+            ProductVersion, "product_versions", instance.product_versions
+        )
+
+    @staticmethod
+    def get_product_streams(instance: Component) -> list[dict[str, str]]:
+        return get_product_data_list_by_ofuri(
+            ProductStream, "product_streams", instance.product_streams
+        )
 
 
 class AppStreamLifeCycleSerializer(serializers.ModelSerializer):

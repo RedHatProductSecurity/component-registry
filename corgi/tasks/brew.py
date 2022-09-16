@@ -29,7 +29,12 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
     else:
         logger.info("Fetching brew build with build_id: %s", build_id)
 
-    component = Brew().get_component_data(build_id)
+    try:
+        component = Brew().get_component_data(build_id)
+    except BrewBuildTypeNotSupported as exc:
+        logger.warning(str(exc))
+        return
+
     if not component:
         logger.info("No data fetched for build %s from Brew, exiting...", build_id)
         return
@@ -60,9 +65,8 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
     elif component["type"] == "module":
         root_node = save_module(softwarebuild, component)
     else:
-        raise BrewBuildTypeNotSupported(
-            f"Build {build_id} type is not supported: {component['type']}"
-        )
+        logger.warning(f"Build {build_id} type is not supported: {component['type']}")
+        return
 
     for c in component.get("components", []):
         save_component(c, root_node, softwarebuild)

@@ -611,13 +611,18 @@ def test_fetch_rpm_build(mock_sca):
     ]:
         assert package in provides
     assert len(srpm.get_upstreams()) == 1
-    assert len(srpm.get_source()) == 1
+    # SRPM has no sources of its own (nor is it embedded in any other component)
+    assert len(srpm.get_source()) == 0
     cockpit_system = Component.objects.get(
         type=Component.Type.RPM, name="cockpit-system", version="251", release="1.el8"
     )
     assert cockpit_system.software_build
+    # Cockpit has its own SRPM
+    assert cockpit_system.get_source() == ["pkg:rpm/redhat/cockpit@251-1.el8?arch=src"]
     jquery = Component.objects.get(type=Component.Type.NPM, name="jquery", version="3.5.1")
     assert not jquery.software_build
+    # jQuery is embedded in Cockpit
+    assert jquery.get_source() == ["pkg:rpm/redhat/cockpit@251-1.el8?arch=src"]
 
 
 @pytest.mark.vcr(match_on=["method", "scheme", "host", "port", "path", "body"])

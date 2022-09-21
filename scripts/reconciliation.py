@@ -262,7 +262,7 @@ for stream_ofuri, deptopia_id in stream_corpus:
                 logger.info(
                     "DIFFERENT: deptopia: %s | compreg: %s",
                     deptopia_build["nvr"] + "," + deptopia_build["build_type"],
-                    str(check_version.count) + " " + check_version.results[0].nvr,
+                    str(check_version.count),
                 )
                 different.append(deptopia_build["nvr"])
             else:

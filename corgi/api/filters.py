@@ -51,10 +51,7 @@ class ComponentFilter(FilterSet):
     upstreams = CharFilter(lookup_expr="icontains")
     re_upstream = CharFilter(lookup_expr="regex", field_name="upstreams")
 
-    def filter_ofuri(queryset, name, value):
-        return queryset.filter(product_streams__icontains=value)
-
-    ofuri = CharFilter(method=filter_ofuri)
+    ofuri = CharFilter(field_name="product_streams", lookup_expr="icontains")
 
 
 class ProductDataFilter(FilterSet):

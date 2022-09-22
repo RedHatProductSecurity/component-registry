@@ -281,6 +281,9 @@ class ComponentListSerializer(serializers.ModelSerializer):
         fields = [
             "link",
             "purl",
+            "name",
+            "version",
+            "nvr",
         ]
 
 

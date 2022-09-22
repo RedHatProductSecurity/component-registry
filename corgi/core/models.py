@@ -781,6 +781,9 @@ class Component(TimeStampedModel):
             models.Index(fields=["name"]),
             models.Index(fields=["type"]),
             models.Index(fields=["nvr"]),
+            models.Index(fields=["purl"]),
+            models.Index(fields=["product_streams"]),
+            models.Index(fields=["product_variants"]),
         ]
 
     def __str__(self) -> str:

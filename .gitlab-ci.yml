@@ -26,13 +26,14 @@ include:
   - export CORGI_TEST_OSBS_HOST1
   - export CORGI_TEST_OSBS_HOST2
   - export CORGI_TEST_OSBS_HOST3
+  - export CORGI_TEST_PULP_URL
   - export CORGI_TEST_REGISTRY_URL
   # Not used in tests directly, but needed for tests to pass
-  - export CORGI_LOOKASIDE_CACHE_URL
   - export CORGI_APP_STREAMS_LIFE_CYCLE_URL
   - export CORGI_BREW_URL
   - export CORGI_BREW_DOWNLOAD_ROOT_URL
   - export CORGI_ERRATA_TOOL_URL
+  - export CORGI_LOOKASIDE_CACHE_URL
   - export CORGI_MANIFEST_HINTS_URL
   - export CORGI_PRODSEC_DASHBOARD_URL
   - export PIP_INDEX_URL

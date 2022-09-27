@@ -1,3 +1,5 @@
+import os
+
 import pytest
 from django.conf import settings
 
@@ -14,9 +16,10 @@ pytestmark = pytest.mark.unit
 
 def test_products(requests_mock):
     with open("tests/data/product-definitions.json") as prod_defs:
-        requests_mock.get(
-            f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=prod_defs.read()
-        )
+        text = prod_defs.read()
+        text = text.replace("{CORGI_TEST_DOWNLOAD_URL}", os.getenv("CORGI_TEST_DOWNLOAD_URL"))
+        text = text.replace("{CORGI_TEST_PULP_URL}", os.getenv("CORGI_TEST_PULP_URL"))
+        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
     et_product = CollectorErrataProduct.objects.create(
         et_id=152, name="Red Hat ACM", short_name="RHACM"
     )

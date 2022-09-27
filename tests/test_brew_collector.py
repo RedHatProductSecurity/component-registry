@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from unittest.mock import call, patch
 
 import pytest
+from django.conf import settings
 
 from corgi.collectors.brew import Brew, BrewBuildTypeNotSupported
 from corgi.core.models import Component, ComponentNode
@@ -269,14 +270,14 @@ def test_get_container_build_data_remote_sources_in_archives(
     if len(remote_sources_names) == 1:
         with open(f"tests/data/{remote_sources_names[0]}", "r") as remote_source_data:
             requests_mock.get(
-                f"{os.getenv('CORGI_BREW_DOWNLOAD_ROOT_URL')}/{download_path}/remote-source.json",
+                f"{settings.BREW_DOWNLOAD_ROOT_URL}/{download_path}/remote-source.json",
                 text=remote_source_data.read(),
             )
     else:
         for path in remote_sources_names:
             with open(f"tests/data/remote-source-{path}.json", "r") as remote_source_data:
                 requests_mock.get(
-                    f"{os.getenv('CORGI_BREW_DOWNLOAD_ROOT_URL')}/{download_path}/remote-source-"
+                    f"{settings.BREW_DOWNLOAD_ROOT_URL}/{download_path}/remote-source-"
                     f"{path}.json",
                     text=remote_source_data.read(),
                 )
@@ -288,21 +289,20 @@ def test_get_container_build_data_remote_sources_in_archives(
     if len(remote_sources_names) == 1:
         assert (
             c["sources"][0]["meta"]["remote_source_archive"]
-            == f"{os.getenv('CORGI_BREW_DOWNLOAD_ROOT_URL')}/"
+            == f"{settings.BREW_DOWNLOAD_ROOT_URL}/"
             f"{download_path}/remote-source.tar.gz"
         )
     else:
         download_urls = [s["meta"]["remote_source_archive"] for s in c["sources"]]
         assert download_urls == [
-            f"{os.getenv('CORGI_BREW_DOWNLOAD_ROOT_URL')}/{download_path}/"
-            f"remote-source-{path}.tar.gz"
+            f"{settings.BREW_DOWNLOAD_ROOT_URL}/{download_path}/remote-source-{path}.tar.gz"
             for path in remote_sources_names
         ]
 
 
 def test_extract_remote_sources(requests_mock):
     # buildID=1475846
-    json_url = "http://test/data/remote-source-quay-clair-container.json"
+    json_url = "https://test/data/remote-source-quay-clair-container.json"
     remote_sources = {"28637": (json_url, "tar.gz")}
     with open("tests/data/remote-source-quay-clair-container.json") as remote_source_data:
         requests_mock.get(json_url, text=remote_source_data.read())
@@ -326,15 +326,15 @@ def test_extract_remote_sources(requests_mock):
 def test_extract_multiple_remote_sources(requests_mock):
     # buildId=1911112
     remote_sources = {
-        "238481": ("http://test/data/remote-source-quay.json", "tar.gz"),
-        "238482": ("http://test/data/remote-source-config-tool.json", "tar.gz"),
-        "238483": ("http://test/data/remote-source-jwtproxy.json", "tar.gz"),
-        "238484": ("http://test/data/remote-source-pushgateway.json", "tar.gz"),
+        "238481": ("https://test/data/remote-source-quay.json", "tar.gz"),
+        "238482": ("https://test/data/remote-source-config-tool.json", "tar.gz"),
+        "238483": ("https://test/data/remote-source-jwtproxy.json", "tar.gz"),
+        "238484": ("https://test/data/remote-source-pushgateway.json", "tar.gz"),
     }
     for remote_source in ["quay", "config-tool", "jwtproxy", "pushgateway"]:
         with open(f"tests/data/remote-source-{remote_source}.json") as remote_source_data:
             requests_mock.get(
-                f"http://test/data/remote-source-{remote_source}.json",
+                f"https://test/data/remote-source-{remote_source}.json",
                 text=remote_source_data.read(),
             )
     go_version = "v1.16.0"

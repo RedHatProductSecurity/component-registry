@@ -5,6 +5,7 @@ from typing import Tuple
 from unittest.mock import call, patch
 
 import pytest
+from django.conf import settings
 
 from corgi.collectors.syft import Syft
 from corgi.core.models import Component, ComponentNode
@@ -133,7 +134,7 @@ def test_download_lookaside_sources(
 ):
     distgit_source_archive = Path(test_sources)
     expected_url = (
-        f"https://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}/repo/{package_type}/{package_name}/"
+        f"{settings.LOOKASIDE_CACHE_BASE_URL}/{package_type}/{package_name}/"
         f"{expected_filename}/{expected_path}{expected_filename}"
     )
     print(f"mocking call to {expected_url}")
@@ -239,7 +240,7 @@ def test_slow_software_composition_analysis(
     )
     assert not Component.objects.filter(purl=expected_purl).exists()
 
-    expected_url = f"https://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}/repo/{download_path}"
+    expected_url = f"{settings.LOOKASIDE_CACHE_BASE_URL}/{download_path}"
 
     requests_mock.get(expected_url, text="resp")
 

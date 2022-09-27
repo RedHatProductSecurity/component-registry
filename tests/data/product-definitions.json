@@ -4,11 +4,11 @@
   "ps_update_streams": {
     "openshift-4.10.z": {
       "yum_repositories": [
-        "http://rhsm-pulp.corp.redhat.com/content/dist/layered/rhel8/aarch64/rhocp/4.10/os/",
-        "http://rhsm-pulp.corp.redhat.com/content/dist/layered/rhel8/ppc64le/rhocp/4.10/os/",
-        "http://rhsm-pulp.corp.redhat.com/content/dist/layered/rhel8/s390x/rhocp/4.10/os/",
-        "http://rhsm-pulp.corp.redhat.com/content/dist/layered/rhel8/x86_64/rhocp/4.10/os/",
-        "http://rhsm-pulp.corp.redhat.com/content/dist/rhel/server/7/7Server/x86_64/ose/4.10/os/"
+        "{CORGI_TEST_PULP_URL}/layered/rhel8/aarch64/rhocp/4.10/os/",
+        "{CORGI_TEST_PULP_URL}/layered/rhel8/ppc64le/rhocp/4.10/os/",
+        "{CORGI_TEST_PULP_URL}/layered/rhel8/s390x/rhocp/4.10/os/",
+        "{CORGI_TEST_PULP_URL}/layered/rhel8/x86_64/rhocp/4.10/os/",
+        "{CORGI_TEST_PULP_URL}/rhel/server/7/7Server/x86_64/ose/4.10/os/"
       ],
       "target_release": "4.10.z",
       "version": "4.10",
@@ -56,7 +56,7 @@
       ],
       "composes": [
         {
-          "url": "http://download-node-02.eng.bos.redhat.com/rhel-8/rel-eng/RHEL-8/latest-RHEL-8.6.0/compose",
+          "url": "{CORGI_TEST_DOWNLOAD_URL}/rhel-8/rel-eng/RHEL-8/latest-RHEL-8.6.0/compose",
           "variants": [
             "AppStream",
             "BaseOS",
@@ -69,7 +69,7 @@
           ]
         },
         {
-          "url": "http://download-node-02.eng.bos.redhat.com/rhel-8/rel-eng/Supp-8/latest-Supp-8.6.0-RHEL-8/compose",
+          "url": "{CORGI_TEST_DOWNLOAD_URL}/rhel-8/rel-eng/Supp-8/latest-Supp-8.6.0-RHEL-8/compose",
           "variants": [
             "Supplementary"
           ]

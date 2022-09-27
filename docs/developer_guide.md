@@ -36,19 +36,18 @@ export CORGI_TEST_DOWNLOAD_URL
 export CORGI_TEST_OSBS_HOST1
 export CORGI_TEST_OSBS_HOST2
 export CORGI_TEST_OSBS_HOST3
+export CORGI_TEST_PULP_URL
 export CORGI_TEST_REGISTRY_URL
 # Not used in tests directly, but needed for tests to pass
-export CORGI_LOOKASIDE_CACHE_URL
 export CORGI_APP_STREAMS_LIFE_CYCLE_URL
 export CORGI_BREW_URL
 export CORGI_BREW_DOWNLOAD_ROOT_URL
 export CORGI_ERRATA_TOOL_URL
+export CORGI_LOOKASIDE_CACHE_URL
 export CORGI_MANIFEST_HINTS_URL
 export CORGI_PRODSEC_DASHBOARD_URL
 # The internal Nexus PyPI mirror is used to avoid overloading the public PyPI service
 export PIP_INDEX_URL
-# The team mailing list is private, so we default to using secalert@redhat.com as our public contact address instead
-export PRODSEC_EMAIL
 # The internal root CA certificate is needed to use the Nexus PyPI mirror and other internal Red Hat services
 export ROOT_CA_URL
 ```
@@ -74,9 +73,9 @@ CORGI_APP_STREAMS_LIFE_CYCLE_URL=<value>
 CORGI_BREW_DOWNLOAD_ROOT_URL=<value>
 CORGI_BREW_URL=<value>
 CORGI_ERRATA_TOOL_URL=<value>
+CORGI_LOOKASIDE_CACHE_URL=<value>
 CORGI_MANIFEST_HINTS_URL=<value>
 CORGI_PRODSEC_DASHBOARD_URL=<value>
-CORGI_LOOKASIDE_CACHE_URL=<value>
 ```
 
 Build container images:

@@ -1056,10 +1056,9 @@ class Component(TimeStampedModel):
     def save_datascore(self):
         score = 0
         report = set()
-        if self.type == Component.Type.UPSTREAM:
-            if not self.related_url:
-                score += 20
-                report.add("upstream has no related_url")
+        if self.type == Component.Type.UPSTREAM and not self.related_url:
+            score += 20
+            report.add("upstream has no related_url")
         if not self.description:
             score += 10
             report.add("no description")

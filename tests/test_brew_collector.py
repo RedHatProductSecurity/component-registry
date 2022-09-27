@@ -165,7 +165,7 @@ remote_source_in_archive_data = [
                 "image": {},
                 "typeinfo": {
                     "remote-sources": {
-                        "remote_source_url": "https://example.com/api/v1/" "requests/28637/download"
+                        "remote_source_url": "https://example.com/api/v1/requests/28637/download"
                     }
                 },
             },

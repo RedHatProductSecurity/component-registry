@@ -135,3 +135,6 @@ Makefile
 
 # ripgrep-specific ignore file
 .rgignore
+
+# SonarQube
+.scannerwork/

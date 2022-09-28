@@ -9,6 +9,9 @@ include:
   - project: 'product-security/dev/component-registry-ops'
     ref: "$CORGI_OPS_BRANCH"
     file: '/templates/gitlab/ansible-run.yml'
+  - project: 'product-security/dev/component-registry-ops'
+    ref: "$CORGI_OPS_BRANCH"
+    file: '/templates/gitlab/sonarqube.yml'
 
 .common_ci_setup: &common_ci_setup
   - export LANG=en_US.UTF-8

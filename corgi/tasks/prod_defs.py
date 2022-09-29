@@ -181,7 +181,8 @@ def update_products() -> None:
 
                         for et_product_version in et_product_versions:
                             et_pv_name = et_product_version["name"]
-                            product_stream.et_product_versions.append(et_pv_name)
+                            if et_pv_name not in product_stream.et_product_versions:
+                                product_stream.et_product_versions.append(et_pv_name)
 
                             for variant in et_product_version["variants"]:
                                 logger.debug(

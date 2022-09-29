@@ -647,7 +647,7 @@ class Brew:
         meta_attr = {
             "stream": modulemd["data"]["stream"],
             "context": modulemd["data"]["context"],
-            "components": modulemd["data"]["components"],
+            "components": modulemd["data"].get("components", []),
             "rpms": modulemd["data"]["xmd"]["mbs"]["rpms"],
         }
         module = {

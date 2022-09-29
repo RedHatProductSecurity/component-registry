@@ -56,19 +56,22 @@ class ErrataTool:
     def load_et_products(self):
         products = self.get_paged("api/v1/products", page_data_attr="data")
         for product in products:
-            et_product, created = CollectorErrataProduct.objects.get_or_create(
-                name=product["attributes"]["name"],
+            et_product, created = CollectorErrataProduct.objects.update_or_create(
+                et_id=product["id"],
                 defaults={
-                    "et_id": product["id"],
+                    "name": product["attributes"]["name"],
                     "short_name": product["attributes"]["short_name"],
                 },
             )
             if created:
                 logger.info("Created ET Product: %s", et_product.short_name)
             for product_version in product["relationships"]["product_versions"]:
-                et_product_version, created = CollectorErrataProductVersion.objects.get_or_create(
-                    name=product_version["name"],
-                    defaults={"et_id": product_version["id"], "product": et_product},
+                (
+                    et_product_version,
+                    created,
+                ) = CollectorErrataProductVersion.objects.update_or_create(
+                    et_id=product_version["id"],
+                    defaults={"name": product_version["name"], "product": et_product},
                 )
                 if created:
                     logger.info("Created ET ProductVersion: %s", et_product_version.name)
@@ -90,12 +93,12 @@ class ErrataTool:
             except CollectorErrataProductVersion.DoesNotExist:
                 logger.warning("Did not find product version with id %s", product_version_id)
                 continue
-            et_product_variant, created = CollectorErrataProductVariant.objects.get_or_create(
-                name=variant["attributes"]["name"],
+            et_product_variant, created = CollectorErrataProductVariant.objects.update_or_create(
+                et_id=variant["id"],
                 defaults={
                     "cpe": variant["attributes"]["cpe"],
-                    "et_id": variant["id"],
                     "product_version": et_product_version,
+                    "name": variant["attributes"]["name"],
                 },
             )
             if created:

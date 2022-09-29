@@ -75,9 +75,11 @@ def update_products() -> None:
                 )
                 product_version, _ = ProductVersion.objects.update_or_create(
                     name=name,
-                    version=version,
-                    description=description,
-                    defaults={"meta_attr": pd_product_version},
+                    defaults={
+                        "version": version,
+                        "description": description,
+                        "meta_attr": pd_product_version,
+                    },
                 )
                 product_version_node, _ = ProductNode.objects.get_or_create(
                     object_id=product_version.pk,

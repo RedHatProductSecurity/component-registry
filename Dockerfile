@@ -18,6 +18,7 @@ RUN cd /etc/pki/ca-trust/source/anchors/ && \
     cd -
 
 WORKDIR /opt/app-root/src/
+COPY ./requirements/rpms.txt ./requirements/rpms.txt
 
 RUN dnf --nodocs -y install --setopt install_weak_deps=false $(grep '^[^#]' ./requirements/rpms.txt) \
     && dnf clean all

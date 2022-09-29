@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 def save_component(component: dict[str, Any], parent: ComponentNode):
     meta = component.get("meta", {})
     if component["type"] not in Component.Type:
-        logger.warning("Tried to save component with unknown type: ", component["type"])
+        logger.warning("Tried to save component with unknown type: %s", component["type"])
 
     # Use all fields from Component index and uniqueness constraint
     obj, created = Component.objects.get_or_create(

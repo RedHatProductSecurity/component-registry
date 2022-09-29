@@ -75,9 +75,7 @@ class Brew:
             raise BrewBuildSourceNotFound(no_source_msg)
 
         task_request = self.koji_session.getTaskRequest(build_info["task_id"])
-        if task_request is None:
-            raise BrewBuildSourceNotFound(no_source_msg)
-        elif not isinstance(task_request, list):
+        if not isinstance(task_request, list):
             raise BrewBuildSourceNotFound(no_source_msg)
 
         for value in task_request:
@@ -113,6 +111,7 @@ class Brew:
             elif component.startswith("golang("):
                 pass
             else:
+                # Else it's not bundled or golang, so just skip it
                 continue
             # Strip right parens
             component = component.replace(")", "")
@@ -130,6 +129,7 @@ class Brew:
                 elif component_type in ("npm", "nodejs", "js"):
                     component_type = "npm"
                 elif component_type in ("golang", "crate"):
+                    # golang and crate are both valid component types
                     pass
                 else:
                     # Account for bundled deps like "bundled(rh-nodejs12-zlib)" where it's not clear
@@ -286,7 +286,7 @@ class Brew:
     @staticmethod
     def split_nvr(nvr):
         nvr_parts = nvr.rsplit("-", maxsplit=2)
-        if not len(nvr_parts) == 3:
+        if len(nvr_parts) != 3:
             raise ValueError(f"NVR {nvr} had invalid length after splitting: {len(nvr_parts)}")
         name = nvr_parts[0]
         version = nvr_parts[1]

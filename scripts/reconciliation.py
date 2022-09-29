@@ -18,9 +18,6 @@ import sys
 
 import corgi_bindings
 import requests
-import urllib3
-
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # setup logging
 logger = logging.getLogger()
@@ -40,7 +37,7 @@ args = parser.parse_args()
 
 logger.info("smoke-test: start")
 
-session = corgi_bindings.new_session(corgi_server_uri=args.corgi_url, verify_ssl=False)
+session = corgi_bindings.new_session(corgi_server_uri=args.corgi_url)
 
 # check specific streams [corgi ofuri, deptopia id]
 stream_ga10_corpus = [
@@ -222,10 +219,7 @@ if args.stream_corpus == "ga11":
 for stream_ofuri, deptopia_id in stream_corpus:
     logger.info(f"reconciliation: check product_stream: {stream_ofuri}.")
 
-    response = requests.get(
-        f"{args.deptopia_url}/api/v1/products/id/{deptopia_id}/builds",  # noqa
-        verify=False,
-    )
+    response = requests.get(f"{args.deptopia_url}/api/v1/products/id/{deptopia_id}/builds")
     response.raise_for_status()
     deptopia_builds = json.loads(response.text)
 

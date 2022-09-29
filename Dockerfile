@@ -14,30 +14,12 @@ LABEL maintainer="Red Hat Product Security Dev - Red Hat, Inc." \
 ARG ROOT_CA_URL
 RUN cd /etc/pki/ca-trust/source/anchors/ && \
     curl -O "${ROOT_CA_URL}" && \
-    update-ca-trust
+    update-ca-trust && \
+    cd -
 
 WORKDIR /opt/app-root/src/
 
-RUN dnf --nodocs -y install --setopt install_weak_deps=false  \
-        python39 \
-        python39-setuptools \
-        python39-devel \
-        python39-pip \
-        python39-wheel \
-        # Kerberos-related utils such as kinit
-        krb5-workstation \
-        # To compile C bindings in certain Python dependencies
-        gcc \
-        # For gssapi compilation
-        krb5-devel \
-        # For psycopg2 compilation
-        postgresql-devel \
-        # Dependency for SSL support in the python-qpid-proton Python package
-        openssl \
-        openssl-devel \
-        openldap-devel \
-        https://github.com/anchore/syft/releases/download/v0.48.1/syft_0.48.1_linux_amd64.rpm \
-        git \
+RUN dnf --nodocs -y install --setopt install_weak_deps=false $(grep '^[^#]' ./requirements/rpms.txt) \
     && dnf clean all
 
 COPY ./requirements ./requirements

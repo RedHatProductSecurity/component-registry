@@ -1,7 +1,7 @@
-import os
 from unittest.mock import patch
 
 import pytest
+from django.conf import settings
 
 from corgi.collectors.models import (
     CollectorErrataProduct,
@@ -186,9 +186,7 @@ errata_details = [
 def test_save_product_component_for_errata(
     mock_send, erratum_id, build_list, no_of_objs, requests_mock
 ):
-    build_list_url = (
-        f"{os.getenv('CORGI_ERRATA_TOOL_URL')}/api/v1/erratum/{erratum_id}/builds_list.json"
-    )
+    build_list_url = f"{settings.ERRATA_TOOL_URL}/api/v1/erratum/{erratum_id}/builds_list.json"
     requests_mock.get(build_list_url, text=build_list)
     slow_load_errata(erratum_id)
     pcr = ProductComponentRelation.objects.filter(external_system_id=erratum_id)

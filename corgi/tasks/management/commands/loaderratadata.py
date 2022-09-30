@@ -2,7 +2,8 @@ import sys
 
 from django.core.management.base import BaseCommand, CommandParser
 
-from corgi.tasks.errata_tool import slow_load_errata, update_variant_repos
+from corgi.tasks.errata_tool import slow_load_errata
+from corgi.tasks.pulp import update_cdn_repo_channels
 
 
 class Command(BaseCommand):
@@ -23,10 +24,10 @@ class Command(BaseCommand):
             help="Fetch and update Variant-to-CDN-Repo mapping.",
         )
         parser.add_argument(
-            "-c",
-            "--celery",
+            "-i",
+            "--inline",
             action="store_true",
-            help="Schedule builds for ingestion as celery tasks.",
+            help="Call tasks inline, not in a celery task",
         )
 
     def handle(self, *args, **options) -> None:
@@ -34,10 +35,16 @@ class Command(BaseCommand):
             errata_ids = options["errata_ids"]
             for erratum_id in errata_ids:
                 self.stdout.write(self.style.SUCCESS(f"Loading Errata {erratum_id}"))
-                slow_load_errata(erratum_id)
+                if options["inline"]:
+                    slow_load_errata(erratum_id)
+                else:
+                    slow_load_errata.delay(erratum_id)
         elif options["repos"]:
             self.stdout.write(self.style.SUCCESS("Loading channels"))
-            update_variant_repos()
+            if options["inline"]:
+                update_cdn_repo_channels()
+            else:
+                update_cdn_repo_channels.delay()
         else:
             self.stderr.write(self.style.ERROR("No errata IDs or repo flag specified"))
             sys.exit(1)

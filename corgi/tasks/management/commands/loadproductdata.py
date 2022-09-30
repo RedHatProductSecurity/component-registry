@@ -1,8 +1,9 @@
 from django.core.management.base import BaseCommand
 
 from corgi.tasks.brew import load_brew_tags
-from corgi.tasks.errata_tool import load_et_products, update_variant_repos
+from corgi.tasks.errata_tool import load_et_products
 from corgi.tasks.prod_defs import update_products
+from corgi.tasks.pulp import setup_pulp_relations, update_cdn_repo_channels
 from corgi.tasks.rhel_compose import save_composes
 
 
@@ -30,7 +31,7 @@ class Command(BaseCommand):
                 "Assigning RPM Repos from ET to Product Variants as channels",
             )
         )
-        update_variant_repos.delay()
+        update_cdn_repo_channels()
 
         self.stdout.write(
             self.style.SUCCESS(
@@ -45,3 +46,11 @@ class Command(BaseCommand):
             )
         )
         load_brew_tags()
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                "Setting up pulp relations",
+            )
+        )
+
+        setup_pulp_relations.delay()

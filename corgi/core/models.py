@@ -255,7 +255,12 @@ class SoftwareBuild(TimeStampedModel):
         """update ('materialize') product taxonomy on all build components"""
         variant_ids = list(
             ProductComponentRelation.objects.filter(build_id=self.build_id)
-            .filter(type=ProductComponentRelation.Type.ERRATA)
+            .filter(
+                type__in=(
+                    ProductComponentRelation.Type.ERRATA,
+                    ProductComponentRelation.Type.CDN_REPO,
+                )
+            )
             .distinct()
             .values_list("product_ref", flat=True)
         )
@@ -263,10 +268,10 @@ class SoftwareBuild(TimeStampedModel):
         stream_ids = list(
             ProductComponentRelation.objects.filter(build_id=self.build_id)
             .filter(
-                type__in=[
+                type__in=(
                     ProductComponentRelation.Type.COMPOSE,
                     ProductComponentRelation.Type.BREW_TAG,
-                ]
+                )
             )
             .distinct()
             .values_list("product_ref", flat=True)
@@ -656,6 +661,7 @@ class ProductComponentRelation(TimeStampedModel):
         ERRATA = "ERRATA"
         COMPOSE = "COMPOSE"
         BREW_TAG = "BREW_TAG"
+        CDN_REPO = "CDN_REPO"
         YUM_REPO = "YUM_REPO"
 
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

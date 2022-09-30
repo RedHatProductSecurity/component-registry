@@ -7,6 +7,7 @@ from corgi.collectors.models import (
     CollectorErrataProduct,
     CollectorErrataProductVariant,
     CollectorErrataProductVersion,
+    CollectorRPMRepository,
 )
 from corgi.core.models import (
     Channel,
@@ -71,7 +72,7 @@ def test_update_variant_repos():
         )
 
 
-def setup_models_for_variant_repos(sap_repos, sap_variant, et_id):
+def setup_models_for_variant_repos(repos, variant, et_id):
     et_product = CollectorErrataProduct.objects.create(
         et_id=et_id, name=f"name-{et_id}", short_name=str(et_id)
     )
@@ -79,9 +80,12 @@ def setup_models_for_variant_repos(sap_repos, sap_variant, et_id):
         et_id=et_id, name=f"name-{et_id}", product=et_product
     )
     CollectorErrataProductVariant.objects.create(
-        name=sap_variant, repos=sap_repos, et_id=et_id, product_version=et_product_version
+        name=variant, repos=repos, et_id=et_id, product_version=et_product_version
     )
-    pv = ProductVariantFactory.create(name=sap_variant)
+    for repo in repos:
+        CollectorRPMRepository.objects.get_or_create(name=repo)
+
+    pv = ProductVariantFactory.create(name=variant)
     ProductNode.objects.create(object_id=pv.pk, obj=pv, parent=None)
 
 

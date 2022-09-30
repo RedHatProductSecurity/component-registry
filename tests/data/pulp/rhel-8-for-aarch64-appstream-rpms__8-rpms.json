@@ -1,0 +1,34 @@
+[
+  {
+    "metadata": {
+      "sourcerpm": "python3-3.6.8-37.el8.src.rpm",
+      "_content_type_id": "rpm",
+      "_id": "0052da0c-4716-4b15-bbd7-ee93c44f6a59",
+      "filename": "platform-python-debug-3.6.8-37.el8.aarch64.rpm"
+    },
+    "updated": "2022-05-10T04:33:22Z",
+    "repo_id": "rhel-8-for-aarch64-appstream-rpms__8",
+    "created": "2021-05-18T04:51:27Z",
+    "unit_type_id": "rpm",
+    "unit_id": "0052da0c-4716-4b15-bbd7-ee93c44f6a59",
+    "_id": {
+      "$oid": "60a347cf512be07bc0c959c2"
+    }
+  },
+  {
+    "metadata": {
+      "sourcerpm": "python3-3.6.8-37.el8.src.rpm",
+      "_content_type_id": "rpm",
+      "_id": "00d8f478-0245-4cf2-b0f1-084461fcdb80",
+      "filename": "platform-python-devel-3.6.8-37.el8.aarch64.rpm"
+    },
+    "updated": "2022-05-10T04:33:37Z",
+    "repo_id": "rhel-8-for-aarch64-appstream-rpms__8",
+    "created": "2021-05-18T04:51:52Z",
+    "unit_type_id": "rpm",
+    "unit_id": "00d8f478-0245-4cf2-b0f1-084461fcdb80",
+    "_id": {
+      "$oid": "60a347e8512be07bc0cac85f"
+    }
+  }
+]

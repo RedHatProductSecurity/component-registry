@@ -48,12 +48,17 @@ def setup_periodic_tasks(sender, **kwargs):
     CrontabSchedule.objects.get_queryset().delete()
     IntervalSchedule.objects.get_queryset().delete()
 
+    # Once a week on a Saturday fetch relations from all active CDN repos
+    # Revisit if this is still necessary after CORGI-257 is complete
+    upsert_cron_task("pulp", "setup_pulp_relations", minute=0, hour=4, day_of_week=6)
+    upsert_cron_task("pulp", "fetch_unprocessed_cdn_relations", minute=0, hour=8, day_of_week=6)
+
     # Daily tasks, scheduled to a specific hour. For some reason, using hours=24 may not run the
     # task at all: https://github.com/celery/django-celery-beat/issues/221
     upsert_cron_task("errata_tool", "load_et_products", hour=0, minute=0)
     upsert_cron_task("prod_defs", "update_products", hour=1, minute=0)
-    upsert_cron_task("errata_tool", "update_variant_repos", hour=1, minute=30)
-    upsert_cron_task("rhel_compose", "save_composes", hour=2, minute=0)
+    upsert_cron_task("pulp", "update_cdn_repo_channels", hour=1, minute=30)
+    upsert_cron_task("rhel_compose", "save_composes", hour=3, minute=0)
     upsert_cron_task("monitoring", "email_failed_tasks", hour=10, minute=45)
 
     # Automatic task result expiration is currently disabled

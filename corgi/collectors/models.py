@@ -34,7 +34,7 @@ class CollectorErrataProductVariant(CollectorErrataModel):
     repos = fields.ArrayField(models.CharField(max_length=1024), default=list)
 
 
-class CollectorComposeRhelModule(models.Model):
+class CollectorRhelModule(models.Model):
 
     build_id = models.IntegerField(primary_key=True)
     nvr = models.TextField(unique=True)
@@ -43,7 +43,7 @@ class CollectorComposeRhelModule(models.Model):
         return f"{self.nvr}"
 
 
-class CollectorComposeSRPM(models.Model):
+class CollectorSRPM(models.Model):
 
     build_id = models.IntegerField(primary_key=True)
 
@@ -51,13 +51,29 @@ class CollectorComposeSRPM(models.Model):
         return f"{self.build_id}"
 
 
-class CollectorComposeRPM(models.Model):
+class CollectorRPM(models.Model):
     """Not every RPM built as part of a SRPM is included in a module
     Which is why we don't directly related SRPM builds to product_streams using relations table"""
 
-    nvra = models.TextField(unique=True)
-    rhel_module = models.ManyToManyField(CollectorComposeRhelModule)
-    srpm = models.ForeignKey(CollectorComposeSRPM, on_delete=models.CASCADE, related_name="rpms")
+    nvra = models.TextField()
+    rhel_module = models.ManyToManyField(CollectorRhelModule)
+    srpm = models.ForeignKey(CollectorSRPM, on_delete=models.CASCADE, related_name="rpms")
 
     def __str__(self):
         return f"{self.nvra}"
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                name="unique_collectorrpms",
+                fields=("nvra", "srpm"),
+            ),
+        ]
+
+
+class CollectorRPMRepository(models.Model):
+    name = models.CharField(unique=True, max_length=200)
+    content_set = models.CharField(max_length=200)
+
+    def __str__(self):
+        return f"{self.name}"

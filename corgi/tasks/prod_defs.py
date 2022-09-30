@@ -75,9 +75,11 @@ def update_products() -> None:
                 )
                 product_version, _ = ProductVersion.objects.update_or_create(
                     name=name,
-                    version=version,
-                    description=description,
-                    defaults={"meta_attr": pd_product_version},
+                    defaults={
+                        "version": version,
+                        "description": description,
+                        "meta_attr": pd_product_version,
+                    },
                 )
                 product_version_node, _ = ProductNode.objects.get_or_create(
                     object_id=product_version.pk,
@@ -179,7 +181,8 @@ def update_products() -> None:
 
                         for et_product_version in et_product_versions:
                             et_pv_name = et_product_version["name"]
-                            product_stream.et_product_versions.append(et_pv_name)
+                            if et_pv_name not in product_stream.et_product_versions:
+                                product_stream.et_product_versions.append(et_pv_name)
 
                             for variant in et_product_version["variants"]:
                                 logger.debug(

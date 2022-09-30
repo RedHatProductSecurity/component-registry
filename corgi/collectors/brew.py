@@ -5,13 +5,15 @@ import os
 import re
 from datetime import datetime
 from types import SimpleNamespace
-from typing import Any, Tuple
+from typing import Any, Generator, Tuple
 from urllib.parse import urlparse
 
 import koji
 import requests
 import yaml
 from django.conf import settings
+
+from corgi.collectors.models import CollectorRhelModule, CollectorRPM, CollectorSRPM
 
 logger = logging.getLogger(__name__)
 
@@ -645,7 +647,7 @@ class Brew:
         meta_attr = {
             "stream": modulemd["data"]["stream"],
             "context": modulemd["data"]["context"],
-            "components": modulemd["data"]["components"],
+            "components": modulemd["data"].get("components", []),
             "rpms": modulemd["data"]["xmd"]["mbs"]["rpms"],
         }
         module = {
@@ -760,11 +762,124 @@ class Brew:
             return tuple()
 
     def brew_srpm_lookup(self, srpms) -> tuple:
+        """The Koji API findBuild call can except NVR as a format"""
         with self.koji_session.multicall() as multicall:
             find_build_id_calls = tuple((srpm, multicall.findBuildID(srpm)) for srpm in srpms)
         return find_build_id_calls
 
     def brew_rpm_lookup(self, rpms) -> tuple:
+        """The Koji API getRPM call can except rpm in NVR"""
         with self.koji_session.multicall() as multicall:
             find_build_id_calls = tuple((rpm, multicall.getRPM(rpm)) for rpm in rpms)
         return find_build_id_calls
+
+    def sans_epoch(self, rpm) -> str:
+        """This removed the epoch part of a SRPM or RPM so the RPM name is in NVR format"""
+        name, version, release = self.split_nvr(rpm)
+        version_parts = version.split(":")
+        if len(version_parts) > 1:
+            rpm = f"{name}-{version_parts[1]}-{release}"
+        return rpm
+
+    def module_key_to_nvr(self, module_key) -> str:
+        """This adjusts the rhel_module name found in composes to be in NVR format expected by
+        the Koji API"""
+        module_parts = module_key.split(":")
+        return f"{module_parts[0]}-{module_parts[1]}-{module_parts[2]}.{module_parts[3]}"
+
+    def persist_modules(self, rhel_modules) -> Generator[str, None, None]:
+        # For each rhel_module look up it's build_id
+        find_build_id_calls = self.brew_srpm_lookup(rhel_modules.keys())
+        for srpm, call in find_build_id_calls:
+            build_id = call.result
+            if not build_id:
+                logger.warning("Did not find build_id for rhel_module: %s", srpm)
+                continue
+            rhel_module, _ = CollectorRhelModule.objects.get_or_create(
+                build_id=build_id,
+                defaults={"nvr": srpm},
+            )
+            # Lookup the rpm build_ids
+            rpms = [self.sans_epoch(rpm) for rpm in rhel_modules[srpm] if not rpm.endswith(".src")]
+            rpm_lookup_calls = self.brew_rpm_lookup(rpms)
+            for rpm, call in rpm_lookup_calls:
+                srpm_build_id = call.result["build_id"]
+                srpm, _ = CollectorSRPM.objects.get_or_create(build_id=srpm_build_id)
+                rpm_obj, _ = CollectorRPM.objects.get_or_create(nvra=rpm, srpm=srpm)
+                rpm_obj.rhel_module.add(rhel_module)
+
+            yield build_id
+
+    def lookup_build_ids(self, rpm_filenames_by_srpm) -> Generator[str, None, None]:
+        # For each srpm look up it's build id
+        find_build_id_calls = self.brew_srpm_lookup(rpm_filenames_by_srpm.keys())
+        for srpm, call in find_build_id_calls:
+            build_id = call.result
+            if not build_id:
+                for filename in rpm_filenames_by_srpm[srpm]:
+                    logger.debug(
+                        "Didn't find build with NVR %s, using rpm filename: %s",
+                        srpm,
+                        filename,
+                    )
+                    # We don't use a multicall here, because this won't be called
+                    # in most cases
+                    rpm_data = self.koji_session.getRPM(filename)
+                    if not rpm_data:
+                        # Try the next srpm rpm filename
+                        continue
+                    build_id = rpm_data["build_id"]
+                    # found the build_id, stop iterating filenames
+                    break
+                # if no filenames had RPM data
+                if not build_id:
+                    logger.warning("Unable to find build_id for %s", srpm)
+                    continue
+            yield build_id
+
+    @classmethod
+    def fetch_rhel_module(cls, build_id: int) -> dict[str, Any]:
+        try:
+            rhel_module = CollectorRhelModule.objects.get(build_id=build_id)
+        except CollectorRhelModule.DoesNotExist:
+            logger.debug("Did not find %s in CollectorRhelModule data", build_id)
+            return {}
+        name, version, release = Brew.split_nvr(rhel_module.nvr)
+        module: dict[str, Any] = {
+            "type": "module",
+            "namespace": "redhat",
+            "meta": {
+                "name": name,
+                "version": version,
+                "release": release,
+            },
+            "analysis_meta": {
+                "source": ["collectors/rhel_module"],
+            },
+        }
+        nested_builds: set[int] = set()
+        rpm_components: list[dict] = []
+        for rpm in rhel_module.collectorrpm_set.all():
+            srpm_build_id = rpm.srpm.build_id
+            nested_builds.add(srpm_build_id)
+            name, version, release = Brew.split_nvr(rpm.nvra)
+            release_split = release.rsplit(".", 1)
+            arch = ""
+            if len(release_split) == 2:
+                arch = release_split[1]
+            rpm_component: dict = {
+                "type": "rpm",
+                "namespace": "redhat",
+                "brew_build_id": srpm_build_id,
+                "meta": {
+                    "name": name,
+                    "version": version,
+                    "release": release_split[0],
+                    "arch": arch,
+                },
+                "analysis_meta": {"source": "collectors/rhel_module"},
+            }
+            rpm_components.append(rpm_component)
+        module["components"] = rpm_components
+        module["nested_builds"] = list(nested_builds)
+        return module

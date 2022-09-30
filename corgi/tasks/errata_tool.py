@@ -167,5 +167,3 @@ def update_variant_repos() -> None:
                 ProductVersion.objects.get(name=product_version).save_product_taxonomy()
             for product in pv.products:
                 Product.objects.get(name=product).save_product_taxonomy()
-
-    app.send_task("corgi.tasks.pulp.setup_pulp_relations")

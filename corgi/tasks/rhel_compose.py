@@ -29,6 +29,8 @@ def save_compose(stream_name) -> None:
         )
         for key in "srpms", "rhel_modules":
             if key not in compose_data:
+                # Most composes don't have rhel_modules, in that case the rhel_modules
+                # key won't exist so we can safely skip creating relations
                 continue
             no_of_relations += _create_relations(
                 compose_data[key], compose_id, stream_name, ProductComponentRelation.Type.COMPOSE

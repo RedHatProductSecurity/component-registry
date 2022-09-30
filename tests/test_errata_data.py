@@ -22,8 +22,7 @@ from .factories import ProductVariantFactory
 pytestmark = pytest.mark.unit
 
 
-@patch("config.celery.app.send_task")
-def test_update_variant_repos(mock_setup_pulp_relations):
+def test_update_variant_repos():
     sap_variant = "SAP-8.4.0.Z.EUS"
     sap_repos = [
         "rhel-8-for-ppc64le-sap-netweaver-e4s-debug-rpms__8_DOT_4",

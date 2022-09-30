@@ -4,11 +4,29 @@ from celery_singleton import Singleton
 
 from config.celery import app
 from corgi.collectors.pulp import Pulp
-from corgi.core.models import Channel, ProductComponentRelation, ProductVariant
+from corgi.core.models import (
+    Channel,
+    ProductComponentRelation,
+    ProductVariant,
+    SoftwareBuild,
+)
+from corgi.tasks.brew import fetch_modular_build, slow_fetch_brew_build
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS, _create_relations
 from corgi.tasks.errata_tool import update_variant_repos
 
 logger = logging.getLogger(__name__)
+
+
+@app.task(base=Singleton, autorety_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
+def fetch_unprocessed_cdn_relations():
+    for build_id in (
+        ProductComponentRelation.objects.filter(type=ProductComponentRelation.Type.CDN_REPO)
+        .values_list("build_id", flat=True)
+        .distinct()
+    ):
+        if not SoftwareBuild.objects.filter(build_id=int(build_id)).exists():
+            fetch_modular_build.delay(build_id)
+            slow_fetch_brew_build.delay(int(build_id))
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)

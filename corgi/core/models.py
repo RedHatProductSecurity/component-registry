@@ -1023,7 +1023,7 @@ class Component(TimeStampedModel):
 
     def get_source(self) -> list:
         """return all root nodes"""
-        purl_cn = self.cnodes.all()
+        purl_cn = ComponentNode.objects.filter(purl=self.purl)
         return (
             purl_cn.get_ancestors(include_self=False)  # type: ignore
             .filter(parent=None)

@@ -1023,10 +1023,13 @@ class Component(TimeStampedModel):
 
     def get_source(self) -> list:
         """return all root nodes"""
-        purl_cn = ComponentNode.objects.filter(purl=self.purl).get_ancestors(  # type: ignore
-            include_self=False
+        purl_cn = self.cnodes.all()
+        return (
+            purl_cn.get_ancestors(include_self=False)  # type: ignore
+            .filter(parent=None)
+            .values_list("purl", flat=True)
+            .distinct()
         )
-        return list(purl_cn.filter(parent=None).values_list("purl", flat=True).distinct())
 
     def get_upstreams(self):
         """return upstreams component ancestors in family trees"""

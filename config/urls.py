@@ -14,14 +14,7 @@ urlpatterns = [
     path("", include("corgi.web.urls")),
 ]
 
-if os.getenv("DJANGO_SETTINGS_MODULE") == "config.settings.dev":
-    import debug_toolbar
-
-    urlpatterns = [
-        path("__debug__/", include(debug_toolbar.urls)),
-    ] + urlpatterns
-
-if os.getenv("DJANGO_SETTINGS_MODULE") == "config.settings.stage":
+if os.getenv("DJANGO_SETTINGS_MODULE") in ("config.settings.dev", "config.settings.stage"):
     import debug_toolbar
 
     urlpatterns = [

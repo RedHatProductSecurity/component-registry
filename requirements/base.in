@@ -19,3 +19,4 @@ python-qpid-proton
 requests
 requests-gssapi
 whitenoise
+django-debug-toolbar

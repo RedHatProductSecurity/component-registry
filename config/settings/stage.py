@@ -16,3 +16,16 @@ ALLOWED_HOSTS = [
 # the request came over HTTPS from the client to HAProxy.
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Temporary enable debug
+DEBUG = True
+
+# Django Debug Toolbar config; requires requirements/dev.txt deps
+INSTALLED_APPS += ["debug_toolbar"]  # noqa: F405
+MIDDLEWARE += ["debug_toolbar.middleware.DebugToolbarMiddleware"]  # noqa: F405
+
+# Ensure debug toolbar is always shown in local env by overriding the check for specific IP
+# addresses in INTERNAL_IPS (in a containerized environment, these change every time so adding
+# localhost to INTERNAL_IPS is not sufficient).
+# https://django-debug-toolbar.readthedocs.io/en/latest/configuration.html#toolbar-options
+DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": lambda _: True}

@@ -20,3 +20,10 @@ if os.getenv("DJANGO_SETTINGS_MODULE") == "config.settings.dev":
     urlpatterns = [
         path("__debug__/", include(debug_toolbar.urls)),
     ] + urlpatterns
+
+if os.getenv("DJANGO_SETTINGS_MODULE") == "config.settings.stage":
+    import debug_toolbar
+
+    urlpatterns = [
+        path("__debug__/", include(debug_toolbar.urls)),
+    ] + urlpatterns

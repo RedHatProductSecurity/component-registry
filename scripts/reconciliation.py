@@ -51,7 +51,9 @@ stream_ga10_corpus = [
     ["o:redhat:openshift:4.11.z", "2367"],  # GA 1.0
     ["o:redhat:rhacm:2.3.z", "104"],  # GA 1.0
     ["o:redhat:rhacm:2.4.z", "1444"],  # GA 1.0
-    ["o:redhat:rhacm:2.5", "1443"],  # GA 1.0
+    ["o:redhat:rhacm:2.5.z", "2397"],  # GA 1.0
+    ["o:redhat:rhacm:2.6.z", "2394"],  # GA 1.0
+    ["o:redhat:rhacm:2.7", "2395"],  # GA 1.0
     ["o:redhat:rhel:8.4.0.z", "35"],  # GA 1.0
     ["o:redhat:rhel:8.6.0.z", "2302"],  # GA 1.0
     ["o:redhat:rhel:8.7.0", "2301"],  # GA 1.0

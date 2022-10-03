@@ -1,7 +1,6 @@
-import os
-
 from django.urls import include, path
 
+from config.utils import running_dev
 from corgi.api.constants import CORGI_API_VERSION
 from corgi.api.views import healthy
 
@@ -14,7 +13,7 @@ urlpatterns = [
     path("", include("corgi.web.urls")),
 ]
 
-if os.getenv("DJANGO_SETTINGS_MODULE") in ("config.settings.dev", "config.settings.stage"):
+if running_dev():
     import debug_toolbar
 
     urlpatterns = [

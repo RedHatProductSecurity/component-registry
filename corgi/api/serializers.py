@@ -231,8 +231,7 @@ class ComponentSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_upstreams(instance: Component) -> list[dict[str, str]]:
-        return []
-        # return get_component_data_list(instance.get_upstreams())
+        return get_component_data_list(instance.get_upstreams())
 
     class Meta:
         model = Component

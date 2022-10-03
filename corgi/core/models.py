@@ -689,6 +689,7 @@ class ProductComponentRelation(TimeStampedModel):
             models.Index(fields=["product_ref"]),
             models.Index(fields=["build_id"]),
             models.Index(fields=["type"]),
+            models.Index(fields=("product_ref", "type")),
         ]
 
 

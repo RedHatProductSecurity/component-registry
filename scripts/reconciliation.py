@@ -15,6 +15,7 @@ import argparse
 import json
 import logging
 import sys
+from urllib.parse import quote
 
 import corgi_bindings
 import requests
@@ -241,7 +242,7 @@ for stream_ofuri, deptopia_id in stream_corpus:
         if deptopia_build["build_type"] == "maven":
             component_type = "MAVEN"
         single_response = session.components.retrieve_list(
-            nvr=deptopia_build["nvr"],
+            nvr=quote(deptopia_build["nvr"]),
             type=component_type,
             ofuri=stream_ofuri,
         )

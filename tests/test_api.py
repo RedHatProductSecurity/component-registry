@@ -255,11 +255,13 @@ def test_purl_reserved(client, api_path):
         arch="x86_64",
     )
     response = client.get(
-        f"{api_path}/components?nvr=dbus-glib-debuginfo-0.110-13.module+el9.0.0+14622+3cf1e152"
+        f"{api_path}/components?nvr={quote('dbus-glib-debuginfo-0.110-13.module+el9.0.0+14622+3cf1e152')}"
     )
     assert response.status_code == 200
+    assert response.json()["count"] == 1
     response = client.get(f"{api_path}/components?purl={quote(c1.purl)}")
     assert response.status_code == 302
+    assert response.headers["Location"] == f"/api/v1/components/{c1.uuid}"
 
 
 def test_re_name_filter(client, api_path):
@@ -367,19 +369,19 @@ def test_retrieve_lifecycle_defs():
     assert isinstance(data, list)
     assert isinstance(data[0], dict)
     assert [
-        "acg",
-        # TODO: Below added when re-recording cassette
-        # "application_stream_name",
-        "enddate",
-        "initial_product_version",
-        "lifecycle",
-        "name",
-        "private",
-        "product",
-        "source",
-        "stream",
-        "type",
-    ] == sorted(data[0].keys())
+               "acg",
+               # TODO: Below added when re-recording cassette
+               # "application_stream_name",
+               "enddate",
+               "initial_product_version",
+               "lifecycle",
+               "name",
+               "private",
+               "product",
+               "source",
+               "stream",
+               "type",
+           ] == sorted(data[0].keys())
 
 
 def test_products(client, api_path):
@@ -456,7 +458,8 @@ def test_api_listing(client, api_path):
 
 def test_api_component_404(client, api_path):
     response = client.get(
-        f"{api_path}/components?purl=pkg:rpm/redhat/non-existent-fake-libs@3.26.0-15.el8?arch=x86_64"  # noqa
+        f"{api_path}/components?purl=pkg:rpm/redhat/non-existent-fake-libs@3.26.0-15.el8?arch=x86_64"
+        # noqa
     )
     assert response.status_code == 404
 

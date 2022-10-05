@@ -296,6 +296,40 @@ paths:
               schema:
                 $ref: '#/components/schemas/Component'
           description: ''
+  /api/v1/components/{uuid}/olcs_test:
+    put:
+      operationId: v1_components_olcs_test_update
+      description: Allow OpenLCS to upload copyright text / license scan results for
+        a component
+      parameters:
+      - in: path
+        name: uuid
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Component(<class 'type'>).
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Component'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Component'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Component'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Component'
+          description: ''
   /api/v1/components/{uuid}/provides:
     get:
       operationId: v1_components_provides_retrieve
@@ -1082,7 +1116,6 @@ components:
           type: string
         related_url:
           type: string
-          nullable: true
           maxLength: 1024
         tags:
           type: array
@@ -1107,13 +1140,28 @@ components:
         epoch:
           type: string
           readOnly: true
-        license:
+        copyright_text:
           type: string
-        license_list:
+        license_concluded:
+          type: string
+          readOnly: true
+        license_concluded_list:
           type: array
           items:
             type: string
           readOnly: true
+        license_declared:
+          type: string
+          readOnly: true
+        license_declared_list:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        openlcs_scan_url:
+          type: string
+        openlcs_scan_version:
+          type: string
         software_build:
           $ref: '#/components/schemas/SoftwareBuildSummary'
         errata:
@@ -1175,7 +1223,10 @@ components:
       - download_url
       - epoch
       - errata
-      - license_list
+      - license_concluded
+      - license_concluded_list
+      - license_declared
+      - license_declared_list
       - link
       - name
       - product_streams

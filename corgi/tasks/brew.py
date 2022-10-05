@@ -202,7 +202,7 @@ def save_component(component, parent, softwarebuild=None):
         defaults={
             "description": meta.pop("description", ""),
             "filename": find_package_file_name(meta.pop("source", [])),
-            "license": meta.pop("license", ""),
+            "license_declared_raw": meta.pop("license", ""),
             "related_url": meta.pop("url", ""),
             "software_build": softwarebuild,
         },
@@ -234,7 +234,7 @@ def save_srpm(softwarebuild, build_data) -> ComponentNode:
         version=build_data["meta"].get("version", ""),
         release=build_data["meta"].get("release", ""),
         defaults={
-            "license": build_data["meta"].get("license", ""),
+            "license_declared_raw": build_data["meta"].get("license", ""),
             "description": build_data["meta"].get("description", ""),
             "software_build": softwarebuild,
             "meta_attr": build_data["meta"],
@@ -254,12 +254,12 @@ def save_srpm(softwarebuild, build_data) -> ComponentNode:
             type=Component.Type.UPSTREAM,
             name=build_data["meta"].get("name"),
             version=build_data["meta"].get("version", ""),
-            # To avoid any future variance of license and related_url
+            # To avoid any future variance of license_declared and related_url
             # set only when initially created
             defaults={
                 "description": build_data["meta"].get("description", ""),
                 "filename": find_package_file_name(build_data["meta"].get("source", [])),
-                "license": build_data["meta"].get("license", ""),
+                "license_declared_raw": build_data["meta"].get("license", ""),
                 "related_url": build_data["meta"].get("url", ""),
             },
         )
@@ -399,7 +399,7 @@ def save_module(softwarebuild, build_data) -> ComponentNode:
         version=build_data["meta"].get("version", ""),
         release=build_data["meta"].get("release", ""),
         defaults={
-            "license": build_data["meta"].get("license", ""),
+            "license_declared_raw": build_data["meta"].get("license", ""),
             "description": build_data["meta"].get("description", ""),
             "software_build": softwarebuild,
             "meta_attr": meta_attr,

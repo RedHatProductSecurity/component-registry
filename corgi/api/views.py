@@ -13,6 +13,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet
 
+from config import utils
 from corgi import __version__
 from corgi.core.models import (
     AppStreamLifeCycle,
@@ -396,6 +397,47 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         component = Component.objects.filter(purl=purl).first()
         if not component:
             return Response(status=404)
+        response = Response(status=302)
+        response["Location"] = f"/api/{CORGI_API_VERSION}/components/{component.uuid}"
+        return response
+
+    @action(methods=["put"], detail=True)
+    def olcs_test(self, request, uuid=None):
+        """Allow OpenLCS to upload copyright text / license scan results for a component"""
+        # In the future these could be separate endpoints
+        # For testing we'll just keep it under one endpoint
+        if utils.running_prod():
+            # This is only temporary for OpenLCS testing
+            # Do not enable in production until we add OIDC authentication
+            return Response(status=403)
+        component = self.queryset.filter(uuid=uuid).first()
+        if not component:
+            return Response(status=404)
+
+        copyright_text = request.data.get("copyright_text")
+        license_concluded = request.data.get("license_concluded")
+        openlcs_scan_url = request.data.get("openlcs_scan_url")
+        openlcs_scan_version = request.data.get("openlcs_scan_version")
+        if (
+            not copyright_text
+            and not license_concluded
+            and not openlcs_scan_url
+            and not openlcs_scan_version
+        ):
+            # At least one of above is required, else Bad Request
+            return Response(status=400)
+
+        # if it's None, it wasn't included in the request
+        # But it might be "" if the user wants to empty out the value
+        if copyright_text is not None:
+            component.copyright_text = copyright_text
+        if license_concluded is not None:
+            component.license_concluded_raw = license_concluded
+        if openlcs_scan_url is not None:
+            component.openlcs_scan_url = openlcs_scan_url
+        if openlcs_scan_version is not None:
+            component.openlcs_scan_version = openlcs_scan_version
+        component.save()
         response = Response(status=302)
         response["Location"] = f"/api/{CORGI_API_VERSION}/components/{component.uuid}"
         return response

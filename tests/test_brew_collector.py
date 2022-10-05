@@ -21,7 +21,7 @@ from tests.factories import ComponentFactory, SoftwareBuildFactory
 pytestmark = pytest.mark.unit
 
 # TODO add mock data for commented tests in build_corpus
-# build id, namespace, name, license, type
+# build id, source URL, namespace, name, license_declared_raw, type
 build_corpus = [
     # firefox -brew buildID=1872838
     # (
@@ -113,7 +113,7 @@ class MockBrewResult(object):
 @patch("koji.ClientSession")
 @patch("corgi.collectors.brew.Brew.brew_rpm_headers_lookup")
 @pytest.mark.parametrize(
-    "build_id,build_source,build_ns,build_name,license,build_type", build_corpus
+    "build_id,build_source,build_ns,build_name,license_declared_raw,build_type", build_corpus
 )
 def test_get_component_data(
     mock_headers_lookup,
@@ -122,7 +122,7 @@ def test_get_component_data(
     build_source,
     build_ns,
     build_name,
-    license,
+    license_declared_raw,
     build_type,
     monkeypatch,
 ):
@@ -181,9 +181,9 @@ def test_get_component_data(
     assert c["build_meta"]["build_info"]["source"] == build_source
     assert c["build_meta"]["build_info"]["build_id"] == build_id
     assert c["build_meta"]["build_info"]["name"] == build_name
-    # The "license" field on the Component model defaults to ""
+    # The "license_declared_raw" field on the Component model defaults to ""
     # But the Brew collector (via get_rpm_build_data) / Koji (via getRPMHeaders) may return None
-    assert c["meta"].get("license", "") == license
+    assert c["meta"].get("license", "") == license_declared_raw
     assert c["namespace"] == build_ns
     assert c["type"] == build_type
 
@@ -633,7 +633,7 @@ def test_fetch_rpm_build(mock_sca):
     srpm = Component.objects.get(name="cockpit", type=Component.Type.SRPM)
     assert srpm
     assert srpm.description
-    assert srpm.license
+    assert srpm.license_declared_raw
     assert srpm.software_build
     assert srpm.software_build.build_id
     assert srpm.epoch == 0

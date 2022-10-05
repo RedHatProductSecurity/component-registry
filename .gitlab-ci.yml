@@ -39,6 +39,7 @@ include:
   - export CORGI_LOOKASIDE_CACHE_URL
   - export CORGI_MANIFEST_HINTS_URL
   - export CORGI_PRODSEC_DASHBOARD_URL
+  - export CORGI_PULP_URL
   - export PIP_INDEX_URL
   - export ROOT_CA_URL
   - export DNF_WITH_OPTIONS='dnf --disableplugin=subscription-manager --nodocs --setopt install_weak_deps=false -y'

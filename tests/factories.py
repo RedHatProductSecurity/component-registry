@@ -121,7 +121,7 @@ class ComponentFactory(factory.django.DjangoModelFactory):
     version = "3.2.1"
     release = "1.0.1e"
     arch = "testarch"
-    license = "BSD-3-Clause or (GPLv3+ and LGPLv3+)"
+    license_declared_raw = "BSD-3-Clause or (GPLv3+ and LGPLv3+)"
 
     software_build = factory.SubFactory(SoftwareBuildFactory)
     tag = factory.RelatedFactory(ComponentTagFactory, factory_related_name="component")

@@ -775,14 +775,25 @@ class Component(TimeStampedModel):
 
     cnodes = GenericRelation(ComponentNode)
     software_build = models.ForeignKey(SoftwareBuild, on_delete=models.CASCADE, null=True)
+
+    # Copyright text as it appears in the component source code, from an OpenLCS scan
+    copyright_text = models.TextField(default="")
+    # License information as it appears in the component source code, from an OpenLCS scan
+    # Use the license_concluded or license_concluded_list properties, not this field directly
+    license_concluded_raw = models.TextField(default="")
     # The raw "summary license string" without any transformations
     # This information comes from the build system via an RPM spec file, Maven POM file, etc.
-    # Use the license_expression property for almost any usage, not this field directly
-    license = models.TextField(default="")
+    # Use the license_declared or license_declared_list properties, not this field directly
+    license_declared_raw = models.TextField(default="")
+    # URL with more information about the scan that was performed
+    openlcs_scan_url = models.TextField(default="")
+    # Version of scanner used to perform this analysis
+    openlcs_scan_version = models.TextField(default="")
+
     # The filename of the source rpm package, or similar, from the meta_attr / build system
     filename = models.TextField(default="")
 
-    related_url = models.CharField(max_length=1024, default="", null=True)  # noqa: DJ01
+    related_url = models.CharField(max_length=1024, default="")
 
     data_score = models.IntegerField(default=0)
     data_report = fields.ArrayField(models.CharField(max_length=200), default=list)
@@ -963,22 +974,36 @@ class Component(TimeStampedModel):
         return list(erratum for erratum in errata_qs if erratum)
 
     @property
-    def license_expression(self) -> str:
-        """Return the "summary license string" formatted as an SPDX license expression
+    def license_concluded(self) -> str:
+        """Return the OLCS scan results formatted as an SPDX license expression
         This is almost the same as above, but operators (AND, OR) + license IDs are uppercased"""
-        return self.license.upper()
+        return self.license_concluded_raw.upper()
 
     @property
-    def license_list(self) -> list[str]:
+    def license_declared(self) -> str:
+        """Return the "summary license string" formatted as an SPDX license expression
+        This is almost the same as above, but operators (AND, OR) + license IDs are uppercased"""
+        return self.license_declared_raw.upper()
+
+    @staticmethod
+    def license_list(license_expression: str) -> list[str]:
         """Return a list of any possibly-relevant licenses. No information is given about which apply
         To see if all apply or if you may choose between them, parse the license expression above"""
         # "words".split("not present in string") will return ["words"]
         # AKA below will always add one level of nesting to the array
-        license_parts = self.license_expression.split(" AND ")
+        license_parts = license_expression.split(" AND ")
         # Flatten it back to a list[str] in one line to fix mypy errors
         license_parts = [nested for part in license_parts for nested in part.split(" OR ")]
 
         return [part.strip("()") for part in license_parts]
+
+    @property
+    def license_concluded_list(self) -> list[str]:
+        return self.license_list(self.license_concluded)
+
+    @property
+    def license_declared_list(self) -> list[str]:
+        return self.license_list(self.license_declared)
 
     @property
     def epoch(self) -> str:
@@ -1088,9 +1113,9 @@ class Component(TimeStampedModel):
         if not self.version:
             score += 10
             report.add("no version")
-        if not self.license:
+        if not self.license_declared_raw:
             score += 10
-            report.add("no license")
+            report.add("no license declared")
         if not self.products:
             score += 10
             report.add("no products")

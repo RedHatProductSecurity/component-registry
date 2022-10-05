@@ -1,4 +1,5 @@
 import logging
+from string import Template
 
 from django_filters.rest_framework import CharFilter, Filter, FilterSet
 
@@ -41,17 +42,24 @@ class ComponentFilter(FilterSet):
     description = CharFilter(lookup_expr="icontains")
     tags = TagFilter()
 
-    products = CharFilter(lookup_expr="icontains")
-    product_versions = CharFilter(lookup_expr="icontains")
-    product_streams = CharFilter(lookup_expr="icontains")
-    product_variants = CharFilter(lookup_expr="icontains")
-    channels = CharFilter(lookup_expr="icontains")
+    products = CharFilter(method="filter_arrayfield")
+    product_versions = CharFilter(method="filter_arrayfield")
+    product_streams = CharFilter(method="filter_arrayfield")
+    product_variants = CharFilter(method="filter_arrayfield")
+    channels = CharFilter(method="filter_arrayfield")
     sources = CharFilter(lookup_expr="icontains")
     provides = CharFilter(lookup_expr="icontains")
     upstreams = CharFilter(lookup_expr="icontains")
     re_upstream = CharFilter(lookup_expr="regex", field_name="upstreams")
 
-    ofuri = CharFilter(field_name="product_streams", lookup_expr="icontains")
+    ofuri = CharFilter(method="filter_arrayfield")
+
+    def filter_arrayfield(self, queryset, name, value):
+        array_value = Template("{$value}").substitute(value=value)
+        if name == "ofuri":
+            name = "product_streams"
+        lookup = f"{name}__overlap"
+        return queryset.filter(**{lookup: array_value})
 
 
 class ProductDataFilter(FilterSet):

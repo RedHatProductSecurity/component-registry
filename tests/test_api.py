@@ -68,7 +68,6 @@ def test_product_data_detail(model, endpoint_name, client, api_path):
     assert response.json()["count"] == 1
 
 
-@pytest.mark.skip(reason="Disabled until channel data is integrated into core")
 def test_channel_detail(client, api_path):
     p1 = ChannelFactory(name="Repo1")
 
@@ -464,3 +463,57 @@ def test_api_component_404(client, api_path):
 def test_api_component_400(client, api_path):
     response = client.get(f"{api_path}/components?type=NONEXISTANTTYPE")
     assert response.status_code == 400
+
+
+def test_product_components_ofuri(client, api_path):
+    openssl = ComponentFactory(name="openssl")
+    curl = ComponentFactory(name="curl")
+
+    openssl.product_streams = ["o:redhat:rhel:8.6.0"]
+    openssl.save()
+    curl.product_streams = ["o:redhat:rhel:8.6.0.z"]
+    curl.save()
+
+    response = client.get(f"{api_path}/components?ofuri=o:redhat:rhel:8.6.0.z")
+    assert response.status_code == 200
+    assert response.json()["count"] == 1
+
+    response = client.get(f"{api_path}/components?ofuri=o:redhat:rhel:8.6.0")
+    assert response.status_code == 200
+    assert response.json()["count"] == 1
+
+
+def test_product_components_versions(client, api_path):
+    openssl = ComponentFactory(name="openssl")
+    curl = ComponentFactory(name="curl")
+
+    openssl.product_streams = ["o:redhat:rhel:8"]
+    openssl.save()
+    curl.product_streams = ["o:redhat:rhel:7"]
+    curl.save()
+
+    response = client.get(f"{api_path}/components?product_streams=o:redhat:rhel:8")
+    assert response.status_code == 200
+    assert response.json()["count"] == 1
+
+    response = client.get(f"{api_path}/components?ofuri=o:redhat:rhel:7")
+    assert response.status_code == 200
+    assert response.json()["count"] == 1
+
+
+def test_product_components(client, api_path):
+    openssl = ComponentFactory(name="openssl")
+    curl = ComponentFactory(name="curl")
+
+    openssl.products = ["o:redhat:rhel"]
+    openssl.save()
+    curl.products = ["o:redhat:rhel-br"]
+    curl.save()
+
+    response = client.get(f"{api_path}/components?products=o:redhat:rhel")
+    assert response.status_code == 200
+    assert response.json()["count"] == 1
+
+    response = client.get(f"{api_path}/components?products=o:redhat:rhel-br")
+    assert response.status_code == 200
+    assert response.json()["count"] == 1

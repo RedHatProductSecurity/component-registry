@@ -1,6 +1,8 @@
 import logging
+from datetime import timedelta
 
 from celery_singleton import Singleton
+from django.utils import timezone
 
 from config.celery import app
 from corgi.collectors.pulp import Pulp
@@ -18,15 +20,29 @@ logger = logging.getLogger(__name__)
 
 
 @app.task(base=Singleton, autorety_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def fetch_unprocessed_cdn_relations():
-    for build_id in (
-        ProductComponentRelation.objects.filter(type=ProductComponentRelation.Type.CDN_REPO)
-        .values_list("build_id", flat=True)
-        .distinct()
-    ):
-        if not SoftwareBuild.objects.filter(build_id=int(build_id)).exists():
-            fetch_modular_build.delay(build_id)
-            slow_fetch_brew_build.delay(int(build_id))
+def fetch_unprocessed_cdn_relations(force_process=False, created_in_last_week=True):
+    relations_query = ProductComponentRelation.objects.filter(
+        type=ProductComponentRelation.Type.CDN_REPO
+    )
+    if created_in_last_week:
+        # Account for any timedelay by processing 8 days instead of 7
+        created_during = timezone.now() - timedelta(days=8)
+        relations_query = relations_query.filter(created_at__gte=created_during)
+    # batch process to avoid exhausting the memory limit for the pod
+    relation_count = relations_query.count()
+    logger.info("Found %s unprocessed relations", relation_count)
+    offset = 0
+    limit = 10000
+    while offset < relation_count:
+        logger.info("Processing CDN relations with offset %s and limit %s", offset, limit)
+        for build_id in relations_query.values_list("build_id", flat=True).distinct()[
+            offset : offset + limit
+        ]:
+            if not SoftwareBuild.objects.filter(build_id=int(build_id)).exists():
+                logger.info("Processing CDN relation build with id: %s", build_id)
+                fetch_modular_build.delay(build_id)
+                slow_fetch_brew_build.delay(int(build_id), force_process=force_process)
+        offset = offset + limit
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)

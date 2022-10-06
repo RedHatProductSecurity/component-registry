@@ -255,6 +255,7 @@ class SoftwareBuild(TimeStampedModel):
         """update ('materialize') product taxonomy on all build components"""
         variant_ids = list(
             ProductComponentRelation.objects.filter(build_id=self.build_id)
+            .order_by("build_id")
             .filter(
                 type__in=(
                     ProductComponentRelation.Type.ERRATA,
@@ -267,6 +268,7 @@ class SoftwareBuild(TimeStampedModel):
 
         stream_ids = list(
             ProductComponentRelation.objects.filter(build_id=self.build_id)
+            .order_by("build_id")
             .filter(
                 type__in=(
                     ProductComponentRelation.Type.COMPOSE,

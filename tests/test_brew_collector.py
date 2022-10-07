@@ -5,6 +5,7 @@ from unittest.mock import call, patch
 
 import pytest
 from django.conf import settings
+from yaml import safe_load
 
 from corgi.collectors.brew import Brew, BrewBuildTypeNotSupported
 from corgi.core.models import Component, ComponentNode
@@ -19,43 +20,42 @@ from tests.factories import ComponentFactory, SoftwareBuildFactory
 
 pytestmark = pytest.mark.unit
 
+# TODO add mock data for commented tests in build_corpus
 # build id, namespace, name, license, type
 build_corpus = [
     # firefox -brew buildID=1872838
-    (
-        1872838,
-        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
-        "/rpms/firefox#1b69e6c1315abe3b4a74f455ea9d6fed3c22bbfe",
-        "redhat",
-        "firefox",
-        "MPLv1.1 or GPLv2+ or LGPLv2+",
-        "rpm",
-    ),
+    # (
+    #    1872838,
+    #    f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
+    #    "/rpms/firefox#1b69e6c1315abe3b4a74f455ea9d6fed3c22bbfe",
+    #    "redhat",
+    #    "firefox",
+    #    "MPLv1.1 or GPLv2+ or LGPLv2+",
+    #    "rpm",
+    # ),
     # grafana-container: brew buildID=1872940
     (
         1872940,
-        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
-        "/containers/grafana#1d4356446cbbbb0b23f08fe93e9deb20fe5114bf",
+        "git://pkgs.example.com/containers/grafana#1d4356446cbbbb0b23f08fe93e9deb20fe5114bf",
         "redhat",
         "grafana-container",
         "",
         "image",
     ),
     # rh - nodejs: brew buildID=1700251
-    (
-        1700251,
-        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
-        "/rpms/nodejs#3cbed2be4171502499d0d89bea1ead91690af7d2",
-        "redhat",
-        "rh-nodejs12-nodejs",
-        "MIT and ASL 2.0 and ISC and BSD",
-        "rpm",
-    ),
+    # (
+    #    1700251,
+    #    f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
+    #    "/rpms/nodejs#3cbed2be4171502499d0d89bea1ead91690af7d2",
+    #    "redhat",
+    #    "rh-nodejs12-nodejs",
+    #    "MIT and ASL 2.0 and ISC and BSD",
+    #    "rpm",
+    # ),
     # rubygem: brew buildID=936045
     (
         936045,
-        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
-        "/rpms/rubygem-bcrypt#4deddf4d5f521886a5680853ebccd02e3cabac41",
+        "git://pkgs.example.com/rpms/rubygem-bcrypt#4deddf4d5f521886a5680853ebccd02e3cabac41",
         "redhat",
         "rubygem-bcrypt",
         "MIT",
@@ -63,15 +63,15 @@ build_corpus = [
     ),
     # jboss-webserver-container:
     # brew buildID=1879214
-    (
-        1879214,
-        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
-        "/containers/jboss-webserver-3#73d776be91c6adc3ae70b795866a81e72e161492",
-        "redhat",
-        "jboss-webserver-3-webserver31-tomcat8-openshift-container",
-        "",
-        "image",
-    ),
+    # (
+    #    1879214,
+    #    f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
+    #    "/containers/jboss-webserver-3#73d776be91c6adc3ae70b795866a81e72e161492",
+    #    "redhat",
+    #    "jboss-webserver-3-webserver31-tomcat8-openshift-container",
+    #    "",
+    #    "image",
+    # ),
     # org.apache.cxf-cxf: brew buildID=1796072
     # TODO: uncomment when Maven build type is supported
     # (
@@ -83,39 +83,75 @@ build_corpus = [
     #     "maven",
     # ),
     # nodejs: brew buildID=1700497
-    (
-        1700497,
-        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
-        f"/modules/nodejs?#e457a1b700c09c58beca7e979389a31c98cead34",
-        "redhat",
-        "nodejs",
-        "MIT",
-        "module",
-    ),
+    # (
+    #    1700497,
+    #    f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
+    #    f"/modules/nodejs?#e457a1b700c09c58beca7e979389a31c98cead34",
+    #    "redhat",
+    #    "nodejs",
+    #    "MIT",
+    #    "module",
+    # ),
     # cryostat-rhel8-operator-container:
     # brew buildID=1841202
-    (
-        1841202,
-        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
-        "/containers/cryostat-operator#ec07a9a48444e849f9282a8b1c158a93bf667d1d",
-        "redhat",
-        "cryostat-rhel8-operator-container",
-        "",
-        "image",
-    ),
+    # (
+    #    1841202,
+    #    f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
+    #    "/containers/cryostat-operator#ec07a9a48444e849f9282a8b1c158a93bf667d1d",
+    #    "redhat",
+    #    "cryostat-rhel8-operator-container",
+    #    "",
+    #    "image",
+    # ),
 ]
 
 
-@pytest.mark.vcr(match_on=["method", "scheme", "host", "port", "path", "body"])
+class MockBrewResult(object):
+    pass
+
+
+@patch("koji.ClientSession")
+@patch("corgi.collectors.brew.Brew.brew_rpm_headers_lookup")
 @pytest.mark.parametrize(
     "build_id,build_source,build_ns,build_name,license,build_type", build_corpus
 )
-def test_get_component_data(build_id, build_source, build_ns, build_name, license, build_type):
+def test_get_component_data(
+    mock_headers_lookup,
+    mock_koji,
+    build_id,
+    build_source,
+    build_ns,
+    build_name,
+    license,
+    build_type,
+    monkeypatch,
+):
+    mock_rpm_infos = []
+    for function in ("getBuild", "getBuildType", "listTags", "listRPMs"):
+        with open(f"tests/data/brew/{build_id}/{function}.yaml") as data:
+            pickled_data = safe_load(data.read())
+            mock_func = getattr(mock_koji, function)
+            mock_func.return_value = pickled_data
+            if function == "listRPMs":
+                mock_rpm_infos = pickled_data
+    brew = Brew()
+    monkeypatch.setattr(brew, "koji_session", mock_koji)
+
+    mock_rpm_info_headers = []
+    for rpm_info in mock_rpm_infos:
+        with open(f"tests/data/brew/{build_id}/rpms/{rpm_info['id']}/rpmHeaders.yaml") as data:
+            pickled_rpm_headers = safe_load(data.read())
+        headers_result = MockBrewResult()
+        headers_result.result = pickled_rpm_headers
+        mock_rpm_info_headers.append((rpm_info, headers_result))
+
+    mock_headers_lookup.return_value = mock_rpm_info_headers
+
     if build_type not in Brew.SUPPORTED_BUILD_TYPES:
         with pytest.raises(BrewBuildTypeNotSupported):
-            Brew().get_component_data(build_id)
+            brew.get_component_data(build_id)
         return
-    c = Brew().get_component_data(build_id)
+    c = brew.get_component_data(build_id)
     if build_type == "module":
         assert list(c.keys()) == ["type", "namespace", "meta", "analysis_meta", "build_meta"]
     # TODO: uncomment when Maven build type is supported
@@ -666,3 +702,10 @@ def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, moc
     # TODO: Below should be a method call(), but changing it makes tests fail
     mock_load_errata.assert_not_called
     mock_sca.assert_called_with(1781353)
+
+
+@patch("corgi.core.models.SoftwareBuild.save_product_taxonomy")
+def test_new_software_build_relation(mock_save_prod_tax):
+    sb = SoftwareBuildFactory()
+    slow_fetch_brew_build(sb.build_id)
+    assert mock_save_prod_tax.called

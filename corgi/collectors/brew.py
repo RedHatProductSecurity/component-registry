@@ -154,26 +154,12 @@ class Brew:
         # List of child RPM components
         rpm_components = []
 
-        # Define headers from which we'll pull extra RPM metadata
-        rpm_headers = (
-            "summary",
-            "description",
-            "license",
-            "provides",
-            "provideversion",
-            "url",
-            "source",
-        )
         rpm_infos = self.koji_session.listRPMs(build_id)
 
-        with self.koji_session.multicall() as m:
-            rpm_info_header_calls = [
-                (rpm_info, m.getRPMHeaders(rpmID=rpm_info["id"], headers=rpm_headers))
-                for rpm_info in rpm_infos
-            ]
-        for rpm_info, call in rpm_info_header_calls:
+        for rpm_info, call in self.brew_rpm_headers_lookup(rpm_infos):
             rpm_id = rpm_info["id"]
             headers = call.result
+
             # Create a dictionary by zipping together the values from the "provides" and
             # "provideversion" headers.
             rpm_provides = list(zip(headers.pop("provides"), headers.pop("provideversion")))
@@ -673,7 +659,6 @@ class Brew:
         build = self.koji_session.getBuild(build_id)
         if not build:
             raise BrewBuildNotFound(f"Build {build_id} was not found")
-
         # Determine build state
         state = build.get("state")
         if state != koji.BUILD_STATES["COMPLETE"]:
@@ -760,6 +745,24 @@ class Brew:
         except koji.GenericError as exc:
             logger.warning("Couldn't find brew builds with tag %s: %s", brew_tag, exc)
             return tuple()
+
+    def brew_rpm_headers_lookup(self, rpm_infos) -> tuple:
+        # Define headers from which we'll pull extra RPM metadata
+        rpm_headers = (
+            "summary",
+            "description",
+            "license",
+            "provides",
+            "provideversion",
+            "url",
+            "source",
+        )
+        with self.koji_session.multicall() as m:
+            rpm_info_header_calls = tuple(
+                (rpm_info, m.getRPMHeaders(rpmID=rpm_info["id"], headers=rpm_headers))
+                for rpm_info in rpm_infos
+            )
+        return rpm_info_header_calls
 
     def brew_srpm_lookup(self, srpms) -> tuple:
         """The Koji API findBuild call can except NVR as a format"""

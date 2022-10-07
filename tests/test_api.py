@@ -1,6 +1,7 @@
 from urllib.parse import quote
 
 import pytest
+from django.conf import settings
 
 from corgi.collectors.appstream_lifecycle import AppStreamLifeCycleCollector
 from corgi.core.models import Component, ComponentNode
@@ -359,16 +360,16 @@ def test_lifecycle_detail(client, api_path):
     assert response.json()["name"] == "bzip2-devel"
 
 
-@pytest.mark.vcr
-def test_retrieve_lifecycle_defs():
+def test_retrieve_lifecycle_defs(requests_mock):
+    with open("tests/data/application_streams.yaml", "r") as app_steam_data:
+        requests_mock.get(f"{settings.APP_STREAMS_LIFE_CYCLE_URL}", text=app_steam_data.read())
     collector = AppStreamLifeCycleCollector()
     data = collector.get_lifecycle_defs()
     assert isinstance(data, list)
     assert isinstance(data[0], dict)
     assert [
         "acg",
-        # TODO: Below added when re-recording cassette
-        # "application_stream_name",
+        "application_stream_name",
         "enddate",
         "initial_product_version",
         "lifecycle",

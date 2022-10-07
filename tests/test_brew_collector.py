@@ -702,3 +702,10 @@ def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, moc
     # TODO: Below should be a method call(), but changing it makes tests fail
     mock_load_errata.assert_not_called
     mock_sca.assert_called_with(1781353)
+
+
+@patch("corgi.core.models.SoftwareBuild.save_product_taxonomy")
+def test_new_software_build_relation(mock_save_prod_tax):
+    sb = SoftwareBuildFactory()
+    slow_fetch_brew_build(sb.build_id)
+    assert mock_save_prod_tax.called

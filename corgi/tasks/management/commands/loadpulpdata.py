@@ -13,10 +13,10 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser: CommandParser) -> None:
         parser.add_argument(
-            "stream_name",
+            "stream_names",
             nargs="*",
             type=str,
-            help="Fetch builds using cdn_repo for variants configured in stream",
+            help="Fetch builds using cdn_repo for variants configured in streams",
         )
         parser.add_argument(
             "-f",
@@ -29,12 +29,10 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options) -> None:
-        if options["stream_name"]:
-            stream_name = options["stream_name"]
-            self.stdout.write(self.style.NOTICE(f"Fetching builds for stream: {stream_name}"))
-            self.get_builds_by_cdn_repo(
-                stream_name=options["stream_name"], force_process=options["force"]
-            )
+        if options["stream_names"]:
+            for stream_name in options["stream_names"]:
+                self.stdout.write(self.style.NOTICE(f"Fetching builds for stream: {stream_name}"))
+                self.get_builds_by_cdn_repo(stream_name=stream_name, force_process=options["force"])
         elif options["all"]:
             self.stdout.write(self.style.NOTICE("Fetching all unprocessed pulp relations"))
             fetch_unprocessed_cdn_relations(
@@ -52,7 +50,8 @@ class Command(BaseCommand):
                 product_ref__in=ps.product_variants,
                 type=ProductComponentRelation.Type.CDN_REPO,
             )
+            .order_by("build_id")
             .values_list("build_id", flat=True)
             .distinct()
         )
-        fetch_modular_builds(relations_query, force_process)
+        fetch_modular_builds(relations_query, force_process=force_process)

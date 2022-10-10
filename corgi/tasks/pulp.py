@@ -12,7 +12,7 @@ from corgi.core.models import (
     ProductVariant,
     SoftwareBuild,
 )
-from corgi.tasks.brew import fetch_modular_build, slow_fetch_brew_build
+from corgi.tasks.brew import fetch_modular_build
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS, _create_relations
 from corgi.tasks.errata_tool import update_variant_repos
 
@@ -40,8 +40,7 @@ def fetch_unprocessed_cdn_relations(force_process=False, created_in_last_week=Tr
         ]:
             if not SoftwareBuild.objects.filter(build_id=int(build_id)).exists():
                 logger.info("Processing CDN relation build with id: %s", build_id)
-                fetch_modular_build.delay(build_id)
-                slow_fetch_brew_build.delay(int(build_id), force_process=force_process)
+                fetch_modular_build.delay(build_id, force_process=force_process)
         offset = offset + limit
 
 

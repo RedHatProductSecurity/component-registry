@@ -462,6 +462,7 @@ def load_brew_tags() -> None:
         brew = Brew()
         for brew_tag, inherit in ps.brew_tags.items():
             # Always load all builds in tag when saving relations
+            # TODO: Use _create_relations here and in other places
             builds = brew.get_builds_with_tag(brew_tag, inherit=inherit, latest=False)
             no_of_created = 0
             for build in builds:
@@ -484,7 +485,7 @@ def fetch_modular_builds(relations_query: QuerySet, force_process: bool = False)
 def fetch_unprocessed_relations(relation_type, created_since, force_process=False):
     relations_query = ProductComponentRelation.objects.filter(type=relation_type)
     if created_since:
-        created_during = timezone.now() - timedelta(days=created_since)
+        created_during = timezone.now() - created_since
         relations_query = relations_query.filter(created_at__gte=created_during)
     # batch process to avoid exhausting the memory limit for the pod
     relation_count = relations_query.count()
@@ -517,5 +518,5 @@ def slow_fetch_unprocessed_brew_tag_relations(force_process=False, created_since
     return fetch_unprocessed_relations(
         ProductComponentRelation.Type.BREW_TAG,
         force_process=force_process,
-        created_since=created_since,
+        created_since=timedelta(days=created_since),
     )

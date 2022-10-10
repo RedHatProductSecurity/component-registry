@@ -1,3 +1,5 @@
+import logging
+import subprocess
 from datetime import timedelta
 from ssl import SSLError
 
@@ -27,6 +29,8 @@ RETRY_KWARGS = {
     "retry_jitter": False,
 }
 
+logger = logging.getLogger(__name__)
+
 
 def fatal_code(e):
     """Do not retry on 4xx responses."""
@@ -48,10 +52,8 @@ def get_last_success_for_task(task_name):
     If that still misses stuff, it indicates a longer outage and updates should be scheduled
     manually.
     """
-    # Specifically query for jobs without any task kwargs so prevent refreshing only after a
-    # successful manually triggered task for a particular resource.
     last_success = (
-        TaskResult.objects.filter(task_name=task_name, task_kwargs='"{}"', status="SUCCESS")
+        TaskResult.objects.filter(task_name=task_name, status="SUCCESS")
         .order_by("-date_done")
         .values_list("date_done", flat=True)
         .first()
@@ -73,3 +75,19 @@ def _create_relations(build_ids, external_system_id, product_ref, relation_type)
         if created:
             no_of_relations += 1
     return no_of_relations
+
+
+def run_external(
+    command: list[str], *args, **kwargs
+) -> tuple[subprocess.CompletedProcess, list[str]]:
+    """Simple wrapper function to securely run an external command using the subprocess module
+    Raises a CalledProcessError by default if the command returned a non-zero exit code"""
+    logger.info(f"Running external command: {command}")
+    result = subprocess.run(command, *args, **kwargs, capture_output=True, check=True, text=True)
+    logger.info(f"Command completed with result: {result}")
+    if result.stderr:
+        # Treat warnings like errors even if the command had a successful exit code
+        raise ValueError(f"Command {command} failed: {result.stderr}")
+    output = result.stdout.splitlines()
+
+    return result, output

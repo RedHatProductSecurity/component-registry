@@ -263,8 +263,8 @@ class SoftwareBuild(TimeStampedModel):
             .order_by("build_id")
             .filter(
                 type__in=(
-                    ProductComponentRelation.Type.ERRATA,
                     ProductComponentRelation.Type.CDN_REPO,
+                    ProductComponentRelation.Type.ERRATA,
                 )
             )
             .distinct()
@@ -276,8 +276,9 @@ class SoftwareBuild(TimeStampedModel):
             .order_by("build_id")
             .filter(
                 type__in=(
-                    ProductComponentRelation.Type.COMPOSE,
                     ProductComponentRelation.Type.BREW_TAG,
+                    ProductComponentRelation.Type.COMPOSE,
+                    ProductComponentRelation.Type.YUM_REPO,
                 )
             )
             .distinct()

@@ -2,6 +2,7 @@ from unittest.mock import patch
 
 import pytest
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 
 from corgi.collectors.models import (
     CollectorErrataProduct,
@@ -17,7 +18,7 @@ from corgi.core.models import (
 )
 from corgi.tasks.errata_tool import slow_load_errata, update_variant_repos
 
-from .factories import ProductVariantFactory
+from .factories import ProductStreamFactory, ProductVariantFactory
 
 pytestmark = pytest.mark.unit
 
@@ -37,11 +38,14 @@ def test_update_variant_repos():
         "rhel-8-for-aarch64-highavailability-debug-rpms__8",
         "rhel-8-for-aarch64-highavailability-rpms__8",
     ]
+    ps = ProductStreamFactory.create(name="rhel", version="8.2.0")
+    ps_node = ProductNode.objects.create(parent=None, obj=ps, object_id=ps.pk)
+
     et_id = 0
-    setup_models_for_variant_repos(sap_repos, sap_variant, et_id)
+    setup_models_for_variant_repos(sap_repos, ps_node, sap_variant, et_id)
     for variant in ha_variants:
         et_id += 1
-        setup_models_for_variant_repos(ha_repos, variant, et_id)
+        setup_models_for_variant_repos(ha_repos, ps_node, variant, et_id)
 
     update_variant_repos()
 
@@ -63,16 +67,26 @@ def test_update_variant_repos():
         channel = Channel.objects.get(type=Channel.Type.CDN_REPO, name=repo)
         assert channel.pnodes.count() == 2
         assert (
-            channel.pnodes.order_by("id").first().get_ancestors().first().obj.name
+            channel.pnodes.order_by("id")
+            .first()
+            .get_ancestors()
+            .filter(content_type=ContentType.objects.get_for_model(ProductVariant))
+            .first()
+            .obj.name
             == "HighAvailability-8.2.0.GA"
         )
         assert (
-            channel.pnodes.order_by("id").last().get_ancestors().first().obj.name
+            channel.pnodes.order_by("id")
+            .last()
+            .get_ancestors()
+            .filter(content_type=ContentType.objects.get_for_model(ProductVariant))
+            .first()
+            .obj.name
             == "HighAvailability-8.3.0.GA"
         )
 
 
-def setup_models_for_variant_repos(repos, variant, et_id):
+def setup_models_for_variant_repos(repos, ps_node, variant, et_id):
     et_product = CollectorErrataProduct.objects.create(
         et_id=et_id, name=f"name-{et_id}", short_name=str(et_id)
     )
@@ -86,7 +100,7 @@ def setup_models_for_variant_repos(repos, variant, et_id):
         CollectorRPMRepository.objects.get_or_create(name=repo)
 
     pv = ProductVariantFactory.create(name=variant)
-    ProductNode.objects.create(object_id=pv.pk, obj=pv, parent=None)
+    ProductNode.objects.create(object_id=pv.pk, obj=pv, parent=ps_node)
 
 
 # id, no_of_obj

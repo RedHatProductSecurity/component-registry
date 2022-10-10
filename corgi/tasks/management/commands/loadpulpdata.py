@@ -4,7 +4,7 @@ from django.core.management.base import BaseCommand, CommandParser
 
 from corgi.core.models import ProductComponentRelation, ProductStream
 from corgi.tasks.brew import fetch_modular_builds
-from corgi.tasks.pulp import fetch_unprocessed_cdn_relations
+from corgi.tasks.pulp import slow_fetch_unprocessed_cdn_relations
 
 
 class Command(BaseCommand):
@@ -35,7 +35,7 @@ class Command(BaseCommand):
                 self.get_builds_by_cdn_repo(stream_name=stream_name, force_process=options["force"])
         elif options["all"]:
             self.stdout.write(self.style.NOTICE("Fetching all unprocessed pulp relations"))
-            fetch_unprocessed_cdn_relations(
+            slow_fetch_unprocessed_cdn_relations(
                 force_process=options["force"], created_in_last_week=False
             )
         else:

@@ -2,6 +2,7 @@ import logging
 import re
 
 from celery_singleton import Singleton
+from django.db.models import QuerySet
 from django.utils import dateformat, timezone
 
 from config.celery import app
@@ -107,11 +108,16 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def fetch_modular_build(build_id: str):
+def fetch_modular_build(build_id: str, force_process: bool = False) -> None:
+    logger.info("Fetch modular build called with build id: %s", build_id)
     rhel_module_data = Brew.fetch_rhel_module(int(build_id))
     # Some compose build_ids in the relations table will be for SRPMs, skip those here
     if not rhel_module_data:
+        logger.info("No module data fetched for build %s from Brew, exiting...", build_id)
+        slow_fetch_brew_build.delay(int(build_id), force_process=force_process)
         return
+    # TODO: Should we use update_or_create here?
+    #  We don't currently handle reprocessing a modular build
     obj, created = Component.objects.get_or_create(
         name=rhel_module_data["meta"]["name"],
         type=Component.Type.RHEL_MODULE,
@@ -143,6 +149,8 @@ def fetch_modular_build(build_id: str):
         if "brew_build_id" in c:
             slow_fetch_brew_build.delay(c["brew_build_id"])
         save_component(c, node)
+    slow_fetch_brew_build.delay(int(build_id), force_process=force_process)
+    logger.info("Finished fetching modular build: %s", build_id)
 
 
 def find_package_file_name(sources: list[str]) -> str:
@@ -430,7 +438,6 @@ def load_brew_tags() -> None:
             logger.info("Saving %s new builds for %s", no_of_created, brew_tag)
 
 
-def fetch_modular_builds(relations_query, force_process=False):
+def fetch_modular_builds(relations_query: QuerySet, force_process: bool = False) -> None:
     for build_id in relations_query:
-        fetch_modular_build.delay(build_id)
-        slow_fetch_brew_build.delay(int(build_id), force_process)
+        fetch_modular_build.delay(build_id, force_process=force_process)

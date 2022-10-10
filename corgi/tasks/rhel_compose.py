@@ -38,36 +38,16 @@ def save_compose(stream_name) -> None:
     logger.info("Created %s new relations for stream %s", no_of_relations, stream_name)
 
 
-def get_builds_by_compose(compose_names):
-    relations_query = (
-        ProductComponentRelation.objects.filter(
-            external_system_id__in=compose_names,
-            type=ProductComponentRelation.Type.COMPOSE,
-        )
-        .values_list("build_id", flat=True)
-        .distinct()
+@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
+def get_builds(compose_names: list[str] = None, stream_name: str = None) -> None:
+    """Get compose build IDs, optionally for only a particular stream or set of composes"""
+    relations_query = ProductComponentRelation.objects.filter(
+        type=ProductComponentRelation.Type.COMPOSE
     )
-    fetch_modular_builds(relations_query)
+    if compose_names:
+        relations_query = relations_query.filter(external_system_id__in=compose_names)
+    elif stream_name:
+        relations_query = relations_query.filter(product_ref=stream_name)
 
-
-def get_builds_by_stream(stream_name):
-    relations_query = (
-        ProductComponentRelation.objects.filter(
-            product_ref=stream_name,
-            type=ProductComponentRelation.Type.COMPOSE,
-        )
-        .values_list("build_id", flat=True)
-        .distinct()
-    )
-    fetch_modular_builds(relations_query)
-
-
-def get_all_builds():
-    relations_query = (
-        ProductComponentRelation.objects.filter(
-            type=ProductComponentRelation.Type.COMPOSE,
-        )
-        .values_list("build_id", flat=True)
-        .distinct()
-    )
-    fetch_modular_builds(relations_query)
+    relations_build_ids = relations_query.values_list("build_id", flat=True).distinct()
+    fetch_modular_builds(relations_build_ids)

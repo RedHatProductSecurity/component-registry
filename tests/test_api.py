@@ -4,7 +4,7 @@ import pytest
 from django.conf import settings
 
 from corgi.collectors.appstream_lifecycle import AppStreamLifeCycleCollector
-from corgi.core.models import Component, ComponentNode
+from corgi.core.models import Component, ComponentNode, ProductNode
 
 from .factories import (
     ChannelFactory,
@@ -428,17 +428,28 @@ def test_product_streams(client, api_path):
 
 
 def test_product_variants(client, api_path):
-    ProductVariantFactory(name="AppStream-8.5.0.Z.MAIN")
+    pv_appstream = ProductVariantFactory(name="AppStream-8.5.0.Z.MAIN")
     ProductVariantFactory(name="BaseOS-8.5.0.Z.MAIN")
 
     response = client.get(f"{api_path}/product_variants")
     assert response.status_code == 200
     assert response.json()["count"] == 2
 
-    response = client.get(f"{api_path}/product_variants?ofuri=o:redhat:AppStream-8.5.0.Z.MAIN:")
+    response = client.get(f"{api_path}/product_variants?ofuri=o:redhat::appstream-8.5.0.z.main")
     assert response.status_code == 302
 
-    response = client.get(f"{api_path}/product_variants?ofuri=o:redhat:BaseOS-8.5.0.Z.MAIN:")
+    response = client.get(f"{api_path}/product_variants?ofuri=o:redhat::baseos-8.5.0.z.main")
+    assert response.status_code == 302
+
+    ps = ProductStreamFactory(name="rhel", version="8.5.0.z")
+
+    node1 = ProductNode.objects.create(parent=None, obj=ps, object_id=ps.pk)
+    ProductNode.objects.create(parent=node1, obj=pv_appstream, object_id=pv_appstream.pk)
+    pv_appstream.save()
+
+    response = client.get(
+        f"{api_path}/product_variants?ofuri=o:redhat:rhel:8.5.0.z:appstream-8.5.0.z.main"
+    )
     assert response.status_code == 302
 
 

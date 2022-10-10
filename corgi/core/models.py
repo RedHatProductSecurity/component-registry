@@ -573,10 +573,24 @@ class ProductVariant(ProductModel, TimeStampedModel):
     def get_ofuri(self) -> str:
         """Return product variant URI
 
-        Ex.: o:redhat:rhel:8.2.eus
+        Ex.: o:redhat:rhel:8.6.0.z:baseos-8.6.0.z.main.eus
         """
+        product_stream = f"o:redhat::{self.name.lower()}"
 
-        return f"o:redhat:{self.name}:{self.version}"
+        first_pnode = self.pnodes.first()
+        if not first_pnode:
+            return product_stream
+
+        product_stream_node = (
+            first_pnode.get_ancestors()
+            .filter(content_type=ContentType.objects.get_for_model(ProductStream))
+            .first()
+        )
+        if not product_stream_node:
+            return product_stream
+        else:
+            product_stream = f"{product_stream_node.obj.ofuri}:{self.name.lower()}"
+        return product_stream
 
     @property
     def errata(self) -> QuerySet:

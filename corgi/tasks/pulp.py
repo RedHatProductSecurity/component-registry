@@ -2,6 +2,7 @@ import logging
 from datetime import timedelta
 
 from celery_singleton import Singleton
+from django.conf import settings
 from django.utils import timezone
 
 from config.celery import app
@@ -19,8 +20,13 @@ from corgi.tasks.errata_tool import update_variant_repos
 logger = logging.getLogger(__name__)
 
 
-@app.task(base=Singleton, autorety_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def fetch_unprocessed_cdn_relations(force_process=False, created_in_last_week=True):
+@app.task(
+    base=Singleton,
+    autorety_for=RETRYABLE_ERRORS,
+    retry_kwargs=RETRY_KWARGS,
+    soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
+)
+def slow_fetch_unprocessed_cdn_relations(force_process=False, created_in_last_week=True):
     relations_query = ProductComponentRelation.objects.filter(
         type=ProductComponentRelation.Type.CDN_REPO
     )
@@ -30,14 +36,16 @@ def fetch_unprocessed_cdn_relations(force_process=False, created_in_last_week=Tr
         relations_query = relations_query.filter(created_at__gte=created_during)
     # batch process to avoid exhausting the memory limit for the pod
     relation_count = relations_query.count()
-    logger.info("Found %s unprocessed relations", relation_count)
+    logger.info("Found %s CDN relations", relation_count)
     offset = 0
     limit = 10000
     while offset < relation_count:
         logger.info("Processing CDN relations with offset %s and limit %s", offset, limit)
-        for build_id in relations_query.values_list("build_id", flat=True).distinct()[
-            offset : offset + limit
-        ]:
+        for build_id in (
+            relations_query.order_by("build_id")
+            .values_list("build_id", flat=True)
+            .distinct()[offset : offset + limit]
+        ):
             if not SoftwareBuild.objects.filter(build_id=int(build_id)).exists():
                 logger.info("Processing CDN relation build with id: %s", build_id)
                 fetch_modular_build.delay(build_id)

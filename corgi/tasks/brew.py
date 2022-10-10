@@ -109,11 +109,15 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def fetch_modular_build(build_id: str, force_process: bool = False) -> None:
+    logger.info("Fetch modular build called with build id: %s", build_id)
     rhel_module_data = Brew.fetch_rhel_module(int(build_id))
     # Some compose build_ids in the relations table will be for SRPMs, skip those here
     if not rhel_module_data:
+        logger.info("No module data fetched for build %s from Brew, exiting...", build_id)
         slow_fetch_brew_build.delay(int(build_id), force_process=force_process)
         return
+    # TODO: Should we use update_or_create here?
+    #  We don't currently handle reprocessing a modular build
     obj, created = Component.objects.get_or_create(
         name=rhel_module_data["meta"]["name"],
         type=Component.Type.RHEL_MODULE,
@@ -146,6 +150,7 @@ def fetch_modular_build(build_id: str, force_process: bool = False) -> None:
             slow_fetch_brew_build.delay(c["brew_build_id"])
         save_component(c, node)
     slow_fetch_brew_build.delay(int(build_id), force_process=force_process)
+    logger.info("Finished fetching modular build: %s", build_id)
 
 
 def find_package_file_name(sources: list[str]) -> str:

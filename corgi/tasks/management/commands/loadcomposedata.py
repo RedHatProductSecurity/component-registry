@@ -1,10 +1,6 @@
 from django.core.management.base import BaseCommand, CommandParser
 
-from corgi.tasks.rhel_compose import (
-    get_all_builds,
-    get_builds_by_compose,
-    get_builds_by_stream,
-)
+from corgi.tasks.rhel_compose import get_builds
 
 
 class Command(BaseCommand):
@@ -41,11 +37,11 @@ class Command(BaseCommand):
         if options["compose_names"]:
             compose_names = options["compose_names"]
             self.stderr.write(self.style.NOTICE(f"Fetching builds for composes: {compose_names}"))
-            get_builds_by_compose(compose_names)
+            get_builds(compose_names=compose_names)
         elif options["stream"]:
             stream = options["stream"]
             self.stderr.write(self.style.NOTICE(f"Fetching builds for stream {stream}"))
-            get_builds_by_stream(stream)
+            get_builds(stream_name=stream)
         else:
             self.stderr.write(self.style.NOTICE("Fetching builds for all composes"))
-            get_all_builds()
+            get_builds()

@@ -8,7 +8,7 @@ from corgi.collectors.models import CollectorRhelModule, CollectorRPM, Collector
 from corgi.collectors.rhel_compose import RhelCompose
 from corgi.core.models import Component, ProductComponentRelation, ProductStream
 from corgi.tasks.brew import fetch_modular_build
-from corgi.tasks.rhel_compose import get_all_builds, save_compose
+from corgi.tasks.rhel_compose import get_builds, save_compose
 
 pytestmark = pytest.mark.unit
 
@@ -56,17 +56,23 @@ def test_fetch_module_data(mock_brew_rpm_lookup, mock_brew_srpm_lookup, requests
     assert rpm.srpm == srpm
 
 
-@patch("corgi.tasks.brew.fetch_modular_build.delay")
+@patch("corgi.collectors.brew.Brew.fetch_rhel_module", return_value={})
 @patch("corgi.tasks.brew.slow_fetch_brew_build.delay")
-def test_get_all_builds(mock_fetch_compose, mock_slow_fetch_brew_build):
-    compose_builds = get_all_builds()
-    assert not compose_builds
+def test_get_builds(mock_fetch_rhel_module, mock_slow_fetch_brew_build):
+    get_builds()
+    assert mock_fetch_rhel_module.call_count == 0
+    assert mock_slow_fetch_brew_build.call_count == 0
     ProductComponentRelation.objects.create(
         type=ProductComponentRelation.Type.COMPOSE, build_id=module_build_id
     )
-    compose_builds = get_all_builds()
-    assert mock_fetch_compose.called
-    assert mock_slow_fetch_brew_build.called
+    with patch(
+        "corgi.tasks.brew.fetch_modular_build.delay",
+        return_value=fetch_modular_build(module_build_id),
+    ) as mock_fetch_compose:
+        get_builds()
+        assert mock_fetch_compose.call_count == 1
+    assert mock_fetch_rhel_module.call_count == 1
+    assert mock_slow_fetch_brew_build.call_count == 1
 
 
 @patch("corgi.tasks.brew.slow_fetch_brew_build.delay")

@@ -1,7 +1,9 @@
 import logging
 import re
+from datetime import timedelta
 
 from celery_singleton import Singleton
+from django.conf import settings
 from django.db.models import QuerySet
 from django.utils import dateformat, timezone
 
@@ -441,3 +443,43 @@ def load_brew_tags() -> None:
 def fetch_modular_builds(relations_query: QuerySet, force_process: bool = False) -> None:
     for build_id in relations_query:
         fetch_modular_build.delay(build_id, force_process=force_process)
+
+
+def fetch_unprocessed_relations(relation_type, created_since, force_process=False):
+    relations_query = ProductComponentRelation.objects.filter(type=relation_type)
+    if created_since:
+        created_during = timezone.now() - timedelta(days=created_since)
+        relations_query = relations_query.filter(created_at__gte=created_during)
+    # batch process to avoid exhausting the memory limit for the pod
+    relation_count = relations_query.count()
+    logger.info("Found %s %s relations", relation_count, relation_type)
+    offset = 0
+    limit = 10000
+    processed_builds = 0
+    while offset < relation_count:
+        logger.info("Processing CDN relations with offset %s and limit %s", offset, limit)
+        for build_id in (
+            relations_query.order_by("build_id")
+            .values_list("build_id", flat=True)
+            .distinct()[offset : offset + limit]
+        ):
+            if not SoftwareBuild.objects.filter(build_id=int(build_id)).exists():
+                logger.info("Processing CDN relation build with id: %s", build_id)
+                fetch_modular_build.delay(build_id, force_process=force_process)
+                processed_builds += 1
+        offset = offset + limit
+    return processed_builds
+
+
+@app.task(
+    base=Singleton,
+    autorety_for=RETRYABLE_ERRORS,
+    retry_kwargs=RETRY_KWARGS,
+    soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
+)
+def slow_fetch_unprocessed_brew_tag_relations(force_process=False, created_since=2):
+    return fetch_unprocessed_relations(
+        ProductComponentRelation.Type.BREW_TAG,
+        force_process=force_process,
+        created_since=created_since,
+    )

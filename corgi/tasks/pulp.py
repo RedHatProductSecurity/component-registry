@@ -1,19 +1,12 @@
 import logging
-from datetime import timedelta
 
 from celery_singleton import Singleton
 from django.conf import settings
-from django.utils import timezone
 
 from config.celery import app
 from corgi.collectors.pulp import Pulp
-from corgi.core.models import (
-    Channel,
-    ProductComponentRelation,
-    ProductVariant,
-    SoftwareBuild,
-)
-from corgi.tasks.brew import fetch_modular_build
+from corgi.core.models import Channel, ProductComponentRelation, ProductVariant
+from corgi.tasks.brew import fetch_unprocessed_relations
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS, _create_relations
 from corgi.tasks.errata_tool import update_variant_repos
 
@@ -26,30 +19,12 @@ logger = logging.getLogger(__name__)
     retry_kwargs=RETRY_KWARGS,
     soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
 )
-def slow_fetch_unprocessed_cdn_relations(force_process=False, created_in_last_week=True):
-    relations_query = ProductComponentRelation.objects.filter(
-        type=ProductComponentRelation.Type.CDN_REPO
+def slow_fetch_unprocessed_cdn_relations(force_process=False, created_since=8) -> int:
+    return fetch_unprocessed_relations(
+        ProductComponentRelation.Type.CDN_REPO,
+        force_process=force_process,
+        created_since=created_since,
     )
-    if created_in_last_week:
-        # Account for any timedelay by processing 8 days instead of 7
-        created_during = timezone.now() - timedelta(days=8)
-        relations_query = relations_query.filter(created_at__gte=created_during)
-    # batch process to avoid exhausting the memory limit for the pod
-    relation_count = relations_query.count()
-    logger.info("Found %s CDN relations", relation_count)
-    offset = 0
-    limit = 10000
-    while offset < relation_count:
-        logger.info("Processing CDN relations with offset %s and limit %s", offset, limit)
-        for build_id in (
-            relations_query.order_by("build_id")
-            .values_list("build_id", flat=True)
-            .distinct()[offset : offset + limit]
-        ):
-            if not SoftwareBuild.objects.filter(build_id=int(build_id)).exists():
-                logger.info("Processing CDN relation build with id: %s", build_id)
-                fetch_modular_build.delay(build_id, force_process=force_process)
-        offset = offset + limit
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)

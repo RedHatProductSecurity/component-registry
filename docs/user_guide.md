@@ -35,15 +35,28 @@ response.raise_for_status()
 
 #### Retrieving component detail
 
-Components are addressable by a unique id (UUID).
+Components are addressable by a unique id (UUID) or [Package URL (purl)](https://github.com/package-url/purl-spec/). 
+UUID is subject to change so it's best to refer to a component by it's purl. Component purl lookups are redirected to
+the UUID addresses listed below.
 
 ##### cURL
+
+```bash
+curl "curl -L https://${CORGI_DOMAIN}/api/v1/components?purl=pkg:npm/is-svg@2.1.0"
+```
 
 ```bash
 $ curl "https://${CORGI_DOMAIN}/api/v1/components/2fe16efb-11cb-4cd2-b31b-d769ba821073"
 ```
 
 ##### python
+
+```python
+import requests
+purl = "pkg://npm/is-svg@2.1.0"
+response = requests.get(f"https://{CORGI_DOMAIN}/api/v1/components?purl={purl}")
+response.raise_for_status()
+```
 
 ```python
 import requests
@@ -258,3 +271,148 @@ The following is a listing of most of the attributes shown above with a descript
 
 Each product-level entity has a `/manifest` endpoint that takes a list of components belonging to that entity and
 generates an SPDX manifest for all of them.
+
+### Example Use cases
+
+#### Find product streams and root-level components containing a specific artifact version
+
+Take for example `NPM` artifact `is-svg` version `2.1.0`
+
+If you know the exact purl syntax you can search for it directly:
+
+```bash
+curl -L https://{CORGI_HOST}/api/v1/components?purl=pkg:npm/is-svg@2.1.0
+```
+
+Alternatively use the type, name and version fields:
+
+```bash
+curl 'https://{CORGI_HOST}/api/v1/components?type=NPM&name=is-svg&version=2.1.0'
+```
+
+This query returns a list of results include the component count. The component data can be found in the results field.
+The sources field lists all the components which embed this component, at the time of writing we are yet to implement
+latest filtering, so it's useful to process the results on the client side to get a clearer picture of the packages included:
+
+```bash
+$ curl -L -s 'https://{CORGI_HOST}/api/v1/components?purl=pkg:npm/is-svg@2.1.0' | jq '.sources' | grep '"purl"' | awk '{print $2}' | awk -F@ '{print $1}' | cut -c2- | sort | uniq
+
+pkg:container/redhat/devspaces-machineexec-rhel8-container
+pkg:container/redhat/devspaces-theia-rhel8-container
+pkg:container/redhat/grafana-container
+pkg:container/redhat/grafana-container-source
+pkg:container/redhat/openshift-enterprise-console-container
+pkg:container/redhat/openshift-enterprise-console-container-source
+pkg:container/redhat/quay-registry-container
+pkg:rpm/redhat/cfme-gemset
+pkg:rpm/redhat/cockpit-ceph-installer
+pkg:rpm/redhat/cockpit-ovirt
+pkg:rpm/redhat/dotnet
+pkg:rpm/redhat/dotnet3.1
+pkg:rpm/redhat/dotnet5.0
+pkg:rpm/redhat/firefox
+pkg:rpm/redhat/foreman
+pkg:rpm/redhat/grafana
+pkg:rpm/redhat/kibana
+pkg:rpm/redhat/mozjs60
+pkg:rpm/redhat/ovirt-engine-api-explorer
+pkg:rpm/redhat/ovirt-web-ui
+pkg:rpm/redhat/polkit
+pkg:rpm/redhat/rh-dotnet31-dotnet
+pkg:rpm/redhat/rh-dotnet50-dotnet
+pkg:rpm/redhat/subscription-manager
+pkg:rpm/redhat/tfm-rubygem-katello
+pkg:rpm/redhat/thunderbird
+pkg:srpm/redhat/dotnet3.1
+pkg:srpm/redhat/mozjs60
+```
+
+Let's say wanted to know which product streams the openshift-enterprise-console-container shipped to we could do component search using that name. Just using the name alone however returns nearly 500 results currently:
+
+```bash
+$ curl -s 'https://{CORGI_HOST}/api/v1/components?name=openshift-enterprise-console-container' | jq '.count'
+467
+```
+
+Let's narrow down by specifying the arch to be 'noarch'. No arch containers represent an image index. It's sha256 digest can be used to pull the image on a container image registry client of any arch. In our data models arch specific containers are children of noarch containers.
+
+```bash
+curl -s 'https://{CORGI_HOST}/api/v1/components?name=openshift-enterprise-console-container&arch=noarch&limit=500' | jq '.results[] | .purl'
+```
+
+If we wanted to know which product streams this container was shipped to, we could filter and sort the results by product_streams field eg:
+
+```bash
+curl -s 'https://{CORGI_HOST}/api/v1/components?name=openshift-enterprise-console-container&arch=noarch&limit=500' | jq '.results[] | .product_streams[] | .ofuri' | sort | uniq
+"o:redhat:openshift:4.10.z"
+"o:redhat:openshift:4.11.z"
+"o:redhat:openshift:4.4.z"
+"o:redhat:openshift:4.5.z"
+"o:redhat:openshift:4.8"
+"o:redhat:openshift:4.8.z"
+"o:redhat:openshift:4.9"
+"o:redhat:openshift:4.9.z"
+"o:redhat:openshift-enterprise:3.11.z"
+```
+
+Using the current version of the API, we have to repeat the above query for each component in the sources list of the first component query. This is probably best automated by a client tool.
+
+#### Search by upstream path
+
+Upstream path could mean a few things, for example it could include golang modules or packages with the upstream path in the name. Alternatively it could mean the upstream path from which we obtain the source code for some build.
+
+Regardless everything in Component Registry is a component, so we can utilize regular expression parameters to search for components with a substring in the name, eg for a go package:
+
+```bash
+curl -s 'https://{CORGI_HOST}/api/v1/components?re_name=github.com/ulikunitz/xz' | jq '.results[] | .purl'
+"pkg:golang/github.com/ulikunitz/xz@v0.5.9"
+"pkg:golang/github.com/ulikunitz/xz@0.5.10"
+"pkg:golang/github.com/ulikunitz/xz@v0.5.8"
+"pkg:golang/github.com/ulikunitz/xz@v0.5.5"
+"pkg:golang/github.com/ulikunitz/xz@v0.5.7"
+"pkg:golang/github.com/ulikunitz/xz@v0.5.10"
+"pkg:golang/github.com/ulikunitz/xz@v0.5.6"
+"pkg:golang/github.com/ulikunitz/xz@v0.5.4"
+"pkg:golang/github.com/ulikunitz/xz/internal/hash@v0.5.8"
+"pkg:golang/github.com/ulikunitz/xz/internal/hash@v0.5.5"
+```
+
+If you want to exclude go packages use a name query instead:
+
+```bash
+curl -s 'https://{CORGI_HOST}/api/v1/components?name=github.com/ulikunitz/xz' | jq '.results[] | .purl'
+"pkg:golang/github.com/ulikunitz/xz@0.5.10"
+"pkg:golang/github.com/ulikunitz/xz@v0.5.10"
+"pkg:golang/github.com/ulikunitz/xz@v0.5.4"
+"pkg:golang/github.com/ulikunitz/xz@v0.5.5"
+"pkg:golang/github.com/ulikunitz/xz@v0.5.6"
+"pkg:golang/github.com/ulikunitz/xz@v0.5.7"
+"pkg:golang/github.com/ulikunitz/xz@v0.5.8"
+"pkg:golang/github.com/ulikunitz/xz@v0.5.9"
+```
+
+The re_name parameter also finds components which are not of type golang, eg:
+
+```bash
+curl -L -s 'https://{CORGI_HOST}/api/v1/components?re_name=github.com/3scale/apicast&limit=50' | jq '.results[] | .purl' | awk -F@ '{print $1}' | cut -c2- | sort | uniq
+pkg:generic/github.com/3scale/apicast
+pkg:generic/github.com/3scale/apicast-operator
+pkg:golang/github.com/3scale/apicast-operator
+pkg:golang/github.com/3scale/apicast-operator/apis/apps
+pkg:golang/github.com/3scale/apicast-operator/apis/apps/v1alpha1
+pkg:golang/github.com/3scale/apicast-operator/controllers/apps
+pkg:golang/github.com/3scale/apicast-operator/pkg/apicast
+pkg:golang/github.com/3scale/apicast-operator/pkg/apis/apps
+pkg:golang/github.com/3scale/apicast-operator/pkg/apis/apps/v1alpha1
+pkg:golang/github.com/3scale/apicast-operator/pkg/helper
+pkg:golang/github.com/3scale/apicast-operator/pkg/k8sutils
+pkg:golang/github.com/3scale/apicast-operator/pkg/reconcilers
+pkg:golang/github.com/3scale/apicast-operator/version
+```
+
+Notice the generic namespace is used to denote an upstream source in Component Registry. We plan to improve the accuracy of this in future to use more specific [purl types from the specification](https://github.com/package-url/purl-spec/blob/master/PURL-TYPES.rst) where possible.
+
+
+
+
+

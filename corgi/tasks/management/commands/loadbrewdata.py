@@ -5,11 +5,13 @@ from koji import GenericError
 
 from corgi.collectors.brew import Brew
 from corgi.core.models import ProductStream
-from corgi.tasks.brew import slow_fetch_brew_build
+from corgi.tasks.brew import (
+    slow_fetch_brew_build,
+    slow_fetch_unprocessed_brew_tag_relations,
+)
 
 
 class Command(BaseCommand):
-
     help = "Fetch component data from Brew for a specific build or tag."
 
     def add_arguments(self, parser: CommandParser) -> None:
@@ -24,6 +26,12 @@ class Command(BaseCommand):
             "--stream",
             dest="stream",
             help="Fetch latest builds by tag from product stream",
+        )
+        parser.add_argument(
+            "-a",
+            "--all",
+            action="store_true",
+            help="Fetch all builds with brew_tag relations",
         )
         parser.add_argument(
             "-i",
@@ -55,8 +63,19 @@ class Command(BaseCommand):
                     self.style.SUCCESS(f"Found {len(builds)} builds matching {brew_tag}")
                 )
                 build_ids.update(builds)
+        elif options["all"]:
+            self.stdout.write(self.style.NOTICE("Fetching all unprocessed brew_tag relations"))
+            if options["inline"]:
+                slow_fetch_unprocessed_brew_tag_relations(
+                    force_process=options["force"], created_since=0
+                )
+            else:
+                slow_fetch_unprocessed_brew_tag_relations.delay(
+                    force_process=options["force"], created_since=0
+                )
+            sys.exit(0)
         else:
-            self.stderr.write(self.style.ERROR("No build IDs or Product Stream specified..."))
+            self.stderr.write(self.style.ERROR("No build IDs, stream or all flag specified..."))
             sys.exit(1)
 
         self.stdout.write(

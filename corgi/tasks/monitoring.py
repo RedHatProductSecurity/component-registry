@@ -60,6 +60,8 @@ def setup_periodic_tasks(sender, **kwargs):
     upsert_cron_task("pulp", "update_cdn_repo_channels", hour=2, minute=0)
     upsert_cron_task("rhel_compose", "save_composes", hour=3, minute=0)
     upsert_cron_task("rhel_compose", "get_builds", hour=4, minute=0)
+    upsert_cron_task("brew", "load_brew_tags", hour=5, minute=0)
+    upsert_cron_task("brew", "slow_fetch_unprocessed_brew_tag_relations", hour=6, minute=0)
     upsert_cron_task("monitoring", "email_failed_tasks", hour=10, minute=45)
 
     # Automatic task result expiration is currently disabled

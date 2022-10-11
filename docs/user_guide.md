@@ -357,4 +357,62 @@ curl -s 'https://{CORGI_HOST}/api/v1/components?name=openshift-enterprise-consol
 
 Using the current version of the API, we have to repeat the above query for each component in the sources list of the first component query. This is probably best automated by a client tool.
 
-#### 
+#### Search by upstream path
+
+Upstream path could mean a few things, for example it could include golang modules or packages with the upstream path in the name. Alternatively it could mean the upstream path from which we obtain the source code for some build.
+
+Regardless everything in Component Registry is a component, so we can utilize regular expression parameters to search for components with a substring in the name, eg for a go package:
+
+```bash
+curl -s 'https://{CORGI_HOST}/api/v1/components?re_name=github.com/ulikunitz/xz' | jq '.results[] | .purl'
+"pkg:golang/github.com/ulikunitz/xz@v0.5.9"
+"pkg:golang/github.com/ulikunitz/xz@0.5.10"
+"pkg:golang/github.com/ulikunitz/xz@v0.5.8"
+"pkg:golang/github.com/ulikunitz/xz@v0.5.5"
+"pkg:golang/github.com/ulikunitz/xz@v0.5.7"
+"pkg:golang/github.com/ulikunitz/xz@v0.5.10"
+"pkg:golang/github.com/ulikunitz/xz@v0.5.6"
+"pkg:golang/github.com/ulikunitz/xz@v0.5.4"
+"pkg:golang/github.com/ulikunitz/xz/internal/hash@v0.5.8"
+"pkg:golang/github.com/ulikunitz/xz/internal/hash@v0.5.5"
+```
+
+If you want to exclude go packages use a name query instead:
+
+```bash
+curl -s 'https://{CORGI_HOST}/api/v1/components?name=github.com/ulikunitz/xz' | jq '.results[] | .purl'
+"pkg:golang/github.com/ulikunitz/xz@0.5.10"
+"pkg:golang/github.com/ulikunitz/xz@v0.5.10"
+"pkg:golang/github.com/ulikunitz/xz@v0.5.4"
+"pkg:golang/github.com/ulikunitz/xz@v0.5.5"
+"pkg:golang/github.com/ulikunitz/xz@v0.5.6"
+"pkg:golang/github.com/ulikunitz/xz@v0.5.7"
+"pkg:golang/github.com/ulikunitz/xz@v0.5.8"
+"pkg:golang/github.com/ulikunitz/xz@v0.5.9"
+```
+
+The re_name parameter also finds components which are not of type golang, eg:
+
+```bash
+curl -L -s 'https://{CORGI_HOST}/api/v1/components?re_name=github.com/3scale/apicast&limit=50' | jq '.results[] | .purl' | awk -F@ '{print $1}' | cut -c2- | sort | uniq
+pkg:generic/github.com/3scale/apicast
+pkg:generic/github.com/3scale/apicast-operator
+pkg:golang/github.com/3scale/apicast-operator
+pkg:golang/github.com/3scale/apicast-operator/apis/apps
+pkg:golang/github.com/3scale/apicast-operator/apis/apps/v1alpha1
+pkg:golang/github.com/3scale/apicast-operator/controllers/apps
+pkg:golang/github.com/3scale/apicast-operator/pkg/apicast
+pkg:golang/github.com/3scale/apicast-operator/pkg/apis/apps
+pkg:golang/github.com/3scale/apicast-operator/pkg/apis/apps/v1alpha1
+pkg:golang/github.com/3scale/apicast-operator/pkg/helper
+pkg:golang/github.com/3scale/apicast-operator/pkg/k8sutils
+pkg:golang/github.com/3scale/apicast-operator/pkg/reconcilers
+pkg:golang/github.com/3scale/apicast-operator/version
+```
+
+Notice the generic namespace is used to denote an upstream source in Component Registry. We plan to improve the accuracy of this in future to use more specific [purl types from the specification](https://github.com/package-url/purl-spec/blob/master/PURL-TYPES.rst) where possible.
+
+
+
+
+

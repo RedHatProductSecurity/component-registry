@@ -642,7 +642,8 @@ class Brew:
             "meta": {
                 "name": build_info["name"],
                 "version": build_info["version"],
-                "license": " OR ".join(modulemd["data"]["license"].get("module", "")),
+                # TODO: Need to verify this
+                "license_declared_raw": " OR ".join(modulemd["data"]["license"].get("module", "")),
                 "release": build_info["release"],
                 "description": modulemd["data"]["description"],
                 "meta_attr": meta_attr,

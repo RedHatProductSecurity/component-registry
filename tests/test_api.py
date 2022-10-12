@@ -93,6 +93,54 @@ def test_component_detail(client, api_path):
     assert response.json()["name"] == "curl"
 
 
+def test_component_detail_olcs_put(client, api_path):
+    """Test that OpenLCS can upload scan results for a component"""
+    c1 = ComponentFactory()
+    component_path = f"{api_path}/components/{c1.uuid}"
+    openlcs_data = {
+        "copyright_text": "Copyright Test",
+        "license_concluded": "BSD or MIT",
+        "openlcs_scan_url": "a link",
+        "openlcs_scan_version": "a version",
+    }
+
+    response = client.get(component_path)
+    assert response.status_code == 200
+    response = response.json()
+    for key in openlcs_data:
+        # Values are unset by default
+        assert response[key] == ""
+
+    # Subtly different from requests.put(), so json= kwarg doesn't work
+    # Below should use follow=True, but it's currently broken
+    # https://github.com/encode/django-rest-framework/discussions/8695
+    response = client.put(f"{component_path}/olcs_test", data=openlcs_data, format="json")
+    assert response.status_code == 302
+    assert response.headers["Location"] == component_path
+
+    response = client.get(component_path)
+    assert response.status_code == 200
+    response = response.json()
+    for key, value in openlcs_data.items():
+        if key == "license_concluded":
+            # Uppercased to be SPDX-compliant
+            value = value.upper()
+        # Values now match what was submitted
+        assert response[key] == value
+
+    # Return a 400 if none of the above keys are getting set. May change in future
+    response = client.put(f"{component_path}/olcs_test", data={}, format="json")
+    assert response.status_code == 400
+
+    # Return a 404 if that component can't be found
+    response = client.put(
+        f"{api_path}/components/00000000-0000-0000-0000-000000000000/olcs_test",
+        data=openlcs_data,
+        format="json",
+    )
+    assert response.status_code == 404
+
+
 def test_component_detail_dev(client, api_path):
     upstream = ComponentFactory(
         type=Component.Type.UPSTREAM, related_url="https://example.org/related"

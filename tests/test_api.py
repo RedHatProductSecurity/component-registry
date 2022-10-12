@@ -1,3 +1,4 @@
+from datetime import datetime
 from urllib.parse import quote
 
 import pytest
@@ -526,12 +527,47 @@ def test_api_component_400(client, api_path):
 
 
 def test_product_components_ofuri(client, api_path):
-    openssl = ComponentFactory(name="openssl")
-    curl = ComponentFactory(name="curl")
+    """test 'latest' filter on components"""
 
-    openssl.product_streams = ["o:redhat:rhel:8.6.0"]
+    ps1 = ProductStreamFactory(name="rhel-8.6.0", version="8.6.0")
+    assert ps1.ofuri == "o:redhat:rhel:8.6.0"
+    ps1.save()
+    ps2 = ProductStreamFactory(name="rhel-8.6.0.z", version="8.6.0.z")
+    assert ps2.ofuri == "o:redhat:rhel:8.6.0.z"
+    ps2.save()
+
+    old_sb1 = SoftwareBuildFactory(
+        completion_time=datetime.strptime("2017-03-29 12:13:29", "%Y-%m-%d %H:%M:%S")
+    )
+    old_sb1.save()
+    old_openssl = ComponentFactory(
+        type=Component.Type.SRPM, name="openssl", software_build=old_sb1, release="1"
+    )
+    old_openssl.product_streams = [ps1.ofuri]
+    old_openssl.save()
+
+    sb1 = SoftwareBuildFactory(completion_time=datetime.now())
+    sb1.save()
+    openssl = ComponentFactory(
+        type=Component.Type.SRPM, name="openssl", software_build=sb1, release="2"
+    )
+    openssl.product_streams = [ps1.ofuri]
     openssl.save()
-    curl.product_streams = ["o:redhat:rhel:8.6.0.z"]
+
+    old_sb2 = SoftwareBuildFactory(
+        completion_time=datetime.strptime("2017-03-29 12:13:29", "%Y-%m-%d %H:%M:%S")
+    )
+    old_sb2.save()
+    old_curl = ComponentFactory(
+        type=Component.Type.SRPM, name="curl", software_build=old_sb2, release="1"
+    )
+    old_curl.product_streams = [ps2.ofuri]
+    old_curl.save()
+
+    sb2 = SoftwareBuildFactory(completion_time=datetime.now())
+    sb1.save()
+    curl = ComponentFactory(type=Component.Type.SRPM, name="curl", software_build=sb2, release="2")
+    curl.product_streams = [ps2.ofuri]
     curl.save()
 
     response = client.get(f"{api_path}/components?ofuri=o:redhat:rhel:8.6.0.z")
@@ -544,18 +580,39 @@ def test_product_components_ofuri(client, api_path):
 
 
 def test_product_components_versions(client, api_path):
-    openssl = ComponentFactory(name="openssl")
-    curl = ComponentFactory(name="curl")
+    ps1 = ProductStreamFactory(name="rhel-7", version="7")
+    assert ps1.ofuri == "o:redhat:rhel:7"
+    ps1.save()
+    ps2 = ProductStreamFactory(name="rhel-8", version="8")
+    assert ps2.ofuri == "o:redhat:rhel:8"
+    ps2.save()
 
-    openssl.product_streams = ["o:redhat:rhel:8"]
+    sb1 = SoftwareBuildFactory(completion_time=datetime.now())
+    sb1.save()
+    openssl = ComponentFactory(
+        type=Component.Type.RPM, arch="x86_64", name="openssl", software_build=sb1
+    )
+    openssl.product_streams = [ps2.ofuri]
     openssl.save()
-    curl.product_streams = ["o:redhat:rhel:7"]
+    openssl_srpm = ComponentFactory(type=Component.Type.SRPM, name="openssl", software_build=sb1)
+    openssl_srpm.product_streams = [ps2.ofuri]
+    openssl_srpm.save()
+
+    sb2 = SoftwareBuildFactory(completion_time=datetime.now())
+    sb2.save()
+    curl = ComponentFactory(type=Component.Type.RPM, arch="x86_64", name="curl", software_build=sb2)
+    curl.product_streams = [ps1.ofuri]
     curl.save()
+    curl_srpm = ComponentFactory(type=Component.Type.SRPM, name="curl", software_build=sb2)
+    curl_srpm.product_streams = [ps1.ofuri]
+    curl_srpm.save()
 
     response = client.get(f"{api_path}/components?product_streams=o:redhat:rhel:8")
     assert response.status_code == 200
-    assert response.json()["count"] == 1
+    assert response.json()["count"] == 2
 
+    # ofuri returns 'latest' build root components (eg. including SRPM,
+    #  noarch CONTAINER_IMAGE and RHEL_MODULE)
     response = client.get(f"{api_path}/components?ofuri=o:redhat:rhel:7")
     assert response.status_code == 200
     assert response.json()["count"] == 1

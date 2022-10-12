@@ -1,4 +1,3 @@
-import datetime
 import logging
 import re
 import uuid as uuid
@@ -8,12 +7,10 @@ from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelatio
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
 from django.db import models
-from django.db.models import Q, QuerySet
-from django.utils.timezone import make_aware
+from django.db.models import F, OuterRef, Q, QuerySet, Subquery
 from mptt.models import MPTTModel, TreeForeignKey
 from packageurl import PackageURL
 
-from corgi.api.constants import TZINFO
 from corgi.core.constants import CONTAINER_DIGEST_FORMATS
 from corgi.core.files import ProductManifestFile
 from corgi.core.mixins import TimeStampedModel
@@ -306,14 +303,6 @@ class SoftwareBuild(TimeStampedModel):
 
         return None
 
-    def save(self, *args, **kwargs):
-        if "completion_time" in self.meta_attr:
-            dt = datetime.datetime.strptime(
-                self.meta_attr["completion_time"].split(".")[0], "%Y-%m-%d %H:%M:%S"
-            )
-            self.completion_time = make_aware(dt, timezone=TZINFO)
-        super().save(*args, **kwargs)
-
 
 class SoftwareBuildTag(Tag, TimeStampedModel):
     software_build = models.ForeignKey(SoftwareBuild, on_delete=models.CASCADE, related_name="tags")
@@ -552,6 +541,34 @@ class ProductStream(ProductModel, TimeStampedModel):
         """
         stream_name = re.sub(r"(-|_|)" + self.version + "$", "", self.name)
         return f"o:redhat:{stream_name}:{self.version}"
+
+    def get_latest_components(self):
+        """Return root components from latest builds."""
+        root_components = (
+            Q(type=Component.Type.SRPM)
+            | Q(type=Component.Type.CONTAINER_IMAGE, arch="noarch")
+            | Q(type=Component.Type.RHEL_MODULE)
+        )
+        return (
+            Component.objects.filter(
+                root_components,
+                product_streams__overlap=[self.ofuri],
+            )
+            .annotate(
+                latest=Subquery(
+                    Component.objects.filter(
+                        root_components,
+                        name=OuterRef("name"),
+                        product_streams__overlap=[self.ofuri],
+                    )
+                    .order_by("software_build__completion_time")
+                    .values("uuid")[:1]
+                )
+            )
+            .filter(
+                uuid=F("latest"),
+            )
+        )
 
 
 class ProductStreamTag(Tag):

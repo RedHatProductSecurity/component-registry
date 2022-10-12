@@ -44,7 +44,10 @@ def get_component_purl_link(purl: str) -> str:
 
 
 def get_model_ofuri_link(
-    model_name: str, ofuri: str, related_type=None, view=None, mode=None
+    model_name: str,
+    ofuri: str,
+    related_type=None,
+    view=None,
 ) -> str:
     """Generic method to get an ofuri link for an arbitrary Model subclass."""
     link = f"{CORGI_API_URL}/{model_name}?ofuri={ofuri}"
@@ -54,8 +57,6 @@ def get_model_ofuri_link(
         link += f"&type={related_type}"
     if view:
         link += f"&view={view}"
-    if mode:
-        link += f"&mode={mode}"
     return link
 
 
@@ -342,7 +343,7 @@ class ProductSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_components(instance: Product) -> str:
-        return get_model_ofuri_link("components", instance.ofuri, view="summary", mode="latest")
+        return get_model_ofuri_link("components", instance.ofuri, view="summary")
 
     @staticmethod
     def get_upstreams(instance: Product) -> str:
@@ -408,7 +409,7 @@ class ProductVersionSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_components(instance: ProductVersion) -> str:
-        return get_model_ofuri_link("components", instance.ofuri, view="summary", mode="latest")
+        return get_model_ofuri_link("components", instance.ofuri, view="summary")
 
     @staticmethod
     def get_upstreams(instance: ProductVersion) -> str:
@@ -481,7 +482,7 @@ class ProductStreamSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_components(instance: ProductVersion) -> str:
-        return get_model_ofuri_link("components", instance.ofuri, view="summary", mode="latest")
+        return get_model_ofuri_link("components", instance.ofuri, view="summary")
 
     @staticmethod
     def get_upstreams(instance: ProductStream) -> str:
@@ -566,7 +567,7 @@ class ProductVariantSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_components(instance: ProductVersion) -> str:
-        return get_model_ofuri_link("components", instance.ofuri, view="summary", mode="latest")
+        return get_model_ofuri_link("components", instance.ofuri, view="summary")
 
     @staticmethod
     def get_upstreams(instance: ProductVersion) -> str:

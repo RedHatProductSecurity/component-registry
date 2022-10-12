@@ -2,6 +2,17 @@
 
 import django.db.models.deletion
 from django.db import migrations, models
+from django.utils import dateparse
+from django.utils.timezone import make_aware
+
+
+def set_software_build_completion_time(apps, schema_editor):
+    SoftwareBuild = apps.get_model("core", "SoftwareBuild")
+    for sb in SoftwareBuild.objects.all():
+        sb.completion_time = make_aware(
+            dateparse.parse_datetime(sb.meta_attr["completion_time"].split(".")[0])
+        )
+        sb.save()
 
 
 class Migration(migrations.Migration):
@@ -30,4 +41,5 @@ class Migration(migrations.Migration):
             model_name="softwarebuild",
             index=models.Index(fields=["completion_time"], name="core_softwa_complet_c38fc7_idx"),
         ),
+        migrations.RunPython(set_software_build_completion_time),
     ]

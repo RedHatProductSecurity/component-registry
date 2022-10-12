@@ -361,7 +361,7 @@ Using the current version of the API, we have to repeat the above query for each
 
 Upstream path could mean a few things, for example it could include golang modules or packages with the upstream path in the name. Alternatively it could mean the upstream path from which we obtain the source code for some build.
 
-Regardless everything in Component Registry is a component, so we can utilize regular expression parameters to search for components with a substring in the name, eg for a go package:
+Regardless everything in Component Registry is a component, so we can utilize regular expressions to search for components with a substring in the name, eg:
 
 ```bash
 curl -s 'https://{CORGI_HOST}/api/v1/components?re_name=github.com/ulikunitz/xz' | jq '.results[] | .purl'
@@ -377,7 +377,7 @@ curl -s 'https://{CORGI_HOST}/api/v1/components?re_name=github.com/ulikunitz/xz'
 "pkg:golang/github.com/ulikunitz/xz/internal/hash@v0.5.5"
 ```
 
-If you want to exclude go packages use a name query instead:
+If you want to exclude wildcard matches use a `name` query instead:
 
 ```bash
 curl -s 'https://{CORGI_HOST}/api/v1/components?name=github.com/ulikunitz/xz' | jq '.results[] | .purl'
@@ -391,7 +391,7 @@ curl -s 'https://{CORGI_HOST}/api/v1/components?name=github.com/ulikunitz/xz' | 
 "pkg:golang/github.com/ulikunitz/xz@v0.5.9"
 ```
 
-The re_name parameter also finds components which are not of type golang, eg:
+Another example query, which returns both `golang` and `generic` results:
 
 ```bash
 curl -L -s 'https://{CORGI_HOST}/api/v1/components?re_name=github.com/3scale/apicast&limit=50' | jq '.results[] | .purl' | awk -F@ '{print $1}' | cut -c2- | sort | uniq
@@ -410,7 +410,42 @@ pkg:golang/github.com/3scale/apicast-operator/pkg/reconcilers
 pkg:golang/github.com/3scale/apicast-operator/version
 ```
 
-Notice the generic namespace is used to denote an upstream source in Component Registry. We plan to improve the accuracy of this in future to use more specific [purl types from the specification](https://github.com/package-url/purl-spec/blob/master/PURL-TYPES.rst) where possible.
+Notice the `generic` namespace is used to denote an upstream source in Component Registry. We plan to increase the number of purl types in future according to [purl types from the specification](https://github.com/package-url/purl-spec/blob/master/PURL-TYPES.rst). For example the results in the above query could use the `github` type instead of `generic`.
+
+#### Find components by type
+
+You can use the `type` url parameters on the `components` endpoint to limit results to a single type. For example if we want to only include upstream types in the previous query, we use a query such as:
+
+```bash
+curl -L -s 'https://{CORGI_HOST}/api/v1/components?type=UPSTREAM&re_name=github.com/3scale/apicast&limit=50' | jq '.results[] | .purl' | awk -F@ '{print $1}' | cut -c2- | sort | uniq
+pkg:generic/github.com/3scale/apicast
+pkg:generic/github.com/3scale/apicast-operator
+```
+
+The types available to filter results on can be found in the openapi schema:
+
+```bash
+curl -s https://{CORGI_HOST}/api/v1/schema?format=json | jq '.paths[] | .get | select(.operationId == "v1_components_list") | .parameters[] | select(.name == "type")'
+{
+  "in": "query",
+  "name": "type",
+  "schema": {
+    "type": "string",
+    "enum": [
+      "CONTAINER_IMAGE",
+      "GOLANG",
+      "MAVEN",
+      "NPM",
+      "PYPI",
+      "RHEL_MODULE",
+      "RPM",
+      "SRPM",
+      "UNKNOWN",
+      "UPSTREAM"
+    ]
+  }
+}
+```
 
 
 

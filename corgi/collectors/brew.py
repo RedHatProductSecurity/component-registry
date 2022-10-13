@@ -683,10 +683,18 @@ class Brew:
         #  identified in a separate attribute on the build itself.
         if build_type == self.CONTAINER_BUILD_TYPE:
             # If this is an "image" type build, it may be building a container image, ISO image,
-            # or other types of images. Check the content generator name to determine where this
-            # image was built, which indicates what type of image it is.
-            if build["cg_name"] != "atomic-reactor":
+            # or other types of images.
+            build_extra = build.get("extra")
+            if build["cg_name"] == "atomic-reactor":
+                # Check the content generator name to determine where this
+                # image was built, which indicates what type of image it is.
                 # Container images are built in OSBS, which uses atomic-reactor to build them.
+                pass
+            elif build_extra and build_extra.get("submitter") == "osbs":
+                # Some builds such as 903565 have the cg_name field set to None
+                # In that case check the extra/submitter field for osbs value
+                pass
+            else:
                 raise BrewBuildTypeNotSupported(
                     f"Image build {build_id} is not supported: "
                     f"{build['cg_name']} content generator used"

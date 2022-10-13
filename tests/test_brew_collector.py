@@ -37,7 +37,6 @@ build_corpus = [
     (
         1872940,
         "git://pkgs.example.com/containers/grafana#1d4356446cbbbb0b23f08fe93e9deb20fe5114bf",
-        "redhat",
         "grafana-container",
         "",
         "image",
@@ -56,7 +55,6 @@ build_corpus = [
     (
         936045,
         "git://pkgs.example.com/rpms/rubygem-bcrypt#4deddf4d5f521886a5680853ebccd02e3cabac41",
-        "redhat",
         "rubygem-bcrypt",
         "MIT",
         "rpm",
@@ -103,6 +101,16 @@ build_corpus = [
     #    "",
     #    "image",
     # ),
+    # ansible-tower-messaging-container
+    # brew buildID=903617
+    (
+        903617,
+        "git://pkgs.example.com/containers/"
+        "ansible-tower-messaging#bef542c8527bf77fe9b02d6c2d2c60455fe7e510",
+        "ansible-tower-messaging-container",
+        "",
+        "image",
+    ),
 ]
 
 
@@ -113,14 +121,13 @@ class MockBrewResult(object):
 @patch("koji.ClientSession")
 @patch("corgi.collectors.brew.Brew.brew_rpm_headers_lookup")
 @pytest.mark.parametrize(
-    "build_id,build_source,build_ns,build_name,license_declared_raw,build_type", build_corpus
+    "build_id,build_source,build_name,license_declared_raw,build_type", build_corpus
 )
 def test_get_component_data(
     mock_headers_lookup,
     mock_koji,
     build_id,
     build_source,
-    build_ns,
     build_name,
     license_declared_raw,
     build_type,
@@ -184,7 +191,6 @@ def test_get_component_data(
     # The "license_declared_raw" field on the Component model defaults to ""
     # But the Brew collector (via get_rpm_build_data) / Koji (via getRPMHeaders) may return None
     assert c["meta"].get("license", "") == license_declared_raw
-    assert c["namespace"] == build_ns
     assert c["type"] == build_type
 
 

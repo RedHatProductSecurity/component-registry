@@ -43,12 +43,20 @@ def get_component_purl_link(purl: str) -> str:
     return f"{CORGI_API_URL}/components?purl={quote(purl)}"
 
 
-def get_model_ofuri_link(model_name: str, ofuri: str, related_type=None) -> str:
+def get_model_ofuri_link(
+    model_name: str, ofuri: str, related_type=None, view=None, mode=None
+) -> str:
     """Generic method to get an ofuri link for an arbitrary Model subclass."""
     link = f"{CORGI_API_URL}/{model_name}?ofuri={ofuri}"
     if model_name == "components":
-        link = f"{link}&type=SRPM&limit=3000"
-    return link if not related_type else f"{link}&type={related_type}"
+        link = f"{link}"
+    if related_type:
+        link += f"&type={related_type}"
+    if view:
+        link += f"&view={view}"
+    if mode:
+        link += f"&mode={mode}"
+    return link
 
 
 def get_model_id_link(model_name: str, uuid_or_build_id, manifest=False) -> str:
@@ -124,7 +132,9 @@ class SoftwareBuildSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_components(instance: SoftwareBuild) -> list[dict[str, str]]:
-        return get_component_data_list(instance.components)
+        return get_component_data_list(
+            instance.components.values_list("purl", flat=True)  # type: ignore
+        )
 
     class Meta:
         model = SoftwareBuild
@@ -277,10 +287,17 @@ class ComponentSerializer(serializers.ModelSerializer):
 class ComponentListSerializer(serializers.ModelSerializer):
 
     link = serializers.SerializerMethodField()
+    build_completion_dt = serializers.SerializerMethodField()
 
     @staticmethod
     def get_link(instance: Component) -> str:
         return get_component_purl_link(instance.purl)
+
+    @staticmethod
+    def get_build_completion_dt(instance: Component) -> str:
+        if instance.software_build:
+            return str(instance.software_build.completion_time)
+        return ""
 
     class Meta:
         model = Component
@@ -290,6 +307,8 @@ class ComponentListSerializer(serializers.ModelSerializer):
             "name",
             "version",
             "nvr",
+            "build_completion_dt",
+            # "meta_attr",
         ]
 
 
@@ -323,7 +342,7 @@ class ProductSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_components(instance: Product) -> str:
-        return get_model_ofuri_link("components", instance.ofuri)
+        return get_model_ofuri_link("components", instance.ofuri, view="summary", mode="latest")
 
     @staticmethod
     def get_upstreams(instance: Product) -> str:
@@ -389,7 +408,7 @@ class ProductVersionSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_components(instance: ProductVersion) -> str:
-        return get_model_ofuri_link("components", instance.ofuri)
+        return get_model_ofuri_link("components", instance.ofuri, view="summary", mode="latest")
 
     @staticmethod
     def get_upstreams(instance: ProductVersion) -> str:
@@ -462,7 +481,7 @@ class ProductStreamSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_components(instance: ProductVersion) -> str:
-        return get_model_ofuri_link("components", instance.ofuri)
+        return get_model_ofuri_link("components", instance.ofuri, view="summary", mode="latest")
 
     @staticmethod
     def get_upstreams(instance: ProductStream) -> str:
@@ -547,7 +566,7 @@ class ProductVariantSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_components(instance: ProductVersion) -> str:
-        return get_model_ofuri_link("components", instance.ofuri)
+        return get_model_ofuri_link("components", instance.ofuri, view="summary", mode="latest")
 
     @staticmethod
     def get_upstreams(instance: ProductVersion) -> str:

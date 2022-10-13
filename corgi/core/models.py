@@ -1,3 +1,4 @@
+import datetime
 import logging
 import re
 import uuid as uuid
@@ -8,9 +9,11 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
 from django.db import models
 from django.db.models import Q, QuerySet
+from django.utils.timezone import make_aware
 from mptt.models import MPTTModel, TreeForeignKey
 from packageurl import PackageURL
 
+from corgi.api.constants import TZINFO
 from corgi.core.constants import CONTAINER_DIGEST_FORMATS
 from corgi.core.files import ProductManifestFile
 from corgi.core.mixins import TimeStampedModel
@@ -225,15 +228,16 @@ class SoftwareBuild(TimeStampedModel):
     type = models.CharField(choices=Type.choices, max_length=20)
     name = models.TextField()  # Arbitrary identifier for a build
     source = models.TextField()  # Source code reference for build
+    completion_time = models.DateTimeField(null=True)  # meta_attr["completion_time"]
     # Store meta attributes relevant to different build system types.
     meta_attr = models.JSONField(default=dict)
 
     class Meta:
         ordering = ["-build_id"]
 
-    @property
-    def components(self):
-        return self.component_set.values_list("purl", flat=True)
+        indexes = [
+            models.Index(fields=["completion_time"]),
+        ]
 
     def save_datascore(self):
         for component in Component.objects.filter(software_build__build_id=self.build_id):
@@ -301,6 +305,14 @@ class SoftwareBuild(TimeStampedModel):
             component.save()
 
         return None
+
+    def save(self, *args, **kwargs):
+        if "completion_time" in self.meta_attr:
+            dt = datetime.datetime.strptime(
+                self.meta_attr["completion_time"].split(".")[0], "%Y-%m-%d %H:%M:%S"
+            )
+            self.completion_time = make_aware(dt, timezone=TZINFO)
+        super().save(*args, **kwargs)
 
 
 class SoftwareBuildTag(Tag, TimeStampedModel):
@@ -774,7 +786,9 @@ class Component(TimeStampedModel):
     upstreams = fields.ArrayField(models.CharField(max_length=1024), default=list)
 
     cnodes = GenericRelation(ComponentNode)
-    software_build = models.ForeignKey(SoftwareBuild, on_delete=models.CASCADE, null=True)
+    software_build = models.ForeignKey(
+        SoftwareBuild, on_delete=models.CASCADE, null=True, related_name="components"
+    )
 
     # Copyright text as it appears in the component source code, from an OpenLCS scan
     copyright_text = models.TextField(default="")

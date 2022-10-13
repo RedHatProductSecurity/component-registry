@@ -3,6 +3,7 @@ import logging
 
 import django_filters.rest_framework
 from django.db import connection
+from django.db.models import F, OuterRef, Q, Subquery
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from mptt.templatetags.mptt_tags import cache_tree_children
@@ -380,12 +381,49 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
     filterset_class = ComponentFilter
     lookup_url_kwarg = "uuid"
 
+    def get_queryset(self):
+        mode = self.request.query_params.get("mode")
+        if mode == "latest":
+            # 'latest' mode only relevent in terms of a specific offering/product
+            # TODO - subject of a near-future PR will handle instances of when we have
+            #      multiple root components with the same component name yet different versions.
+            ofuri = self.request.query_params.get("ofuri")
+            if ofuri:
+                component_types = Q(type=Component.Type.SRPM) | Q(
+                    type=Component.Type.CONTAINER_IMAGE
+                )
+                results = (
+                    Component.objects.filter(
+                        component_types,
+                        product_streams__overlap=[ofuri],
+                        software_build__completion_time__isnull=False,
+                    )
+                    .annotate(
+                        latest=Subquery(
+                            Component.objects.filter(
+                                component_types,
+                                name=OuterRef("name"),
+                                product_streams__overlap=[ofuri],
+                                software_build__completion_time__isnull=False,
+                            )
+                            .order_by("software_build__completion_time")
+                            .values("uuid")[:1]
+                        )
+                    )
+                    .filter(
+                        uuid=F("latest"),
+                    )
+                )
+                return results
+            else:
+                return Component.objects.all()
+
     def list(self, request, *args, **kwargs):
         # purl are stored with each segment url encoded as per the specification. The purl query
         # param here is url decoded, to ensure special characters such as '@' and '?'
-        # are not interpreted as part of the request.
-        ofuri = request.query_params.get("ofuri")
-        if ofuri:
+        # are not interpreted  as part of the request.
+        view = request.query_params.get("view")
+        if view == "summary":
             self.serializer_class = ComponentListSerializer
             return super().list(request)
         purl = request.query_params.get("purl")

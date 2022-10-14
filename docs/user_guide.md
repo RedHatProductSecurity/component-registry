@@ -278,16 +278,16 @@ generates an SPDX manifest for all of them.
 
 Take for example `NPM` artifact `is-svg` version `2.1.0`
 
-If you know the exact purl syntax you can search for it directly:
+If you know the exact purl syntax you can search for it directly. Notice I added the -L flag to curl which follows redirects.
 
 ```bash
-curl -L https://{CORGI_HOST}/api/v1/components?purl=pkg:npm/is-svg@2.1.0
+curl -s -L https://{CORGI_HOST}/api/v1/components?purl=pkg:npm/is-svg@2.1.0
 ```
 
 Alternatively use the type, name and version fields:
 
 ```bash
-curl 'https://{CORGI_HOST}/api/v1/components?type=NPM&name=is-svg&version=2.1.0'
+curl -s 'https://{CORGI_HOST}/api/v1/components?type=NPM&name=is-svg&version=2.1.0'
 ```
 
 This query returns a list of results include the component count. The component data can be found in the results field.
@@ -295,8 +295,8 @@ The sources field lists all the components which embed this component, at the ti
 latest filtering, so it's useful to process the results on the client side to get a clearer picture of the packages included:
 
 ```bash
-$ curl -L -s 'https://{CORGI_HOST}/api/v1/components?purl=pkg:npm/is-svg@2.1.0' | jq '.sources' | grep '"purl"' | awk '{print $2}' | awk -F@ '{print $1}' | cut -c2- | sort | uniq
-
+$ curl -L -s 'https://{CORGI_HOST}/api/v1/components?purl=pkg:npm/is-svg@2.1.0' | jq '.sources[] | .purl' | awk -F@ '{print $1}' | cut -c2- | sort | uniq
+pkg:container/redhat/console-ui-container
 pkg:container/redhat/devspaces-machineexec-rhel8-container
 pkg:container/redhat/devspaces-theia-rhel8-container
 pkg:container/redhat/grafana-container
@@ -307,7 +307,6 @@ pkg:container/redhat/quay-registry-container
 pkg:rpm/redhat/cfme-gemset
 pkg:rpm/redhat/cockpit-ceph-installer
 pkg:rpm/redhat/cockpit-ovirt
-pkg:rpm/redhat/dotnet
 pkg:rpm/redhat/dotnet3.1
 pkg:rpm/redhat/dotnet5.0
 pkg:rpm/redhat/firefox
@@ -316,6 +315,7 @@ pkg:rpm/redhat/grafana
 pkg:rpm/redhat/kibana
 pkg:rpm/redhat/mozjs60
 pkg:rpm/redhat/ovirt-engine-api-explorer
+pkg:rpm/redhat/ovirt-engine-ui-extensions
 pkg:rpm/redhat/ovirt-web-ui
 pkg:rpm/redhat/polkit
 pkg:rpm/redhat/rh-dotnet31-dotnet
@@ -334,7 +334,7 @@ $ curl -s 'https://{CORGI_HOST}/api/v1/components?name=openshift-enterprise-cons
 467
 ```
 
-Let's narrow down by specifying the arch to be 'noarch'. No arch containers represent an image index. It's sha256 digest can be used to pull the image on a container image registry client of any arch. In our data models arch specific containers are children of noarch containers.
+Let's narrow down by specifying the arch to be 'noarch'. No arch containers represent an image index. It's sha256 digest can be used to pull the image on a container image registry client of any arch. In our data model noarch containers are parents of arch specific containers, or to use the taxonomy from the schema noarch containers provide arch specific containers.
 
 ```bash
 curl -s 'https://{CORGI_HOST}/api/v1/components?name=openshift-enterprise-console-container&arch=noarch&limit=500' | jq '.results[] | .purl'
@@ -356,6 +356,50 @@ curl -s 'https://{CORGI_HOST}/api/v1/components?name=openshift-enterprise-consol
 ```
 
 Using the current version of the API, we have to repeat the above query for each component in the sources list of the first component query. This is probably best automated by a client tool.
+
+#### List the product streams and root-level containers which include an RPM package
+
+Suppose we were interested in which container products shipped the polkit RPM package. Since we don't know the version in this case, we search by name and type. Normally when we search for an RPM package we are interested in SRPMs, but they are not installed in containers, only arch specific RPMs are installed. We could choose any arch to search for, but let's use x86_64 as an example in this case. I made sure all results where included in a single query by increasing the limit to 50. Also let's process the results so that we only see a single container results, not all versions.
+
+```bash
+$ curl -s 'https://{CORGI_HOST}/api/v1/components?type=RPM&name=polkit&&arch=x86_64&limit=50' | jq '.results[] | .sources[] | .purl' | grep 'pkg:container' | awk -F@ '{print $1}' | cut -c2- | sort | uniq
+pkg:container/redhat/assisted-installer-agent-container
+pkg:container/redhat/cephcsi-container
+pkg:container/redhat/cluster-node-tuning-operator-container
+pkg:container/redhat/flatpak-build-base-container
+pkg:container/redhat/ironic-rhcos-downloader-container
+pkg:container/redhat/kubevirt-tekton-tasks-disk-virt-customize-container
+pkg:container/redhat/kubevirt-tekton-tasks-disk-virt-customize-rhel9-container
+pkg:container/redhat/kubevirt-tekton-tasks-disk-virt-sysprep-container
+pkg:container/redhat/kubevirt-tekton-tasks-disk-virt-sysprep-rhel9-container
+pkg:container/redhat/kubevirt-v2v-conversion-container
+pkg:container/redhat/libguestfs-tools-container
+pkg:container/redhat/libguestfs-tools-rhel9-container
+pkg:container/redhat/mtv-virt-v2v-container
+pkg:container/redhat/multicluster-engine-assisted-installer-agent-container
+pkg:container/redhat/openstack-nova-compute-container
+pkg:container/redhat/openstack-nova-compute-ironic-container
+pkg:container/redhat/openstack-nova-libvirt-container
+pkg:container/redhat/ose-agent-installer-node-agent-container
+pkg:container/redhat/rhacm-assisted-installer-agent-container
+pkg:container/redhat/rook-ceph-operator-container
+pkg:container/redhat/sssd-container
+pkg:container/redhat/tuned-container
+pkg:container/redhat/ubi8-init-container
+pkg:container/redhat/virt-launcher-container
+pkg:container/redhat/virt-launcher-rhel9-container
+pkg:container/redhat/vm-import-virtv2v-container
+```
+
+If we wanted to know which product streams these containers ship to, we can look at the product_streams field for each of these containers one by one, for example:
+
+```bash
+curl -s 'https://{CORGI_HOST}/api/v1/components?name=rhacm-assisted-installer-agent-container&arch=noarch' | jq '.results[] | .product_streams[] | .ofuri' | sort | uniq
+"o:redhat:rhacm:2.3.z"
+"o:redhat:rhacm:2.4.z"
+```
+
+The last request would have to be repeated for each container image, which is something best handled by a CLI client.
 
 #### Search by upstream path
 
@@ -410,7 +454,7 @@ pkg:golang/github.com/3scale/apicast-operator/pkg/reconcilers
 pkg:golang/github.com/3scale/apicast-operator/version
 ```
 
-Notice the `generic` namespace is used to denote an upstream source in Component Registry. We plan to increase the number of purl types in future according to [purl types from the specification](https://github.com/package-url/purl-spec/blob/master/PURL-TYPES.rst). For example the results in the above query could use the `github` type instead of `generic`.
+Notice the `generic` namespace is used to denote an upstream source in Component Registry. 
 
 #### Find components by type
 
@@ -422,7 +466,7 @@ pkg:generic/github.com/3scale/apicast
 pkg:generic/github.com/3scale/apicast-operator
 ```
 
-The types available to filter results on can be found in the openapi schema:
+The types available to filter results on can be found in the openapi schema. These types are subject to change in future versions.
 
 ```bash
 curl -s https://{CORGI_HOST}/api/v1/schema?format=json | jq '.paths[] | .get | select(.operationId == "v1_components_list") | .parameters[] | select(.name == "type")'
@@ -556,6 +600,8 @@ curl -s 'https://{CORGI_HOST}/api/v1/components?nvr=bare-metal-event-relay-opera
 "pkg:rpm/redhat/xz-libs@5.2.4-4.el8_6?arch=x86_64"
 "pkg:rpm/redhat/zlib@1.2.11-18.el8_5?arch=x86_64"
 ```
+
+
 
 
 

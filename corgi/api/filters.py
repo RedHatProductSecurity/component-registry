@@ -52,8 +52,6 @@ class ComponentFilter(FilterSet):
     upstreams = CharFilter(lookup_expr="icontains")
     re_upstream = CharFilter(lookup_expr="regex", field_name="upstreams")
 
-    ofuri = CharFilter(method="filter_arrayfield")
-
     def filter_arrayfield(self, queryset, name, value):
         array_value = Template("{$value}").substitute(value=value)
         if name == "ofuri":

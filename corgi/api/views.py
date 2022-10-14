@@ -60,6 +60,9 @@ def healthy(request: Request) -> Response:
 
 
 class StatusViewSet(GenericViewSet):
+    # Note-including a dummy queryset as scheme generation is complaining for reasons unknown
+    queryset = Product.objects.all()
+
     @extend_schema(
         request=None,
         responses={
@@ -380,12 +383,29 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
     filterset_class = ComponentFilter
     lookup_url_kwarg = "uuid"
 
+    def get_queryset(self):
+        # 'latest' filter only relevent in terms of a specific offering/product
+        ofuri = self.request.query_params.get("ofuri")
+        if ofuri:
+            # Note - originally ofuri explicitly embedded product type (eg. Product,
+            # Product Version, Product Stream, Product Variant)
+            # ... which would have simplified this code.
+            if ProductStream.objects.filter(ofuri=ofuri).exists():
+                return ProductStream.objects.get(ofuri=ofuri).get_latest_components()
+            if ProductVariant.objects.filter(ofuri=ofuri).exists():
+                return Component.objects.filter(product_variants=[ofuri])
+            if ProductVersion.objects.filter(ofuri=ofuri).exists():
+                return Component.objects.filter(product_versions=[ofuri])
+            if Product.objects.filter(ofuri=ofuri).exists():
+                return Component.objects.filter(products=[ofuri])
+        return Component.objects.all()
+
     def list(self, request, *args, **kwargs):
         # purl are stored with each segment url encoded as per the specification. The purl query
         # param here is url decoded, to ensure special characters such as '@' and '?'
-        # are not interpreted as part of the request.
-        ofuri = request.query_params.get("ofuri")
-        if ofuri:
+        # are not interpreted  as part of the request.
+        view = request.query_params.get("view")
+        if view == "summary":
             self.serializer_class = ComponentListSerializer
             return super().list(request)
         purl = request.query_params.get("purl")

@@ -7,7 +7,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelatio
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
 from django.db import models
-from django.db.models import Q, QuerySet
+from django.db.models import F, OuterRef, Q, QuerySet, Subquery
 from mptt.models import MPTTModel, TreeForeignKey
 from packageurl import PackageURL
 
@@ -225,15 +225,16 @@ class SoftwareBuild(TimeStampedModel):
     type = models.CharField(choices=Type.choices, max_length=20)
     name = models.TextField()  # Arbitrary identifier for a build
     source = models.TextField()  # Source code reference for build
+    completion_time = models.DateTimeField(null=True)  # meta_attr["completion_time"]
     # Store meta attributes relevant to different build system types.
     meta_attr = models.JSONField(default=dict)
 
     class Meta:
         ordering = ["-build_id"]
 
-    @property
-    def components(self):
-        return self.component_set.values_list("purl", flat=True)
+        indexes = [
+            models.Index(fields=["completion_time"]),
+        ]
 
     def save_datascore(self):
         for component in Component.objects.filter(software_build__build_id=self.build_id):
@@ -541,6 +542,34 @@ class ProductStream(ProductModel, TimeStampedModel):
         stream_name = re.sub(r"(-|_|)" + self.version + "$", "", self.name)
         return f"o:redhat:{stream_name}:{self.version}"
 
+    def get_latest_components(self):
+        """Return root components from latest builds."""
+        root_components = (
+            Q(type=Component.Type.SRPM)
+            | Q(type=Component.Type.CONTAINER_IMAGE, arch="noarch")
+            | Q(type=Component.Type.RHEL_MODULE)
+        )
+        return (
+            Component.objects.filter(
+                root_components,
+                product_streams__overlap=[self.ofuri],
+            )
+            .annotate(
+                latest=Subquery(
+                    Component.objects.filter(
+                        root_components,
+                        name=OuterRef("name"),
+                        product_streams__overlap=[self.ofuri],
+                    )
+                    .order_by("software_build__completion_time")
+                    .values("uuid")[:1]
+                )
+            )
+            .filter(
+                uuid=F("latest"),
+            )
+        )
+
 
 class ProductStreamTag(Tag):
     product_stream = models.ForeignKey(ProductStream, on_delete=models.CASCADE, related_name="tags")
@@ -774,7 +803,9 @@ class Component(TimeStampedModel):
     upstreams = fields.ArrayField(models.CharField(max_length=1024), default=list)
 
     cnodes = GenericRelation(ComponentNode)
-    software_build = models.ForeignKey(SoftwareBuild, on_delete=models.CASCADE, null=True)
+    software_build = models.ForeignKey(
+        SoftwareBuild, on_delete=models.CASCADE, null=True, related_name="components"
+    )
 
     # Copyright text as it appears in the component source code, from an OpenLCS scan
     copyright_text = models.TextField(default="")

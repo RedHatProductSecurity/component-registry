@@ -2,6 +2,7 @@
 corgi api constants
 """
 
+
 # REST API version
 CORGI_API_VERSION: str = "v1"
 

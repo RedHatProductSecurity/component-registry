@@ -190,10 +190,6 @@ paths:
         schema:
           type: integer
       - in: query
-        name: ofuri
-        schema:
-          type: string
-      - in: query
         name: product_streams
         schema:
           type: string

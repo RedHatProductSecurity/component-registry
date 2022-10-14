@@ -5,7 +5,8 @@ from datetime import timedelta
 from celery_singleton import Singleton
 from django.conf import settings
 from django.db.models import QuerySet
-from django.utils import dateformat, timezone
+from django.utils import dateformat, dateparse, timezone
+from django.utils.timezone import make_aware
 
 from config.celery import app
 from corgi.collectors.brew import Brew, BrewBuildTypeNotSupported
@@ -52,6 +53,17 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
     build_meta["corgi_ingest_start_dt"] = dateformat.format(timezone.now(), "Y-m-d H:i:s")
     build_meta["corgi_ingest_status"] = "INPROGRESS"
 
+    completion_dt = None
+    if "completion_time" in build_meta:
+        completion_dt = make_aware(
+            dateparse.parse_datetime(build_meta["completion_time"].split(".")[0])  # type:ignore
+        )
+    else:
+        logger.info(
+            "No completion_time, no data fetched for build %s from Brew, exiting...", build_id
+        )
+        return
+
     softwarebuild, created = SoftwareBuild.objects.get_or_create(
         build_id=component["build_meta"]["build_info"]["build_id"],
         defaults={
@@ -60,6 +72,7 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
             "source": component["build_meta"]["build_info"]["source"],
             "meta_attr": build_meta,
         },
+        completion_time=completion_dt,
     )
 
     if not force_process and not created:

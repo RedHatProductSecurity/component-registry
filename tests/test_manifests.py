@@ -30,14 +30,24 @@ def test_product_manifest_properties():
     pvnode = ProductNode.objects.create(parent=pnode, obj=version, object_id=version.pk)
     psnode = ProductNode.objects.create(parent=pvnode, obj=stream, object_id=stream.pk)
     _ = ProductNode.objects.create(parent=psnode, obj=variant, object_id=variant.pk)
-    # This generates and saves the product_variants, and product_streams property of `variant`
-    variant.save_product_taxonomy()
+    # This generates and saves the product_variants property of stream
+    stream.save_product_taxonomy()
+    assert variant.name in stream.product_variants
 
     build = SoftwareBuildFactory(build_id=1)
-    component = ComponentFactory(software_build=build)
+    build.save()
+    component = ComponentFactory(
+        software_build=build,
+        type="SRPM",
+        product_variants=[variant.ofuri],
+        product_streams=[stream.ofuri],
+    )
+    component.save()
     _, _ = component.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=component.purl
     )
+    # The product_ref here is a variant name but below we use it's parent stream
+    # to generate the manifest
     ProductComponentRelationFactory(
         build_id="1", product_ref="1", type=ProductComponentRelation.Type.ERRATA
     )
@@ -45,17 +55,16 @@ def test_product_manifest_properties():
     build.save_component_taxonomy()
     build.save_product_taxonomy()
 
-    json.loads(product.manifest)
-    json.loads(version.manifest)
-    json.loads(stream.manifest)
-    manifest = json.loads(variant.manifest)
+    manifest = json.loads(stream.manifest)
+
     # Test will fail with JSONDecodeError if above isn't valid
     # Eventually, we should also check the actual manifest content is valid SPDX data
     # Then most of below can go away
 
     # One component linked to this product
-    num_components = len(variant.components)
+    num_components = len(stream.get_latest_components())
     assert num_components == 1
+
     # Manifest contains info for all components + the product itself
     assert len(manifest["packages"]) == 2
 
@@ -68,20 +77,20 @@ def test_product_manifest_properties():
     assert component_data["name"] == component.name
     assert component_data["externalRefs"][0]["referenceLocator"] == component.purl
 
-    assert product_data["SPDXID"] == f"SPDXRef-{variant.uuid}"
-    assert product_data["name"] == variant.name
-    if variant.cpes:
-        assert product_data["externalRefs"][0]["referenceLocator"] == variant.cpes[0]
-    assert product_data["externalRefs"][-1]["referenceLocator"] == f"cpe:/{variant.ofuri}"
+    assert product_data["SPDXID"] == f"SPDXRef-{stream.uuid}"
+    assert product_data["name"] == stream.name
+    if stream.cpes:
+        assert product_data["externalRefs"][0]["referenceLocator"] == stream.cpes[0]
+    assert product_data["externalRefs"][-1]["referenceLocator"] == f"cpe:/{stream.ofuri}"
 
     document_describes_product = {
-        "relatedSpdxElement": f"SPDXRef-{variant.uuid}",
+        "relatedSpdxElement": f"SPDXRef-{stream.uuid}",
         "relationshipType": "DESCRIBES",
         "spdxElementId": "SPDXRef-DOCUMENT",
     }
 
     component_is_package_of_product = {
-        "relatedSpdxElement": f"SPDXRef-{variant.uuid}",
+        "relatedSpdxElement": f"SPDXRef-{stream.uuid}",
         "relationshipType": "PACKAGE_OF",
         "spdxElementId": f"SPDXRef-{component.uuid}",
     }

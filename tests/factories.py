@@ -2,6 +2,7 @@ from datetime import datetime
 from random import choice, randint
 
 import factory
+from django.utils import timezone
 
 from corgi.core import models
 
@@ -26,6 +27,7 @@ class SoftwareBuildFactory(factory.django.DjangoModelFactory):
     build_id = factory.sequence(lambda n: n + 100)
     name = factory.Faker("word")
     tag = factory.RelatedFactory(SoftwareBuildTagFactory, factory_related_name="software_build")
+    completion_time = timezone.now()
 
 
 class ProductTagFactory(TagFactory):

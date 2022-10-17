@@ -130,8 +130,13 @@ class Brew:
                     component_type = "gem"
                 elif component_type in ("npm", "nodejs", "js"):
                     component_type = "npm"
-                elif component_type in ("golang", "crate"):
+                elif component_type == "golang":
+                    # Need to skip arch names, See CORGI-48
+                    if component in ["aarch-64", "ppc-64", "s390-64", "x86-64"]:
+                        continue
                     # golang and crate are both valid component types
+                    pass
+                elif component_type == "crate":
                     pass
                 else:
                     # Account for bundled deps like "bundled(rh-nodejs12-zlib)" where it's not clear

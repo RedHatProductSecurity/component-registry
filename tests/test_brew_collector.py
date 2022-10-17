@@ -464,6 +464,8 @@ def test_parsing_bundled_provides():
     test_provides = [
         # brew rpmID=6809357
         "golang(golang.org/x/crypto/acme)",
+        # brew rpmID=10558907
+        "golang(aarch-64)",
         # brew rpmID=8261950
         "bundled(golang(github.com/git-lfs/go-netrc)",
         "bundled(golang)(github.com/alexbrainman/sspi)",

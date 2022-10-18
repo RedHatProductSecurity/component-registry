@@ -74,6 +74,7 @@ class CollectorRPM(models.Model):
 class CollectorRPMRepository(models.Model):
     name = models.CharField(unique=True, max_length=200)
     content_set = models.CharField(max_length=200)
+    relative_url = models.CharField(max_length=200, default="")
 
     def __str__(self):
         return f"{self.name}"

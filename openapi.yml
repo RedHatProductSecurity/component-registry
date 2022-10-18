@@ -1014,6 +1014,9 @@ components:
           readOnly: true
         name:
           type: string
+        relative_url:
+          type: string
+          maxLength: 200
         type:
           $ref: '#/components/schemas/ChannelTypeEnum'
         description:

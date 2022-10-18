@@ -142,6 +142,7 @@ def update_variant_repos() -> None:
                     name=repo,
                     defaults={
                         "type": Channel.Type.CDN_REPO,
+                        "relative_url": rpm_repo.relative_url,
                         "meta_attr": {"content_set": rpm_repo.content_set},
                     },
                 )

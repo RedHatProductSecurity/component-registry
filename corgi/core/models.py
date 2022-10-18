@@ -631,6 +631,7 @@ class Channel(TimeStampedModel):
 
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.TextField(unique=True)
+    relative_url = models.CharField(max_length=200, default="")
     type = models.CharField(choices=Type.choices, max_length=50)
     description = models.TextField(default="")
     meta_attr = models.JSONField(default=dict)

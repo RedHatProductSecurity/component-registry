@@ -49,9 +49,12 @@ class Pulp:
         response.raise_for_status()
         no_created = 0
         for repo in response.json():
-            content_set = repo["notes"].get("content_set", "")
             _, created = CollectorRPMRepository.objects.update_or_create(
-                name=repo["id"], defaults={"content_set": content_set}
+                name=repo["id"],
+                defaults={
+                    "content_set": repo["notes"].get("content_set", ""),
+                    "relative_url": repo["notes"].get("relative_url", ""),
+                },
             )
             if created:
                 no_created += 1

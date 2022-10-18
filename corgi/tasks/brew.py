@@ -208,6 +208,10 @@ def save_component(component, parent, softwarebuild=None):
     ):
         softwarebuild = None
 
+    # Handle case when key is present but value is None
+    related_url = meta.pop("url", "")
+    if related_url is None:
+        related_url = ""
     obj, _ = Component.objects.update_or_create(
         type=component_type,
         name=meta.pop("name", ""),
@@ -218,7 +222,7 @@ def save_component(component, parent, softwarebuild=None):
             "description": meta.pop("description", ""),
             "filename": find_package_file_name(meta.pop("source", [])),
             "license_declared_raw": meta.pop("license", ""),
-            "related_url": meta.pop("url", ""),
+            "related_url": related_url,
             "software_build": softwarebuild,
         },
     )
@@ -264,7 +268,9 @@ def save_srpm(softwarebuild, build_data) -> ComponentNode:
             "obj": obj,
         },
     )
-    if "url" in build_data["meta"]:
+    # Handle case when key is present but value is None
+    related_url = build_data["meta"].get("url", "")
+    if related_url:
         new_upstream, created = Component.objects.get_or_create(
             type=Component.Type.UPSTREAM,
             name=build_data["meta"].get("name"),
@@ -275,7 +281,7 @@ def save_srpm(softwarebuild, build_data) -> ComponentNode:
                 "description": build_data["meta"].get("description", ""),
                 "filename": find_package_file_name(build_data["meta"].get("source", [])),
                 "license_declared_raw": build_data["meta"].get("license", ""),
-                "related_url": build_data["meta"].get("url", ""),
+                "related_url": related_url,
             },
         )
         new_upstream.cnodes.get_or_create(
@@ -370,11 +376,15 @@ def save_container(softwarebuild, build_data) -> ComponentNode:
 
     if "sources" in build_data:
         for source in build_data["sources"]:
+            # Handle case when key is present but value is None
+            related_url = source["meta"].pop("url", "")
+            if related_url is None:
+                related_url = ""
             new_upstream, created = Component.objects.get_or_create(
                 type=Component.Type.UPSTREAM,
                 name=source["meta"].pop("name"),
                 version=source["meta"].pop("version"),
-                defaults={"meta_attr": source["meta"]},
+                defaults={"meta_attr": source["meta"], "related_url": related_url},
             )
             upstream_node, _ = new_upstream.cnodes.get_or_create(
                 type=ComponentNode.ComponentNodeType.SOURCE,

@@ -160,6 +160,8 @@ def update_variant_repos() -> None:
 
             # Update list of channels for this Variant so that we don't have to call
             # the more expensive save_product_taxonomy() method just to update channels.
+            # TODO: Below wipes out any existing values in the field
+            #  Which were set by the full save_product_taxonomy()
             pv.channels = pv_channels
             pv.save()
             for product_stream in pv.product_streams:

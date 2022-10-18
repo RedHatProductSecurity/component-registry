@@ -648,17 +648,33 @@ class Channel(TimeStampedModel):
         return str(self.name)
 
     def save_product_taxonomy(self):
+        # TODO: Below doesn't match ProductModel's save_product_taxonomy
+        # We use ofuri here to identify the taxonomy
+        # But ProductModel subclasses all use name to identify the taxonomy
+        # And in Component, we use ofuri to identify the taxonomy
+        # But the Component taxonomy properties don't seem to be set anywhere
+        # and all Components in stage have an empty [] list of product_variants
         product_set = set()
+        version_set = set()
         stream_set = set()
         variant_set = set()
         for n in self.pnodes.first().get_ancestors():
-            if type(n.obj) == Product:
+            if isinstance(n.obj, Product):
                 product_set.add(n.obj.ofuri)
-            elif type(n.obj) == ProductStream:
+            elif isinstance(n.obj, ProductVersion):
+                version_set.add(n.obj.ofuri)
+            elif isinstance(n.obj, ProductStream):
                 stream_set.add(n.obj.ofuri)
-            elif type(n.obj) == ProductVariant:
+            elif isinstance(n.obj, ProductVariant):
                 variant_set.add(n.obj.ofuri)
+            else:
+                raise ValueError(
+                    f"Unknown type {type(n.obj)} for {n.obj.ofuri}"
+                    f"when saving product taxonomy for channel {self.name}"
+                )
+
         self.products = list(product_set)
+        self.product_versions = list(version_set)
         self.product_streams = list(stream_set)
         self.product_variants = list(variant_set)
         self.save()

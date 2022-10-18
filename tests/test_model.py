@@ -14,6 +14,7 @@ from corgi.core.models import (
 
 from .factories import (
     ComponentFactory,
+    ProductComponentRelationFactory,
     ProductFactory,
     ProductStreamFactory,
     ProductVariantFactory,
@@ -28,17 +29,6 @@ def test_product_model():
     p1 = ProductFactory(name="RHEL")
     assert Product.objects.get(name="RHEL") == p1
     assert p1.ofuri == "o:redhat:RHEL"
-
-
-def test_product_related_errata():
-    ProductComponentRelation.objects.create(
-        type=ProductComponentRelation.Type.ERRATA, product_ref="Base"
-    )
-    p = ProductFactory()
-    relations = p.get_product_component_relations(["Base"], only_errata=True)
-    assert relations.exists()
-    relations = p.get_product_component_relations(["rhel"], only_errata=True)
-    assert not relations.exists()
 
 
 def test_productversion_model():
@@ -83,46 +73,35 @@ def test_cpes():
 
 
 def test_product_taxonomic_queries():
-    p1, ps1, ps2, ps3, pv1a, pv1b = create_product_hierarchy()
+    rhel, rhel_7, _, rhel_8, _, rhel_8_2, _ = create_product_hierarchy()
 
-    relate_product_hierarchy(p1, ps1, ps2, ps3, pv1a, pv1b)
-
-    assert p1.product_streams == ["Ansercanagicus", "Ansercaerulescens", "Brantabernicla"]
-    pv1b.save_product_taxonomy()
-    assert pv1b.product_streams == ["Ansercaerulescens", "Brantabernicla"]
-    assert pv1b.products == ["RHEL"]
-    ps3.save_product_taxonomy()
-    assert ps3.products == ["RHEL"]
-
-
-def relate_product_hierarchy(p1, ps1, ps2, ps3, pv1a, pv1b):
-    pvar1 = ProductVariantFactory(name="Base8-test")
-    node1 = ProductNode.objects.create(parent=None, obj=p1, object_id=p1.pk)
-    assert node1
-    node2a = ProductNode.objects.create(parent=node1, obj=pv1a, object_id=pv1a.pk)
-    assert node2a
-    node2b = ProductNode.objects.create(parent=node1, obj=pv1b, object_id=pv1b.pk)
-    assert node2b
-    node3a = ProductNode.objects.create(parent=node2a, obj=ps1, object_id=ps1.pk)
-    assert node3a
-    node3b = ProductNode.objects.create(parent=node2b, obj=ps2, object_id=ps2.pk)
-    assert node3b
-    node3c = ProductNode.objects.create(parent=node2b, obj=ps3, object_id=ps3.pk)
-    assert node3c
-    node4a = ProductNode.objects.create(parent=node3c, obj=pvar1, object_id=pvar1.pk)
-    assert node4a
-
-    p1.save_product_taxonomy()
+    assert rhel.product_streams == ["rhel-7.1", "rhel-8.1", "rhel-8.2"]
+    assert rhel_8.product_streams == ["rhel-8.1", "rhel-8.2"]
+    assert rhel_7.products == ["RHEL"]
+    assert rhel_8_2.products == ["RHEL"]
 
 
 def create_product_hierarchy():
-    p1 = ProductFactory(name="RHEL")
-    pv1a = ProductVersionFactory(name="RHEL-7", version="7")
-    pv1b = ProductVersionFactory(name="RHEL-8", version="8")
-    ps1 = ProductStreamFactory(name="Ansercanagicus")
-    ps2 = ProductStreamFactory(name="Ansercaerulescens")
-    ps3 = ProductStreamFactory(name="Brantabernicla", cpe="cpe:/o:redhat:Brantabernicla:8")
-    return p1, ps1, ps2, ps3, pv1a, pv1b
+    rhel = ProductFactory(name="RHEL")
+    rhel_7 = ProductVersionFactory(name="rhel-7", version="7")
+    rhel_8 = ProductVersionFactory(name="rhel-8", version="8")
+    rhel_7_1 = ProductStreamFactory(name="rhel-7.1")
+    rhel_8_1 = ProductStreamFactory(name="rhel-8.1")
+    rhel_8_2 = ProductStreamFactory(name="rhel-8.2", cpe="cpe:/o:redhat:8.2")
+    rhel_8_2_base = ProductVariantFactory(name="Base8-test")
+    rhel_node = ProductNode.objects.create(parent=None, obj=rhel, object_id=rhel.pk)
+    rhel_7_node = ProductNode.objects.create(parent=rhel_node, obj=rhel_7, object_id=rhel_7.pk)
+    rhel_8_node = ProductNode.objects.create(parent=rhel_node, obj=rhel_8, object_id=rhel_8.pk)
+    ProductNode.objects.create(parent=rhel_7_node, obj=rhel_7_1, object_id=rhel_7_1.pk)
+    ProductNode.objects.create(parent=rhel_8_node, obj=rhel_8_1, object_id=rhel_8_1.pk)
+    rhel_8_2_node = ProductNode.objects.create(
+        parent=rhel_8_node, obj=rhel_8_2, object_id=rhel_8_2.pk
+    )
+    ProductNode.objects.create(parent=rhel_8_2_node, obj=rhel_8_2_base, object_id=rhel_8_2_base.pk)
+
+    for product_model in (rhel, rhel_7, rhel_7_1, rhel_8, rhel_8_1, rhel_8_2, rhel_8_2_base):
+        product_model.save_product_taxonomy()
+    return rhel, rhel_7, rhel_7_1, rhel_8, rhel_8_1, rhel_8_2, rhel_8_2_base
 
 
 def test_component_model():
@@ -203,10 +182,9 @@ def test_get_roots():
 def test_product_component_relations():
     build_id = 1754635
     sb = SoftwareBuildFactory(build_id=build_id)
-    p1, ps1, ps2, ps3, pv1a, pv1b = create_product_hierarchy()
-    relate_product_hierarchy(p1, ps1, ps2, ps3, pv1a, pv1b)
+    _, _, rhel_7_1, _, _, _, _ = create_product_hierarchy()
     ProductComponentRelation.objects.create(
-        type=ProductComponentRelation.Type.COMPOSE, product_ref=ps1.name, build_id=build_id
+        type=ProductComponentRelation.Type.COMPOSE, product_ref=rhel_7_1.name, build_id=build_id
     )
     srpm = ComponentFactory(software_build=sb, type=Component.Type.SRPM)
     srpm_cnode, _ = srpm.cnodes.get_or_create(
@@ -214,24 +192,73 @@ def test_product_component_relations():
     )
     sb.save_product_taxonomy()
     c = Component.objects.get(uuid=srpm.uuid)
-    assert ps1.ofuri in c.product_streams
+    assert rhel_7_1.ofuri in c.product_streams
 
 
 def test_product_component_relations_errata():
     build_id = 1754635
     sb = SoftwareBuildFactory(build_id=build_id)
+    _, _, _, _, _, rhel_8_2, rhel_8_2_base = create_product_hierarchy()
     ProductComponentRelation.objects.create(
-        type=ProductComponentRelation.Type.ERRATA, product_ref="Base8-test", build_id=build_id
+        type=ProductComponentRelation.Type.ERRATA, product_ref=rhel_8_2_base.name, build_id=build_id
     )
-    p1, ps1, ps2, ps3, pv1a, pv1b = create_product_hierarchy()
-    relate_product_hierarchy(p1, ps1, ps2, ps3, pv1a, pv1b)
     srpm = ComponentFactory(software_build=sb, type=Component.Type.SRPM)
     srpm_cnode, _ = srpm.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=srpm.purl
     )
     sb.save_product_taxonomy()
     c = Component.objects.get(uuid=srpm.uuid)
-    assert ps3.ofuri in c.product_streams
+    assert rhel_8_2.ofuri in c.product_streams
+
+
+def test_product_stream_builds():
+    rhel_8_2_build = SoftwareBuildFactory()
+    rhel_8_2_base_build = SoftwareBuildFactory()
+    rhel_7_1_build = SoftwareBuildFactory()
+    rhel, rhel_7, rhel_7_1, _, rhel_8_1, rhel_8_2, rhel_8_2_base = create_product_hierarchy()
+    ProductComponentRelation.objects.create(
+        type=ProductComponentRelation.Type.COMPOSE,
+        # This is a product stream ref
+        product_ref=rhel_8_2.name,
+        build_id=rhel_8_2_build.build_id,
+    )
+    ProductComponentRelation.objects.create(
+        type=ProductComponentRelation.Type.CDN_REPO,
+        # This is a product variant ref, and also a child of rhel_8_2 stream
+        product_ref=rhel_8_2_base.name,
+        build_id=rhel_8_2_base_build.build_id,
+    )
+    ProductComponentRelation.objects.create(
+        type=ProductComponentRelation.Type.BREW_TAG,
+        # This is a product stream ref only
+        product_ref=rhel_7_1.name,
+        build_id=rhel_7_1_build.build_id,
+    )
+    # Test we can find product variant builds
+    rhel_8_2_builds = [int(b) for b in rhel_8_2.builds]
+    assert rhel_8_2_build.build_id in rhel_8_2_builds
+    # Test we can find both product variant and product stream builds when they are ancestors
+    assert rhel_8_2_base_build.build_id in rhel_8_2_builds
+    # Test we can find product stream builds
+    assert rhel_7_1_build.build_id in [int(b) for b in rhel_7_1.builds]
+    # Test we can find builds from product stream children of product version
+    assert rhel_7_1_build.build_id in [int(b) for b in rhel_7.builds]
+    # Test products have all builds
+    rhel_builds = [int(b) for b in rhel.builds]
+    assert rhel_8_2_build.build_id in rhel_builds
+    assert rhel_7_1_build.build_id in rhel_builds
+    assert rhel_8_2_base_build.build_id in rhel_builds
+    # Test that builds from another stream don't get included
+    assert rhel_8_2_build.build_id not in [int(b) for b in rhel_8_1.builds]
+
+
+def test_component_errata():
+    sb = SoftwareBuildFactory()
+    c = ComponentFactory(software_build=sb)
+    ProductComponentRelationFactory(
+        build_id=sb.build_id, external_system_id="RHSA-1", type=ProductComponentRelation.Type.ERRATA
+    )
+    assert "RHSA-1" in c.errata
 
 
 def test_get_upstream():

@@ -22,14 +22,16 @@ pytestmark = pytest.mark.unit
 def test_product_manifest_properties():
     """Test that all models inheriting from ProductModel have a .manifest property
     And that it generates valid JSON. TODO: Use a library to generate + validate the SPDX data"""
-    product = ProductFactory(product_variants=["1"])
-    version = ProductVersionFactory(product_variants=["1"])
-    stream = ProductStreamFactory(product_variants=["1"])
+    product = ProductFactory()
+    version = ProductVersionFactory()
+    stream = ProductStreamFactory()
     variant = ProductVariantFactory(name="1")
     pnode = ProductNode.objects.create(parent=None, obj=product, object_id=product.pk)
     pvnode = ProductNode.objects.create(parent=pnode, obj=version, object_id=version.pk)
     psnode = ProductNode.objects.create(parent=pvnode, obj=stream, object_id=stream.pk)
     _ = ProductNode.objects.create(parent=psnode, obj=variant, object_id=variant.pk)
+    # This generates and saves the product_variants, and product_streams property of `variant`
+    variant.save_product_taxonomy()
 
     build = SoftwareBuildFactory(build_id=1)
     component = ComponentFactory(software_build=build)

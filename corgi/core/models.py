@@ -347,34 +347,30 @@ class ProductModel(models.Model):
         # Else self.builds is an empty QuerySet
         return Component.objects.none()
 
-    @staticmethod
-    def get_product_component_relations(
-        variant_ids: list[str], sort_field="external_system_id", only_errata=False
-    ) -> QuerySet["ProductComponentRelation"]:
-        """Returns unique productcomponentrelations with at least 1 matching variant_id,
-        ordered by sort_field. if only_errata is True, only return PCRs with Type=ERRATA
-        """
-        if variant_ids:
-            query = Q()
-            for variant_id in variant_ids:
-                query |= Q(product_ref__contains=variant_id)
-            result = ProductComponentRelation.objects.filter(query).distinct().order_by(sort_field)
-            if only_errata:
-                result = result.filter(type=ProductComponentRelation.Type.ERRATA)
-            return result
-        # Else self.product_variants is an empty QuerySet
-        return ProductComponentRelation.objects.none()
-
     @property
     def builds(self) -> QuerySet:
-        """Return unique build IDs for errata with variant_ids matching self.product_variants"""
-        return (
-            self.get_product_component_relations(
-                self.product_variants, "build_id", only_errata=True
+        """Returns unique productcomponentrelations with at least 1 matching variant or stream,
+        ordered by build_id.
+        """
+        product_refs = [self.name]
+        if isinstance(self, ProductStream):
+            # we also want to include child product_variants of this product stream
+            product_refs.extend(self.product_variants)
+        elif isinstance(self, ProductVersion) or isinstance(self, Product):
+            # we don't store product or product versions in the relations table therefore
+            # we only want to include child product_streams and product_variants in the query
+            product_refs = self.product_streams + self.product_variants
+        # else it was a product variant, only look up by self.name
+
+        if product_refs:
+            return (
+                ProductComponentRelation.objects.filter(product_ref__in=product_refs)
+                .order_by("build_id")
+                .values_list("build_id", flat=True)
+                .distinct()
             )
-            .values_list("build_id", flat=True)
-            .distinct()
-        )
+        # Else no product_variants or product_streams
+        return ProductComponentRelation.objects.none()
 
     @property
     def components(self) -> QuerySet["Component"]:
@@ -383,33 +379,9 @@ class ProductModel(models.Model):
         return self.get_related_components(self.builds, "purl")
 
     @property
-    def errata(self) -> QuerySet:
-        """Return unique errata IDs with variant_ids matching self.product_variants"""
-        return (
-            self.get_product_component_relations(self.product_variants, only_errata=True)
-            .values_list("external_system_id", flat=True)
-            .distinct()
-        )
-
-    @property
     def manifest(self) -> str:
         """Return an SPDX-style manifest in JSON format."""
         return ProductManifestFile(self).render_content()
-
-    @property
-    def upstream(self) -> QuerySet:
-        """Return unique upstream values for components with build_ids matching self.builds"""
-        # TODO: Need to add @extend_schema_field to fix drf-spectacular warning
-        #  'unable to resolve type hint for function "upstream".
-        #  Consider using a type hint or @extend_schema_field. Defaulting to string.'
-        #  list or Iterable[str] work for drf-spectacular, but break mypy
-        #  Union[anything, QuerySet] or QuerySet work for mypy, but not drf-spectacular
-        # for RPMS its sibling, SRPM its child
-        return (
-            self.get_related_components(self.builds, "upstreams")
-            .values_list("upstreams", flat=True)
-            .distinct()
-        )
 
     @property
     def coverage(self) -> int:
@@ -525,6 +497,7 @@ class ProductStream(ProductModel, TimeStampedModel):
     active = models.BooleanField(default=False)
     et_product_versions = fields.ArrayField(models.CharField(max_length=200), default=list)
 
+    # redefined from parent class
     product_streams = None  # type: ignore
     pnodes = GenericRelation(ProductNode, related_query_name="product_stream")
 
@@ -592,6 +565,7 @@ class ProductVariant(ProductModel, TimeStampedModel):
 
     cpe = models.CharField(max_length=1000, default="")
 
+    # redefined from parent class
     product_variants = None  # type: ignore
     pnodes = GenericRelation(ProductNode, related_query_name="product_variant")
 
@@ -620,24 +594,6 @@ class ProductVariant(ProductModel, TimeStampedModel):
         else:
             product_stream = f"{product_stream_node.obj.ofuri}:{self.name.lower()}"
         return product_stream
-
-    @property
-    def errata(self) -> QuerySet:
-        """Return unique errata IDs with variant_ids matching this variant's name"""
-        return (
-            self.get_product_component_relations([self.name], only_errata=True)
-            .values_list("external_system_id", flat=True)
-            .distinct()
-        )
-
-    @property
-    def builds(self) -> QuerySet:
-        """Return unique build IDs for errata with variant_ids matching this variant's name"""
-        return (
-            self.get_product_component_relations([self.name], "build_id", only_errata=True)
-            .values_list("build_id", flat=True)
-            .distinct()
-        )
 
 
 class ProductVariantTag(Tag):
@@ -990,15 +946,12 @@ class Component(TimeStampedModel):
         """Return errata that contain component."""
         if not self.software_build:
             return []
-        component_name = ""
-        if self.type in (Component.Type.RPM, Component.Type.SRPM):
-            component_name = f"{self.nevra}.rpm"
         errata_qs = (
             ProductComponentRelation.objects.filter(
                 type=ProductComponentRelation.Type.ERRATA,
                 build_id=self.software_build.build_id,
-                meta_attr__components__contains=component_name,
             )
+            .order_by("external_system_id")
             .values_list("external_system_id", flat=True)
             .distinct()
         )
@@ -1039,32 +992,6 @@ class Component(TimeStampedModel):
     @property
     def epoch(self) -> str:
         return self.meta_attr.get("epoch", "")
-
-    def get_product_variants(self):
-        build_ids = [
-            a.obj.software_build.build_id
-            for a in self.cnodes.get_queryset().get_ancestors(include_self=True)
-            if a.obj.software_build
-        ]
-        return list(
-            ProductComponentRelation.objects.filter(build_id__in=set(build_ids))
-            .filter(type=ProductComponentRelation.Type.ERRATA)
-            .values_list("product_ref", flat=True)
-            .distinct()
-        )
-
-    def get_product_streams(self):
-        build_ids = [
-            a.obj.software_build.build_id
-            for a in self.cnodes.get_queryset().get_ancestors(include_self=True)
-            if a.obj.software_build
-        ]
-        return list(
-            ProductComponentRelation.objects.filter(build_id__in=set(build_ids))
-            .filter(type=ProductComponentRelation.Type.COMPOSE)
-            .values_list("product_ref", flat=True)
-            .distinct()
-        )
 
     def get_channels(self):
         variant_ids = self.product_variants

@@ -291,8 +291,7 @@ curl -s 'https://{CORGI_HOST}/api/v1/components?type=NPM&name=is-svg&version=2.1
 ```
 
 This query returns a list of results include the component count. The component data can be found in the results field.
-The sources field lists all the components which embed this component, at the time of writing we are yet to implement
-latest filtering, so it's useful to process the results on the client side to get a clearer picture of the packages included:
+The sources field lists all versions of all components which embed this component, it's useful to process the results on the client side to get a clearer picture of the packages included:
 
 ```bash
 $ curl -L -s 'https://{CORGI_HOST}/api/v1/components?purl=pkg:npm/is-svg@2.1.0' | jq '.sources[] | .purl' | awk -F@ '{print $1}' | cut -c2- | sort | uniq
@@ -327,7 +326,7 @@ pkg:srpm/redhat/dotnet3.1
 pkg:srpm/redhat/mozjs60
 ```
 
-Let's say wanted to know which product streams the openshift-enterprise-console-container shipped to we could do component search using that name. Just using the name alone however returns nearly 500 results currently:
+Let's say you wanted to know which product streams the openshift-enterprise-console-container was shipped to. We could do component search using that name. Just using the name alone however returns nearly 500 results currently:
 
 ```bash
 $ curl -s 'https://{CORGI_HOST}/api/v1/components?name=openshift-enterprise-console-container' | jq '.count'
@@ -355,7 +354,7 @@ curl -s 'https://{CORGI_HOST}/api/v1/components?name=openshift-enterprise-consol
 "o:redhat:openshift-enterprise:3.11.z"
 ```
 
-Using the current version of the API, we have to repeat the above query for each component in the sources list of the first component query. This is probably best automated by a client tool.
+Using the current version of the API, we have to repeat the above query for each component in the sources list of the first component query. Also we want to be able to limit the results to only those product streams which are currently receiving security updates. This is probably best automated by a client tool.
 
 #### List the product streams and root-level containers which include an RPM package
 
@@ -501,104 +500,91 @@ curl -s 'https://{CORGI_HOST}/api/v1/components?nvr=bare-metal-event-relay-opera
 "pkg:rpm/redhat/audit-libs@3.0.7-2.el8.2?arch=x86_64"
 "pkg:rpm/redhat/basesystem@11-5.el8?arch=noarch"
 "pkg:rpm/redhat/bash@4.4.20-4.el8_6?arch=x86_64"
-"pkg:rpm/redhat/brotli@1.0.6-3.el8?arch=x86_64"
-"pkg:rpm/redhat/bzip2-libs@1.0.6-26.el8?arch=x86_64"
-"pkg:rpm/redhat/ca-certificates@2022.2.54-80.2.el8_6?arch=noarch"
-"pkg:rpm/redhat/chkconfig@1.19.1-1.el8?arch=x86_64"
-"pkg:rpm/redhat/coreutils-single@8.30-12.el8?arch=x86_64"
-"pkg:rpm/redhat/crypto-policies@20211116-1.gitae470d6.el8?arch=noarch"
-"pkg:rpm/redhat/curl@7.61.1-22.el8_6.4?arch=x86_64"
-"pkg:rpm/redhat/cyrus-sasl-lib@2.1.27-6.el8_5?arch=x86_64"
-"pkg:rpm/redhat/elfutils-libelf@0.186-1.el8?arch=x86_64"
-"pkg:rpm/redhat/file-libs@5.33-20.el8?arch=x86_64"
-"pkg:rpm/redhat/filesystem@3.8-6.el8?arch=x86_64"
-"pkg:rpm/redhat/gawk@4.2.1-4.el8?arch=x86_64"
-"pkg:rpm/redhat/glib2@2.56.4-158.el8?arch=x86_64"
-"pkg:rpm/redhat/glibc-common@2.28-189.5.el8_6?arch=x86_64"
-"pkg:rpm/redhat/glibc-minimal-langpack@2.28-189.5.el8_6?arch=x86_64"
-"pkg:rpm/redhat/glibc@2.28-189.5.el8_6?arch=x86_64"
-"pkg:rpm/redhat/gmp@6.1.2-10.el8?arch=x86_64&epoch=1"
-"pkg:rpm/redhat/gnupg2@2.2.20-3.el8_6?arch=x86_64"
-"pkg:rpm/redhat/gnutls@3.6.16-4.el8?arch=x86_64"
-"pkg:rpm/redhat/gobject-introspection@1.56.1-1.el8?arch=x86_64"
-"pkg:rpm/redhat/gpgme@1.13.1-11.el8?arch=x86_64"
-"pkg:rpm/redhat/grep@3.1-6.el8?arch=x86_64"
-"pkg:rpm/redhat/info@6.5-7.el8?arch=x86_64"
-"pkg:rpm/redhat/json-c@0.13.1-3.el8?arch=x86_64"
-"pkg:rpm/redhat/json-glib@1.4.4-1.el8?arch=x86_64"
-"pkg:rpm/redhat/keyutils-libs@1.5.10-9.el8?arch=x86_64"
-"pkg:rpm/redhat/krb5-libs@1.18.2-14.el8?arch=x86_64"
-"pkg:rpm/redhat/langpacks-en@1.0-12.el8?arch=noarch"
-"pkg:rpm/redhat/libacl@2.2.53-1.el8?arch=x86_64"
-"pkg:rpm/redhat/libarchive@3.3.3-3.el8_5?arch=x86_64"
-"pkg:rpm/redhat/libassuan@2.5.1-3.el8?arch=x86_64"
-"pkg:rpm/redhat/libattr@2.4.48-3.el8?arch=x86_64"
-"pkg:rpm/redhat/libblkid@2.32.1-35.el8?arch=x86_64"
-"pkg:rpm/redhat/libcap-ng@0.7.11-1.el8?arch=x86_64"
-"pkg:rpm/redhat/libcap@2.48-2.el8?arch=x86_64"
-"pkg:rpm/redhat/libcom_err@1.45.6-4.el8?arch=x86_64"
-"pkg:rpm/redhat/libcurl@7.61.1-22.el8_6.4?arch=x86_64"
-"pkg:rpm/redhat/libdb-utils@5.3.28-42.el8_4?arch=x86_64"
-"pkg:rpm/redhat/libdb@5.3.28-42.el8_4?arch=x86_64"
-"pkg:rpm/redhat/libdnf@0.63.0-8.2.el8_6?arch=x86_64"
-"pkg:rpm/redhat/libffi@3.1-23.el8?arch=x86_64"
-"pkg:rpm/redhat/libgcc@8.5.0-10.1.el8_6?arch=x86_64"
-"pkg:rpm/redhat/libgcrypt@1.8.5-7.el8_6?arch=x86_64"
-"pkg:rpm/redhat/libgpg-error@1.31-1.el8?arch=x86_64"
-"pkg:rpm/redhat/libidn2@2.2.0-1.el8?arch=x86_64"
-"pkg:rpm/redhat/libksba@1.3.5-7.el8?arch=x86_64"
-"pkg:rpm/redhat/libmodulemd@2.13.0-1.el8?arch=x86_64"
-"pkg:rpm/redhat/libmount@2.32.1-35.el8?arch=x86_64"
-"pkg:rpm/redhat/libnghttp2@1.33.0-3.el8_2.1?arch=x86_64"
-"pkg:rpm/redhat/libpeas@1.22.0-6.el8?arch=x86_64"
-"pkg:rpm/redhat/libpsl@0.20.2-6.el8?arch=x86_64"
-"pkg:rpm/redhat/librepo@1.14.2-1.el8?arch=x86_64"
-"pkg:rpm/redhat/librhsm@0.0.3-4.el8?arch=x86_64"
-"pkg:rpm/redhat/libselinux@2.9-5.el8?arch=x86_64"
-"pkg:rpm/redhat/libsepol@2.9-3.el8?arch=x86_64"
-"pkg:rpm/redhat/libsigsegv@2.11-5.el8?arch=x86_64"
-"pkg:rpm/redhat/libsmartcols@2.32.1-35.el8?arch=x86_64"
-"pkg:rpm/redhat/libsolv@0.7.20-1.el8?arch=x86_64"
-"pkg:rpm/redhat/libssh-config@0.9.6-3.el8?arch=noarch"
-"pkg:rpm/redhat/libssh@0.9.6-3.el8?arch=x86_64"
-"pkg:rpm/redhat/libstdc%2B%2B@8.5.0-10.1.el8_6?arch=x86_64"
-"pkg:rpm/redhat/libtasn1@4.13-3.el8?arch=x86_64"
-"pkg:rpm/redhat/libunistring@0.9.9-3.el8?arch=x86_64"
-"pkg:rpm/redhat/libusbx@1.0.23-4.el8?arch=x86_64"
-"pkg:rpm/redhat/libuuid@2.32.1-35.el8?arch=x86_64"
-"pkg:rpm/redhat/libverto@0.3.0-5.el8?arch=x86_64"
-"pkg:rpm/redhat/libxcrypt@4.1.1-6.el8?arch=x86_64"
-"pkg:rpm/redhat/libxml2@2.9.7-13.el8_6.1?arch=x86_64"
-"pkg:rpm/redhat/libyaml@0.1.7-5.el8?arch=x86_64"
-"pkg:rpm/redhat/libzstd@1.4.4-1.el8?arch=x86_64"
-"pkg:rpm/redhat/lua-libs@5.3.4-12.el8?arch=x86_64"
-"pkg:rpm/redhat/lz4-libs@1.8.3-3.el8_4?arch=x86_64"
-"pkg:rpm/redhat/microdnf@3.8.0-2.el8?arch=x86_64"
-"pkg:rpm/redhat/mpfr@3.1.6-1.el8?arch=x86_64"
-"pkg:rpm/redhat/ncurses-base@6.1-9.20180224.el8?arch=noarch"
-"pkg:rpm/redhat/ncurses-libs@6.1-9.20180224.el8?arch=x86_64"
-"pkg:rpm/redhat/nettle@3.4.1-7.el8?arch=x86_64"
-"pkg:rpm/redhat/npth@1.5-4.el8?arch=x86_64"
-"pkg:rpm/redhat/openldap@2.4.46-18.el8?arch=x86_64"
-"pkg:rpm/redhat/openssl-libs@1.1.1k-7.el8_6?arch=x86_64&epoch=1"
-"pkg:rpm/redhat/p11-kit-trust@0.23.22-1.el8?arch=x86_64"
-"pkg:rpm/redhat/p11-kit@0.23.22-1.el8?arch=x86_64"
-"pkg:rpm/redhat/pcre2@10.32-3.el8_6?arch=x86_64"
-"pkg:rpm/redhat/pcre@8.42-6.el8?arch=x86_64"
-"pkg:rpm/redhat/popt@1.18-1.el8?arch=x86_64"
-"pkg:rpm/redhat/publicsuffix-list-dafsa@20180723-1.el8?arch=noarch"
-"pkg:rpm/redhat/readline@7.0-10.el8?arch=x86_64"
-"pkg:rpm/redhat/redhat-release@8.6-0.1.el8?arch=x86_64"
-"pkg:rpm/redhat/rootfiles@8.1-22.el8?arch=noarch"
-"pkg:rpm/redhat/rpm-libs@4.14.3-23.el8?arch=x86_64"
-"pkg:rpm/redhat/rpm@4.14.3-23.el8?arch=x86_64"
-"pkg:rpm/redhat/sed@4.5-5.el8?arch=x86_64"
-"pkg:rpm/redhat/setup@2.12.2-6.el8?arch=noarch"
-"pkg:rpm/redhat/sqlite-libs@3.26.0-15.el8?arch=x86_64"
-"pkg:rpm/redhat/systemd-libs@239-58.el8_6.7?arch=x86_64"
-"pkg:rpm/redhat/tzdata@2022c-1.el8?arch=noarch"
-"pkg:rpm/redhat/xz-libs@5.2.4-4.el8_6?arch=x86_64"
-"pkg:rpm/redhat/zlib@1.2.11-18.el8_5?arch=x86_64"
+...
+```
+
+#### List the components in a product stream
+
+Let's start listing all the active product streams in Component Registry. By default inactive product streams (those not listed as active in product_definitions) are excluded when listing all product_streams using the following query.
+
+```bash
+$ curl -s 'https://{CORGI_HOST}/api/v1/product_streams' | jq '.count'
+311
+```
+
+If we wanted to include inactive streams as well, we'd do it like this:
+
+```bash
+$ curl -s 'https://{CORGI_HOST}/api/v1/product_streams?active=all' | jq '.count'
+1162
+```
+
+Another useful property of product_streams we can filter on (client side) is the build_count. We can use a query such as this to limit the results to only the active product streams for which we have builds recorded.
+
+```bash
+curl -s 'https://{CORGI_HOST}/api/v1/product_streams?limit=311' | jq '.results[] | select(.build_count > 0) | .ofuri, .build_count'
+"o:redhat:3amp:2"
+"o:redhat:amq:7"
+"o:redhat:amq-cl:2"
+"o:redhat:amq-ic:1"
+"o:redhat:amq-on:1"
+"o:redhat:amq-st:1"
+"o:redhat:ansible_automation_platform:1.2"
+...
+```
+
+This time including the build_count and sorting by it:
+
+```bash
+$ curl -s 'https://{CORGI_HOST}/api/v1/product_streams?limit=311' | jq -r '.results[] | select(.build_count > 0) | [.ofuri, .build_count] | @tsv' | sort -t$'\t' -k2 -nr
+o:redhat:rhel:7.9.z	12984
+o:redhat:rhel:7.7.z	11151
+o:redhat:rhel:7.6.z	10594
+o:redhat:rhel:8.6.0.z	9693
+o:redhat:openstack-13-els:	9623
+o:redhat:rhel-6-els:	7699
+o:redhat:rhel:8.4.0.z	7536
+o:redhat:openstack:16.1	7486
+o:redhat:openshift:4.6.z	7387
+...
+```
+
+Let's focus in on the `o:redhat:rhel-br:8.6.0.z` product stream, as it doesn't have too many components, and includes some rhel modules. We can inspect the `components` field of the product stream to get a link to the components filter for the root-level components in that stream:
+
+```bash
+curl -s -L 'https://{CORGI_HOST}/api/v1/product_streams?ofuri=o:redhat:rhel-br:8.6.0.z' | jq '.components'
+"https://{CORGI_HOST}/api/v1/components?ofuri=o:redhat:rhel-br:8.6.0.z&view=summary"
+```
+
+Let's first make sure we're including all results:
+
+```bash
+curl -s 'https://{CORGI_HOST}/api/v1/components?ofuri=o:redhat:rhel-br:8.6.0.z&view=summary' | jq '.count'
+1612
+```
+
+The reason this figure is less than the builds count (3085) is because the `ofuri` filter only includes the latest builds, whereas the `build_count` property above includes all builds in the stream.
+
+Since there are so many root-level components in the `o:redhat:rhel-br:8.6.0.z` product stream let's limit the results to only rhel modules:
+
+```bash
+curl -s 'https://{CORGI_HOST}/api/v1/components?ofuri=o:redhat:rhel-br:8.6.0.z&type=RHEL_MODULE' | jq '.results[] | .purl'
+"pkg:rpmmod/redhat/mariadb-devel@10.3-8010020190902091509.cdc1202b?context=cdc1202b&stream=10.3&version=8010020190902091509"
+"pkg:rpmmod/redhat/python38-devel@3.8-8020020200309184510.bbc63041?context=bbc63041&stream=3.8&version=8020020200309184510"
+"pkg:rpmmod/redhat/virt-devel@rhel-820190226174025.9edba152?context=9edba152&stream=rhel&version=820190226174025"
+```
+
+To inspect the RPMs in those modules, simply inspect the `provides` property of each of them. In order to translate the purl into a url, it's best to use the `link` property instead of `purl` as used above, eg:
+
+```bash
+curl -s 'https://{CORGI_HOST}/api/v1/components?ofuri=o:redhat:rhel-br:8.6.0.z&type=RHEL_MODULE?limit=1' | jq '.results[] | .link'
+"https://{CORGI_HOST}/api/v1/components?purl=pkg%3Arpmmod/redhat/mariadb-devel%4010.3-8010020190902091509.cdc1202b%3Fcontext%3Dcdc1202b%26stream%3D10.3%26version%3D8010020190902091509"
+
+curl -s -L 'https://{CORGI_HOST}/api/v1/components?purl=pkg%3Arpmmod/redhat/mariadb-devel%4010.3-8010020190902091509.cdc1202b%3Fcontext%3Dcdc1202b%26stream%3D10.3%26version%3D8010020190902091509' | jq '.provides[] | .purl'
+"pkg:rpm/redhat/Judy-devel@1.0.5-18.module%2Bel8%2B2765%2Bcfa4f87b?arch=s390x"
+"pkg:rpm/redhat/Judy-devel@1.0.5-18.module%2Bel8%2B2765%2Bcfa4f87b?arch=aarch64"
+"pkg:rpm/redhat/mariadb-embedded-debuginfo@10.3.17-1.module%2Bel8.1.0%2B3974%2B90eded84?arch=i686"
+...
 ```
 
 

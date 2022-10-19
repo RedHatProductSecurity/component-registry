@@ -67,6 +67,11 @@ class Pulp:
 
     def _get_module_data(self, repo) -> dict[str, list[str]]:
         module_data = self._get_unit_data(repo, MODULE_CRITERIA)
+        return self.get_rpms_by_module(module_data)
+
+    @staticmethod
+    def get_rpms_by_module(module_data: list[dict[str, dict]]) -> dict[str, list[str]]:
+        """Given a list of modules return a mapping of module NSVCs to a list of module artifacts"""
         rpms_by_module = {}
         for entry in module_data:
             name = entry["metadata"]["name"]
@@ -100,12 +105,12 @@ class Pulp:
                 break
         return rpms_by_srpm
 
-    def _get_unit_data(self, repo: str, criteria: dict) -> dict:
+    def _get_unit_data(self, repo: str, criteria: dict) -> list[dict[str, dict]]:
         url = f"{settings.PULP_URL}/api/v2/repositories/{repo}/search/units/"
         auth = (settings.PULP_USERNAME, settings.PULP_PASSWORD)
         response = self.session.post(url, json=criteria, auth=auth)
         if response.status_code == 404:
             logger.warning("No pulp units found for repo: %s", repo)
-            return {}
+            return []
         response.raise_for_status()
         return response.json()

@@ -290,11 +290,14 @@ class ProductVersionViewSet(ProductDataViewSet):
 class ProductStreamViewSetSet(ProductDataViewSet):
     """View for api/v1/product_streams"""
 
-    queryset = ProductStream.objects.get_queryset()
+    queryset = ProductStream.objects.filter(active=True)
     serializer_class = ProductStreamSerializer
 
     def list(self, request, *args, **kwargs):
         req = self.request
+        active = request.query_params.get("active")
+        if active == "all":
+            self.queryset = ProductStream.objects.filter()
         ofuri = req.query_params.get("ofuri")
         if not ofuri:
             return super().list(request)

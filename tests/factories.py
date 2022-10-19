@@ -72,6 +72,7 @@ class ProductStreamFactory(factory.django.DjangoModelFactory):
     description = factory.Faker("word")
     cpe = "cpe:/o:redhat:enterprise_linux:9"
     tag = factory.RelatedFactory(ProductStreamTagFactory, factory_related_name="product_stream")
+    active = True
 
 
 class ProductVariantTagFactory(TagFactory):

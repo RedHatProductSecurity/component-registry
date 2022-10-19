@@ -463,9 +463,13 @@ def test_product_versions(client, api_path):
 
 def test_product_streams(client, api_path):
     ProductStreamFactory(name="rhel-8.5.0-z", version="8.5.0-z")
-    ProductStreamFactory(name="rhel-av-8.5.0-z", version="8.5.0-z")
+    ProductStreamFactory(name="rhel-av-8.5.0-z", version="8.5.0-z", active=False)
 
     response = client.get(f"{api_path}/product_streams")
+    assert response.status_code == 200
+    assert response.json()["count"] == 1
+
+    response = client.get(f"{api_path}/product_streams?active=all")
     assert response.status_code == 200
     assert response.json()["count"] == 2
 

@@ -21,7 +21,6 @@ from corgi.core.models import (
     Component,
     ComponentNode,
     Product,
-    ProductComponentRelation,
     ProductStream,
     ProductVariant,
     ProductVersion,
@@ -114,6 +113,19 @@ class StatusViewSet(GenericViewSet):
         with connection.cursor() as cursor:
             cursor.execute("SELECT pg_size_pretty(pg_database_size(current_database()));")
             db_size = cursor.fetchone()
+            cursor.execute(
+                "SELECT reltuples AS estimate FROM pg_class "
+                "WHERE relname = 'core_productcomponentrelation';"
+            )
+            pcr_count = cursor.fetchone()
+            cursor.execute(
+                "SELECT reltuples AS estimate FROM pg_class WHERE relname = 'core_component';"
+            )
+            component_count = cursor.fetchone()
+            cursor.execute(
+                "SELECT reltuples AS estimate FROM pg_class WHERE relname = 'core_softwarebuild';"
+            )
+            sb_count = cursor.fetchone()
 
         return Response(
             {
@@ -123,12 +135,12 @@ class StatusViewSet(GenericViewSet):
                 "rest_api_version": CORGI_API_VERSION,
                 "db_size": db_size,
                 "builds": {
-                    "count": SoftwareBuild.objects.count(),
+                    "count": sb_count,
                 },
                 "components": {
-                    "count": Component.objects.count(),
+                    "count": component_count,
                 },
-                "relations": {"count": ProductComponentRelation.objects.count()},
+                "relations": {"count": pcr_count},
                 "products": {
                     "count": Product.objects.count(),
                 },

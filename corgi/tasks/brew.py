@@ -53,15 +53,16 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
     build_meta["corgi_ingest_start_dt"] = dateformat.format(timezone.now(), "Y-m-d H:i:s")
     build_meta["corgi_ingest_status"] = "INPROGRESS"
 
-    completion_dt = None
-    if "completion_time" in build_meta:
-        completion_dt = make_aware(
-            dateparse.parse_datetime(build_meta["completion_time"].split(".")[0])  # type:ignore
-        )
+    completion_time = build_meta.get("completion_time", "")
+    if completion_time:
+        dt = dateparse.parse_datetime(completion_time.split(".")[0])
+        if dt:
+            completion_dt = make_aware(dt)
+        else:
+            logger.info("Could not parse completion_time for build %s", build_id)
+            return
     else:
-        logger.info(
-            "No completion_time, no data fetched for build %s from Brew, exiting...", build_id
-        )
+        logger.info("No completion_time for build %s", build_id)
         return
 
     softwarebuild, created = SoftwareBuild.objects.get_or_create(

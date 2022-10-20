@@ -540,7 +540,7 @@ class ProductStream(ProductModel, TimeStampedModel):
                         name=OuterRef("name"),
                         product_streams__overlap=[self.ofuri],
                     )
-                    .order_by("software_build__completion_time")
+                    .order_by("-software_build__completion_time")
                     .values("uuid")[:1]
                 )
             )
@@ -624,7 +624,7 @@ class ProductVariant(ProductModel, TimeStampedModel):
                         name=OuterRef("name"),
                         product_streams__overlap=[self.ofuri],
                     )
-                    .order_by("software_build__completion_time")
+                    .order_by("-software_build__completion_time")
                     .values("uuid")[:1]
                 )
             )

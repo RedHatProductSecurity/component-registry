@@ -2,6 +2,7 @@ import json
 import logging
 
 import pytest
+from django.utils.datetime_safe import datetime
 
 from corgi.core.models import ComponentNode, ProductComponentRelation, ProductNode
 
@@ -34,15 +35,16 @@ def test_product_manifest_properties():
     stream.save_product_taxonomy()
     assert variant.name in stream.product_variants
 
-    build = SoftwareBuildFactory(build_id=1)
-    build.save()
+    build = SoftwareBuildFactory(
+        build_id=1,
+        completion_time=datetime.strptime("2017-03-29 12:13:29", "%Y-%m-%d %H:%M:%S"),
+    )
     component = ComponentFactory(
         software_build=build,
         type="SRPM",
         product_variants=[variant.ofuri],
         product_streams=[stream.ofuri],
     )
-    component.save()
     _, _ = component.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=component.purl
     )

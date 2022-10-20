@@ -1,8 +1,8 @@
-from datetime import datetime
 from urllib.parse import quote
 
 import pytest
 from django.conf import settings
+from django.utils.datetime_safe import datetime
 
 from corgi.collectors.appstream_lifecycle import AppStreamLifeCycleCollector
 from corgi.core.models import Component, ComponentNode, ProductNode

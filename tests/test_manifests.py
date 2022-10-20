@@ -1,7 +1,11 @@
 import json
 import logging
+from io import StringIO
 
 import pytest
+from spdx.parsers import jsonparser
+from spdx.parsers.jsonyamlxmlbuilders import Builder
+from spdx.parsers.loggers import FileLogger
 
 from corgi.core.models import ComponentNode, ProductComponentRelation, ProductNode
 
@@ -14,6 +18,11 @@ from .factories import (
     ProductVersionFactory,
     SoftwareBuildFactory,
 )
+
+# from spdx.parsers.loggers import StandardLogger
+# from spdx.parsers.tagvalue import Parser
+# from spdx.parsers.tagvaluebuilders import Builder
+
 
 logger = logging.getLogger()
 pytestmark = pytest.mark.unit
@@ -55,56 +64,10 @@ def test_product_manifest_properties():
     build.save_component_taxonomy()
     build.save_product_taxonomy()
 
-    manifest = json.loads(stream.manifest)
-
-    # Test will fail with JSONDecodeError if above isn't valid
-    # Eventually, we should also check the actual manifest content is valid SPDX data
-    # Then most of below can go away
-
-    # One component linked to this product
-    num_components = len(stream.get_latest_components())
-    assert num_components == 1
-
-    # Manifest contains info for all components + the product itself
-    assert len(manifest["packages"]) == 2
-
-    # Last "component" is actually the product
-    component_data = manifest["packages"][0]
-    product_data = manifest["packages"][-1]
-
-    # UUID and PURL, for each component attached to product, should be included in manifest
-    assert component_data["SPDXID"] == f"SPDXRef-{component.uuid}"
-    assert component_data["name"] == component.name
-    assert component_data["externalRefs"][0]["referenceLocator"] == component.purl
-
-    assert product_data["SPDXID"] == f"SPDXRef-{stream.uuid}"
-    assert product_data["name"] == stream.name
-    if stream.cpes:
-        assert product_data["externalRefs"][0]["referenceLocator"] == stream.cpes[0]
-    assert product_data["externalRefs"][-1]["referenceLocator"] == f"cpe:/{stream.ofuri}"
-
-    document_describes_product = {
-        "relatedSpdxElement": f"SPDXRef-{stream.uuid}",
-        "relationshipType": "DESCRIBES",
-        "spdxElementId": "SPDXRef-DOCUMENT",
-    }
-
-    component_is_package_of_product = {
-        "relatedSpdxElement": f"SPDXRef-{stream.uuid}",
-        "relationshipType": "PACKAGE_OF",
-        "spdxElementId": f"SPDXRef-{component.uuid}",
-    }
-
-    component_contains_nothing = {
-        "relatedSpdxElement": "NONE",
-        "relationshipType": "CONTAINS",
-        "spdxElementId": f"SPDXRef-{component.uuid}",
-    }
-
-    # For each component, one "component is package of product" relationship
-    # And one "component contains nothing" relationship
-    # Plus one "document describes product" relationship for the whole document at the end
-    assert len(manifest["relationships"]) == (num_components * 2) + 1
-    assert manifest["relationships"][0] == component_is_package_of_product
-    assert manifest["relationships"][1] == component_contains_nothing
-    assert manifest["relationships"][-1] == document_describes_product
+    print(stream.manifest)
+    err = StringIO()
+    parser = jsonparser.Parser(Builder(), FileLogger(err))
+    manifest_io = StringIO(stream.manifest)
+    doc, _ = parser.parse(manifest_io)
+    known_errors = "'None' is not a valid value for PKG_VERIF_CODE\n"
+    assert err.getvalue() == known_errors

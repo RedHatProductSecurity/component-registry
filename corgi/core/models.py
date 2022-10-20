@@ -2,6 +2,7 @@ import logging
 import re
 import uuid as uuid
 from collections import defaultdict
+from io import StringIO
 
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
@@ -10,9 +11,13 @@ from django.db import models
 from django.db.models import F, OuterRef, Q, QuerySet, Subquery
 from mptt.models import MPTTModel, TreeForeignKey
 from packageurl import PackageURL
+from spdx.creationinfo import Organization
+from spdx.document import Document, License
+from spdx.package import Package
+from spdx.version import Version
+from spdx.writers.json import write_document
 
 from corgi.core.constants import CONTAINER_DIGEST_FORMATS
-from corgi.core.files import ProductManifestFile
 from corgi.core.mixins import TimeStampedModel
 
 logger = logging.getLogger(__name__)
@@ -513,7 +518,28 @@ class ProductStream(ProductModel, TimeStampedModel):
     @property
     def manifest(self) -> str:
         """Return an SPDX-style manifest in JSON format."""
-        return ProductManifestFile(self).render_content()
+        doc = Document(version=Version(2, 2))
+        doc.name = self.name
+        doc.spdx_id = "SPDXRef-DOCUMENT"
+        doc.namespace = (
+            f"https://access.redhat.com/security/data/manifest/spdx/{self.name}"
+        )
+        doc.data_license = License.from_identifier("CC0-1.0")
+        doc.creation_info.add_creator(
+            Organization("Red Hat Product Security", "secalert@redhat.com")
+        )
+        doc.creation_info.set_created_now()
+        # TODO do all components
+        component = self.get_latest_components().first()
+        package = Package()
+        package.name = component.name
+        package.version = f"{component.version}-{component.release}"
+        package.spdx_id = f"SPDXRef-{component.name}"
+        doc.package = package
+
+        out = StringIO()
+        write_document(doc, out, validate=False)
+        return out.getvalue()
 
     def get_latest_components(self):
         """Return root components from latest builds."""

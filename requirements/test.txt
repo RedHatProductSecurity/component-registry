@@ -64,6 +64,7 @@ click==8.0.3 \
     #   click-didyoumean
     #   click-plugins
     #   click-repl
+    #   spdx-tools
 click-didyoumean==0.3.0 \
     --hash=sha256:a0713dc7a1de3f06bc0df5a9567ad19ead2d3d5689b434768a6145bff77c0667 \
     --hash=sha256:f184f0d851d96b6d29297354ed981b7dd71df7ff500d82fa6d11f0856bee8035
@@ -216,9 +217,9 @@ faker==13.2.0 \
     --hash=sha256:206050b40d6dfb6efe8ccfbbb9866c56477c53edfdab83f80de3b59f38a88ce0 \
     --hash=sha256:edb62f9511a0977abcea6a78e43b99d1f26c915d2142bbf4c6bf02a9bb597c7f
     # via factory-boy
-flower==1.1.0 \
-    --hash=sha256:77be4bece7330893703e8cca3f3baddba356a0019186594a961e3968289da7ec \
-    --hash=sha256:f920ca2902d7539fc180ab15e51f1d918355e5cc23da854ff9d59c6e5a1725b6
+flower==1.2.0 \
+    --hash=sha256:46493c7e8d9ca2167e8a46eb97ae8d280997cb40a81993230124d74f0fe40bac \
+    --hash=sha256:ae2977cf7343c526cf44def8c7e7173db8dedb8249b91ba4b88cfd18e7a2d486
     # via -r requirements/base.txt
 gevent==21.12.0 \
     --hash=sha256:0082d8a5d23c35812ce0e716a91ede597f6dd2c5ff508a02a998f73598c59397 \
@@ -366,6 +367,12 @@ iniconfig==1.1.1 \
     --hash=sha256:011e24c64b7f47f6ebd835bb12a743f2fbe9a26d4cecaa7f53bc4f35ee9da8b3 \
     --hash=sha256:bc3af051d7d14b2ee5ef9969666def0cd1a000e121eaea580d4a313df4b37f32
     # via pytest
+isodate==0.6.1 \
+    --hash=sha256:0751eece944162659049d35f4f549ed815792b38793f07cf73381c1c87cbed96 \
+    --hash=sha256:48c5881de7e8b0a0d648cb024c8062dc84e7b840ed81e864c7614fd3c127bde9
+    # via
+    #   -r requirements/base.txt
+    #   rdflib
 itypes==1.2.0 \
     --hash=sha256:03da6872ca89d29aef62773672b2d408f490f80db48b23079a4b194c86dd04c6 \
     --hash=sha256:af886f129dea4a2a1e3d36595a2d139589e4dd287f5cab0b40e799ee81570ff1
@@ -609,6 +616,12 @@ pluggy==1.0.0 \
     --hash=sha256:4224373bacce55f955a878bf9cfa763c1e360858e330072059e10bad68531159 \
     --hash=sha256:74134bbf457f031a36d68416e1509f34bd5ccc019f0bcc952c7b909d06b37bd3
     # via pytest
+ply==3.11 \
+    --hash=sha256:00c7c1aaa88358b9c765b6d3000c6eec0ba42abca5351b095321aef446081da3 \
+    --hash=sha256:096f9b8350b65ebd2fd1346b12452efe5b9607f7482813ffca50c22722a807ce
+    # via
+    #   -r requirements/base.txt
+    #   spdx-tools
 prometheus-client==0.14.1 \
     --hash=sha256:522fded625282822a89e2773452f42df14b5a8e84a86433e3f8a189c1d54dc01 \
     --hash=sha256:5459c427624961076277fdc6dc50540e2bacb98eebde99886e59ec55ed92093a
@@ -638,10 +651,13 @@ py==1.11.0 \
     --hash=sha256:51c75c4126074b472f746a24399ad32f6053d1b34b68d2fa41e558e6f4a98719 \
     --hash=sha256:607c53218732647dff4acdfcd50cb62615cedf612e72d1724fb1a0cc6405b378
     # via pytest
-pyparsing==3.0.7 \
-    --hash=sha256:18ee9022775d270c55187733956460083db60b37d0d0fb357445f3094eed3eea \
-    --hash=sha256:a6c06a88f252e6c322f65faf8f418b16213b51bdfaece0524c1c1bc30c63c484
-    # via packaging
+pyparsing==3.0.9 \
+    --hash=sha256:2b020ecf7d21b687f219b71ecad3631f644a47f01403fa1d1036b0c6416d70fb \
+    --hash=sha256:5026bae9a10eeaefb61dab2f09052b9f4307d44aee4eda64b309723d8d206bbc
+    # via
+    #   -r requirements/base.txt
+    #   packaging
+    #   rdflib
 pyrsistent==0.18.1 \
     --hash=sha256:0e3e1fcc45199df76053026a51cc59ab2ea3fc7c094c6627e93b7b44cdae2c8c \
     --hash=sha256:1b34eedd6812bf4d33814fca1b66005805d3640ce53140ab8bbb1e2651b0d9bc \
@@ -754,7 +770,14 @@ pyyaml==6.0 \
     # via
     #   -r requirements/base.txt
     #   drf-spectacular
+    #   spdx-tools
     #   vcrpy
+rdflib==6.2.0 \
+    --hash=sha256:62dc3c86d1712db0f55785baf8047f63731fa59b2682be03219cb89262065942 \
+    --hash=sha256:85c34a86dfc517a41e5f2425a41a0aceacc23983462b32e68610b9fad1383bca
+    # via
+    #   -r requirements/base.txt
+    #   spdx-tools
 redis==3.5.3 \
     --hash=sha256:0e7e0cfca8660dea8b7d5cd8c4f6c5e29e11f31158c0b0ae91a397f00e5a05a2 \
     --hash=sha256:432b788c4530cfe16d8d943a09d40ca6c16149727e4afe8c2c9d5580c59d9f24
@@ -787,10 +810,14 @@ six==1.16.0 \
     # via
     #   -r requirements/base.txt
     #   click-repl
+    #   isodate
     #   koji
     #   python-dateutil
     #   requests-mock
     #   vcrpy
+spdx-tools @ https://github.com/spdx/tools-python/archive/fd6aeba22ec0ad7650571d99db19d2a113ed0782.zip \
+    --hash=sha256:ab3e4cf5a72f833270bdc9de519a1267a2680018ab5ecebc77a01e83be3a910e
+    # via -r requirements/base.txt
 sqlparse==0.4.2 \
     --hash=sha256:0c00730c74263a94e5a9919ade150dfc3b19c574389985446148402998287dae \
     --hash=sha256:48719e356bb8b42991bdbb1e8b83223757b93789c00910a616a071910ca4a64d
@@ -946,6 +973,12 @@ wrapt==1.13.3 \
     --hash=sha256:f9c51d9af9abb899bd34ace878fbec8bf357b3194a10c4e8e0a25512826ef056 \
     --hash=sha256:fd76c47f20984b43d93de9a82011bb6e5f8325df6c9ed4d8310029a55fa361ea
     # via vcrpy
+xmltodict==0.13.0 \
+    --hash=sha256:341595a488e3e01a85a9d8911d8912fd922ede5fecc4dce437eb4b6c8d037e56 \
+    --hash=sha256:aa89e8fd76320154a40d19a0df04a4695fb9dc5ba977cbb68ab3e4eb225e7852
+    # via
+    #   -r requirements/base.txt
+    #   spdx-tools
 yarl==1.7.2 \
     --hash=sha256:044daf3012e43d4b3538562da94a88fb12a6490652dbc29fb19adfa02cf72eac \
     --hash=sha256:0cba38120db72123db7c58322fa69e3c0efa933040ffb586c3a87c063ec7cae8 \
@@ -1091,5 +1124,6 @@ setuptools==59.6.0 \
     #   celery
     #   gevent
     #   gunicorn
+    #   rdflib
     #   zope-event
     #   zope-interface

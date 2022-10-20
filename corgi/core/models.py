@@ -8,6 +8,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
 from django.db import models
 from django.db.models import F, OuterRef, Q, QuerySet, Subquery
+from django.utils.datetime_safe import datetime
+from django.utils.timezone import now
 from mptt.models import MPTTModel, TreeForeignKey
 from packageurl import PackageURL
 
@@ -515,13 +517,16 @@ class ProductStream(ProductModel, TimeStampedModel):
         """Return an SPDX-style manifest in JSON format."""
         return ProductManifestFile(self).render_content()
 
-    def get_latest_components(self):
-        """Return root components from latest builds."""
+    def get_latest_components(self, start_dt: datetime = now()):
+        """Return root components from latest builds (or from a supplied start datetime)."""
         root_components = (
             Q(type=Component.Type.SRPM)
             | Q(type=Component.Type.CONTAINER_IMAGE, arch="noarch")
             | Q(type=Component.Type.RHEL_MODULE)
         )
+        dt_range = Q()
+        if start_dt:
+            dt_range &= Q(software_build__completion_time__lte=start_dt)
         return (
             Component.objects.filter(
                 root_components,
@@ -531,6 +536,7 @@ class ProductStream(ProductModel, TimeStampedModel):
                 latest=Subquery(
                     Component.objects.filter(
                         root_components,
+                        dt_range,
                         name=OuterRef("name"),
                         product_streams__overlap=[self.ofuri],
                     )
@@ -595,13 +601,16 @@ class ProductVariant(ProductModel, TimeStampedModel):
             product_stream = f"{product_stream_node.obj.ofuri}:{self.name.lower()}"
         return product_stream
 
-    def get_latest_components(self):
-        """Return root components from latest builds."""
+    def get_latest_components(self, start_dt: datetime = now()):
+        """Return root components from latest builds (or from a supplied start datetime)."""
         root_components = (
             Q(type=Component.Type.SRPM)
             | Q(type=Component.Type.CONTAINER_IMAGE, arch="noarch")
             | Q(type=Component.Type.RHEL_MODULE)
         )
+        dt_range = Q()
+        if start_dt:
+            dt_range &= Q(software_build__completion_time__lte=start_dt)
         return (
             Component.objects.filter(
                 root_components,
@@ -611,6 +620,7 @@ class ProductVariant(ProductModel, TimeStampedModel):
                 latest=Subquery(
                     Component.objects.filter(
                         root_components,
+                        dt_range,
                         name=OuterRef("name"),
                         product_streams__overlap=[self.ofuri],
                     )

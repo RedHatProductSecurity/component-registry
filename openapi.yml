@@ -588,27 +588,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProductVariant'
           description: ''
-  /api/v1/product_variants/{uuid}/manifest:
-    get:
-      operationId: v1_product_variants_manifest_retrieve
-      description: View for api/v1/product_variants
-      parameters:
-      - in: path
-        name: uuid
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this product variant.
-        required: true
-      tags:
-      - v1
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProductVariant'
-          description: ''
   /api/v1/product_variants/{uuid}/taxonomy:
     get:
       operationId: v1_product_variants_taxonomy_retrieve
@@ -719,27 +698,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProductVersion'
           description: ''
-  /api/v1/product_versions/{uuid}/manifest:
-    get:
-      operationId: v1_product_versions_manifest_retrieve
-      description: View for api/v1/product_versions
-      parameters:
-      - in: path
-        name: uuid
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this product version.
-        required: true
-      tags:
-      - v1
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProductVersion'
-          description: ''
   /api/v1/product_versions/{uuid}/taxonomy:
     get:
       operationId: v1_product_versions_taxonomy_retrieve
@@ -832,27 +790,6 @@ paths:
   /api/v1/products/{uuid}:
     get:
       operationId: v1_products_retrieve
-      description: View for api/v1/products
-      parameters:
-      - in: path
-        name: uuid
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this product.
-        required: true
-      tags:
-      - v1
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Product'
-          description: ''
-  /api/v1/products/{uuid}/manifest:
-    get:
-      operationId: v1_products_manifest_retrieve
       description: View for api/v1/products
       parameters:
       - in: path

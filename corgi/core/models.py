@@ -379,11 +379,6 @@ class ProductModel(models.Model):
         return self.get_related_components(self.builds, "purl")
 
     @property
-    def manifest(self) -> str:
-        """Return an SPDX-style manifest in JSON format."""
-        return ProductManifestFile(self).render_content()
-
-    @property
     def coverage(self) -> int:
         if not self.pnodes.exists():
             return 0
@@ -514,6 +509,11 @@ class ProductStream(ProductModel, TimeStampedModel):
         """
         stream_name = re.sub(r"(-|_|)" + self.version + "$", "", self.name)
         return f"o:redhat:{stream_name}:{self.version}"
+
+    @property
+    def manifest(self) -> str:
+        """Return an SPDX-style manifest in JSON format."""
+        return ProductManifestFile(self).render_content()
 
     def get_latest_components(self):
         """Return root components from latest builds."""

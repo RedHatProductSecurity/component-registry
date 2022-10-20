@@ -407,6 +407,9 @@ class ProductModel(models.Model):
     class Meta:
         abstract = True
         ordering = ["name"]
+        indexes = [
+            models.Index(fields=["ofuri"]),
+        ]
 
     def __str__(self) -> str:
         return str(self.name)

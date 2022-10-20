@@ -8,7 +8,6 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
 from django.db import models
 from django.db.models import F, OuterRef, Q, QuerySet, Subquery
-from django.utils.datetime_safe import datetime
 from django.utils.timezone import now
 from mptt.models import MPTTModel, TreeForeignKey
 from packageurl import PackageURL
@@ -517,7 +516,7 @@ class ProductStream(ProductModel, TimeStampedModel):
         """Return an SPDX-style manifest in JSON format."""
         return ProductManifestFile(self).render_content()
 
-    def get_latest_components(self, start_dt: datetime = now()):
+    def get_latest_components(self, start_dt = now()):
         """Return root components from latest builds (or from a supplied start datetime)."""
         root_components = (
             Q(type=Component.Type.SRPM)
@@ -601,7 +600,7 @@ class ProductVariant(ProductModel, TimeStampedModel):
             product_stream = f"{product_stream_node.obj.ofuri}:{self.name.lower()}"
         return product_stream
 
-    def get_latest_components(self, start_dt: datetime = now()):
+    def get_latest_components(self, start_dt = now()):
         """Return root components from latest builds (or from a supplied start datetime)."""
         root_components = (
             Q(type=Component.Type.SRPM)

@@ -12,7 +12,7 @@
     ],
     "documentNamespace": "https://access.redhat.com/security/data/manifest/spdx/{{product.name}}-{{product.uuid}}",
     "name": "{{product.name}}",
-    "packages": [{% for component in product.components %}{# Below will eventually become component.manifest #}
+    "packages": [{% for component in product.get_latest_components %}{# Below will eventually become component.manifest #}
         {
             "copyrightText": {% if component.copyright_text %}"{{component.copyright_text}}"{% else %}"NOASSERTION"{% endif %},
             "downloadLocation": {% if component.channels %}"{{component.channels.0}}"{% else %}"NOASSERTION"{% endif %},
@@ -62,7 +62,7 @@
             "versionInfo": "{{product.version}}"
         }
     ],
-    "relationships": [{% for component in product.components %}
+    "relationships": [{% for component in product.get_latest_components %}
         {
           "relatedSpdxElement": "SPDXRef-{{product.uuid}}",
           "relationshipType": "PACKAGE_OF",

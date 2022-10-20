@@ -230,14 +230,6 @@ class ProductViewSet(ProductDataViewSet):
         return response
 
     @action(methods=["get"], detail=True)
-    def manifest(self, request, uuid=None):
-        obj = self.queryset.filter(uuid=uuid).first()
-        if not obj:
-            return Response(status=404)
-        manifest = json.loads(obj.manifest)
-        return Response(manifest)
-
-    @action(methods=["get"], detail=True)
     def taxonomy(self, request, uuid=None):
         obj = self.queryset.filter(uuid=uuid).first()
         if not obj:
@@ -266,14 +258,6 @@ class ProductVersionViewSet(ProductDataViewSet):
         response = Response(status=302)
         response["Location"] = f"/api/{CORGI_API_VERSION}/product_versions/{pv.uuid}"
         return response
-
-    @action(methods=["get"], detail=True)
-    def manifest(self, request, uuid=None):
-        obj = self.queryset.filter(uuid=uuid).first()
-        if not obj:
-            return Response(status=404)
-        manifest = json.loads(obj.manifest)
-        return Response(manifest)
 
     @action(methods=["get"], detail=True)
     def taxonomy(self, request, uuid=None):
@@ -345,14 +329,6 @@ class ProductVariantViewSetSet(ProductDataViewSet):
         response = Response(status=302)
         response["Location"] = f"/api/{CORGI_API_VERSION}/product_variants/{pv.uuid}"
         return response
-
-    @action(methods=["get"], detail=True)
-    def manifest(self, request, uuid=None):
-        obj = self.queryset.filter(uuid=uuid).first()
-        if not obj:
-            return Response(status=404)
-        manifest = json.loads(obj.manifest)
-        return Response(manifest)
 
     @action(methods=["get"], detail=True)
     def taxonomy(self, request, uuid=None):

@@ -377,15 +377,12 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
     def get_queryset(self):
         # 'latest' filter only relevent in terms of a specific offering/product
         ofuri = self.request.query_params.get("ofuri")
-        start_dt = self.request.query_params.get("start")
         if ofuri:
             # Note - originally ofuri explicitly embedded product type (eg. Product,
             # Product Version, Product Stream, Product Variant)
             # ... which would have simplified this code.
             if ProductStream.objects.filter(ofuri=ofuri).exists():
-                return ProductStream.objects.get(ofuri=ofuri).get_latest_components(
-                    start_dt=start_dt
-                )
+                return ProductStream.objects.get(ofuri=ofuri).get_latest_components()
             if ProductVariant.objects.filter(ofuri=ofuri).exists():
                 return Component.objects.filter(product_variants=[ofuri])
             if ProductVersion.objects.filter(ofuri=ofuri).exists():

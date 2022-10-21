@@ -608,38 +608,6 @@ class ProductVariant(ProductModel, TimeStampedModel):
             product_stream = f"{product_stream_node.obj.ofuri}:{self.name.lower()}"
         return product_stream
 
-    def get_latest_components(self, start_dt=now()):
-        """Return root components from latest builds (or from a supplied start datetime)."""
-        root_components = (
-            Q(type=Component.Type.SRPM)
-            | Q(type=Component.Type.CONTAINER_IMAGE, arch="noarch")
-            | Q(type=Component.Type.RHEL_MODULE)
-        )
-        dt_range = Q()
-        if start_dt:
-            dt_range &= Q(software_build__completion_time__lte=start_dt)
-        return (
-            Component.objects.filter(
-                root_components,
-                product_streams__overlap=[self.ofuri],
-            )
-            .annotate(
-                latest=Subquery(
-                    Component.objects.filter(
-                        root_components,
-                        dt_range,
-                        name=OuterRef("name"),
-                        product_streams__overlap=[self.ofuri],
-                    )
-                    .order_by("-software_build__completion_time")
-                    .values("uuid")[:1]
-                )
-            )
-            .filter(
-                uuid=F("latest"),
-            )
-        )
-
 
 class ProductVariantTag(Tag):
     product_variant = models.ForeignKey(

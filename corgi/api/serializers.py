@@ -60,20 +60,11 @@ def get_model_ofuri_link(
     return link
 
 
-def get_model_product_stream_link(
-    model_name: str,
+def get_upstream_link(
     product_stream: str,
-    related_type=None,
-    view=None,
 ) -> str:
-    """Generic method to get an ofuri link for an arbitrary Model subclass."""
-    link = f"{CORGI_API_URL}/{model_name}?product_streams={product_stream}"
-    if model_name == "components":
-        link = f"{link}"
-    if related_type:
-        link += f"&type={related_type}"
-    if view:
-        link += f"&view={view}"
+    """method to return all a product_stream upstream components."""
+    link = f"{CORGI_API_URL}/components?product_streams={product_stream}&type=UPSTREAM&view=summary"
     return link
 
 
@@ -364,7 +355,7 @@ class ProductSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_upstreams(instance: Product) -> str:
-        return get_model_product_stream_link("components", instance.ofuri, related_type="UPSTREAM")
+        return get_upstream_link(instance.ofuri)
 
     @staticmethod
     def get_builds(instance: Product) -> str:
@@ -430,7 +421,7 @@ class ProductVersionSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_upstreams(instance: ProductVersion) -> str:
-        return get_model_product_stream_link("components", instance.ofuri, related_type="UPSTREAM")
+        return get_upstream_link(instance.ofuri)
 
     @staticmethod
     def get_manifest(instance: ProductVersion) -> str:
@@ -503,7 +494,7 @@ class ProductStreamSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_upstreams(instance: ProductStream) -> str:
-        return get_model_product_stream_link("components", instance.ofuri, related_type="UPSTREAM")
+        return get_upstream_link(instance.ofuri)
 
     @staticmethod
     def get_manifest(instance: ProductStream) -> str:
@@ -588,7 +579,7 @@ class ProductVariantSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_upstreams(instance: ProductVersion) -> str:
-        return get_model_product_stream_link("components", instance.ofuri, related_type="UPSTREAM")
+        return get_upstream_link(instance.ofuri)
 
     @staticmethod
     def get_manifest(instance: ProductVersion) -> str:

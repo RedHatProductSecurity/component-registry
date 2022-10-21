@@ -1,8 +1,8 @@
 import json
 import logging
+from datetime import datetime
 
 import pytest
-from django.utils.datetime_safe import datetime
 
 from corgi.core.models import ComponentNode, ProductComponentRelation, ProductNode
 
@@ -37,7 +37,7 @@ def test_product_manifest_properties():
 
     build = SoftwareBuildFactory(
         build_id=1,
-        completion_time=datetime.strptime("2017-03-29 12:13:29", "%Y-%m-%d %H:%M:%S"),
+        completion_time=datetime.strptime("2017-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z"),
     )
     component = ComponentFactory(
         software_build=build,

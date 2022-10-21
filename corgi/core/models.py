@@ -13,7 +13,9 @@ from mptt.models import MPTTModel, TreeForeignKey
 from packageurl import PackageURL
 from spdx.creationinfo import Organization
 from spdx.document import Document, License
-from spdx.package import Package
+from spdx.package import ExternalPackageRef, Package
+from spdx.relationship import Relationship, RelationshipType
+from spdx.utils import NoAssert
 from spdx.version import Version
 from spdx.writers.json import write_document
 
@@ -521,25 +523,49 @@ class ProductStream(ProductModel, TimeStampedModel):
         doc = Document(version=Version(2, 2))
         doc.name = self.name
         doc.spdx_id = "SPDXRef-DOCUMENT"
-        doc.namespace = (
-            f"https://access.redhat.com/security/data/manifest/spdx/{self.name}"
-        )
+        doc.namespace = f"https://access.redhat.com/security/data/manifest/spdx/{self.name}"
         doc.data_license = License.from_identifier("CC0-1.0")
         doc.creation_info.add_creator(
             Organization("Red Hat Product Security", "secalert@redhat.com")
         )
         doc.creation_info.set_created_now()
-        # TODO do all components
-        component = self.get_latest_components().first()
+        for component in self.get_latest_components():
+            comp_spdx_id = self.add_manifest_package(component, doc)
+            for provided_purl in component.provides:
+                provided_component = Component.objects.get(purl=provided_purl)
+                prov_spdx_id = self.add_manifest_package(provided_component, doc)
+                relationship = Relationship(
+                    f"{comp_spdx_id} {RelationshipType.CONTAINS} {prov_spdx_id}"
+                )
+                doc.add_relationships(relationship)
+
+        out = StringIO()
+        # TODO fix validation errors related to pg_verif_code being None (see test_manifests.py)
+        write_document(doc, out, validate=False)
+        return out.getvalue()
+
+    def add_manifest_package(self, component, doc):
         package = Package()
         package.name = component.name
         package.version = f"{component.version}-{component.release}"
-        package.spdx_id = f"SPDXRef-{component.name}"
-        doc.package = package
-
-        out = StringIO()
-        write_document(doc, out, validate=False)
-        return out.getvalue()
+        package.spdx_id = f"SPDXRef-{component.type}-{component.name}"
+        external_package_ref = ExternalPackageRef(
+            category="PACKAGE-MANAGER", locator=component.purl, pkg_ext_ref_type=""
+        )
+        package.add_pkg_ext_refs(external_package_ref)
+        # TODO add this once https://github.com/spdx/tools-python/issues/193 is fixed
+        #  package.files_analyzed = False
+        package.download_location = "https://access.redhat.com/downloads"
+        if component.copyright_text:
+            package.cr_text = component.copyright_text
+        else:
+            package.cr_text = NoAssert()
+        # TODO need translate license into SPDX format
+        # https://spdx.org/licenses/
+        package.conc_lics = NoAssert()
+        package.license_declared = NoAssert()
+        doc.add_package(package)
+        return package.spdx_id
 
     def get_latest_components(self):
         """Return root components from latest builds."""

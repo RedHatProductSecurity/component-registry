@@ -110,8 +110,9 @@ class StatusViewSet(GenericViewSet):
         },
     )
     def list(self, request):
-        # pg has a well known limitation with counting (https://wiki.postgresql.org/wiki/Slow_Counting)
-        # the following approach provides an estimate for the various raw table counts which performs
+        # pg has well known limitation with counting
+        #        (https://wiki.postgresql.org/wiki/Slow_Counting)
+        # the following approach provides an estimate for raw table counts which performs
         # much better.
         with connection.cursor() as cursor:
             cursor.execute("SELECT pg_size_pretty(pg_database_size(current_database()));")

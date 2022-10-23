@@ -14,7 +14,7 @@ from packageurl import PackageURL
 from spdx.creationinfo import Organization
 from spdx.document import Document, License
 from spdx.package import ExternalPackageRef, Package
-from spdx.relationship import Relationship, RelationshipType
+from spdx.relationship import Relationship
 from spdx.utils import NoAssert
 from spdx.version import Version
 from spdx.writers.json import write_document
@@ -531,24 +531,45 @@ class ProductStream(ProductModel, TimeStampedModel):
         doc.creation_info.set_created_now()
         for component in self.get_latest_components():
             comp_spdx_id = self.add_manifest_package(component, doc)
-            for provided_purl in component.provides:
-                provided_component = Component.objects.get(purl=provided_purl)
-                prov_spdx_id = self.add_manifest_package(provided_component, doc)
-                relationship = Relationship(
-                    f"{comp_spdx_id} {RelationshipType.CONTAINS} {prov_spdx_id}"
-                )
-                doc.add_relationships(relationship)
+            # TODO fix the SPDX relationship types to use RelationType class once
+            #  https://github.com/spdx/tools-python/pull/207 is fixed
+            self.add_relationships(
+                comp_spdx_id,
+                component,
+                doc,
+                ComponentNode.ComponentNodeType.PROVIDES,
+                "CONTAINED_BY",
+            )
+            self.add_relationships(
+                comp_spdx_id,
+                component,
+                doc,
+                ComponentNode.ComponentNodeType.PROVIDES_DEV,
+                "DEV_DEPENDENCY_OF",
+            )
 
         out = StringIO()
         # TODO fix validation errors related to pg_verif_code being None (see test_manifests.py)
         write_document(doc, out, validate=False)
         return out.getvalue()
 
+    def add_relationships(self, comp_spdx_id, component, doc, component_type, relationship_type):
+        for descendant in component.cnodes.first().get_descendants().filter(type=component_type):
+            prov_spdx_id = self.add_manifest_package(descendant.obj, doc)
+            relationship = Relationship(f"{prov_spdx_id} {relationship_type} {comp_spdx_id}")
+            doc.add_relationships(relationship)
+
     def add_manifest_package(self, component, doc):
         package = Package()
         package.name = component.name
         package.version = f"{component.version}-{component.release}"
-        package.spdx_id = f"SPDXRef-{component.type}-{component.name}"
+        # SPDX identifiers can only contain letters number '.' or '-'
+        # We don't just use uuid because we want it to be readable by a human
+        id_list = [component.type, component.name, component.version]
+        if component.arch:
+            id_list.append(component.arch)
+        id_list.append(str(component.uuid)[:8])
+        package.spdx_id = "SPDXRef-" + "-".join(id_list)
         external_package_ref = ExternalPackageRef(
             category="PACKAGE-MANAGER", locator=component.purl, pkg_ext_ref_type=""
         )

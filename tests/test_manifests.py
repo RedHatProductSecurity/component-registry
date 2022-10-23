@@ -23,10 +23,6 @@ from .factories import (
     SoftwareBuildFactory,
 )
 
-# from spdx.parsers.loggers import StandardLogger
-# from spdx.parsers.tagvalue import Parser
-# from spdx.parsers.tagvaluebuilders import Builder
-
 
 logger = logging.getLogger()
 pytestmark = pytest.mark.unit
@@ -50,6 +46,7 @@ def test_product_manifest_properties():
     build = SoftwareBuildFactory(build_id=1)
     build.save()
     provided = ComponentFactory(type="RPM")
+    dev_provided = ComponentFactory(type=Component.Type.NPM)
     component = ComponentFactory(
         software_build=build,
         type="SRPM",
@@ -63,6 +60,9 @@ def test_product_manifest_properties():
     provided.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.PROVIDES, parent=cnode, purl=provided.purl
     )
+    dev_provided.cnodes.get_or_create(
+        type=ComponentNode.ComponentNodeType.PROVIDES_DEV, parent=cnode, purl=provided.purl
+    )
     # The product_ref here is a variant name but below we use it's parent stream
     # to generate the manifest
     ProductComponentRelationFactory(
@@ -73,15 +73,15 @@ def test_product_manifest_properties():
     build.save_product_taxonomy()
 
     component = Component.objects.get(pk=component.uuid)
-    assert len(component.provides) == 1
+    assert len(component.provides) == 2
+    # print([name for name, _ in RelationshipType.__members__.items()])
     print(stream.manifest)
-    # assert False
     err = StringIO()
     parser = jsonparser.Parser(Builder(), FileLogger(err))
     manifest_io = StringIO(stream.manifest)
     doc, _ = parser.parse(manifest_io)
 
-    assert len(doc.packages) == 2
+    assert len(doc.packages) == 3
 
     pkg_verif_code_node_error = "'None' is not a valid value for PKG_VERIF_CODE"
     pkg_errors = []
@@ -95,4 +95,4 @@ def test_product_manifest_properties():
     # for package in doc.packages:
     #     assert not package.are_files_analyzed
 
-    assert len(doc.relationships) == 1
+    assert len(doc.relationships) == 2

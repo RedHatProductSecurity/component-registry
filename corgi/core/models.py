@@ -171,6 +171,11 @@ class ComponentNode(MPTTModel, TimeStampedModel):
                 condition=models.Q(parent__isnull=True),
             ),
         ]
+        # 0037_custom_indexes.py contains the following custom performance indexes
+        #    core_componentnode_tree_parent_lft_idx
+        #    core_cn_tree_lft_purl_parent_idx
+        #    core_cn_lft_tree_idx
+        #    core_cn_lft_rght_tree_idx
         indexes = [
             models.Index(fields=("type", "parent", "purl")),
             models.Index(fields=["type"]),
@@ -406,6 +411,9 @@ class ProductModel(models.Model):
     class Meta:
         abstract = True
         ordering = ["name"]
+        indexes = [
+            models.Index(fields=["ofuri"]),
+        ]
 
     def __str__(self) -> str:
         return str(self.name)
@@ -534,7 +542,7 @@ class ProductStream(ProductModel, TimeStampedModel):
                         name=OuterRef("name"),
                         product_streams__overlap=[self.ofuri],
                     )
-                    .order_by("software_build__completion_time")
+                    .order_by("-software_build__completion_time")
                     .values("uuid")[:1]
                 )
             )
@@ -797,6 +805,10 @@ class Component(TimeStampedModel):
                 fields=("name", "type", "arch", "version", "release"),
             ),
         ]
+        # 0040_auto_20221020_1057.py contains the following custom performance indexes
+        #    core_compon_latest_idx
+        #    core_compon_latest_name_type_idx
+        #    core_compon_latest_type_name_idx
         indexes = [
             models.Index(fields=("name", "type", "arch", "version", "release")),
             models.Index(fields=("type", "name")),

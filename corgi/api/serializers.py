@@ -60,6 +60,14 @@ def get_model_ofuri_link(
     return link
 
 
+def get_upstream_link(
+    product_stream: str,
+) -> str:
+    """method to return all a product_stream upstream components."""
+    link = f"{CORGI_API_URL}/components?product_streams={product_stream}&type=UPSTREAM&view=summary"
+    return link
+
+
 def get_model_id_link(model_name: str, uuid_or_build_id, manifest=False) -> str:
     """Generic method to get an ID-based link for an arbitrary Model subclass."""
     link = f"{CORGI_API_URL}/{model_name}/{uuid_or_build_id}"
@@ -347,7 +355,7 @@ class ProductSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_upstreams(instance: Product) -> str:
-        return get_model_ofuri_link("components", instance.ofuri, related_type="UPSTREAM")
+        return get_upstream_link(instance.ofuri)
 
     @staticmethod
     def get_builds(instance: Product) -> str:
@@ -413,7 +421,7 @@ class ProductVersionSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_upstreams(instance: ProductVersion) -> str:
-        return get_model_ofuri_link("components", instance.ofuri, related_type="UPSTREAM")
+        return get_upstream_link(instance.ofuri)
 
     @staticmethod
     def get_manifest(instance: ProductVersion) -> str:
@@ -486,7 +494,7 @@ class ProductStreamSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_upstreams(instance: ProductStream) -> str:
-        return get_model_ofuri_link("components", instance.ofuri, related_type="UPSTREAM")
+        return get_upstream_link(instance.ofuri)
 
     @staticmethod
     def get_manifest(instance: ProductStream) -> str:
@@ -571,7 +579,7 @@ class ProductVariantSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_upstreams(instance: ProductVersion) -> str:
-        return get_model_ofuri_link("components", instance.ofuri, related_type="UPSTREAM")
+        return get_upstream_link(instance.ofuri)
 
     @staticmethod
     def get_manifest(instance: ProductVersion) -> str:

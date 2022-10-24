@@ -1,5 +1,6 @@
 import json
 import logging
+from datetime import datetime
 
 import pytest
 
@@ -34,15 +35,16 @@ def test_product_manifest_properties():
     stream.save_product_taxonomy()
     assert variant.name in stream.product_variants
 
-    build = SoftwareBuildFactory(build_id=1)
-    build.save()
+    build = SoftwareBuildFactory(
+        build_id=1,
+        completion_time=datetime.strptime("2017-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z"),
+    )
     component = ComponentFactory(
         software_build=build,
         type="SRPM",
         product_variants=[variant.ofuri],
         product_streams=[stream.ofuri],
     )
-    component.save()
     _, _ = component.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=component.purl
     )

@@ -541,7 +541,7 @@ def test_product_components_ofuri(client, api_path):
     ps2.save()
 
     old_sb1 = SoftwareBuildFactory(
-        completion_time=datetime.strptime("2017-03-29 12:13:29", "%Y-%m-%d %H:%M:%S")
+        completion_time=datetime.strptime("2017-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z")
     )
     old_sb1.save()
     old_openssl = ComponentFactory(
@@ -550,7 +550,9 @@ def test_product_components_ofuri(client, api_path):
     old_openssl.product_streams = [ps1.ofuri]
     old_openssl.save()
 
-    sb1 = SoftwareBuildFactory(completion_time=datetime.now())
+    sb1 = SoftwareBuildFactory(
+        completion_time=datetime.strptime("2018-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z")
+    )
     sb1.save()
     openssl = ComponentFactory(
         type=Component.Type.SRPM, name="openssl", software_build=sb1, release="2"
@@ -559,7 +561,7 @@ def test_product_components_ofuri(client, api_path):
     openssl.save()
 
     old_sb2 = SoftwareBuildFactory(
-        completion_time=datetime.strptime("2017-03-29 12:13:29", "%Y-%m-%d %H:%M:%S")
+        completion_time=datetime.strptime("2017-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z")
     )
     old_sb2.save()
     old_curl = ComponentFactory(
@@ -568,7 +570,9 @@ def test_product_components_ofuri(client, api_path):
     old_curl.product_streams = [ps2.ofuri]
     old_curl.save()
 
-    sb2 = SoftwareBuildFactory(completion_time=datetime.now())
+    sb2 = SoftwareBuildFactory(
+        completion_time=datetime.strptime("2018-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z")
+    )
     sb1.save()
     curl = ComponentFactory(type=Component.Type.SRPM, name="curl", software_build=sb2, release="2")
     curl.product_streams = [ps2.ofuri]
@@ -591,7 +595,9 @@ def test_product_components_versions(client, api_path):
     assert ps2.ofuri == "o:redhat:rhel:8"
     ps2.save()
 
-    sb1 = SoftwareBuildFactory(completion_time=datetime.now())
+    sb1 = SoftwareBuildFactory(
+        completion_time=datetime.strptime("2018-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z")
+    )
     sb1.save()
     openssl = ComponentFactory(
         type=Component.Type.RPM, arch="x86_64", name="openssl", software_build=sb1
@@ -602,7 +608,9 @@ def test_product_components_versions(client, api_path):
     openssl_srpm.product_streams = [ps2.ofuri]
     openssl_srpm.save()
 
-    sb2 = SoftwareBuildFactory(completion_time=datetime.now())
+    sb2 = SoftwareBuildFactory(
+        completion_time=datetime.strptime("2018-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z")
+    )
     sb2.save()
     curl = ComponentFactory(type=Component.Type.RPM, arch="x86_64", name="curl", software_build=sb2)
     curl.product_streams = [ps1.ofuri]

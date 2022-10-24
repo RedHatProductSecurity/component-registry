@@ -52,7 +52,6 @@ paths:
           enum:
           - BREW
           - KOJI
-          - PNC
       tags:
       - v1
       responses:
@@ -176,6 +175,13 @@ paths:
         schema:
           type: string
       - in: query
+        name: namespace
+        schema:
+          type: string
+          enum:
+          - REDHAT
+          - UPSTREAM
+      - in: query
         name: nevra
         schema:
           type: string
@@ -244,16 +250,17 @@ paths:
         schema:
           type: string
           enum:
-          - CONTAINER_IMAGE
+          - CARGO
+          - GEM
+          - GENERIC
+          - GITHUB
           - GOLANG
           - MAVEN
           - NPM
+          - OCI
           - PYPI
-          - RHEL_MODULE
           - RPM
-          - SRPM
-          - UNKNOWN
-          - UPSTREAM
+          - RPMMOD
       - in: query
         name: upstreams
         schema:
@@ -1061,6 +1068,8 @@ components:
           readOnly: true
         type:
           $ref: '#/components/schemas/ComponentTypeEnum'
+        namespace:
+          $ref: '#/components/schemas/NamespaceEnum'
         purl:
           type: string
           maxLength: 1024
@@ -1183,6 +1192,7 @@ components:
       - license_declared_list
       - link
       - name
+      - namespace
       - product_streams
       - product_variants
       - product_versions
@@ -1197,16 +1207,22 @@ components:
       - version
     ComponentTypeEnum:
       enum:
-      - CONTAINER_IMAGE
+      - CARGO
+      - OCI
+      - GEM
+      - GENERIC
+      - GITHUB
       - GOLANG
       - MAVEN
       - NPM
-      - RHEL_MODULE
+      - RPMMOD
       - RPM
-      - SRPM
       - PYPI
-      - UNKNOWN
+      type: string
+    NamespaceEnum:
+      enum:
       - UPSTREAM
+      - REDHAT
       type: string
     PaginatedChannelList:
       type: object
@@ -1685,7 +1701,7 @@ components:
           maximum: 2147483647
           minimum: -2147483648
         type:
-          $ref: '#/components/schemas/TypeF2cEnum'
+          $ref: '#/components/schemas/Type111Enum'
         name:
           type: string
         source:
@@ -1732,7 +1748,7 @@ components:
           maximum: 2147483647
           minimum: -2147483648
         type:
-          $ref: '#/components/schemas/TypeF2cEnum'
+          $ref: '#/components/schemas/Type111Enum'
         name:
           type: string
         source:
@@ -1760,9 +1776,8 @@ components:
       required:
       - created_at
       - name
-    TypeF2cEnum:
+    Type111Enum:
       enum:
       - BREW
-      - PNC
       - KOJI
       type: string

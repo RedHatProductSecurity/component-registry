@@ -14,6 +14,7 @@ import yaml
 from django.conf import settings
 
 from corgi.collectors.models import CollectorRhelModule, CollectorRPM, CollectorSRPM
+from corgi.core.models import Component
 
 logger = logging.getLogger(__name__)
 
@@ -120,34 +121,30 @@ class Brew:
             # Split into namespace identifier and component name
             component_split = re.split(r"([(-])", component, maxsplit=1)
             if len(component_split) != 3:
-                component_type = "unknown"
+                component_type = Component.Type.GENERIC
             else:
                 component_type, separator, component = component_split
 
                 if component_type.startswith("python"):
-                    component_type = "pypi"
+                    component_type = Component.Type.PYPI
                 elif component_type.startswith("ruby"):
-                    component_type = "gem"
+                    component_type = Component.Type.GEM
                 elif component_type in ("npm", "nodejs", "js"):
-                    component_type = "npm"
+                    component_type = Component.Type.NPM
                 elif component_type == "golang":
                     # Need to skip arch names, See CORGI-48
                     if component in ["aarch-64", "ppc-64", "s390-64", "x86-64"]:
                         continue
-                    # golang and crate are both valid component types
-                    pass
+                    component_type = Component.Type.GOLANG
                 elif component_type == "crate":
-                    pass
+                    component_type = Component.Type.CARGO
                 else:
                     # Account for bundled deps like "bundled(rh-nodejs12-zlib)" where it's not clear
                     # what is the component type and what is the actual component name.
                     if separator == "-":
                         # E.g. unknown / rh-nodejs12-zlib
                         component = f"{component_type}-{component}"
-                        component_type = "unknown"
-                    else:
-                        # E.g. unknown:cocoa / zlib
-                        component_type = f"unknown:{component_type}"
+                    component_type = Component.Type.GENERIC
 
             bundled_components.append((component_type, component, version))
         return bundled_components
@@ -170,8 +167,8 @@ class Brew:
             rpm_provides = list(zip(headers.pop("provides"), headers.pop("provideversion")))
 
             rpm_component = {
-                "type": "rpm",
-                "namespace": "redhat",
+                "type": Component.Type.RPM,
+                "namespace": Component.Namespace.REDHAT,
                 "id": rpm_id,
                 "meta": {
                     "nvr": rpm_info["nvr"],
@@ -206,7 +203,7 @@ class Brew:
                 for component_type, bundled_component_name, version in bundled_provides:
                     bundled_component = {
                         "type": component_type,
-                        "namespace": "upstream",
+                        "namespace": Component.Namespace.UPSTREAM,
                         "id": f"{rpm_info['id']}-bundles-{next(id_generator)}",
                         "meta": {
                             "name": bundled_component_name,
@@ -264,8 +261,7 @@ class Brew:
         if any(item == "" for item in (name, version, release)):
             name, version, release = Brew.split_nvr(nvr)
         return {
-            "type": "container_image",
-            "namespace": "redhat",
+            "type": Component.Type.CONTAINER_IMAGE,
             "brew_build_id": build_id,
             "meta": {
                 "nvr": nvr,
@@ -289,8 +285,7 @@ class Brew:
     def get_container_build_data(self, build_id: int, build_info: dict) -> dict:
 
         component: dict[str, Any] = {
-            "type": "image",
-            "namespace": "redhat",
+            "type": Component.Type.CONTAINER_IMAGE,
             "meta": {
                 "name": build_info["name"],
                 "version": build_info["version"],
@@ -402,8 +397,8 @@ class Brew:
         for build_loc, coords in remote_sources.items():
             remote_source = self._get_remote_source(coords[0])
             source_component: dict[str, Any] = {
-                "type": "upstream",
-                "namespace": "redhat",
+                "type": Component.Type.GENERIC,
+                "namespace": Component.Namespace.REDHAT,
                 "meta": {
                     "name": self._parse_remote_source_url(remote_source.repo),
                     "version": remote_source.ref,
@@ -421,6 +416,12 @@ class Brew:
             )
             for pkg_type in remote_source.pkg_managers:
                 if pkg_type in ("npm", "pip", "yarn"):
+                    # Convert Cachito-reported package type to Corgi component type.
+                    pkg_type = {
+                        "npm": Component.Type.NPM,
+                        "pip": Component.Type.PYPI,
+                        "yarn": Component.Type.NPM,
+                    }.get(pkg_type)
                     provides, remote_source.packages = self._extract_provides(
                         remote_source.packages, pkg_type
                     )
@@ -478,8 +479,8 @@ class Brew:
         arch_specific_rpms = []
         for rpm in rpms:
             rpm_component = {
-                "type": "rpm",
-                "namespace": "redhat",
+                "type": Component.Type.RPM,
+                "namespace": Component.Namespace.REDHAT,
                 "brew_build_id": rpm["build_id"],
                 "meta": {
                     "nvr": rpm["nvr"],
@@ -558,8 +559,10 @@ class Brew:
                 if pkg_name.startswith(module.name):
                     found_matching_module = True
                     dependant_provides: dict[str, Any] = {
-                        "type": "go-package",
+                        "type": Component.Type.GOLANG,
+                        "namespace": Component.Namespace.UPSTREAM,
                         "meta": {
+                            "go_component_type": "go-package",
                             "name": pkg_name,
                             "version": pkg.version,
                         },
@@ -570,8 +573,10 @@ class Brew:
                 # Add this package as a direct dependency of the source
                 # Usually these are golang standard library packages
                 direct_dependant: dict[str, Any] = {
-                    "type": "go-package",
+                    "type": Component.Type.GOLANG,
+                    "namespace": Component.Namespace.UPSTREAM,
                     "meta": {
+                        "go_component_type": "go-package",
                         "name": pkg.name,
                         "version": pkg.version,
                     },
@@ -583,8 +588,13 @@ class Brew:
         package_list: list[dict[str, Any]]
         for module_version, package_list in module_packages.items():
             dependant: dict[str, Any] = {
-                "type": "gomod",
-                "meta": {"name": module_version[0], "version": module_version[1]},
+                "type": Component.Type.GOLANG,
+                "namespace": Component.Namespace.UPSTREAM,
+                "meta": {
+                    "go_component_type": "gomod",
+                    "name": module_version[0],
+                    "version": module_version[1],
+                },
             }
             if len(package_list) > 0:
                 dependant["components"] = package_list
@@ -606,8 +616,8 @@ class Brew:
     @staticmethod
     def get_maven_build_data(build_info: dict, build_type_info: dict) -> dict:
         component = {
-            "type": "maven",
-            "namespace": "redhat",
+            "type": Component.Type.MAVEN,
+            "namespace": Component.Namespace.REDHAT,
             "meta": {
                 # Strip release since it's not technically part of the unique GAV identifier
                 "gav": build_info["nvr"].rsplit("-", maxsplit=1)[0],
@@ -642,8 +652,8 @@ class Brew:
             "rpms": modulemd["data"]["xmd"]["mbs"]["rpms"],
         }
         module = {
-            "type": "module",
-            "namespace": "redhat",
+            "type": Component.Type.RHEL_MODULE,
+            "namespace": Component.Namespace.REDHAT,
             "meta": {
                 "name": build_info["name"],
                 "version": build_info["version"],
@@ -863,8 +873,8 @@ class Brew:
             return {}
         name, version, release = Brew.split_nvr(rhel_module.nvr)
         module: dict[str, Any] = {
-            "type": "module",
-            "namespace": "redhat",
+            "type": Component.Type.RHEL_MODULE,
+            "namespace": Component.Namespace.REDHAT,
             "meta": {
                 "name": name,
                 "version": version,
@@ -885,8 +895,8 @@ class Brew:
             if len(release_split) == 2:
                 arch = release_split[1]
             rpm_component: dict = {
-                "type": "rpm",
-                "namespace": "redhat",
+                "type": Component.Type.RPM,
+                "namespace": Component.Namespace.REDHAT,
                 "brew_build_id": srpm_build_id,
                 "meta": {
                     "name": name,

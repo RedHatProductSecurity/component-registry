@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 from urllib.parse import quote
 
 from django.conf import settings
@@ -46,8 +47,9 @@ def get_component_purl_link(purl: str) -> str:
 def get_model_ofuri_link(
     model_name: str,
     ofuri: str,
-    related_type=None,
-    view=None,
+    related_type: Optional[str] = None,
+    related_namespace: Optional[str] = None,
+    view: Optional[str] = None,
 ) -> str:
     """Generic method to get an ofuri link for an arbitrary Model subclass."""
     link = f"{CORGI_API_URL}/{model_name}?ofuri={ofuri}"
@@ -55,6 +57,8 @@ def get_model_ofuri_link(
         link = f"{link}"
     if related_type:
         link += f"&type={related_type}"
+    if related_namespace:
+        link += f"&namespace={related_namespace}"
     if view:
         link += f"&view={view}"
     return link
@@ -200,7 +204,7 @@ class ComponentSerializer(serializers.ModelSerializer):
         if component.software_build and component.software_build.type == SoftwareBuild.Type.BREW:
             # RPM ex:
             # /vol/rhel-7/packages/emacs/24.3/23.el7/ppc64le/emacs-common-24.3-23.el7.ppc64le.rpm
-            if component.type in (Component.Type.RPM, Component.Type.SRPM):
+            if component.type == Component.Type.RPM:
                 return (
                     f"{settings.BREW_DOWNLOAD_ROOT_URL}/vol/"
                     f"{component.software_build.meta_attr['volume_name']}/packages/"
@@ -261,6 +265,7 @@ class ComponentSerializer(serializers.ModelSerializer):
             "download_url",
             "uuid",
             "type",
+            "namespace",
             "purl",
             "name",
             "description",

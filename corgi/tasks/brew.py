@@ -82,11 +82,11 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
         logger.warning("SoftwareBuild with build_id %s already existed, not reprocessing", build_id)
         return
 
-    if component["type"] == "rpm":
+    if component["type"] == Component.Type.RPM:
         root_node = save_srpm(softwarebuild, component)
-    elif component["type"] == "image":
+    elif component["type"] == Component.Type.CONTAINER_IMAGE:
         root_node = save_container(softwarebuild, component)
-    elif component["type"] == "module":
+    elif component["type"] == Component.Type.RHEL_MODULE:
         root_node = save_module(softwarebuild, component)
     else:
         logger.warning(f"Build {build_id} type is not supported: {component['type']}")
@@ -194,19 +194,16 @@ def save_component(component, parent, softwarebuild=None):
 
     elif component_type == "PIP":
         component_type = "PYPI"
-    elif component_type not in Component.Type.names:
+
+    elif component_type not in Component.Type.values:
         logger.warning("Tried to create component with invalid component_type: %s", component_type)
         return
 
     # Only save softwarebuild for RPM where they are direct children of SRPMs
-    # This avoid the situation where only the latest build fetched has the softarebuild associated
+    # This avoids the situation where only the latest build fetched has the softarebuild associated
     # For example if we were processing a container image with embedded rpms this could be set to
     # the container build id, whereas we want it also to reflect the build id of the RPM build
-    if not (
-        softwarebuild
-        and component_type == Component.Type.RPM
-        and parent.obj.type == Component.Type.SRPM
-    ):
+    if not (softwarebuild and parent.obj.is_srpm()):
         softwarebuild = None
 
     # Handle case when key is present but value is None
@@ -215,6 +212,7 @@ def save_component(component, parent, softwarebuild=None):
         related_url = ""
     obj, _ = Component.objects.update_or_create(
         type=component_type,
+        namespace=component["namespace"],
         name=meta.pop("name", ""),
         version=component_version,
         release=meta.pop("release", ""),
@@ -249,7 +247,8 @@ def save_component(component, parent, softwarebuild=None):
 def save_srpm(softwarebuild, build_data) -> ComponentNode:
     obj, created = Component.objects.get_or_create(
         name=build_data["meta"].get("name"),
-        type=Component.Type.SRPM,
+        type=build_data["type"],
+        namespace=build_data["namespace"],
         arch=build_data["meta"].get("arch", ""),
         version=build_data["meta"].get("version", ""),
         release=build_data["meta"].get("release", ""),
@@ -273,7 +272,8 @@ def save_srpm(softwarebuild, build_data) -> ComponentNode:
     related_url = build_data["meta"].get("url", "")
     if related_url:
         new_upstream, created = Component.objects.get_or_create(
-            type=Component.Type.UPSTREAM,
+            type=build_data["type"],
+            namespace=Component.Namespace.UPSTREAM,
             name=build_data["meta"].get("name"),
             version=build_data["meta"].get("version", ""),
             # To avoid any future variance of license_declared and related_url
@@ -309,7 +309,8 @@ def process_image_components(image):
 def save_container(softwarebuild, build_data) -> ComponentNode:
     obj, created = Component.objects.get_or_create(
         name=build_data["meta"]["name"],
-        type=Component.Type.CONTAINER_IMAGE,
+        type=build_data["type"],
+        namespace=build_data["namespace"],
         arch="noarch",
         version=build_data["meta"]["version"],
         release=build_data["meta"]["release"],
@@ -332,6 +333,7 @@ def save_container(softwarebuild, build_data) -> ComponentNode:
         for module in build_data["meta"]["upstream_go_modules"]:
             new_upstream, created = Component.objects.get_or_create(
                 type=Component.Type.GOLANG,
+                namespace=Component.Namespace.UPSTREAM,
                 name=module,
                 # the upstream commit is included in the dist-git commit history, but is not
                 # exposed anywhere in the brew data that I can find
@@ -351,7 +353,8 @@ def save_container(softwarebuild, build_data) -> ComponentNode:
         for image in build_data["image_components"]:
             obj, created = Component.objects.get_or_create(
                 name=image["meta"].pop("name"),
-                type=Component.Type.CONTAINER_IMAGE,
+                type=image["type"],
+                namespace=image["namespace"],
                 arch=image["meta"].pop("arch"),
                 version=image["meta"].pop("version"),
                 release=image["meta"].pop("release"),
@@ -382,7 +385,8 @@ def save_container(softwarebuild, build_data) -> ComponentNode:
             if related_url is None:
                 related_url = ""
             new_upstream, created = Component.objects.get_or_create(
-                type=Component.Type.UPSTREAM,
+                type=source["type"],
+                namespace=Component.Namespace.UPSTREAM,
                 name=source["meta"].pop("name"),
                 version=source["meta"].pop("version"),
                 defaults={"meta_attr": source["meta"], "related_url": related_url},
@@ -420,7 +424,8 @@ def save_module(softwarebuild, build_data) -> ComponentNode:
     meta_attr.update(build_data["analysis_meta"])
     obj, created = Component.objects.update_or_create(
         name=build_data["meta"]["name"],
-        type=Component.Type.RHEL_MODULE,
+        type=build_data["type"],
+        namespace=build_data["namespace"],
         arch=build_data["meta"].get("arch", ""),
         version=build_data["meta"].get("version", ""),
         release=build_data["meta"].get("release", ""),

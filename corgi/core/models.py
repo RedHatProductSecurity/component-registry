@@ -794,7 +794,6 @@ class Component(TimeStampedModel):
     data_report = fields.ArrayField(models.CharField(max_length=200), default=list)
 
     class Meta:
-        verbose_name = f"Component({type})"
         ordering = (
             "type",
             "name",

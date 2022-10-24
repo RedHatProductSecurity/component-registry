@@ -281,7 +281,7 @@ paths:
         schema:
           type: string
           format: uuid
-        description: A UUID string identifying this Component(<class 'type'>).
+        description: A UUID string identifying this component.
         required: true
       tags:
       - v1
@@ -302,7 +302,7 @@ paths:
         schema:
           type: string
           format: uuid
-        description: A UUID string identifying this Component(<class 'type'>).
+        description: A UUID string identifying this component.
         required: true
       tags:
       - v1
@@ -324,7 +324,7 @@ paths:
         schema:
           type: string
           format: uuid
-        description: A UUID string identifying this Component(<class 'type'>).
+        description: A UUID string identifying this component.
         required: true
       tags:
       - v1
@@ -357,7 +357,7 @@ paths:
         schema:
           type: string
           format: uuid
-        description: A UUID string identifying this Component(<class 'type'>).
+        description: A UUID string identifying this component.
         required: true
       tags:
       - v1
@@ -378,7 +378,7 @@ paths:
         schema:
           type: string
           format: uuid
-        description: A UUID string identifying this Component(<class 'type'>).
+        description: A UUID string identifying this component.
         required: true
       tags:
       - v1

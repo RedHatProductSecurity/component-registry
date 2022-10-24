@@ -223,7 +223,6 @@ class SoftwareBuild(TimeStampedModel):
 
     class Type(models.TextChoices):
         BREW = "BREW"  # Red Hat Brew build system
-        PNC = "PNC"  # Red Hat PNC (Project Newcastle) build system
         KOJI = "KOJI"  # Fedora's Koji build system, the upstream equivalent of Red Hat's Brew
 
     build_id = models.IntegerField(primary_key=True)

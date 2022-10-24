@@ -304,6 +304,9 @@ UMB_BROKER_URL = os.getenv("CORGI_UMB_BROKER_URL")
 # https://docs.python.org/3/distutils/apiref.html#distutils.util.strtobool
 UMB_BREW_MONITOR_ENABLED = strtobool(os.getenv("CORGI_UMB_BREW_MONITOR_ENABLED", "true"))
 
+# Set to True to turn on loading of community products from product-definitions.
+COMMUNITY_PRODUCTS_ENABLED = strtobool(os.getenv("CORGI_COMMUNITY_PRODUCTS_ENABLED", "false"))
+
 # Brew
 BREW_URL = os.getenv("CORGI_BREW_URL")
 BREW_WEB_URL = os.getenv("CORGI_BREW_WEB_URL")

@@ -12,7 +12,7 @@ from mptt.models import MPTTModel, TreeForeignKey
 from packageurl import PackageURL
 
 from corgi.core.constants import CONTAINER_DIGEST_FORMATS
-from corgi.core.files import ProductManifestFile
+from corgi.core.files import ComponentManifestFile, ProductManifestFile
 from corgi.core.mixins import TimeStampedModel
 
 logger = logging.getLogger(__name__)
@@ -1000,6 +1000,11 @@ class Component(TimeStampedModel):
     @property
     def license_declared_list(self) -> list[str]:
         return self.license_list(self.license_declared)
+
+    @property
+    def manifest(self) -> str:
+        """Return an SPDX-style manifest in JSON format."""
+        return ComponentManifestFile(self).render_content()
 
     @property
     def epoch(self) -> str:

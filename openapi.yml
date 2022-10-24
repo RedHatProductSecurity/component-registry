@@ -292,6 +292,27 @@ paths:
               schema:
                 $ref: '#/components/schemas/Component'
           description: ''
+  /api/v1/components/{uuid}/manifest:
+    get:
+      operationId: v1_components_manifest_retrieve
+      description: View for api/v1/components
+      parameters:
+      - in: path
+        name: uuid
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Component(<class 'type'>).
+        required: true
+      tags:
+      - v1
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Component'
+          description: ''
   /api/v1/components/{uuid}/olcs_test:
     put:
       operationId: v1_components_olcs_test_update

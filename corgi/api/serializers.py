@@ -244,7 +244,7 @@ class ComponentSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_provides(instance: Component) -> list[dict[str, str]]:
-        return get_component_data_list(instance.get_provides())
+        return get_component_data_list(list(instance.get_provides_purls()))
 
     @staticmethod
     def get_sources(instance: Component) -> list[dict[str, str]]:

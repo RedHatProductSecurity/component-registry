@@ -118,7 +118,7 @@ def test_component_provides():
     dev_comp.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.PROVIDES_DEV, parent=upstream_node, purl=dev_comp.purl
     )
-    assert dev_comp.purl in upstream.get_provides()
+    assert dev_comp.purl in upstream.get_provides_purls()
 
 
 def test_software_build_model():

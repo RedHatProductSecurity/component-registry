@@ -898,7 +898,7 @@ class Component(TimeStampedModel):
 
     def save_component_taxonomy(self):
         self.upstreams = self.get_upstreams()
-        self.provides = self.get_provides()
+        self.provides = list(self.get_provides_purls())
         self.sources = self.get_source()
         self.save()
 
@@ -1020,18 +1020,24 @@ class Component(TimeStampedModel):
                     channels.append(descendant.obj.name)
         return list(set(channels))
 
-    def get_provides(self, include_dev=True):
-        """return all descendants with PROVIDES ComponentNode type"""
-        provides = set()
+    def get_provides_nodes(self, include_dev: bool = True) -> QuerySet[ComponentNode]:
+        """return a QuerySet of descendants with PROVIDES ComponentNode type"""
+        # Used in manifests. Returns whole objects to access their properties
         type_list = [ComponentNode.ComponentNodeType.PROVIDES]
         if include_dev:
             type_list.append(ComponentNode.ComponentNodeType.PROVIDES_DEV)
-        for cnode in self.cnodes.get_queryset():
-            if cnode.get_descendant_count() == 0:
-                continue
-            for descendant in cnode.get_descendants().filter(type__in=type_list):
-                provides.add(descendant.purl)
-        return list(provides)
+        return self.cnodes.get_queryset().get_descendants().filter(type__in=type_list)
+
+    def get_provides_purls(self, include_dev: bool = True) -> QuerySet:
+        """return a QuerySet of unique descendant PURLs with PROVIDES ComponentNode type"""
+        # Used in serializers / taxonomies. Returns identifiers (purls) to track relationships
+        return (
+            # No need for .order_by() to prevent duplicate values in list
+            # ComponentNode.Meta has no ordering, so .distinct() works automatically
+            self.get_provides_nodes(include_dev=include_dev)
+            .values_list("purl", flat=True)
+            .distinct()
+        )
 
     def get_source(self) -> list:
         """return all root nodes"""

@@ -8,18 +8,40 @@
     },
     "dataLicense": "CC-BY-4.0",
     "documentDescribes": [
-        "SPDXRef-{{product.uuid}}"
+        "SPDXRef-{{component.uuid}}"
     ],
-    "documentNamespace": "https://access.redhat.com/security/data/manifest/spdx/{{product.name}}-{{product.uuid}}",
-    "name": "{{product.name}}",
-    "packages": [{% for component in product.get_latest_components %}{# Below will eventually become component.manifest #}
+    "documentNamespace": "https://access.redhat.com/security/data/manifest/spdx/{{component.name}}-{{component.uuid}}",
+    "name": "{{component.name}}",
+    "packages": [{% for node in component.get_provides_nodes %}
+        {
+            "copyrightText": {% if node.obj.copyright_text %}"{{node.obj.copyright_text}}"{% else %}"NOASSERTION"{% endif %},
+            "downloadLocation": {% if node.obj.channels %}"{{node.obj.channels.0}}"{% else %}"NOASSERTION"{% endif %},
+            "externalRefs": [
+                {
+                    "referenceCategory": "PACKAGE-MANAGER",
+                    "referenceLocator": "{{node.purl|safe}}",
+                    "referenceType": "purl"
+                }
+            ],
+            "filesAnalyzed": false,
+            "homepage": {% if node.obj.related_url %}"{{node.obj.related_url}}"{% else %}"NOASSERTION"{% endif %},
+            "licenseComments": "Licensing information is automatically generated and may be incomplete or incorrect.",
+            "licenseConcluded": {% if node.obj.license_concluded %}"{{node.obj.license_concluded}}",{% else %}"NOASSERTION"{% endif %},
+            "licenseDeclared": {% if node.obj.license_declared %}"{{node.obj.license_declared}}"{% else %}"NOASSERTION"{% endif %},
+            "name": "{{node.obj.name}}",
+            "originator": "NOASSERTION",
+            "packageFileName": {% if node.obj.filename %}"{{node.obj.filename}}"{% else %}"NOASSERTION"{% endif %},
+            "SPDXID": "SPDXRef-{{node.obj.uuid}}",
+            "supplier": "Organization: Red Hat",
+            "versionInfo": "{{node.obj.nevra}}"
+        },{% endfor %}
         {
             "copyrightText": {% if component.copyright_text %}"{{component.copyright_text}}"{% else %}"NOASSERTION"{% endif %},
             "downloadLocation": {% if component.channels %}"{{component.channels.0}}"{% else %}"NOASSERTION"{% endif %},
             "externalRefs": [
                 {
                     "referenceCategory": "PACKAGE-MANAGER",
-                    "referenceLocator": "{{component.purl|safe}}",
+                    "referenceLocator": "{{node.purl|safe}}",
                     "referenceType": "purl"
                 }
             ],
@@ -29,52 +51,25 @@
             "licenseConcluded": {% if component.license_concluded %}"{{component.license_concluded}}",{% else %}"NOASSERTION"{% endif %},
             "licenseDeclared": {% if component.license_declared %}"{{component.license_declared}}"{% else %}"NOASSERTION"{% endif %},
             "name": "{{component.name}}",
-            "originator": "NOASSERTION",
             "packageFileName": {% if component.filename %}"{{component.filename}}"{% else %}"NOASSERTION"{% endif %},
             "SPDXID": "SPDXRef-{{component.uuid}}",
             "supplier": "Organization: Red Hat",
-            "versionInfo": "{{component.nevra}}"
-        },{% endfor %}
-        {
-            "copyrightText": "NOASSERTION",
-            "downloadLocation": {% if product.channels %}"{{product.channels.0}}"{% else %}"NOASSERTION"{% endif %},
-            "externalRefs": [{% for cpe in product.cpes %}
-                {
-                    "referenceCategory": "SECURITY",
-                    "referenceLocator": "{{cpe}}",
-                    "referenceType": "cpe22Type"
-                },{% endfor %}
-                {{# We report ofuri since it can be used to link and compare two manifests for the same product, like CPE #}
-                    "referenceCategory": "SECURITY",
-                    "referenceLocator": "cpe:/{{product.ofuri}}",
-                    "referenceType": "cpe22Type"
-                }
-            ],
-            "filesAnalyzed": false,
-            "homepage": {% if product.lifecycle_url %}"{{product.lifecycle_url}}"{% else %}"https://www.redhat.com/"{% endif %},
-            "licenseComments": "Red Hat cannot providing licensing information for products in our manifests at this time.",
-            "licenseConcluded": "NOASSERTION",
-            "licenseDeclared": "NOASSERTION",
-            "name": "{{product.name}}",
-            "packageFileName": "NOASSERTION",
-            "SPDXID": "SPDXRef-{{product.uuid}}",
-            "supplier": "Organization: Red Hat",
-            "versionInfo": "{{product.version}}"
+            "versionInfo": "{{component.version}}"
         }
     ],
-    "relationships": [{% for component in product.get_latest_components %}
+    "relationships": [{% for node in component.get_provides_nodes %}
         {
-          "relatedSpdxElement": "SPDXRef-{{product.uuid}}",
-          "relationshipType": "PACKAGE_OF",
+          "relatedSpdxElement": "SPDXRef-{{node.obj.uuid}}",{# subcomponent is built from, or contained in, component #}
+          "relationshipType": {% if node.type == "PROVIDES_DEV" %}"BUILD_DEPENDENCY_OF"{% else %}"CONTAINS"{% endif %},
           "spdxElementId": "SPDXRef-{{component.uuid}}"
         },
         {
-          "relatedSpdxElement": "NONE",
+          "relatedSpdxElement": "NONE",{# subcomponent is a leaf node #}
           "relationshipType": "CONTAINS",
-          "spdxElementId": "SPDXRef-{{component.uuid}}"
+          "spdxElementId": "SPDXRef-{{node.obj.uuid}}"
         },{% endfor %}
         {
-          "relatedSpdxElement": "SPDXRef-{{product.uuid}}",
+          "relatedSpdxElement": "SPDXRef-{{component.uuid}}",{# Document describes component being manifested #}
           "relationshipType": "DESCRIBES",
           "spdxElementId": "SPDXRef-DOCUMENT"
         }

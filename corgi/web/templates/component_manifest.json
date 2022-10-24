@@ -8,11 +8,11 @@
     },
     "dataLicense": "CC-BY-4.0",
     "documentDescribes": [
-        "SPDXRef-{{component.uuid}}"
+        "SPDXRef-{{obj.uuid}}"
     ],
-    "documentNamespace": "https://access.redhat.com/security/data/manifest/spdx/{{component.name}}-{{component.uuid}}",
-    "name": "{{component.name}}",
-    "packages": [{% for node in component.get_provides_nodes %}
+    "documentNamespace": "https://access.redhat.com/security/data/manifest/spdx/{{obj.name}}-{{obj.uuid}}",
+    "name": "{{obj.name}}",
+    "packages": [{% for node in obj.get_provides_nodes %}
         {
             "copyrightText": {% if node.obj.copyright_text %}"{{node.obj.copyright_text}}"{% else %}"NOASSERTION"{% endif %},
             "downloadLocation": {% if node.obj.channels %}"{{node.obj.channels.0}}"{% else %}"NOASSERTION"{% endif %},
@@ -36,8 +36,8 @@
             "versionInfo": "{{node.obj.nevra}}"
         },{% endfor %}
         {
-            "copyrightText": {% if component.copyright_text %}"{{component.copyright_text}}"{% else %}"NOASSERTION"{% endif %},
-            "downloadLocation": {% if component.channels %}"{{component.channels.0}}"{% else %}"NOASSERTION"{% endif %},
+            "copyrightText": {% if obj.copyright_text %}"{{obj.copyright_text}}"{% else %}"NOASSERTION"{% endif %},
+            "downloadLocation": {% if obj.channels %}"{{obj.channels.0}}"{% else %}"NOASSERTION"{% endif %},
             "externalRefs": [
                 {
                     "referenceCategory": "PACKAGE-MANAGER",
@@ -46,22 +46,22 @@
                 }
             ],
             "filesAnalyzed": false,
-            "homepage": {% if component.related_url %}"{{component.related_url}}"{% else %}"NOASSERTION"{% endif %},
+            "homepage": {% if obj.related_url %}"{{obj.related_url}}"{% else %}"NOASSERTION"{% endif %},
             "licenseComments": "Licensing information is automatically generated and may be incomplete or incorrect.",
-            "licenseConcluded": {% if component.license_concluded %}"{{component.license_concluded}}",{% else %}"NOASSERTION"{% endif %},
-            "licenseDeclared": {% if component.license_declared %}"{{component.license_declared}}"{% else %}"NOASSERTION"{% endif %},
-            "name": "{{component.name}}",
-            "packageFileName": {% if component.filename %}"{{component.filename}}"{% else %}"NOASSERTION"{% endif %},
-            "SPDXID": "SPDXRef-{{component.uuid}}",
+            "licenseConcluded": {% if obj.license_concluded %}"{{obj.license_concluded}}",{% else %}"NOASSERTION"{% endif %},
+            "licenseDeclared": {% if obj.license_declared %}"{{obj.license_declared}}"{% else %}"NOASSERTION"{% endif %},
+            "name": "{{obj.name}}",
+            "packageFileName": {% if obj.filename %}"{{obj.filename}}"{% else %}"NOASSERTION"{% endif %},
+            "SPDXID": "SPDXRef-{{obj.uuid}}",
             "supplier": "Organization: Red Hat",
-            "versionInfo": "{{component.version}}"
+            "versionInfo": "{{obj.version}}"
         }
     ],
-    "relationships": [{% for node in component.get_provides_nodes %}
+    "relationships": [{% for node in obj.get_provides_nodes %}
         {
           "relatedSpdxElement": "SPDXRef-{{node.obj.uuid}}",{# subcomponent is built from, or contained in, component #}
           "relationshipType": {% if node.type == "PROVIDES_DEV" %}"BUILD_DEPENDENCY_OF"{% else %}"CONTAINS"{% endif %},
-          "spdxElementId": "SPDXRef-{{component.uuid}}"
+          "spdxElementId": "SPDXRef-{{obj.uuid}}"
         },
         {
           "relatedSpdxElement": "NONE",{# subcomponent is a leaf node #}
@@ -69,7 +69,7 @@
           "spdxElementId": "SPDXRef-{{node.obj.uuid}}"
         },{% endfor %}
         {
-          "relatedSpdxElement": "SPDXRef-{{component.uuid}}",{# Document describes component being manifested #}
+          "relatedSpdxElement": "SPDXRef-{{obj.uuid}}",{# Document describes component being manifested #}
           "relationshipType": "DESCRIBES",
           "spdxElementId": "SPDXRef-DOCUMENT"
         }

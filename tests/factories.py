@@ -1,3 +1,4 @@
+import random
 from datetime import datetime
 from random import choice, randint
 
@@ -119,17 +120,30 @@ class ComponentFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = models.Component
 
-    type = models.Component.Type.RPM
+    type = random.choice(models.Component.Type.values)
+    namespace = random.choice(models.Component.Namespace.values)
     name = factory.Faker("word")
-    version = "3.2.1"
-    release = "1.0.1e"
-    arch = "testarch"
+    version = ".".join(str(n) for n in random.sample(range(10), 3))
+    release = str(random.randint(0, 10))
+    arch = random.choice(("src", "noarch", "s390", "ppc", "x86_64"))
     license_declared_raw = "BSD-3-Clause or (GPLv3+ and LGPLv3+)"
 
     software_build = factory.SubFactory(SoftwareBuildFactory)
     tag = factory.RelatedFactory(ComponentTagFactory, factory_related_name="component")
 
     meta_attr = {}
+
+
+class SrpmComponentFactory(ComponentFactory):
+    type = models.Component.Type.RPM
+    namespace = models.Component.Namespace.REDHAT
+    arch = "src"
+
+
+class ContainerImageComponentFactory(ComponentFactory):
+    type = models.Component.Type.CONTAINER_IMAGE
+    namespace = models.Component.Namespace.REDHAT
+    arch = "noarch"
 
 
 class LifeCycleFactory(factory.django.DjangoModelFactory):

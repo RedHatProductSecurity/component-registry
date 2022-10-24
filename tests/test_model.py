@@ -14,12 +14,14 @@ from corgi.core.models import (
 
 from .factories import (
     ComponentFactory,
+    ContainerImageComponentFactory,
     ProductComponentRelationFactory,
     ProductFactory,
     ProductStreamFactory,
     ProductVariantFactory,
     ProductVersionFactory,
     SoftwareBuildFactory,
+    SrpmComponentFactory,
 )
 
 pytestmark = pytest.mark.unit
@@ -105,12 +107,12 @@ def create_product_hierarchy():
 
 
 def test_component_model():
-    c1 = ComponentFactory(name="curl", type=Component.Type.SRPM)
+    c1 = SrpmComponentFactory(name="curl")
     assert Component.objects.get(name="curl") == c1
 
 
 def test_component_provides():
-    upstream = ComponentFactory(type=Component.Type.UPSTREAM)
+    upstream = ComponentFactory(namespace=Component.Namespace.UPSTREAM)
     upstream_node, _ = upstream.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=upstream.purl
     )
@@ -132,7 +134,7 @@ def test_software_build_model():
 
 
 def test_get_roots():
-    srpm = ComponentFactory(type=Component.Type.SRPM)
+    srpm = SrpmComponentFactory()
     srpm_cnode, _ = srpm.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=srpm.purl
     )
@@ -149,7 +151,7 @@ def test_get_roots():
     )
     assert nested.get_roots == [srpm_cnode]
 
-    container = ComponentFactory(type=Component.Type.CONTAINER_IMAGE, arch="noarch")
+    container = ContainerImageComponentFactory()
     container_cnode, _ = container.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=container.purl
     )
@@ -162,7 +164,7 @@ def test_get_roots():
     assert not container_rpm.get_roots
     assert container.get_roots == [container_cnode]
 
-    container_source = ComponentFactory(type=Component.Type.UPSTREAM)
+    container_source = ComponentFactory(namespace=Component.Namespace.UPSTREAM)
     container_source_cnode, _ = container_source.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=container_cnode,
@@ -186,7 +188,7 @@ def test_product_component_relations():
     ProductComponentRelation.objects.create(
         type=ProductComponentRelation.Type.COMPOSE, product_ref=rhel_7_1.name, build_id=build_id
     )
-    srpm = ComponentFactory(software_build=sb, type=Component.Type.SRPM)
+    srpm = SrpmComponentFactory(software_build=sb)
     srpm_cnode, _ = srpm.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=srpm.purl
     )
@@ -202,7 +204,7 @@ def test_product_component_relations_errata():
     ProductComponentRelation.objects.create(
         type=ProductComponentRelation.Type.ERRATA, product_ref=rhel_8_2_base.name, build_id=build_id
     )
-    srpm = ComponentFactory(software_build=sb, type=Component.Type.SRPM)
+    srpm = SrpmComponentFactory(software_build=sb)
     srpm_cnode, _ = srpm.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=srpm.purl
     )
@@ -262,7 +264,7 @@ def test_component_errata():
 
 
 def test_get_upstream():
-    srpm = ComponentFactory(type=Component.Type.SRPM)
+    srpm = SrpmComponentFactory()
     srpm_cnode, _ = srpm.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=srpm.purl
     )
@@ -270,13 +272,13 @@ def test_get_upstream():
     rpm_cnode, _ = rpm.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.PROVIDES, parent=srpm_cnode, purl=rpm.purl
     )
-    srpm_upstream = ComponentFactory(type=Component.Type.UPSTREAM)
+    srpm_upstream = ComponentFactory(namespace=Component.Namespace.UPSTREAM)
     srpm_upstream_cnode, _ = srpm_upstream.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE, parent=srpm_cnode, purl=srpm_upstream.purl
     )
     assert rpm.get_upstreams() == [srpm_upstream.purl]
 
-    container = ComponentFactory(type=Component.Type.CONTAINER_IMAGE, arch="noarch")
+    container = ContainerImageComponentFactory()
     container_cnode, _ = container.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=container.purl
     )
@@ -288,7 +290,11 @@ def test_get_upstream():
     )
     assert container_rpm.get_upstreams() == []
 
-    container_source = ComponentFactory(name="container_upstream", type=Component.Type.UPSTREAM)
+    container_source = ComponentFactory(
+        name="container_upstream",
+        type=Component.Type.CONTAINER_IMAGE,
+        namespace=Component.Namespace.UPSTREAM,
+    )
     container_source_cnode, _ = container_source.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=container_cnode,
@@ -304,7 +310,9 @@ def test_get_upstream():
     assert container_nested.get_upstreams() == [container_source.purl]
 
     container_o_source = ComponentFactory(
-        name="contain_upstream_other", type=Component.Type.UPSTREAM
+        name="contain_upstream_other",
+        type=Component.Type.PYPI,
+        namespace=Component.Namespace.UPSTREAM,
     )
     container_o_source_cnode, _ = container_o_source.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE,

@@ -14,6 +14,7 @@ from packageurl import PackageURL
 from spdx.creationinfo import Organization
 from spdx.document import Document, License
 from spdx.package import ExternalPackageRef, Package
+from spdx.parsers.loggers import ErrorMessages
 from spdx.relationship import Relationship
 from spdx.utils import NoAssert
 from spdx.version import Version
@@ -520,9 +521,7 @@ class ProductStream(ProductModel, TimeStampedModel):
     @property
     def manifest(self) -> str:
         """Return an SPDX-style manifest in JSON format."""
-        doc = Document(version=Version(2, 2))
-        doc.name = self.name
-        doc.spdx_id = "SPDXRef-DOCUMENT"
+        doc = Document(spdx_id="SPDXRef-DOCUMENT", version=Version(2, 2), name=self.name)
         doc.namespace = f"https://access.redhat.com/security/data/manifest/spdx/{self.name}"
         doc.data_license = License.from_identifier("CC0-1.0")
         doc.creation_info.add_creator(
@@ -549,6 +548,12 @@ class ProductStream(ProductModel, TimeStampedModel):
             )
 
         out = StringIO()
+        messages = ErrorMessages()
+        doc.validate(messages)
+        if messages:
+            logger.debug("Manifest document for stream %s is Invalid", self.name)
+            for message in messages:
+                logger.debug(message)
         # TODO fix validation errors related to pg_verif_code being None (see test_manifests.py)
         write_document(doc, out, validate=False)
         return out.getvalue()
@@ -560,18 +565,19 @@ class ProductStream(ProductModel, TimeStampedModel):
             doc.add_relationships(relationship)
 
     def add_manifest_package(self, component, doc):
-        package = Package()
-        package.name = component.name
-        package.version = f"{component.version}-{component.release}"
         # SPDX identifiers can only contain letters number '.' or '-'
         # We don't just use uuid because we want it to be readable by a human
         id_list = [component.type, component.name, component.version]
         if component.arch:
             id_list.append(component.arch)
         id_list.append(str(component.uuid)[:8])
-        package.spdx_id = "SPDXRef-" + "-".join(id_list)
+        package = Package(
+            spdx_id="SPDXRef-" + "-".join(id_list),
+            name=component.name,
+            version=f"{component.version}-{component.release}",
+        )
         external_package_ref = ExternalPackageRef(
-            category="PACKAGE-MANAGER", locator=component.purl, pkg_ext_ref_type=""
+            category="PACKAGE-MANAGER", locator=component.purl, pkg_ext_ref_type="purl"
         )
         package.add_pkg_ext_refs(external_package_ref)
         # TODO add this once https://github.com/spdx/tools-python/issues/193 is fixed

@@ -23,7 +23,6 @@ from .factories import (
     SoftwareBuildFactory,
 )
 
-
 logger = logging.getLogger()
 pytestmark = pytest.mark.unit
 
@@ -94,5 +93,10 @@ def test_product_manifest_properties():
     # TODO add this once https://github.com/spdx/tools-python/issues/193 is fixed
     # for package in doc.packages:
     #     assert not package.are_files_analyzed
+
+    # TODO there is bug where pkg_ext_refs is not written by the json writer in SPDX
+    # https://github.com/spdx/tools-python/issues/249
+    # for package in doc.packages:
+    # assert package.pkg_ext_refs
 
     assert len(doc.relationships) == 2

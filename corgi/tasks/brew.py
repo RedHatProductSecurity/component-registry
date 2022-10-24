@@ -125,7 +125,7 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def fetch_modular_build(build_id: str, force_process: bool = False):
+def slow_fetch_modular_build(build_id: str, force_process: bool = False) -> None:
     logger.info("Fetch modular build called with build id: %s", build_id)
     rhel_module_data = Brew.fetch_rhel_module(int(build_id))
     # Some compose build_ids in the relations table will be for SRPMs, skip those here
@@ -479,7 +479,7 @@ def load_brew_tags() -> None:
 
 def fetch_modular_builds(relations_query: QuerySet, force_process: bool = False) -> None:
     for build_id in relations_query:
-        fetch_modular_build.delay(build_id, force_process=force_process)
+        slow_fetch_modular_build.delay(build_id, force_process=force_process)
 
 
 def fetch_unprocessed_relations(relation_type, created_since, force_process=False):
@@ -502,7 +502,7 @@ def fetch_unprocessed_relations(relation_type, created_since, force_process=Fals
         ):
             if not SoftwareBuild.objects.filter(build_id=int(build_id)).exists():
                 logger.info("Processing CDN relation build with id: %s", build_id)
-                fetch_modular_build.delay(build_id, force_process=force_process)
+                slow_fetch_modular_build.delay(build_id, force_process=force_process)
                 processed_builds += 1
         offset = offset + limit
     return processed_builds
@@ -514,7 +514,7 @@ def fetch_unprocessed_relations(relation_type, created_since, force_process=Fals
     retry_kwargs=RETRY_KWARGS,
     soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
 )
-def slow_fetch_unprocessed_brew_tag_relations(force_process=False, created_since=2):
+def fetch_unprocessed_brew_tag_relations(force_process=False, created_since=2):
     return fetch_unprocessed_relations(
         ProductComponentRelation.Type.BREW_TAG,
         force_process=force_process,

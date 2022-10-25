@@ -61,6 +61,18 @@ class Brew:
         MODULE_BUILD_TYPE,
     )
 
+    EXTERNAL_PKG_TYPE_MAPPING = {
+        "python": Component.Type.PYPI,
+        "pip": Component.Type.PYPI,
+        "ruby": Component.Type.GEM,
+        "npm": Component.Type.NPM,
+        "yarn": Component.Type.NPM,
+        "nodejs": Component.Type.NPM,
+        "js": Component.Type.NPM,
+        "golang": Component.Type.GOLANG,
+        "crate": Component.Type.CARGO,
+    }
+
     # A list of component names, for which build analysis will be skipped.
     COMPONENT_EXCLUDES = json.loads(os.getenv("CORGI_COMPONENT_EXCLUDES", "[]"))
 
@@ -129,15 +141,13 @@ class Brew:
                     component_type = Component.Type.PYPI
                 elif component_type.startswith("ruby"):
                     component_type = Component.Type.GEM
-                elif component_type in ("npm", "nodejs", "js"):
-                    component_type = Component.Type.NPM
                 elif component_type == "golang":
                     # Need to skip arch names, See CORGI-48
                     if component in ["aarch-64", "ppc-64", "s390-64", "x86-64"]:
                         continue
                     component_type = Component.Type.GOLANG
-                elif component_type == "crate":
-                    component_type = Component.Type.CARGO
+                elif component_type in cls.EXTERNAL_PKG_TYPE_MAPPING:
+                    component_type = cls.EXTERNAL_PKG_TYPE_MAPPING[component_type]
                 else:
                     # Account for bundled deps like "bundled(rh-nodejs12-zlib)" where it's not clear
                     # what is the component type and what is the actual component name.
@@ -417,11 +427,7 @@ class Brew:
             for pkg_type in remote_source.pkg_managers:
                 if pkg_type in ("npm", "pip", "yarn"):
                     # Convert Cachito-reported package type to Corgi component type.
-                    pkg_type = {
-                        "npm": Component.Type.NPM,
-                        "pip": Component.Type.PYPI,
-                        "yarn": Component.Type.NPM,
-                    }.get(pkg_type)
+                    pkg_type = self.EXTERNAL_PKG_TYPE_MAPPING[pkg_type]
                     provides, remote_source.packages = self._extract_provides(
                         remote_source.packages, pkg_type
                     )

@@ -68,7 +68,10 @@ def get_upstream_link(
     product_stream: str,
 ) -> str:
     """method to return all a product_stream upstream components."""
-    link = f"{CORGI_API_URL}/components?product_streams={product_stream}&type=UPSTREAM&view=summary"
+    link = (
+        f"{CORGI_API_URL}/components?product_streams={product_stream}&"
+        "namespace=UPSTREAM&view=summary"
+    )
     return link
 
 

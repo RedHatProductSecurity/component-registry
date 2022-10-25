@@ -22,9 +22,11 @@ class ProdDefs:
         data = cls.get_product_definitions()
 
         products = []
-        for ps_product, product_data in data["ps_products"].items():
-            product_data["id"] = ps_product
-            products.append(product_data)
+        for ps_product, product in data["ps_products"].items():
+            if product["business_unit"] == "Community" and not settings.COMMUNITY_PRODUCTS_ENABLED:
+                continue
+            product["id"] = ps_product
+            products.append(product)
 
         for product in products:
             product_versions = []

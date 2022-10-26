@@ -51,6 +51,7 @@
             "licenseConcluded": {% if obj.license_concluded %}"{{obj.license_concluded}}",{% else %}"NOASSERTION"{% endif %},
             "licenseDeclared": {% if obj.license_declared %}"{{obj.license_declared}}"{% else %}"NOASSERTION"{% endif %},
             "name": "{{obj.name}}",
+            "originator": "NOASSERTION",
             "packageFileName": {% if obj.filename %}"{{obj.filename}}"{% else %}"NOASSERTION"{% endif %},
             "SPDXID": "SPDXRef-{{obj.uuid}}",
             "supplier": "Organization: Red Hat",

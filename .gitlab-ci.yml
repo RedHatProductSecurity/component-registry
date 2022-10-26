@@ -9,9 +9,8 @@ include:
   - project: 'product-security/dev/component-registry-ops'
     ref: "$CORGI_OPS_BRANCH"
     file: '/templates/gitlab/ansible-run.yml'
-  - project: 'product-security/dev/component-registry-ops'
-    ref: "$CORGI_OPS_BRANCH"
-    file: '/templates/gitlab/sonarqube.yml'
+  - project: 'enterprise-pipelines/gitlab-ci/includes'
+    file: 'SAST/sonarqube.yml'
 
 .common_ci_setup: &common_ci_setup
   - export LANG=en_US.UTF-8
@@ -67,6 +66,10 @@ deploy-prod:
   except:
     refs:
       - schedules
+
+sonarqube:
+  # https://source.redhat.com/groups/public/sonarqubecorp/user_documentation/sonarqube_gitlab_ci_job_include
+  stage: test
 
 test:
   stage: test

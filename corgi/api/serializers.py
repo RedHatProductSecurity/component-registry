@@ -363,15 +363,15 @@ class ProductModelSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_product_versions(instance: ProductModel) -> list[dict[str, str]]:
-        return get_product_data_list(ProductVersion, "product_versions", instance.product_versions)
+        return get_product_data_list(ProductVersion, "product_versions", instance.productversions)
 
     @staticmethod
     def get_product_streams(instance: ProductModel) -> list[dict[str, str]]:
-        return get_product_data_list(ProductStream, "product_streams", instance.product_streams)
+        return get_product_data_list(ProductStream, "product_streams", instance.productstreams)
 
     @staticmethod
     def get_product_variants(instance: ProductModel) -> list[dict[str, str]]:
-        return get_product_data_list(ProductVariant, "product_variants", instance.product_variants)
+        return get_product_data_list(ProductVariant, "product_variants", instance.productvariants)
 
     @staticmethod
     def get_channels(instance: ProductModel) -> list[dict[str, str]]:

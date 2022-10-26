@@ -43,7 +43,7 @@ class Command(BaseCommand):
     def get_builds_by_cdn_repo(self, stream_name: str, force_process: bool):
         self.stdout.write(self.style.NOTICE(f"Called save cdn repo with stream {stream_name}"))
         ps = ProductStream.objects.get(name=stream_name)
-        stream_or_variant_names = [stream_name] + ps.product_variants
+        stream_or_variant_names = (stream_name, *ps.productvariants.values_list("name", flat=True))
         relations_query = (
             ProductComponentRelation.objects.filter(
                 product_ref__in=stream_or_variant_names,

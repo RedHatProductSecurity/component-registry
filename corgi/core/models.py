@@ -3,6 +3,7 @@ import re
 import uuid as uuid
 from abc import abstractmethod
 from collections import defaultdict
+from typing import Union
 
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
@@ -109,14 +110,21 @@ class ProductNode(NodeModel):
     #   attribute's related query name.
 
     @staticmethod
-    def get_node_pks_for_type(qs: QuerySet["ProductNode"], target_model: str) -> QuerySet:
+    def get_node_pks_for_type(
+        qs: QuerySet["ProductNode"], mapping_model: type, lookup: str = "__pk"
+    ) -> QuerySet["ProductNode"]:
         """For a given ProductNode queryset, find all nodes with the given type
-        and return the primary keys of their related objects"""
-        # "product_version" -> "ProductVersion"
-        mapping_model = target_model.title().replace("_", "")
-        return qs.filter(level=MODEL_NODE_LEVEL_MAPPING[mapping_model]).values_list(
-            f"{target_model}__pk", flat=True
-        )
+        and return a lookup on their related objects (primary key by default)"""
+        # "ProductVersion" for mapping, "productversion__pk" for field lookup
+        mapping_key = mapping_model.__name__
+        qs = qs.filter(level=MODEL_NODE_LEVEL_MAPPING[mapping_key])
+        if lookup:
+            target_model = mapping_key.lower()
+            qs = qs.values_list(f"{target_model}{lookup}", flat=True)
+        # else client code needs whole Product instances, not their PKs
+        # No way to return "obj" / "productstream" field as a model instance here
+        # ManyToManyFields can use PKs, but ForeignKeys require model instances
+        return qs
 
     @staticmethod
     def get_node_names_for_type(product_model: "ProductModel", target_model: str) -> QuerySet:
@@ -133,24 +141,34 @@ class ProductNode(NodeModel):
         )
 
     @classmethod
-    def get_products(cls, product_model: "ProductModel") -> list[str]:
-        return list(cls.get_node_names_for_type(product_model, "product"))
+    def get_products(
+        cls, qs: QuerySet["ProductNode"], lookup: str = "__pk"
+    ) -> QuerySet["ProductNode"]:
+        return cls.get_node_pks_for_type(qs, Product, lookup=lookup)
 
     @classmethod
-    def get_product_versions(cls, product_model: "ProductModel") -> list[str]:
-        return list(cls.get_node_names_for_type(product_model, "product_version"))
+    def get_product_versions(
+        cls, qs: QuerySet["ProductNode"], lookup: str = "__pk"
+    ) -> QuerySet["ProductNode"]:
+        return cls.get_node_pks_for_type(qs, ProductVersion, lookup=lookup)
 
     @classmethod
-    def get_product_streams(cls, product_model: "ProductModel") -> list[str]:
-        return list(cls.get_node_names_for_type(product_model, "product_stream"))
+    def get_product_streams(
+        cls, qs: QuerySet["ProductNode"], lookup: str = "__pk"
+    ) -> QuerySet["ProductNode"]:
+        return cls.get_node_pks_for_type(qs, ProductStream, lookup=lookup)
 
     @classmethod
-    def get_product_variants(cls, product_model: "ProductModel") -> list[str]:
-        return list(cls.get_node_names_for_type(product_model, "product_variant"))
+    def get_product_variants(
+        cls, qs: QuerySet["ProductNode"], lookup: str = "__pk"
+    ) -> QuerySet["ProductNode"]:
+        return cls.get_node_pks_for_type(qs, ProductVariant, lookup=lookup)
 
     @classmethod
-    def get_channels(cls, product_model: "ProductModel") -> list[str]:
-        return list(cls.get_node_names_for_type(product_model, "channel"))
+    def get_channels(
+        cls, qs: QuerySet["ProductNode"], lookup: str = "__pk"
+    ) -> QuerySet["ProductNode"]:
+        return cls.get_node_pks_for_type(qs, Channel, lookup=lookup)
 
 
 class ComponentNode(NodeModel):
@@ -316,12 +334,34 @@ class ProductModel(TimeStampedModel):
     ofuri = models.CharField(max_length=1024, default="")
     lifecycle_url = models.CharField(max_length=1024, default="")
 
-    # Override each of the below on that model, e.g. products = None on the Product model
-    pnodes = GenericRelation(ProductNode)  # Needed to avoid a mypy warning
-    products = fields.ArrayField(models.CharField(max_length=200), default=list)
-    product_versions = fields.ArrayField(models.CharField(max_length=200), default=list)
-    product_streams = fields.ArrayField(models.CharField(max_length=200), default=list)
-    product_variants = fields.ArrayField(models.CharField(max_length=200), default=list)
+    pnodes = GenericRelation(ProductNode, related_query_name="%(class)s")
+
+    # below fields are added implicitly to all ProductModel subclasses
+    # using Django reverse relations, but mypy needs an explicit type hint
+    @property
+    @abstractmethod
+    def products(self) -> Union["Product", models.ForeignKey]:
+        pass
+
+    @property
+    @abstractmethod
+    def productversions(
+        self,
+    ) -> Union["ProductVersion", models.ForeignKey, models.Manager["ProductVersion"]]:
+        pass
+
+    @property
+    @abstractmethod
+    def productstreams(
+        self,
+    ) -> Union["ProductStream", models.ForeignKey, models.Manager["ProductStream"]]:
+        pass
+
+    @property
+    @abstractmethod
+    def productvariants(self) -> Union["ProductVariant", models.Manager["ProductVariant"]]:
+        pass
+
     channels = fields.ArrayField(models.CharField(max_length=200), default=list)
 
     @staticmethod
@@ -343,12 +383,13 @@ class ProductModel(TimeStampedModel):
         """
         product_refs = [self.name]
         if isinstance(self, ProductStream):
-            # we also want to include child product_variants of this product stream
-            product_refs.extend(self.product_variants)
+            # we also want to include child product variants of this product stream
+            product_refs.extend(self.productvariants.values_list("name", flat=True))
         elif isinstance(self, ProductVersion) or isinstance(self, Product):
-            # we don't store product or product versions in the relations table therefore
-            # we only want to include child product_streams and product_variants in the query
-            product_refs = self.product_streams + self.product_variants
+            # we don't store products or product versions in the relations table therefore
+            # we only want to include child product streams and product variants in the query
+            product_refs.extend(self.productstreams.values_list("name", flat=True))
+            product_refs.extend(self.productvariants.values_list("name", flat=True))
         # else it was a product variant, only look up by self.name
 
         if product_refs:
@@ -357,7 +398,7 @@ class ProductModel(TimeStampedModel):
                 .values_list("build_id", flat=True)
                 .distinct()
             )
-        # Else no product_variants or product_streams
+        # Else no product variants or product streams - should never happen
         return ProductComponentRelation.objects.none()
 
     @property
@@ -386,27 +427,67 @@ class ProductModel(TimeStampedModel):
         descendants = self.pnodes.get_queryset().get_descendants(include_self=True)
         stream_cpes = (
             descendants.filter(level=MODEL_NODE_LEVEL_MAPPING["ProductStream"])
-            .values_list("product_stream__cpe", flat=True)
+            .values_list("productstream__cpe", flat=True)
             .distinct()
         )
         variant_cpes = (
             descendants.filter(level=MODEL_NODE_LEVEL_MAPPING["ProductVariant"])
-            .values_list("product_variant__cpe", flat=True)
+            .values_list("productvariant__cpe", flat=True)
             .distinct()
         )
-        return *stream_cpes, *variant_cpes
+        # Omit CPEs like "", but GenericForeignKeys only support .filter(), not .exclude()??
+        return tuple(cpe for cpe in (*stream_cpes, *variant_cpes) if cpe)
 
     @abstractmethod
     def get_ofuri(self) -> str:
         pass
 
     def save_product_taxonomy(self):
-        self.product_variants = ProductNode.get_product_variants(self)
-        self.product_streams = ProductNode.get_product_streams(self)
-        self.product_versions = ProductNode.get_product_versions(self)
-        self.products = ProductNode.get_products(self)
-        self.channels = ProductNode.get_channels(self)
-        self.save()
+        """Save links between related ProductModel subclasses"""
+        family = self.pnodes.first().get_family()
+        # Get obj from raw nodes - no way to return related __product obj in values_list()
+        products = ProductNode.get_products(family, lookup="").first().obj
+        productversions = tuple(
+            node.obj for node in ProductNode.get_product_versions(family, lookup="")
+        )
+        productstreams = tuple(
+            node.obj for node in ProductNode.get_product_streams(family, lookup="")
+        )
+        productvariants = tuple(
+            node.obj for node in ProductNode.get_product_variants(family, lookup="")
+        )
+
+        # Avoid setting fields on models which don't have them
+        # Also set fields correctly based on which side of the relationship we see
+        # forward relationship like "versions -> products" assigns a single object
+        # reverse relationship like "products -> versions" calls .set() with many objects
+        if isinstance(self, Product):
+            self.productversions.set(productversions)
+            self.productstreams.set(productstreams)
+            self.productvariants.set(productvariants)
+
+        elif isinstance(self, ProductVersion):
+            self.products = products  # Should be only one parent object
+            self.productstreams.set(productstreams)
+            self.productvariants.set(productvariants)
+            self.save()
+
+        elif isinstance(self, ProductStream):
+            self.products = products
+            self.productversions = productversions[0]
+            self.productvariants.set(productvariants)
+            self.save()
+
+        elif isinstance(self, ProductVariant):
+            self.products = products
+            self.productversions = productversions[0]
+            self.productstreams = productstreams[0]
+            self.save()
+
+        else:
+            raise NotImplementedError(
+                f"Add behavior for class {type(self)} in ProductModel.save_product_taxonomy()"
+            )
 
     def save(self, *args, **kwargs):
         self.ofuri = self.get_ofuri()
@@ -421,11 +502,21 @@ class ProductModel(TimeStampedModel):
 
 
 class Product(ProductModel):
+    @property
+    def products(self) -> "Product":
+        return self
 
-    # Inherit product_versions, product_streams, and product_variants from ProductModel
-    # Override only products which doesn't make sense for this model
-    products = None  # type: ignore[assignment]
-    pnodes = GenericRelation(ProductNode, related_query_name="product")
+    # implicit "productversions" field on Product model
+    # is created by products field on ProductVersion model
+    productversions: models.Manager["ProductVersion"]
+
+    # implicit "productstreams" field on Product model
+    # is created by products field on ProductStream model
+    productstreams: models.Manager["ProductStream"]
+
+    # implicit "productvariants" field on Product model
+    # is created by products field on ProductVariant model
+    productvariants: models.Manager["ProductVariant"]
 
     def get_ofuri(self) -> str:
         """Return product URI
@@ -441,8 +532,21 @@ class ProductTag(Tag):
 
 class ProductVersion(ProductModel):
 
-    product_versions = None  # type: ignore[assignment]
-    pnodes = GenericRelation(ProductNode, related_query_name="product_version")
+    products = models.ForeignKey(
+        "Product", on_delete=models.CASCADE, related_name="productversions"
+    )
+
+    @property
+    def productversions(self) -> "ProductVersion":
+        return self
+
+    # implicit "productstreams" field on ProductVersion model
+    # is created by productversions field on ProductStream model
+    productstreams: models.Manager["ProductStream"]
+
+    # implicit "productvariants" field on ProductVersion model
+    # is created by productversions field on ProductVariant model
+    productvariants: models.Manager["ProductVariant"]
 
     def get_ofuri(self) -> str:
         """Return product version URI.
@@ -469,9 +573,20 @@ class ProductStream(ProductModel):
     active = models.BooleanField(default=False)
     et_product_versions = fields.ArrayField(models.CharField(max_length=200), default=list)
 
-    # redefined from parent class
-    product_streams = None  # type: ignore[assignment]
-    pnodes = GenericRelation(ProductNode, related_query_name="product_stream")
+    products = models.ForeignKey("Product", on_delete=models.CASCADE, related_name="productstreams")
+    productversions = models.ForeignKey(
+        "ProductVersion",
+        on_delete=models.CASCADE,
+        related_name="productstreams",
+    )
+
+    @property
+    def productstreams(self) -> "ProductStream":
+        return self
+
+    # implicit "productvariants" field on ProductStream model
+    # is created by productstreams field on ProductVariant model
+    productvariants: models.Manager["ProductVariant"]
 
     def get_ofuri(self) -> str:
         """Return product stream URI
@@ -526,9 +641,20 @@ class ProductVariant(ProductModel):
 
     cpe = models.CharField(max_length=1000, default="")
 
-    # redefined from parent class
-    product_variants = None  # type: ignore[assignment]
-    pnodes = GenericRelation(ProductNode, related_query_name="product_variant")
+    products = models.ForeignKey(
+        "Product", on_delete=models.CASCADE, related_name="productvariants"
+    )
+    productversions = models.ForeignKey(
+        "ProductVersion", on_delete=models.CASCADE, related_name="productvariants"
+    )
+    # Below creates implicit "productvariants" field on ProductStream
+    productstreams = models.ForeignKey(
+        ProductStream, on_delete=models.CASCADE, related_name="productvariants"
+    )
+
+    @property
+    def productvariants(self) -> "ProductVariant":
+        return self
 
     @property
     def cpes(self) -> tuple[str]:
@@ -541,22 +667,7 @@ class ProductVariant(ProductModel):
 
         Ex.: o:redhat:rhel:8.6.0.z:baseos-8.6.0.z.main.eus
         """
-        product_stream = f"o:redhat::{self.name.lower()}"
-
-        first_pnode = self.pnodes.first()
-        if not first_pnode:
-            return product_stream
-
-        product_stream_node = (
-            first_pnode.get_ancestors()
-            .filter(content_type=ContentType.objects.get_for_model(ProductStream))
-            .first()
-        )
-        if not product_stream_node:
-            return product_stream
-        else:
-            product_stream = f"{product_stream_node.obj.ofuri}:{self.name.lower()}"
-        return product_stream
+        return f"{self.productstreams.ofuri}:{self.name.lower()}"
 
 
 class ProductVariantTag(Tag):
@@ -645,7 +756,7 @@ class ProductComponentRelation(TimeStampedModel):
 
     # Ex. if Errata Tool this would be errata_id
     external_system_id = models.CharField(max_length=200, default="")
-    # E.g. product_variant for ERRATA, or product_stream for COMPOSE
+    # E.g. product variant for ERRATA, or product stream for COMPOSE
     product_ref = models.CharField(max_length=200, default="")
     build_id = models.CharField(max_length=200, default="")
 
@@ -671,7 +782,7 @@ def get_product_streams_from_variants(variant_ids: list[str]):
     product_variants = ProductVariant.objects.filter(name__in=variant_ids)
     product_streams = []
     for pv in product_variants:
-        product_streams.extend(ProductNode.get_product_streams(pv))
+        product_streams.extend(pv.productstreams)
     return list(set(product_streams))
 
 

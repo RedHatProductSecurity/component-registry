@@ -68,11 +68,11 @@ class ProductDataFilter(FilterSet):
     re_ofuri = CharFilter(lookup_expr="regex", field_name="ofuri")
     tags = TagFilter()
 
-    products = CharFilter(lookup_expr="icontains")
-    product_versions = CharFilter(lookup_expr="icontains")
-    product_streams = CharFilter(lookup_expr="icontains")
-    product_variants = CharFilter(lookup_expr="icontains")
-    channels = CharFilter(lookup_expr="icontains")
+    products = CharFilter(lookup_expr="name__icontains")
+    product_versions = CharFilter(field_name="productversions", lookup_expr="name__icontains")
+    product_streams = CharFilter(field_name="productstreams", lookup_expr="name__icontains")
+    product_variants = CharFilter(field_name="productvariants", lookup_expr="name__icontains")
+    channels = CharFilter(lookup_expr="name__icontains")
 
 
 class ChannelFilter(FilterSet):

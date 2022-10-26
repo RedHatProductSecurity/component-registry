@@ -36,7 +36,6 @@ def update_products() -> None:
     as noted above.
 
     TODO: investigate whether we need to delete removed definitions from prod-defs.
-    TODO: investigate whether we need to update_or_create ProductNodes
     """
     products = ProdDefs.load_product_definitions()
     with transaction.atomic():
@@ -49,9 +48,9 @@ def update_products() -> None:
             logger.debug("Creating or updating Product: name=%s, description=%s", name, description)
             product, _ = Product.objects.update_or_create(
                 name=name,
-                version="",
-                description=description,
                 defaults={
+                    "version": "",
+                    "description": description,
                     "lifecycle_url": pd_product.pop("lifecycle_url", ""),
                     "meta_attr": pd_product,
                 },
@@ -78,6 +77,7 @@ def update_products() -> None:
                     defaults={
                         "version": version,
                         "description": description,
+                        "products": product,
                         "meta_attr": pd_product_version,
                     },
                 )
@@ -111,9 +111,11 @@ def update_products() -> None:
                     logger.debug("Creating or updating Product Stream: name=%s", name)
                     product_stream, _ = ProductStream.objects.update_or_create(
                         name=name,
-                        version=version,
-                        description="",
                         defaults={
+                            "version": version,
+                            "description": "",
+                            "products": product,
+                            "productversions": product_version,
                             "active": active,
                             "brew_tags": brew_tags_dict,
                             "meta_attr": pd_product_stream,
@@ -159,13 +161,16 @@ def update_products() -> None:
                                     )
                                     product_variant, _ = ProductVariant.objects.update_or_create(
                                         name=et_variant.name,
-                                        version="",
-                                        description="",
                                         defaults={
+                                            "version": "",
+                                            "description": "",
+                                            "products": product,
+                                            "productversions": product_version,
+                                            "productstreams": product_stream,
                                             "meta_attr": {
                                                 "et_product": variant_product_version.product.name,
                                                 "et_product_version": variant_product_version.name,
-                                            }
+                                            },
                                         },
                                     )
                                     ProductNode.objects.get_or_create(
@@ -175,14 +180,15 @@ def update_products() -> None:
                                             "obj": product_variant,
                                         },
                                     )
+                                    product_variant.save_product_taxonomy()
+                    et_product_versions_set = set(product_stream.et_product_versions)
                     for et_product in errata_info:
                         et_product_name = et_product.pop("product_name")
                         et_product_versions = et_product.pop("product_versions")
 
                         for et_product_version in et_product_versions:
                             et_pv_name = et_product_version["name"]
-                            if et_pv_name not in product_stream.et_product_versions:
-                                product_stream.et_product_versions.append(et_pv_name)
+                            et_product_versions_set.add(et_pv_name)
 
                             for variant in et_product_version["variants"]:
                                 logger.debug(
@@ -190,13 +196,16 @@ def update_products() -> None:
                                 )
                                 product_variant, _ = ProductVariant.objects.update_or_create(
                                     name=variant,
-                                    version="",
-                                    description="",
                                     defaults={
+                                        "version": "",
+                                        "description": "",
+                                        "products": product,
+                                        "productversions": product_version,
+                                        "productstreams": product_stream,
                                         "meta_attr": {
                                             "et_product": et_product_name,
                                             "et_product_version": et_pv_name,
-                                        }
+                                        },
                                     },
                                 )
                                 ProductNode.objects.get_or_create(
@@ -206,17 +215,15 @@ def update_products() -> None:
                                         "obj": product_variant,
                                     },
                                 )
-                        # persist et_product_versions plucked from errata_info
-                        product_stream.save()
+                                product_variant.save_product_taxonomy()
+                    # persist et_product_versions plucked from errata_info
+                    product_stream.et_product_versions = sorted(et_product_versions_set)
+                    product_stream.save()
 
-    with transaction.atomic():
-        # Note - Once product taxonomy has been fully loaded we can materialise
-        # relationships in product entities.
-        for product_variant in ProductVariant.objects.get_queryset():
-            product_variant.save_product_taxonomy()
-        for product_stream in ProductStream.objects.get_queryset():
-            product_stream.save_product_taxonomy()
-        for product_version in ProductVersion.objects.get_queryset():
-            product_version.save_product_taxonomy()
-        for product in Product.objects.get_queryset():
+                    # Save taxonomies for newly-created model at end of each loop iteration
+                    # All child models + nodes have already been created and had taxonomies saved
+                    # This should be a no-op since we link models directly upon creation above
+                    # Keeping it here just to be safe, but we could remove in future
+                    product_stream.save_product_taxonomy()
+                product_version.save_product_taxonomy()
             product.save_product_taxonomy()

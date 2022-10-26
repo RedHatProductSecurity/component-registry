@@ -8,11 +8,8 @@ from corgi.collectors.errata_tool import ErrataTool
 from corgi.collectors.models import CollectorRPMRepository
 from corgi.core.models import (
     Channel,
-    Product,
     ProductComponentRelation,
-    ProductStream,
     ProductVariant,
-    ProductVersion,
     SoftwareBuild,
 )
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
@@ -164,9 +161,7 @@ def update_variant_repos() -> None:
             #  Which were set by the full save_product_taxonomy()
             pv.channels = pv_channels
             pv.save()
-            for product_stream in pv.product_streams:
-                ProductStream.objects.get(name=product_stream).save_product_taxonomy()
-            for product_version in pv.product_versions:
-                ProductVersion.objects.get(name=product_version).save_product_taxonomy()
-            for product in pv.products:
-                Product.objects.get(name=product).save_product_taxonomy()
+            # Call the full save_product_taxonomy() method for parent ProductModels
+            pv.productstreams.save_product_taxonomy()
+            pv.productversions.save_product_taxonomy()
+            pv.products.save_product_taxonomy()

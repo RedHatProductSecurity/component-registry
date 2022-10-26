@@ -732,7 +732,7 @@ class ComponentQuerySet(models.QuerySet):
     def root_components(self) -> models.QuerySet["Component"]:
         return self.filter(
             Q(Q(type=Component.Type.RPM) & Q(arch="src"))
-            | Q(type=Component.Type.RHEL_MODULE)
+            | Q(type=Component.Type.RPMMOD)
             | Q(Q(type=Component.Type.CONTAINER_IMAGE) & Q(arch="noarch"))
         )
 
@@ -747,7 +747,7 @@ class Component(TimeStampedModel):
         GOLANG = "GOLANG"
         MAVEN = "MAVEN"
         NPM = "NPM"
-        RHEL_MODULE = "RPMMOD"  # Not an actual purl type, propose addition in CORGI-226
+        RPMMOD = "RPMMOD"  # RHEL/Fedora modules; not an actual purl type, see CORGI-226
         RPM = "RPM"  # Includes SRPMs, which can be identified with arch=src; see also is_srpm().
         PYPI = "PYPI"
 
@@ -851,7 +851,7 @@ class Component(TimeStampedModel):
                 version=f"{self.version}-{self.release}",
                 qualifiers=qualifiers,
             )
-        elif self.type == Component.Type.RHEL_MODULE:
+        elif self.type == Component.Type.RPMMOD:
             # Break down RHEL module version into its specific parts:
             # NSVC = Name, Stream, Version, Context
             version, _, context = self.release.partition(".")

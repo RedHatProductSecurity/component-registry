@@ -657,7 +657,7 @@ class Brew:
             "rpms": modulemd["data"]["xmd"]["mbs"]["rpms"],
         }
         module = {
-            "type": Component.Type.RHEL_MODULE,
+            "type": Component.Type.RPMMOD,
             "namespace": Component.Namespace.REDHAT,
             "meta": {
                 "name": build_info["name"],
@@ -878,7 +878,7 @@ class Brew:
             return {}
         name, version, release = Brew.split_nvr(rhel_module.nvr)
         module: dict[str, Any] = {
-            "type": Component.Type.RHEL_MODULE,
+            "type": Component.Type.RPMMOD,
             "namespace": Component.Namespace.REDHAT,
             "meta": {
                 "name": name,

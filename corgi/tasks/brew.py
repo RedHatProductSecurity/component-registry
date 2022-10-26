@@ -86,7 +86,7 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
         root_node = save_srpm(softwarebuild, component)
     elif component["type"] == Component.Type.CONTAINER_IMAGE:
         root_node = save_container(softwarebuild, component)
-    elif component["type"] == Component.Type.RHEL_MODULE:
+    elif component["type"] == Component.Type.RPMMOD:
         root_node = save_module(softwarebuild, component)
     else:
         logger.warning(f"Build {build_id} type is not supported: {component['type']}")
@@ -136,7 +136,7 @@ def fetch_modular_build(build_id: str, force_process: bool = False) -> None:
     #  We don't currently handle reprocessing a modular build
     obj, created = Component.objects.get_or_create(
         name=rhel_module_data["meta"]["name"],
-        type=Component.Type.RHEL_MODULE,
+        type=Component.Type.RPMMOD,
         arch=rhel_module_data["meta"].get("arch", ""),
         version=rhel_module_data["meta"]["version"],
         release=rhel_module_data["meta"]["release"],

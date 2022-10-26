@@ -79,7 +79,7 @@ def test_get_builds(mock_fetch_rhel_module, mock_slow_fetch_brew_build):
 def test_fetch_compose_build(mock_fetch_brew):
     modular_rpm = _set_up_rhel_compose()
     fetch_modular_build(module_build_id)
-    module_obj = Component.objects.get(type=Component.Type.RHEL_MODULE)
+    module_obj = Component.objects.get(type=Component.Type.RPMMOD)
     assert module_obj
     assert module_obj.nvr == modular_rpm.rhel_module.first().nvr
     assert len(module_obj.cnodes.all()) == 1

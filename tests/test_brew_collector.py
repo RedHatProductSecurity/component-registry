@@ -645,7 +645,7 @@ def test_fetch_rpm_build(mock_sca):
     assert srpm.software_build
     assert srpm.software_build.build_id
     assert srpm.epoch == 0
-    provides = srpm.get_provides()
+    provides = srpm.get_provides_purls()
     assert len(provides) == 30
     for package in [
         "pkg:npm/jquery@3.5.1",

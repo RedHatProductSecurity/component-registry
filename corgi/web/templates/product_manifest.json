@@ -8,11 +8,11 @@
     },
     "dataLicense": "CC-BY-4.0",
     "documentDescribes": [
-        "SPDXRef-{{product.uuid}}"
+        "SPDXRef-{{obj.uuid}}"
     ],
-    "documentNamespace": "https://access.redhat.com/security/data/manifest/spdx/{{product.name}}-{{product.uuid}}",
-    "name": "{{product.name}}",
-    "packages": [{% for component in product.get_latest_components %}{# Below will eventually become component.manifest #}
+    "documentNamespace": "https://access.redhat.com/security/data/manifest/spdx/{{obj.name}}-{{obj.uuid}}",
+    "name": "{{obj.name}}",
+    "packages": [{% for component in obj.get_latest_components %}{# Below will eventually become component.manifest #}
         {
             "copyrightText": {% if component.copyright_text %}"{{component.copyright_text}}"{% else %}"NOASSERTION"{% endif %},
             "downloadLocation": {% if component.channels %}"{{component.channels.0}}"{% else %}"NOASSERTION"{% endif %},
@@ -37,8 +37,8 @@
         },{% endfor %}
         {
             "copyrightText": "NOASSERTION",
-            "downloadLocation": {% if product.channels %}"{{product.channels.0}}"{% else %}"NOASSERTION"{% endif %},
-            "externalRefs": [{% for cpe in product.cpes %}
+            "downloadLocation": {% if obj.channels %}"{{obj.channels.0}}"{% else %}"NOASSERTION"{% endif %},
+            "externalRefs": [{% for cpe in obj.cpes %}
                 {
                     "referenceCategory": "SECURITY",
                     "referenceLocator": "{{cpe}}",
@@ -46,25 +46,25 @@
                 },{% endfor %}
                 {{# We report ofuri since it can be used to link and compare two manifests for the same product, like CPE #}
                     "referenceCategory": "SECURITY",
-                    "referenceLocator": "cpe:/{{product.ofuri}}",
+                    "referenceLocator": "cpe:/{{obj.ofuri}}",
                     "referenceType": "cpe22Type"
                 }
             ],
             "filesAnalyzed": false,
-            "homepage": {% if product.lifecycle_url %}"{{product.lifecycle_url}}"{% else %}"https://www.redhat.com/"{% endif %},
+            "homepage": {% if obj.lifecycle_url %}"{{obj.lifecycle_url}}"{% else %}"https://www.redhat.com/"{% endif %},
             "licenseComments": "Red Hat cannot providing licensing information for products in our manifests at this time.",
             "licenseConcluded": "NOASSERTION",
             "licenseDeclared": "NOASSERTION",
-            "name": "{{product.name}}",
+            "name": "{{obj.name}}",
             "packageFileName": "NOASSERTION",
-            "SPDXID": "SPDXRef-{{product.uuid}}",
+            "SPDXID": "SPDXRef-{{obj.uuid}}",
             "supplier": "Organization: Red Hat",
-            "versionInfo": "{{product.version}}"
+            "versionInfo": "{{obj.version}}"
         }
     ],
-    "relationships": [{% for component in product.get_latest_components %}
+    "relationships": [{% for component in obj.get_latest_components %}
         {
-          "relatedSpdxElement": "SPDXRef-{{product.uuid}}",
+          "relatedSpdxElement": "SPDXRef-{{obj.uuid}}",
           "relationshipType": "PACKAGE_OF",
           "spdxElementId": "SPDXRef-{{component.uuid}}"
         },
@@ -74,7 +74,7 @@
           "spdxElementId": "SPDXRef-{{component.uuid}}"
         },{% endfor %}
         {
-          "relatedSpdxElement": "SPDXRef-{{product.uuid}}",
+          "relatedSpdxElement": "SPDXRef-{{obj.uuid}}",
           "relationshipType": "DESCRIBES",
           "spdxElementId": "SPDXRef-DOCUMENT"
         }

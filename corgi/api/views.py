@@ -416,6 +416,14 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         response["Location"] = f"/api/{CORGI_API_VERSION}/components/{component.uuid}"
         return response
 
+    @action(methods=["get"], detail=True)
+    def manifest(self, request: Request, uuid: str = None) -> Response:
+        obj = self.queryset.filter(uuid=uuid).first()
+        if not obj:
+            return Response(status=404)
+        manifest = json.loads(obj.manifest)
+        return Response(manifest)
+
     @action(methods=["put"], detail=True)
     def olcs_test(self, request, uuid=None):
         """Allow OpenLCS to upload copyright text / license scan results for a component"""

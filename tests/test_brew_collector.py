@@ -171,7 +171,6 @@ def test_get_component_data(
     elif build_type == "image":
         assert list(c.keys()) == [
             "type",
-            "namespace",
             "meta",
             "nested_builds",
             "sources",

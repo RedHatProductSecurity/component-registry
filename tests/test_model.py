@@ -111,6 +111,7 @@ def test_component_model():
     c1 = SrpmComponentFactory(name="curl")
     assert Component.objects.get(name="curl") == c1
 
+
 def test_container_purl():
     container = ContainerImageComponentFactory()
     # When a container doesn't get a digest meta_attr
@@ -119,6 +120,23 @@ def test_container_purl():
     container.meta_attr = {"digests": {CONTAINER_DIGEST_FORMATS[0]: example_digest}}
     container.save()
     assert example_digest in container.purl
+    assert "arch" not in container.purl
+    assert container.name in container.purl
+    example_digest = "sha256:blah"
+    repo_name = "node-exporter-rhel8"
+    repository_url = f"registry.redhat.io/rhacm2/{repo_name}"
+    container.meta_attr = {
+        "digests": {CONTAINER_DIGEST_FORMATS[0]: example_digest},
+        "repository_url": repository_url,
+        "name_from_label": repo_name,
+    }
+    container.arch = "x86_64"
+    container.save()
+    assert example_digest in container.purl
+    assert "x86_64" in container.purl
+    assert repo_name in container.purl.split("?")[0]
+    assert repository_url in container.purl
+
 
 def test_component_provides():
     upstream = ComponentFactory(namespace=Component.Namespace.UPSTREAM)
@@ -173,13 +191,14 @@ def test_get_roots():
     assert not container_rpm.get_roots
     assert container.get_roots == [container_cnode]
 
-    container_source = ComponentFactory(namespace=Component.Namespace.UPSTREAM)
+    container_source = ComponentFactory(
+        namespace=Component.Namespace.UPSTREAM, type=Component.Type.GITHUB
+    )
     container_source_cnode, _ = container_source.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=container_cnode,
         purl=container_source.purl,
     )
-    assert container_source.get_roots == [container_cnode]
     assert container_source.get_roots == [container_cnode]
     container_nested = ComponentFactory(type=Component.Type.NPM)
     container_nested.cnodes.get_or_create(
@@ -287,6 +306,8 @@ def test_get_upstream():
     )
     assert rpm.get_upstreams() == [srpm_upstream.purl]
 
+
+def test_get_upstream_container():
     container = ContainerImageComponentFactory()
     container_cnode, _ = container.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=container.purl
@@ -299,11 +320,7 @@ def test_get_upstream():
     )
     assert container_rpm.get_upstreams() == []
 
-    container_source = ComponentFactory(
-        name="container_upstream",
-        type=Component.Type.CONTAINER_IMAGE,
-        namespace=Component.Namespace.UPSTREAM,
-    )
+    container_source = ContainerImageComponentFactory()
     container_source_cnode, _ = container_source.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=container_cnode,

@@ -212,7 +212,6 @@ def save_component(component, parent, softwarebuild=None):
         related_url = ""
     obj, _ = Component.objects.update_or_create(
         type=component_type,
-        namespace=component["namespace"],
         name=meta.pop("name", ""),
         version=component_version,
         release=meta.pop("release", ""),
@@ -221,6 +220,7 @@ def save_component(component, parent, softwarebuild=None):
             "description": meta.pop("description", ""),
             "filename": find_package_file_name(meta.pop("source", [])),
             "license_declared_raw": meta.pop("license", ""),
+            "namespace": component.get("namespace", ""),
             "related_url": related_url,
             "software_build": softwarebuild,
         },
@@ -248,7 +248,6 @@ def save_srpm(softwarebuild, build_data) -> ComponentNode:
     obj, created = Component.objects.get_or_create(
         name=build_data["meta"].get("name"),
         type=build_data["type"],
-        namespace=build_data["namespace"],
         arch=build_data["meta"].get("arch", ""),
         version=build_data["meta"].get("version", ""),
         release=build_data["meta"].get("release", ""),
@@ -257,6 +256,7 @@ def save_srpm(softwarebuild, build_data) -> ComponentNode:
             "description": build_data["meta"].get("description", ""),
             "software_build": softwarebuild,
             "meta_attr": build_data["meta"],
+            "namespace": build_data["namespace"],
         },
     )
     node, _ = obj.cnodes.get_or_create(
@@ -310,13 +310,13 @@ def save_container(softwarebuild, build_data) -> ComponentNode:
     obj, created = Component.objects.get_or_create(
         name=build_data["meta"]["name"],
         type=build_data["type"],
-        namespace=build_data["namespace"],
         arch="noarch",
         version=build_data["meta"]["version"],
         release=build_data["meta"]["release"],
         defaults={
             "software_build": softwarebuild,
             "meta_attr": build_data["meta"],
+            "namespace": build_data.get("namespace", ""),
         },
     )
     root_node, _ = obj.cnodes.get_or_create(
@@ -333,11 +333,11 @@ def save_container(softwarebuild, build_data) -> ComponentNode:
         for module in build_data["meta"]["upstream_go_modules"]:
             new_upstream, created = Component.objects.get_or_create(
                 type=Component.Type.GOLANG,
-                namespace=Component.Namespace.UPSTREAM,
                 name=module,
                 # the upstream commit is included in the dist-git commit history, but is not
                 # exposed anywhere in the brew data that I can find
                 version="",
+                defaults={"namespace": Component.Namespace.UPSTREAM},
             )
             new_upstream.cnodes.get_or_create(
                 type=ComponentNode.ComponentNodeType.SOURCE,
@@ -354,13 +354,13 @@ def save_container(softwarebuild, build_data) -> ComponentNode:
             obj, created = Component.objects.get_or_create(
                 name=image["meta"].pop("name"),
                 type=image["type"],
-                namespace=image["namespace"],
                 arch=image["meta"].pop("arch"),
                 version=image["meta"].pop("version"),
                 release=image["meta"].pop("release"),
                 defaults={
                     "software_build": softwarebuild,
                     "meta_attr": image["meta"],
+                    "namespace": image.get("namespace", ""),
                 },
             )
             image_arch_node, _ = obj.cnodes.get_or_create(
@@ -386,10 +386,13 @@ def save_container(softwarebuild, build_data) -> ComponentNode:
                 related_url = ""
             new_upstream, created = Component.objects.get_or_create(
                 type=source["type"],
-                namespace=Component.Namespace.UPSTREAM,
                 name=source["meta"].pop("name"),
                 version=source["meta"].pop("version"),
-                defaults={"meta_attr": source["meta"], "related_url": related_url},
+                defaults={
+                    "meta_attr": source["meta"],
+                    "related_url": related_url,
+                    "namespace": Component.Namespace.UPSTREAM,
+                },
             )
             upstream_node, _ = new_upstream.cnodes.get_or_create(
                 type=ComponentNode.ComponentNodeType.SOURCE,
@@ -425,7 +428,6 @@ def save_module(softwarebuild, build_data) -> ComponentNode:
     obj, created = Component.objects.update_or_create(
         name=build_data["meta"]["name"],
         type=build_data["type"],
-        namespace=build_data["namespace"],
         arch=build_data["meta"].get("arch", ""),
         version=build_data["meta"].get("version", ""),
         release=build_data["meta"].get("release", ""),
@@ -434,6 +436,7 @@ def save_module(softwarebuild, build_data) -> ComponentNode:
             "description": build_data["meta"].get("description", ""),
             "software_build": softwarebuild,
             "meta_attr": meta_attr,
+            "namespace": build_data["namespace"],
         },
     )
     node, _ = obj.cnodes.get_or_create(

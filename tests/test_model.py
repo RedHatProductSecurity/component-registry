@@ -1,6 +1,7 @@
 import pytest
 from django.db.utils import IntegrityError
 
+from corgi.core.constants import CONTAINER_DIGEST_FORMATS
 from corgi.core.models import (
     Component,
     ComponentNode,
@@ -110,6 +111,14 @@ def test_component_model():
     c1 = SrpmComponentFactory(name="curl")
     assert Component.objects.get(name="curl") == c1
 
+def test_container_purl():
+    container = ContainerImageComponentFactory()
+    # When a container doesn't get a digest meta_attr
+    assert "@" not in container.purl
+    example_digest = "sha256:blah"
+    container.meta_attr = {"digests": {CONTAINER_DIGEST_FORMATS[0]: example_digest}}
+    container.save()
+    assert example_digest in container.purl
 
 def test_component_provides():
     upstream = ComponentFactory(namespace=Component.Namespace.UPSTREAM)

@@ -874,10 +874,10 @@ class Component(TimeStampedModel):
                         break
             purl_data = dict(
                 name=self.name,
-                version=f"{self.version}-{self.release}",
+                version=digest,
                 qualifiers={
                     "arch": self.arch,
-                    "digest": digest,
+                    "tag": f"{self.version}-{self.release}",
                 },
             )
         else:

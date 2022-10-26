@@ -414,8 +414,9 @@ def test_extract_multiple_remote_sources(requests_mock):
 
     # Inspect jwtproxy components
     jwtproxy_components = components[2]
-    assert jwtproxy_components[0]["type"] == "go-package"
+    assert jwtproxy_components[0]["type"] == Component.Type.GOLANG
     assert jwtproxy_components[0]["meta"]["name"] == "bufio"
+    assert jwtproxy_components[0]["meta"]["go_component_type"] == "go-package"
     assert jwtproxy_components[0]["meta"]["version"] == go_version
 
     # Inspect pushgateway components

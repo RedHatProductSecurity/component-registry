@@ -41,7 +41,7 @@
             "externalRefs": [
                 {
                     "referenceCategory": "PACKAGE-MANAGER",
-                    "referenceLocator": "{{node.purl|safe}}",
+                    "referenceLocator": "{{obj.purl|safe}}",
                     "referenceType": "purl"
                 }
             ],

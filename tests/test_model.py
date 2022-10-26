@@ -45,35 +45,40 @@ def test_productversion_model():
 def test_productstream_model():
     p1 = ProductStreamFactory(name="RHEL")
     assert ProductStream.objects.get(name="RHEL") == p1
-    assert p1.ofuri == "o:redhat:RHEL:8.2.z"
-    assert p1.cpe == "cpe:/o:redhat:enterprise_linux:9"
+    assert p1.ofuri == "o:redhat:RHEL:8.2.0.z"
+    assert p1.cpe == "cpe:/o:redhat:enterprise_linux:8"
 
 
 def test_cpes():
     p1 = ProductFactory(name="RHEL")
-    pv1a = ProductVersionFactory(name="RHEL-7", version="7")
-    pv1b = ProductVersionFactory(name="RHEL-8", version="8")
-    ps1 = ProductStreamFactory(name="Ansercanagicus")
-    ps2 = ProductStreamFactory(name="Ansercaerulescens")
-    ps3 = ProductStreamFactory(name="Brantabernicla", cpe="cpe:/o:redhat:Brantabernicla:8")
+    pv1 = ProductVersionFactory(name="RHEL-7", version="7", products=p1)
+    pv2 = ProductVersionFactory(name="RHEL-8", version="8", products=p1)
+    ps1 = ProductStreamFactory(name="Ansercanagicus", products=p1, productversions=pv1)
+    ps2 = ProductStreamFactory(name="Ansercaerulescens", products=p1, productversions=pv2)
+    ps3 = ProductStreamFactory(
+        name="Brantabernicla",
+        cpe="cpe:/o:redhat:Brantabernicla:8",
+        products=p1,
+        productversions=pv2,
+    )
 
-    node1 = ProductNode.objects.create(parent=None, obj=p1, object_id=p1.pk)
-    assert node1
-    node2a = ProductNode.objects.create(parent=node1, obj=pv1a, object_id=pv1a.pk)
-    assert node2a
-    node2b = ProductNode.objects.create(parent=node1, obj=pv1b, object_id=pv1b.pk)
-    assert node2b
-    node3a = ProductNode.objects.create(parent=node2a, obj=ps1, object_id=ps1.pk)
-    assert node3a
-    node3b = ProductNode.objects.create(parent=node2b, obj=ps2, object_id=ps2.pk)
-    assert node3b
-    node3c = ProductNode.objects.create(parent=node2b, obj=ps3, object_id=ps3.pk)
-    assert node3c
+    p1node = ProductNode.objects.create(parent=None, obj=p1)
+    assert p1node
+    pv1node = ProductNode.objects.create(parent=p1node, obj=pv1)
+    assert pv1node
+    pv2node = ProductNode.objects.create(parent=p1node, obj=pv2)
+    assert pv2node
+    ps1node = ProductNode.objects.create(parent=pv1node, obj=ps1)
+    assert ps1node
+    ps2node = ProductNode.objects.create(parent=pv2node, obj=ps2)
+    assert ps2node
+    ps3node = ProductNode.objects.create(parent=pv2node, obj=ps3)
+    assert ps3node
 
-    assert pv1a.cpes == ("cpe:/o:redhat:enterprise_linux:9",)
+    assert pv1.cpes == ("cpe:/o:redhat:enterprise_linux:8",)
     assert sorted(p1.cpes) == [
         "cpe:/o:redhat:Brantabernicla:8",
-        "cpe:/o:redhat:enterprise_linux:9",
+        "cpe:/o:redhat:enterprise_linux:8",
     ]
 
 
@@ -99,32 +104,43 @@ def test_nevra():
 def test_product_taxonomic_queries():
     rhel, rhel_7, _, rhel_8, _, rhel_8_2, _ = create_product_hierarchy()
 
-    assert rhel.product_streams == ["rhel-7.1", "rhel-8.1", "rhel-8.2"]
-    assert rhel_8.product_streams == ["rhel-8.1", "rhel-8.2"]
-    assert rhel_7.products == ["RHEL"]
-    assert rhel_8_2.products == ["RHEL"]
+    assert sorted(rhel.productstreams.values_list("name", flat=True)) == [
+        "rhel-7.1",
+        "rhel-8.1",
+        "rhel-8.2",
+    ]
+    assert sorted(rhel_8.productstreams.values_list("name", flat=True)) == ["rhel-8.1", "rhel-8.2"]
+    assert rhel_7.products.name == rhel_8_2.products.name == "RHEL"
 
 
 def create_product_hierarchy():
+    # TODO: Factory should probably create nodes for model
+    #  Move these somewhere for reuse - common.py helper method, or fixtures??
     rhel = ProductFactory(name="RHEL")
-    rhel_7 = ProductVersionFactory(name="rhel-7", version="7")
-    rhel_8 = ProductVersionFactory(name="rhel-8", version="8")
-    rhel_7_1 = ProductStreamFactory(name="rhel-7.1")
-    rhel_8_1 = ProductStreamFactory(name="rhel-8.1")
-    rhel_8_2 = ProductStreamFactory(name="rhel-8.2", cpe="cpe:/o:redhat:8.2")
-    rhel_8_2_base = ProductVariantFactory(name="Base8-test")
-    rhel_node = ProductNode.objects.create(parent=None, obj=rhel, object_id=rhel.pk)
-    rhel_7_node = ProductNode.objects.create(parent=rhel_node, obj=rhel_7, object_id=rhel_7.pk)
-    rhel_8_node = ProductNode.objects.create(parent=rhel_node, obj=rhel_8, object_id=rhel_8.pk)
-    ProductNode.objects.create(parent=rhel_7_node, obj=rhel_7_1, object_id=rhel_7_1.pk)
-    ProductNode.objects.create(parent=rhel_8_node, obj=rhel_8_1, object_id=rhel_8_1.pk)
-    rhel_8_2_node = ProductNode.objects.create(
-        parent=rhel_8_node, obj=rhel_8_2, object_id=rhel_8_2.pk
-    )
-    ProductNode.objects.create(parent=rhel_8_2_node, obj=rhel_8_2_base, object_id=rhel_8_2_base.pk)
+    rhel_node = ProductNode.objects.create(parent=None, obj=rhel)
 
-    for product_model in (rhel, rhel_7, rhel_7_1, rhel_8, rhel_8_1, rhel_8_2, rhel_8_2_base):
-        product_model.save_product_taxonomy()
+    rhel_7 = ProductVersionFactory(name="rhel-7", version="7", products=rhel)
+    rhel_7_node = ProductNode.objects.create(parent=rhel_node, obj=rhel_7)
+
+    rhel_7_1 = ProductStreamFactory(name="rhel-7.1", products=rhel, productversions=rhel_7)
+    ProductNode.objects.create(parent=rhel_7_node, obj=rhel_7_1)
+
+    rhel_8 = ProductVersionFactory(name="rhel-8", version="8", products=rhel)
+    rhel_8_node = ProductNode.objects.create(parent=rhel_node, obj=rhel_8)
+
+    rhel_8_1 = ProductStreamFactory(name="rhel-8.1", products=rhel, productversions=rhel_8)
+    ProductNode.objects.create(parent=rhel_8_node, obj=rhel_8_1)
+
+    rhel_8_2 = ProductStreamFactory(
+        name="rhel-8.2", cpe="cpe:/o:redhat:8.2", products=rhel, productversions=rhel_8
+    )
+    rhel_8_2_node = ProductNode.objects.create(parent=rhel_8_node, obj=rhel_8_2)
+
+    rhel_8_2_base = ProductVariantFactory(
+        name="Base8-test", products=rhel, productversions=rhel_8, productstreams=rhel_8_2
+    )
+    ProductNode.objects.create(parent=rhel_8_2_node, obj=rhel_8_2_base)
+
     return rhel, rhel_7, rhel_7_1, rhel_8, rhel_8_1, rhel_8_2, rhel_8_2_base
 
 
@@ -134,6 +150,7 @@ def test_component_model():
 
 
 def test_container_purl():
+    # TODO: Failed due to "assert arch not in purl"
     container = ContainerImageComponentFactory()
     # When a container doesn't get a digest meta_attr
     assert "@" not in container.purl
@@ -238,12 +255,12 @@ def test_product_component_relations():
         type=ProductComponentRelation.Type.COMPOSE, product_ref=rhel_7_1.name, build_id=build_id
     )
     srpm = SrpmComponentFactory(software_build=sb)
-    srpm_cnode, _ = srpm.cnodes.get_or_create(
-        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=srpm.purl
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=srpm.purl, obj=srpm
     )
     sb.save_product_taxonomy()
     c = Component.objects.get(uuid=srpm.uuid)
-    assert rhel_7_1.ofuri in c.product_streams
+    assert rhel_7_1 in c.productstreams.get_queryset()
 
 
 def test_product_component_relations_errata():
@@ -254,12 +271,12 @@ def test_product_component_relations_errata():
         type=ProductComponentRelation.Type.ERRATA, product_ref=rhel_8_2_base.name, build_id=build_id
     )
     srpm = SrpmComponentFactory(software_build=sb)
-    srpm_cnode, _ = srpm.cnodes.get_or_create(
-        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=srpm.purl
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=srpm.purl, obj=srpm
     )
     sb.save_product_taxonomy()
     c = Component.objects.get(uuid=srpm.uuid)
-    assert rhel_8_2.ofuri in c.product_streams
+    assert rhel_8_2 in c.productstreams.get_queryset()
 
 
 def test_product_stream_builds():
@@ -325,7 +342,7 @@ def test_get_upstream():
     srpm_upstream_cnode, _ = srpm_upstream.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE, parent=srpm_cnode, purl=srpm_upstream.purl
     )
-    assert rpm.get_upstreams() == [srpm_upstream.purl]
+    assert sorted(rpm.get_upstreams_purls()) == [srpm_upstream.purl]
 
 
 def test_get_upstream_container():
@@ -339,7 +356,7 @@ def test_get_upstream_container():
         parent=container_cnode,
         purl=container_rpm.purl,
     )
-    assert container_rpm.get_upstreams() == []
+    assert container_rpm.get_upstreams_purls() == set()
 
     container_source = ContainerImageComponentFactory()
     container_source_cnode, _ = container_source.cnodes.get_or_create(
@@ -354,7 +371,7 @@ def test_get_upstream_container():
         parent=container_source_cnode,
         purl=container_source.purl,
     )
-    assert container_nested.get_upstreams() == [container_source.purl]
+    assert sorted(container_nested.get_upstreams_purls()) == [container_source.purl]
 
     container_o_source = ComponentFactory(
         name="contain_upstream_other",
@@ -373,7 +390,7 @@ def test_get_upstream_container():
         parent=container_o_source_cnode,
         purl=container_other_nested.purl,
     )
-    assert container_other_nested.get_upstreams() == [container_o_source.purl]
+    assert sorted(container_other_nested.get_upstreams_purls()) == [container_o_source.purl]
 
 
 def test_duplicate_insert_fails():

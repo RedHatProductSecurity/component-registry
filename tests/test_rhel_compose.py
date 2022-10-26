@@ -9,6 +9,7 @@ from corgi.collectors.rhel_compose import RhelCompose
 from corgi.core.models import Component, ProductComponentRelation, ProductStream
 from corgi.tasks.brew import slow_fetch_modular_build
 from corgi.tasks.rhel_compose import get_builds, save_compose
+from tests.factories import ProductVersionFactory
 
 pytestmark = pytest.mark.unit
 
@@ -141,7 +142,13 @@ def test_save_compose(requests_mock):
     for path in ["composeinfo", "rpms", "osbs", "modules"]:
         with open(f"tests/data/compose/RHEL-8.4.0-RC-1.2/{path}.json") as compose:
             requests_mock.get(f"{compose_url}/metadata/{path}.json", text=compose.read())
-    product_stream = ProductStream.objects.create(name="rhel-8.4.0", composes=composes)
+    product_version = ProductVersionFactory()
+    product_stream = ProductStream.objects.create(
+        name="rhel-8.4.0",
+        composes=composes,
+        products=product_version.products,
+        productversions=product_version,
+    )
     save_compose("rhel-8.4.0")
     relation = ProductComponentRelation.objects.get(product_ref=product_stream)
     assert relation.type == ProductComponentRelation.Type.COMPOSE

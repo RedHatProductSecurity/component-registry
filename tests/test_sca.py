@@ -63,12 +63,11 @@ def test_parse_golist_components():
 
 
 def test_golist_scan_files():
-    file = Path("Dockerfile")
-    assert not file.is_dir()
-    assert not GoList.scan_files([file])
+    scan_file = Path("Dockerfile")
+    assert not scan_file.is_dir()
+    assert not GoList.scan_files([scan_file])
     archive = Path("tests/data/go/runc-1.1.3.tar.gz")
-    results = GoList.scan_files([archive])
-    assert results
+    assert GoList.scan_files([archive])
 
 
 @patch("corgi.collectors.go_list.GoList.scan_files")

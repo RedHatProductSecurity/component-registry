@@ -44,14 +44,16 @@ def test_products(requests_mock):
     assert rhel_product.name == "rhel"
     assert rhel_product.ofuri == "o:redhat:rhel"
 
-    assert "HighAvailability-8.6.0.Z.MAIN.EUS" in rhel_product.product_variants
+    assert "HighAvailability-8.6.0.Z.MAIN.EUS" in rhel_product.productvariants.values_list(
+        "name", flat=True
+    )
 
     rhel_860 = ProductStream.objects.get(name="rhel-8.6.0")
     assert len(rhel_860.composes) == 2
 
     openshift410z = ProductStream.objects.get(name="openshift-4.10.z")
     assert openshift410z
-    assert len(openshift410z.product_variants) == 0
+    assert openshift410z.productvariants.count() == 0
     openshift410z_brew_tags = openshift410z.brew_tags.keys()
     assert len(openshift410z_brew_tags) == 2
     assert "rhaos-4.10-rhel-8-container-released" in openshift410z_brew_tags
@@ -60,4 +62,4 @@ def test_products(requests_mock):
 
     rhacm24z = ProductStream.objects.get(name="rhacm-2.4.z")
     assert rhacm24z
-    assert et_variant.name in rhacm24z.product_variants
+    assert et_variant.name in rhacm24z.productvariants.values_list("name", flat=True)

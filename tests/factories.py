@@ -58,6 +58,13 @@ class ProductVersionFactory(factory.django.DjangoModelFactory):
     name = factory.Faker("word")
     version = "8"
     description = factory.Faker("word")
+    # link model using relationship to parent model
+    products = factory.SubFactory(
+        ProductFactory,
+        name=factory.SelfAttribute("..name"),
+        description=factory.SelfAttribute("..description"),
+    )
+    # link model using reverse relationship to child models
     tag = factory.RelatedFactory(ProductVersionTagFactory, factory_related_name="tagged_model")
 
 
@@ -71,9 +78,22 @@ class ProductStreamFactory(factory.django.DjangoModelFactory):
         model = models.ProductStream
 
     name = factory.Faker("word")
-    version = "8.2.z"
+    version = "8.2.0.z"
     description = factory.Faker("word")
-    cpe = "cpe:/o:redhat:enterprise_linux:9"
+    cpe = "cpe:/o:redhat:enterprise_linux:8"
+    # link model using relationship to parent model
+    products = factory.SubFactory(
+        ProductFactory,
+        name=factory.SelfAttribute("..name"),
+        description=factory.SelfAttribute("..description"),
+    )
+    productversions = factory.SubFactory(
+        ProductVersionFactory,
+        name=factory.SelfAttribute("..name"),
+        description=factory.SelfAttribute("..description"),
+        products=factory.SelfAttribute("..products"),
+    )
+    # link model using reverse relationship to child models
     tag = factory.RelatedFactory(ProductStreamTagFactory, factory_related_name="tagged_model")
     active = True
 
@@ -88,8 +108,34 @@ class ProductVariantFactory(factory.django.DjangoModelFactory):
         model = models.ProductVariant
 
     name = factory.Faker("word")
+    # TODO: Fix below
     version = ""
     description = factory.Faker("word")
+    # TODO: Use dynamic sane value for below
+    #  factories and model properties logic could be improved
+    #  maybe roll some of this into an abstract ProductModelFactory
+    cpe = "cpe:/o:redhat:enterprise_linux:8"
+    # link model using relationship to parent model
+    # parent model will reuse properties defined here
+    products = factory.SubFactory(
+        ProductFactory,
+        name=factory.SelfAttribute("..name"),
+        description=factory.SelfAttribute("..description"),
+    )
+    productversions = factory.SubFactory(
+        ProductVersionFactory,
+        name=factory.SelfAttribute("..name"),
+        description=factory.SelfAttribute("..description"),
+        products=factory.SelfAttribute("..products"),
+    )
+    productstreams = factory.SubFactory(
+        ProductStreamFactory,
+        name=factory.SelfAttribute("..name"),
+        description=factory.SelfAttribute("..description"),
+        products=factory.SelfAttribute("..products"),
+        productversions=factory.SelfAttribute("..productversions"),
+    )
+    # link model using reverse relationship to child models
     tag = factory.RelatedFactory(ProductVariantTagFactory, factory_related_name="tagged_model")
 
 

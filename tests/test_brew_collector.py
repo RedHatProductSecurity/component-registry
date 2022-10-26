@@ -355,7 +355,6 @@ def test_extract_remote_sources(requests_mock):
     source_components = Brew()._extract_remote_sources("", remote_sources)
     assert len(source_components) == 1
     assert source_components[0]["meta"]["name"] == "github.com/thomasmckay/clair"
-    # TODO FAIL: what does 374 refer to here?!?
     assert len(source_components[0]["components"]) == 374
     xtext_modules = [
         d for d in source_components[0]["components"] if d["meta"]["name"] == "golang.org/x/text"
@@ -365,7 +364,9 @@ def test_extract_remote_sources(requests_mock):
     xtext_package_names = [p["meta"]["name"] for p in xtext_modules[0]["components"]]
     assert all([n.startswith("golang.org/x/text") for n in xtext_package_names])
     # verify_pypi_provides test
-    pip_modules = [d for d in source_components[0]["components"] if d["type"] == "pip"]
+    pip_modules = [
+        d for d in source_components[0]["components"] if d["type"] == Component.Type.PYPI
+    ]
     assert len(pip_modules) == 1
     assert pip_modules[0]["meta"]["name"] == "clair"
 
@@ -693,11 +694,14 @@ def test_fetch_rpm_build(mock_sca):
     assert jquery.get_source() == ["pkg:rpm/redhat/cockpit@251-1.el8?arch=src"]
 
 
-@pytest.mark.vcr(match_on=["method", "scheme", "host", "port", "path", "body"])
+@patch("corgi.tasks.brew.Brew")
 @patch("corgi.tasks.brew.slow_software_composition_analysis.delay")
 @patch("corgi.tasks.brew.slow_load_errata.delay")
 @patch("corgi.tasks.brew.slow_fetch_brew_build.delay")
-def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, mock_sca):
+def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, mock_sca, mock_brew):
+    with open("tests/data/brew/1781353/component_data.json", "r") as component_data_file:
+        mock_brew.return_value.get_component_data.return_value = json.load(component_data_file)
+
     slow_fetch_brew_build(1781353)
     image_index = Component.objects.get(
         name="subctl-container", type=Component.Type.CONTAINER_IMAGE, arch="noarch"
@@ -729,13 +733,7 @@ def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, moc
         [call(build_id) for build_id in RPM_BUILD_IDS],
         any_order=True,
     )
-
-    # Verify that slow_load_errata didn't try to fetch the only build in this erratum again
-    # TODO FAIL: why should it *not* call it if build meta includes:
-    #  'tags': ['rhacm-2.4-rhel-8-container-released', 'RHEA-2021:4610-released'],
-    #  'errata_tags': ['RHEA-2021:4610']
-    #  ???
-    mock_load_errata.assert_not_called()
+    mock_load_errata.assert_called_with("RHEA-2021:4610")
     mock_sca.assert_called_with(1781353)
 
 

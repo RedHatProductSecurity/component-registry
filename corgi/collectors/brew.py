@@ -399,7 +399,7 @@ class Brew:
         component["nested_builds"] = list(rpm_build_ids)
         component["sources"] = source_components
         component["image_components"] = child_image_components
-        component["components"] = noarch_rpms_by_id.values()
+        component["components"] = list(noarch_rpms_by_id.values())
         return component
 
     def _extract_remote_sources(self, go_stdlib_version, remote_sources):
@@ -427,7 +427,6 @@ class Brew:
             for pkg_type in remote_source.pkg_managers:
                 if pkg_type in ("npm", "pip", "yarn"):
                     # Convert Cachito-reported package type to Corgi component type.
-                    pkg_type = self.EXTERNAL_PKG_TYPE_MAPPING[pkg_type]
                     provides, remote_source.packages = self._extract_provides(
                         remote_source.packages, pkg_type
                     )
@@ -513,7 +512,7 @@ class Brew:
         typed_pkgs, remaining_packages = self._filter_by_type(packages, pkg_type)
         for typed_pkg in typed_pkgs:
             typed_component: dict[str, Any] = {
-                "type": pkg_type,
+                "type": self.EXTERNAL_PKG_TYPE_MAPPING[pkg_type],
                 "meta": {
                     "name": typed_pkg.name,
                     "version": typed_pkg.version,

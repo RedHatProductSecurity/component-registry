@@ -819,10 +819,6 @@ class Component(TimeStampedModel):
                 fields=("name", "type", "arch", "version", "release"),
             ),
         ]
-        # 0040_auto_20221020_1057.py contains the following custom performance indexes
-        #    core_compon_latest_idx
-        #    core_compon_latest_name_type_idx
-        #    core_compon_latest_type_name_idx
         indexes = [
             models.Index(fields=("name", "type", "arch", "version", "release")),
             models.Index(fields=("type", "name")),
@@ -833,6 +829,33 @@ class Component(TimeStampedModel):
             models.Index(fields=["product_streams"]),
             models.Index(fields=["product_variants"]),
             models.Index(fields=("type", "product_streams")),
+            models.Index(
+                fields=("type", "name", "arch"),
+                name="compon_latest_name_type_idx",
+                condition=Q(
+                    Q(Q(type="RPM") & Q(arch="src"))
+                    | Q(type="RPMMOD")
+                    | Q(Q(type="OCI") & Q(arch="noarch"))
+                ),
+            ),
+            models.Index(
+                fields=("name", "type", "arch"),
+                name="compon_latest_type_name_idx",
+                condition=Q(
+                    Q(Q(type="RPM") & Q(arch="src"))
+                    | Q(type="RPMMOD")
+                    | Q(Q(type="OCI") & Q(arch="noarch"))
+                ),
+            ),
+            models.Index(
+                fields=("uuid", "software_build_id", "type", "name", "arch", "product_streams"),
+                name="compon_latest_idx",
+                condition=Q(
+                    Q(Q(type="RPM") & Q(arch="src"))
+                    | Q(type="RPMMOD")
+                    | Q(Q(type="OCI") & Q(arch="noarch"))
+                ),
+            ),
         ]
 
     def __str__(self) -> str:
@@ -866,19 +889,28 @@ class Component(TimeStampedModel):
                 qualifiers=qualifiers,
             )
         elif self.type == Component.Type.CONTAINER_IMAGE:
-            digest = None
+            digest = ""
             if self.meta_attr.get("digests"):
                 for digest_fmt in CONTAINER_DIGEST_FORMATS:
                     digest = self.meta_attr["digests"].get(digest_fmt)
                     if digest:
                         break
+            purl_name = self.name
+            name_from_label = self.meta_attr.get("name_from_label")
+            if name_from_label:
+                purl_name = name_from_label
+            qualifiers = {
+                "tag": f"{self.version}-{self.release}",
+            }
+            if self.arch != "noarch":
+                qualifiers["arch"] = self.arch
+            repository_url = self.meta_attr.get("repository_url")
+            if repository_url:
+                qualifiers["repository_url"] = repository_url
             purl_data = dict(
-                name=self.name,
+                name=purl_name,
                 version=digest,
-                qualifiers={
-                    "arch": self.arch,
-                    "tag": f"{self.version}-{self.release}",
-                },
+                qualifiers=qualifiers,
             )
         else:
             version = self.version

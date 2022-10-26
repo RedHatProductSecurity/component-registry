@@ -14,6 +14,7 @@ import yaml
 from django.conf import settings
 
 from corgi.collectors.models import CollectorRhelModule, CollectorRPM, CollectorSRPM
+from corgi.core.constants import CONTAINER_REPOSITORY
 from corgi.core.models import Component
 
 logger = logging.getLogger(__name__)
@@ -263,6 +264,7 @@ class Brew:
         version: str = "",
         release: str = "",
         arch: str = "noarch",
+        name_label: str = "",
     ) -> dict[str, Any]:
         # A multi arch image is really just an OCI image index. From a container registry client
         # point of view they are transparent in that the client will always pull the correct arch
@@ -270,6 +272,10 @@ class Brew:
         # See https://github.com/opencontainers/image-spec/blob/main/image-index.md
         if any(item == "" for item in (name, version, release)):
             name, version, release = Brew.split_nvr(nvr)
+        repository_url = f"{CONTAINER_REPOSITORY}/{name_label}"
+        name_label_parts = name_label.rsplit("/", 1)
+        if len(name_label_parts) == 2:
+            name_from_label = name_label_parts[1]
         return {
             "type": Component.Type.CONTAINER_IMAGE,
             "brew_build_id": build_id,
@@ -279,6 +285,8 @@ class Brew:
                 "version": version,
                 "release": release,
                 "arch": arch,
+                "repository_url": repository_url,
+                "name_from_label": name_from_label,
             },
         }
 
@@ -400,6 +408,16 @@ class Brew:
         component["sources"] = source_components
         component["image_components"] = child_image_components
         component["components"] = list(noarch_rpms_by_id.values())
+
+        # During collection we are only able to inspect docker config labels on
+        # attached arch specific archives. We do this loop here to save the
+        # name label also on the index container object at the root of the tree.
+        for image in component["image_components"]:
+            name_from_label = image["meta"].get("name_from_label")
+            if name_from_label:
+                component["meta"]["name_from_label"] = name_from_label
+                break
+
         return component
 
     def _extract_remote_sources(self, go_stdlib_version, remote_sources):
@@ -473,10 +491,12 @@ class Brew:
         rpm_build_ids: set[int],
     ) -> Tuple[dict[int, dict[str, Any]], dict[str, Any]]:
         logger.info("Processing image archive %s", archive["filename"])
+        docker_config = archive["extra"]["docker"]["config"]
+        name_label = self._get_name_label(docker_config)
         child_component = self._create_image_component(
-            build_id, build_nvr, arch=archive["extra"]["image"]["arch"]
+            build_id, build_nvr, arch=archive["extra"]["image"]["arch"], name_label=name_label
         )
-        child_component["meta"]["docker_config"] = archive["extra"]["docker"]["config"]
+        child_component["meta"]["docker_config"] = docker_config
         child_component["meta"]["brew_archive_id"] = archive["id"]
         child_component["meta"]["digests"] = archive["extra"]["docker"]["digests"]
         child_component["analysis_meta"] = {"source": ["koji.listArchives"]}
@@ -504,6 +524,11 @@ class Brew:
                 arch_specific_rpms.append(rpm_component)
         child_component["rpm_components"] = arch_specific_rpms
         return noarch_rpms_by_id, child_component
+
+    def _get_name_label(self, docker_config):
+        config = docker_config.get("config", {})
+        labels = config.get("Labels", {})
+        return labels.get("name", "")
 
     def _extract_provides(
         self, packages: list[SimpleNamespace], pkg_type: str

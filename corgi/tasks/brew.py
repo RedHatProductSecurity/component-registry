@@ -212,7 +212,7 @@ def save_component(component, parent, softwarebuild=None):
         related_url = ""
     obj, _ = Component.objects.update_or_create(
         type=component_type,
-        namespace=component["namespace"],
+        namespace=component.get("namespace", ""),
         name=meta.pop("name", ""),
         version=component_version,
         release=meta.pop("release", ""),
@@ -310,7 +310,7 @@ def save_container(softwarebuild, build_data) -> ComponentNode:
     obj, created = Component.objects.get_or_create(
         name=build_data["meta"]["name"],
         type=build_data["type"],
-        namespace=build_data["namespace"],
+        namespace=build_data.get("namespace", ""),
         arch="noarch",
         version=build_data["meta"]["version"],
         release=build_data["meta"]["release"],
@@ -354,7 +354,7 @@ def save_container(softwarebuild, build_data) -> ComponentNode:
             obj, created = Component.objects.get_or_create(
                 name=image["meta"].pop("name"),
                 type=image["type"],
-                namespace=image["namespace"],
+                namespace=image.get("namespace", ""),
                 arch=image["meta"].pop("arch"),
                 version=image["meta"].pop("version"),
                 release=image["meta"].pop("release"),

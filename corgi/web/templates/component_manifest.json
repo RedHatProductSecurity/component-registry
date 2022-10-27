@@ -1,64 +1,33 @@
-{
-    "creationInfo": {
-        "created": "{% now 'Y-m-d' %}T{% now 'H:i:00' %}Z",
-        "creators": [
-            "Organization: Red Hat Product Security (secalert@redhat.com)"
+{% extends "base_manifest.json" %}
+{% block packages %}
+{% for node in obj.get_provides_nodes %}
+        {% include "package_manifest.json" with component=node.obj %}
+    {% endfor %}
+    {
+        "copyrightText": {% if obj.copyright_text %}"{{obj.copyright_text}}"{% else %}"NOASSERTION"{% endif %},
+        "downloadLocation": {% if obj.channels %}"{{obj.channels.0}}"{% else %}"NOASSERTION"{% endif %},
+        "externalRefs": [
+            {
+                "referenceCategory": "PACKAGE_MANAGER",
+                "referenceLocator": "{{obj.purl|safe}}",
+                "referenceType": "purl"
+            }
         ],
-        "licenseListVersion": "3.8"
-    },
-    "dataLicense": "CC-BY-4.0",
-    "documentDescribes": [
-        "SPDXRef-{{obj.uuid}}"
-    ],
-    "documentNamespace": "https://access.redhat.com/security/data/manifest/spdx/{{obj.name}}-{{obj.uuid}}",
-    "name": "{{obj.name}}",
-    "packages": [{% for node in obj.get_provides_nodes %}
-        {
-            "copyrightText": {% if node.obj.copyright_text %}"{{node.obj.copyright_text}}"{% else %}"NOASSERTION"{% endif %},
-            "downloadLocation": {% if node.obj.channels %}"{{node.obj.channels.0}}"{% else %}"NOASSERTION"{% endif %},
-            "externalRefs": [
-                {
-                    "referenceCategory": "PACKAGE_MANAGER",
-                    "referenceLocator": "{{node.purl|safe}}",
-                    "referenceType": "purl"
-                }
-            ],
-            "filesAnalyzed": false,
-            "homepage": {% if node.obj.related_url %}"{{node.obj.related_url}}"{% else %}"NOASSERTION"{% endif %},
-            "licenseComments": "Licensing information is automatically generated and may be incomplete or incorrect.",
-            "licenseConcluded": {% if node.obj.license_concluded %}"{{node.obj.license_concluded}}",{% else %}"NOASSERTION"{% endif %},
-            "licenseDeclared": {% if node.obj.license_declared %}"{{node.obj.license_declared}}"{% else %}"NOASSERTION"{% endif %},
-            "name": "{{node.obj.name}}",
-            "originator": "NOASSERTION",
-            "packageFileName": {% if node.obj.filename %}"{{node.obj.filename}}"{% else %}"NOASSERTION"{% endif %},
-            "SPDXID": "SPDXRef-{{node.obj.uuid}}",
-            "supplier": "Organization: Red Hat",
-            "versionInfo": "{{node.obj.nevra}}"
-        },{% endfor %}
-        {
-            "copyrightText": {% if obj.copyright_text %}"{{obj.copyright_text}}"{% else %}"NOASSERTION"{% endif %},
-            "downloadLocation": {% if obj.channels %}"{{obj.channels.0}}"{% else %}"NOASSERTION"{% endif %},
-            "externalRefs": [
-                {
-                    "referenceCategory": "PACKAGE_MANAGER",
-                    "referenceLocator": "{{obj.purl|safe}}",
-                    "referenceType": "purl"
-                }
-            ],
-            "filesAnalyzed": false,
-            "homepage": {% if obj.related_url %}"{{obj.related_url}}"{% else %}"NOASSERTION"{% endif %},
-            "licenseComments": "Licensing information is automatically generated and may be incomplete or incorrect.",
-            "licenseConcluded": {% if obj.license_concluded %}"{{obj.license_concluded}}",{% else %}"NOASSERTION"{% endif %},
-            "licenseDeclared": {% if obj.license_declared %}"{{obj.license_declared}}"{% else %}"NOASSERTION"{% endif %},
-            "name": "{{obj.name}}",
-            "originator": "NOASSERTION",
-            "packageFileName": {% if obj.filename %}"{{obj.filename}}"{% else %}"NOASSERTION"{% endif %},
-            "SPDXID": "SPDXRef-{{obj.uuid}}",
-            "supplier": "Organization: Red Hat",
-            "versionInfo": "{{obj.version}}"
-        }
-    ],
-    "relationships": [{% for node in obj.get_provides_nodes %}
+        "filesAnalyzed": false,
+        "homepage": {% if obj.related_url %}"{{obj.related_url}}"{% else %}"NOASSERTION"{% endif %},
+        "licenseComments": "Licensing information is automatically generated and may be incomplete or incorrect.",
+        "licenseConcluded": {% if obj.license_concluded %}"{{obj.license_concluded}}",{% else %}"NOASSERTION"{% endif %},
+        "licenseDeclared": {% if obj.license_declared %}"{{obj.license_declared}}"{% else %}"NOASSERTION"{% endif %},
+        "name": "{{obj.name}}",
+        "originator": "NOASSERTION",
+        "packageFileName": {% if obj.filename %}"{{obj.filename}}"{% else %}"NOASSERTION"{% endif %},
+        "SPDXID": "SPDXRef-{{obj.uuid}}",
+        "supplier": "Organization: Red Hat",
+        "versionInfo": "{{obj.version}}"
+    }
+{% endblock %}
+{% block relationships %}
+    {% for node in obj.get_provides_nodes %}
         {
           "relatedSpdxElement": "SPDXRef-{{node.obj.uuid}}",{# subcomponent is built from, or contained in, component #}
           "relationshipType": {% if node.type == "PROVIDES_DEV" %}"BUILD_DEPENDENCY_OF"{% else %}"CONTAINS"{% endif %},
@@ -69,12 +38,4 @@
           "relationshipType": "CONTAINS",
           "spdxElementId": "SPDXRef-{{node.obj.uuid}}"
         },{% endfor %}
-        {
-          "relatedSpdxElement": "SPDXRef-{{obj.uuid}}",{# Document describes component being manifested #}
-          "relationshipType": "DESCRIBES",
-          "spdxElementId": "SPDXRef-DOCUMENT"
-        }
-    ],
-    "SPDXID": "SPDXRef-DOCUMENT",
-    "spdxVersion": "SPDX-2.2"
-}
+{% endblock %}

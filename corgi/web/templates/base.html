@@ -10,36 +10,36 @@
     <link rel="stylesheet" type="text/css" crossorigin="anonymous"
           href="https://cdnjs.cloudflare.com/ajax/libs/patternfly/3.59.5/css/patternfly-additions.min.css"
           integrity="sha512-EYt56ZZC96V80F1+H7qwhi3NUIzR7onpd+RsVWHUxQfZSiIWmsQFD+6J/bS6OsAGKgvRftxtkxB16efK4mDFaA==">
+    <link rel="stylesheet" type="text/css" href="{% static 'base.css' %}">
     <title>Red Hat Component Registry | {% block title %}{% endblock %}</title>
   </head>
-  <body style="background-color: whitesmoke">
+  <body class="whitesmoke">
     <nav class="navbar navbar-default navbar-pf" role="navigation">
-      <div style="margin: 3px 0 5px 20px;">
-        <a title="Red Hat Component Registry" href="/"
-           style="font-size: 14px; text-decoration: none; color: white">
+      <div class="margin">
+        <a title="Red Hat Component Registry" href="/" class="whitefont">
           <strong>Component Registry</strong>
         </a>
       </div>
       <div class="collapse navbar-collapse navbar-collapse-1">
         <ul class="nav navbar-nav navbar-utility">
           <li class="dropdown">
-            <button class="btn btn-link nav-item-iconic" id="horizontalDropdownMenu1"
-                    data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"
-                    style="padding: 10px 10px;">
+            <button class="btn btn-link nav-item-iconic padding" id="horizontalDropdownMenu1"
+                    data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
               <span title="Help" class="fa pficon-help dropdown-title"></span>
             </button>
             <ul class="dropdown-menu" aria-labelledby="horizontalDropdownMenu1">
               <li>
                 <a href="mailto:{% app_email %}" target="_blank" rel="noopener noreferrer">
                   Contact Developers
-                  <em class="fa fa-envelope-o" style="padding-left: 5px"></em>
+                  <em class="fa fa-envelope-o paddingleft"></em>
                 </a>
               </li>
               <li class="divider"></li>
               <li>
-                <a href="https:///github.com/RedHatProductSecurity/component-registry/tree/main/docs" target="_blank" rel="noopener noreferrer">
+                <a href="https:///github.com/RedHatProductSecurity/component-registry/tree/main/docs" target="_blank"
+                   rel="noopener noreferrer">
                   Docs
-                  <em class="fa fa-external-link" style="padding-left: 5px"></em>
+                  <em class="fa fa-external-link paddingleft"></em>
                 </a>
               </li>
             </ul>
@@ -50,13 +50,12 @@
     {% block body %}
     {% endblock %}
     <div class="container-fluid footer-pf">
-      <div class="text-center" style="padding-bottom: 5px">
+      <div class="text-center paddingbottom">
         Copyright © {% now 'Y' %} Red Hat, Inc. All rights reserved.
         |
         Version: {% app_version %}{% app_git_ref %}
         |
-        <a href="{% app_docs %}"
-           rel="noopener noreferrer" target="_blank">
+        <a href="{% app_docs %}" rel="noopener noreferrer" target="_blank">
           Report Issue
         </a>
       </div>

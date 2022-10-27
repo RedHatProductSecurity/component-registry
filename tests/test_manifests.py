@@ -30,7 +30,7 @@ pytestmark = pytest.mark.unit
 def test_product_manifest_properties():
     """Test that all models inheriting from ProductModel have a .manifest property
     And that it generates valid JSON."""
-    component, stream = setup_products_and_components()
+    component, stream, provided, dev_provided = setup_products_and_components()
 
     manifest = json.loads(stream.manifest)
 
@@ -45,15 +45,19 @@ def test_product_manifest_properties():
         assert False
 
     # Test will fail with JSONDecodeError if above isn't valid
-    # Eventually, we should also check the actual manifest content is valid SPDX data
-    # Then most of below can go away
 
     # One component linked to this product
     num_components = len(stream.get_latest_components())
     assert num_components == 1
 
-    # Manifest contains info for all components + the product itself
-    assert len(manifest["packages"]) == 2
+    num_provided = 0
+    for component in stream.get_latest_components():
+        num_provided += component.get_provides_nodes().count()
+
+    assert num_provided == 2
+
+    # Manifest contains info for all components, their provides, and the product itself
+    assert len(manifest["packages"]) == num_components + num_provided + 1
 
     # Last "component" is actually the product
     component_data = manifest["packages"][0]
@@ -82,25 +86,47 @@ def test_product_manifest_properties():
         "spdxElementId": f"SPDXRef-{component.uuid}",
     }
 
-    component_contains_nothing = {
-        "relatedSpdxElement": "NONE",
-        "relationshipType": "CONTAINS",
-        "spdxElementId": f"SPDXRef-{component.uuid}",
+    provided_contained_by_component = {
+        "relatedSpdxElement": f"SPDXRef-{component.uuid}",
+        "relationshipType": "CONTAINED_BY",
+        "spdxElementId": f"SPDXRef-{provided.uuid}",
     }
 
+    provided_contains_nothing = {
+        "relatedSpdxElement": "NONE",
+        "relationshipType": "CONTAINS",
+        "spdxElementId": f"SPDXRef-{provided.uuid}",
+    }
+
+    dev_provided_dependency_of_component = {
+        "relatedSpdxElement": f"SPDXRef-{component.uuid}",
+        "relationshipType": "DEV_DEPENDENCY_OF",
+        "spdxElementId": f"SPDXRef-{dev_provided.uuid}",
+    }
+
+    dev_provided_contains_nothing = {
+        "relatedSpdxElement": "NONE",
+        "relationshipType": "CONTAINS",
+        "spdxElementId": f"SPDXRef-{dev_provided.uuid}",
+    }
+
+    # For each provided in component, one "provided contained by component"
+    # For each provided in component, one "provided contains none" indicating a leaf node
     # For each component, one "component is package of product" relationship
-    # And one "component contains nothing" relationship
     # Plus one "document describes product" relationship for the whole document at the end
-    assert len(manifest["relationships"]) == (num_components * 2) + 1
-    assert manifest["relationships"][0] == component_is_package_of_product
-    assert manifest["relationships"][1] == component_contains_nothing
+    assert len(manifest["relationships"]) == num_components + (num_provided * 2) + 1
+    assert manifest["relationships"][0] == provided_contained_by_component
+    assert manifest["relationships"][1] == provided_contains_nothing
+    assert manifest["relationships"][2] == dev_provided_dependency_of_component
+    assert manifest["relationships"][3] == dev_provided_contains_nothing
+    assert manifest["relationships"][-2] == component_is_package_of_product
     assert manifest["relationships"][-1] == document_describes_product
 
 
 def test_component_manifest_properties():
     """Test that all models inheriting from ProductModel have a .manifest property
     And that it generates valid JSON."""
-    component, _ = setup_products_and_components()
+    component, _, provided, dev_provided = setup_products_and_components()
 
     manifest = json.loads(component.manifest)
 
@@ -113,6 +139,47 @@ def test_component_manifest_properties():
     except jsonschema.exceptions.ValidationError as e:
         print(e)
         assert False
+
+    num_provided = component.get_provides_nodes().count()
+
+    assert num_provided == 2
+
+    document_describes_product = {
+        "relatedSpdxElement": f"SPDXRef-{component.uuid}",
+        "relationshipType": "DESCRIBES",
+        "spdxElementId": "SPDXRef-DOCUMENT",
+    }
+
+    provided_contained_by_component = {
+        "relatedSpdxElement": f"SPDXRef-{component.uuid}",
+        "relationshipType": "CONTAINED_BY",
+        "spdxElementId": f"SPDXRef-{provided.uuid}",
+    }
+
+    provided_contains_nothing = {
+        "relatedSpdxElement": "NONE",
+        "relationshipType": "CONTAINS",
+        "spdxElementId": f"SPDXRef-{provided.uuid}",
+    }
+
+    dev_provided_dependency_of_component = {
+        "relatedSpdxElement": f"SPDXRef-{component.uuid}",
+        "relationshipType": "DEV_DEPENDENCY_OF",
+        "spdxElementId": f"SPDXRef-{dev_provided.uuid}",
+    }
+
+    dev_provided_contains_nothing = {
+        "relatedSpdxElement": "NONE",
+        "relationshipType": "CONTAINS",
+        "spdxElementId": f"SPDXRef-{dev_provided.uuid}",
+    }
+
+    assert len(manifest["relationships"]) == (num_provided * 2) + 1
+    assert manifest["relationships"][0] == provided_contained_by_component
+    assert manifest["relationships"][1] == provided_contains_nothing
+    assert manifest["relationships"][2] == dev_provided_dependency_of_component
+    assert manifest["relationships"][3] == dev_provided_contains_nothing
+    assert manifest["relationships"][-1] == document_describes_product
 
 
 def setup_products_and_components():
@@ -154,4 +221,4 @@ def setup_products_and_components():
     )
     build.save_component_taxonomy()
     build.save_product_taxonomy()
-    return component, stream
+    return component, stream, provided, dev_provided

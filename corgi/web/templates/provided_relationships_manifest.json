@@ -1,0 +1,11 @@
+{% for node in obj.get_provides_nodes %}
+    {
+      "relatedSpdxElement": "SPDXRef-{{obj.uuid}}",{# subcomponent is built from, or contained in, component #}
+      "relationshipType": {% if node.type == "PROVIDES_DEV" %}"DEV_DEPENDENCY_OF"{% else %}"CONTAINED_BY"{% endif %},
+      "spdxElementId": "SPDXRef-{{node.obj.uuid}}"
+    },
+    {
+      "relatedSpdxElement": "NONE",{# subcomponent is a leaf node #}
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-{{node.obj.uuid}}"
+    },{% endfor %}

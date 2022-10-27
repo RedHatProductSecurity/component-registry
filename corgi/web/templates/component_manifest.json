@@ -27,15 +27,5 @@
     }
 {% endblock %}
 {% block relationships %}
-    {% for node in obj.get_provides_nodes %}
-        {
-          "relatedSpdxElement": "SPDXRef-{{node.obj.uuid}}",{# subcomponent is built from, or contained in, component #}
-          "relationshipType": {% if node.type == "PROVIDES_DEV" %}"BUILD_DEPENDENCY_OF"{% else %}"CONTAINS"{% endif %},
-          "spdxElementId": "SPDXRef-{{obj.uuid}}"
-        },
-        {
-          "relatedSpdxElement": "NONE",{# subcomponent is a leaf node #}
-          "relationshipType": "CONTAINS",
-          "spdxElementId": "SPDXRef-{{node.obj.uuid}}"
-        },{% endfor %}
+    {% include "provided_relationships_manifest.json" with obj=obj %}
 {% endblock %}

@@ -19,4 +19,4 @@
     "SPDXID": "SPDXRef-{{component.uuid}}",
     "supplier": "Organization: Red Hat",
     "versionInfo": "{{component.nevra}}"
-}
+},

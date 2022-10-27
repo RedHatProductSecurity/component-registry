@@ -18,7 +18,7 @@
     "relationships": [
        {% block relationships %}{% endblock %}
        {
-          "relatedSpdxElement": "SPDXRef-{{obj.uuid}}",{# Document describes component being manifested #}
+          "relatedSpdxElement": "SPDXRef-{{obj.uuid}}",{# Document describes stream or component being manifested #}
           "relationshipType": "DESCRIBES",
           "spdxElementId": "SPDXRef-DOCUMENT"
        }

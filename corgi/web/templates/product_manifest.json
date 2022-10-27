@@ -35,14 +35,11 @@
 {% endblock %}
 {% block relationships %}
     {% for component in obj.get_latest_components %}
+        {% include "provided_relationships_manifest.json" with obj=component %}
         {
           "relatedSpdxElement": "SPDXRef-{{obj.uuid}}",
           "relationshipType": "PACKAGE_OF",
           "spdxElementId": "SPDXRef-{{component.uuid}}"
         },
-        {
-          "relatedSpdxElement": "NONE",
-          "relationshipType": "CONTAINS",
-          "spdxElementId": "SPDXRef-{{component.uuid}}"
-        },{% endfor %}
+    {% endfor %}
 {% endblock %}

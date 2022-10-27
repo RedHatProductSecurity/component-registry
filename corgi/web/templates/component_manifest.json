@@ -18,7 +18,7 @@
             "downloadLocation": {% if node.obj.channels %}"{{node.obj.channels.0}}"{% else %}"NOASSERTION"{% endif %},
             "externalRefs": [
                 {
-                    "referenceCategory": "PACKAGE-MANAGER",
+                    "referenceCategory": "PACKAGE_MANAGER",
                     "referenceLocator": "{{node.purl|safe}}",
                     "referenceType": "purl"
                 }
@@ -40,7 +40,7 @@
             "downloadLocation": {% if obj.channels %}"{{obj.channels.0}}"{% else %}"NOASSERTION"{% endif %},
             "externalRefs": [
                 {
-                    "referenceCategory": "PACKAGE-MANAGER",
+                    "referenceCategory": "PACKAGE_MANAGER",
                     "referenceLocator": "{{obj.purl|safe}}",
                     "referenceType": "purl"
                 }

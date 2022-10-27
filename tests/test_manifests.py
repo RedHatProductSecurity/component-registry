@@ -2,11 +2,18 @@ import json
 import logging
 from datetime import datetime
 
+import jsonschema
 import pytest
 
-from corgi.core.models import ComponentNode, ProductComponentRelation, ProductNode
+from corgi.core.models import (
+    Component,
+    ComponentNode,
+    ProductComponentRelation,
+    ProductNode,
+)
 
 from .factories import (
+    ComponentFactory,
     ProductComponentRelationFactory,
     ProductFactory,
     ProductStreamFactory,
@@ -22,42 +29,20 @@ pytestmark = pytest.mark.unit
 
 def test_product_manifest_properties():
     """Test that all models inheriting from ProductModel have a .manifest property
-    And that it generates valid JSON. TODO: Use a library to generate + validate the SPDX data"""
-    product = ProductFactory()
-    version = ProductVersionFactory()
-    stream = ProductStreamFactory()
-    variant = ProductVariantFactory(name="1")
-    pnode = ProductNode.objects.create(parent=None, obj=product, object_id=product.pk)
-    pvnode = ProductNode.objects.create(parent=pnode, obj=version, object_id=version.pk)
-    psnode = ProductNode.objects.create(parent=pvnode, obj=stream, object_id=stream.pk)
-    _ = ProductNode.objects.create(parent=psnode, obj=variant, object_id=variant.pk)
-    # This generates and saves the product_variants property of stream
-    stream.save_product_taxonomy()
-    assert variant.name in stream.product_variants
-
-    build = SoftwareBuildFactory(
-        build_id=1,
-        completion_time=datetime.strptime("2017-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z"),
-    )
-    build.save()
-    component = SrpmComponentFactory(
-        software_build=build,
-        product_variants=[variant.ofuri],
-        product_streams=[stream.ofuri],
-    )
-    _, _ = component.cnodes.get_or_create(
-        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=component.purl
-    )
-    # The product_ref here is a variant name but below we use it's parent stream
-    # to generate the manifest
-    ProductComponentRelationFactory(
-        build_id="1", product_ref="1", type=ProductComponentRelation.Type.ERRATA
-    )
-
-    build.save_component_taxonomy()
-    build.save_product_taxonomy()
+    And that it generates valid JSON."""
+    component, stream = setup_products_and_components()
 
     manifest = json.loads(stream.manifest)
+
+    # From https://raw.githubusercontent.com/spdx/spdx-spec/development/
+    # v2.2.2/schemas/spdx-schema.json
+    with open("tests/data/spdx-22-spec.json", "r") as spec_file:
+        schema = json.load(spec_file)
+    try:
+        jsonschema.validate(manifest, schema)
+    except jsonschema.exceptions.ValidationError as e:
+        print(e)
+        assert False
 
     # Test will fail with JSONDecodeError if above isn't valid
     # Eventually, we should also check the actual manifest content is valid SPDX data
@@ -110,3 +95,63 @@ def test_product_manifest_properties():
     assert manifest["relationships"][0] == component_is_package_of_product
     assert manifest["relationships"][1] == component_contains_nothing
     assert manifest["relationships"][-1] == document_describes_product
+
+
+def test_component_manifest_properties():
+    """Test that all models inheriting from ProductModel have a .manifest property
+    And that it generates valid JSON."""
+    component, _ = setup_products_and_components()
+
+    manifest = json.loads(component.manifest)
+
+    # From https://raw.githubusercontent.com/spdx/spdx-spec/development/
+    # v2.2.2/schemas/spdx-schema.json
+    with open("tests/data/spdx-22-spec.json", "r") as spec_file:
+        schema = json.load(spec_file)
+    try:
+        jsonschema.validate(manifest, schema)
+    except jsonschema.exceptions.ValidationError as e:
+        print(e)
+        assert False
+
+
+def setup_products_and_components():
+    product = ProductFactory()
+    version = ProductVersionFactory()
+    stream = ProductStreamFactory()
+    variant = ProductVariantFactory(name="1")
+    pnode = ProductNode.objects.create(parent=None, obj=product, object_id=product.pk)
+    pvnode = ProductNode.objects.create(parent=pnode, obj=version, object_id=version.pk)
+    psnode = ProductNode.objects.create(parent=pvnode, obj=stream, object_id=stream.pk)
+    _ = ProductNode.objects.create(parent=psnode, obj=variant, object_id=variant.pk)
+    # This generates and saves the product_variants property of stream
+    stream.save_product_taxonomy()
+    assert variant.name in stream.product_variants
+    build = SoftwareBuildFactory(
+        build_id=1,
+        completion_time=datetime.strptime("2017-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z"),
+    )
+    provided = ComponentFactory(type=Component.Type.RPM)
+    dev_provided = ComponentFactory(type=Component.Type.NPM)
+    component = SrpmComponentFactory(
+        software_build=build,
+        product_variants=[variant.ofuri],
+        product_streams=[stream.ofuri],
+    )
+    cnode, _ = component.cnodes.get_or_create(
+        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=component.purl
+    )
+    provided.cnodes.get_or_create(
+        type=ComponentNode.ComponentNodeType.PROVIDES, parent=cnode, purl=provided.purl
+    )
+    dev_provided.cnodes.get_or_create(
+        type=ComponentNode.ComponentNodeType.PROVIDES_DEV, parent=cnode, purl=provided.purl
+    )
+    # The product_ref here is a variant name but below we use it's parent stream
+    # to generate the manifest
+    ProductComponentRelationFactory(
+        build_id="1", product_ref="1", type=ProductComponentRelation.Type.ERRATA
+    )
+    build.save_component_taxonomy()
+    build.save_product_taxonomy()
+    return component, stream

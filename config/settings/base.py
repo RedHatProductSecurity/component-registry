@@ -79,25 +79,31 @@ X_FRAME_OPTIONS = "DENY"  # Header: X-Frame-Options DENY
 # Content Security Policy
 CSP_STYLE_SRC = (
     "'self'",
+    # Remove this once DRF doesn't require unsafe script execution for CSS:
+    # https://github.com/encode/django-rest-framework/pull/7960
     "'unsafe-inline'",
     "https://cdnjs.cloudflare.com",
-    "https://cdn.jsdelivr.net",
 )
+
 CSP_FONT_SRC = (
     "'self'",
     "https://cdnjs.cloudflare.com",
 )
+
 CSP_SCRIPT_SRC = (
     "'self'",
+    # Remove this once DRF doesn't require unsafe script execution for CSRF:
+    # https://github.com/encode/django-rest-framework/pull/7016
+    # and forms: https://github.com/encode/django-rest-framework/pull/5740
     "'unsafe-inline'",
     "https://cdnjs.cloudflare.com",
-    "https://cdn.jsdelivr.net",
 )
+
 CSP_IMG_SRC = (
     "'self'",
     "data:",
-    "https://cdn.jsdelivr.net",
 )
+
 CSP_DEFAULT_SRC = (
     "'self'",
     "data:",
@@ -119,6 +125,7 @@ INSTALLED_APPS = [
     "django_celery_results",
     "django_celery_beat",
     "drf_spectacular",
+    "drf_spectacular_sidecar",
     "mptt",
     "rest_framework",
     "django_filters",
@@ -349,6 +356,9 @@ PULP_PASSWORD = os.getenv("CORGI_PULP_PASSWORD")
 
 # Settings for the drf-spectacular package
 SPECTACULAR_SETTINGS = {
+    "SWAGGER_UI_DIST": "SIDECAR",  # shorthand to use the sidecar instead
+    "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
+    "REDOC_DIST": "SIDECAR",
     "TITLE": "Component Registry API",
     "DESCRIPTION": "REST API auto-generated docs for Component Registry",
     "VERSION": CORGI_VERSION,

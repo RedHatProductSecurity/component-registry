@@ -155,6 +155,7 @@ django==3.2.15 \
     #   django-timezone-field
     #   djangorestframework
     #   drf-spectacular
+    #   drf-spectacular-sidecar
 django-celery-beat==2.2.1 \
     --hash=sha256:97ae5eb309541551bdb07bf60cc57cadacf42a74287560ced2d2c06298620234 \
     --hash=sha256:ab43049634fd18dc037927d7c2c7d5f67f95283a20ebbda55f42f8606412e66c
@@ -216,10 +217,16 @@ dnspython==2.2.1 \
     # via
     #   -r requirements/base.txt
     #   eventlet
-drf-spectacular==0.21.2 \
+drf-spectacular[sidecar]==0.21.2 \
     --hash=sha256:4ad3a72609640c57a4ff297d498cb0b810a70aca5555c0760b2da9e2f74a45b2 \
     --hash=sha256:aa7a78c8595b63e1ba14906049c770210c8fa34d84b6d1c7dce5c9e334aa2775
     # via -r requirements/base.txt
+drf-spectacular-sidecar==2022.10.1 \
+    --hash=sha256:c32480a1025d1ea426ca3f982ef5967aef89c82e15628cdd77bed39ded68422c \
+    --hash=sha256:c379773bb4bdd4a450d13c0bba7f46a723c1d070ab8ad9010981208465a5c006
+    # via
+    #   -r requirements/base.txt
+    #   drf-spectacular
 eventlet==0.33.1 \
     --hash=sha256:a085922698e5029f820cf311a648ac324d73cec0e4792877609d978a4b5bbf31 \
     --hash=sha256:afbe17f06a58491e9aebd7a4a03e70b0b63fd4cf76d8307bae07f280479b1515

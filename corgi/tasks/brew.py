@@ -1,6 +1,7 @@
 import logging
 import re
 from datetime import timedelta
+from typing import Optional
 
 from celery_singleton import Singleton
 from django.conf import settings
@@ -124,7 +125,7 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def fetch_modular_build(build_id: str, force_process: bool = False) -> None:
+def fetch_modular_build(build_id: str, force_process: bool = False):
     logger.info("Fetch modular build called with build id: %s", build_id)
     rhel_module_data = Brew.fetch_rhel_module(int(build_id))
     # Some compose build_ids in the relations table will be for SRPMs, skip those here
@@ -179,7 +180,9 @@ def find_package_file_name(sources: list[str]) -> str:
     return ""  # If sources was an empty list, or none of the filenames matched
 
 
-def save_component(component, parent, softwarebuild=None):
+def save_component(
+    component: dict, parent: ComponentNode, softwarebuild: Optional[SoftwareBuild] = None
+):
     logger.debug("Called save component with component %s", component)
     component_type = component.pop("type").upper()
     meta = component.get("meta", {})
@@ -203,7 +206,7 @@ def save_component(component, parent, softwarebuild=None):
     # This avoids the situation where only the latest build fetched has the softarebuild associated
     # For example if we were processing a container image with embedded rpms this could be set to
     # the container build id, whereas we want it also to reflect the build id of the RPM build
-    if not (softwarebuild and parent.obj.is_srpm()):
+    if not (softwarebuild and parent.obj is not None and parent.obj.is_srpm()):
         softwarebuild = None
 
     # Handle case when key is present but value is None
@@ -244,7 +247,7 @@ def save_component(component, parent, softwarebuild=None):
     recurse_components(component, node)
 
 
-def save_srpm(softwarebuild, build_data) -> ComponentNode:
+def save_srpm(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
     obj, created = Component.objects.get_or_create(
         name=build_data["meta"].get("name"),
         type=build_data["type"],
@@ -306,7 +309,7 @@ def process_image_components(image):
     return builds_to_fetch
 
 
-def save_container(softwarebuild, build_data) -> ComponentNode:
+def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
     obj, created = Component.objects.get_or_create(
         name=build_data["meta"]["name"],
         type=build_data["type"],
@@ -408,7 +411,7 @@ def save_container(softwarebuild, build_data) -> ComponentNode:
     return root_node
 
 
-def recurse_components(component, parent):
+def recurse_components(component: dict, parent: ComponentNode):
     if not parent:
         logger.warning(f"Failed to create ComponentNode for component: {component}")
     else:

@@ -11,4 +11,4 @@ python3 manage.py collectstatic \
     --noinput
 
 # start gunicorn
-exec gunicorn config.wsgi --config gunicorn_config.py --reload
+exec gunicorn config.wsgi --config gunicorn_config.py

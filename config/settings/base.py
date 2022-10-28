@@ -21,6 +21,10 @@ ADMINS = [
     tuple(name_and_email.split(";")) for name_and_email in os.getenv("CORGI_ADMINS", "").split(",")
 ]
 
+DOCS_URL = os.getenv("CORGI_DOCS_URL")
+OPENSHIFT_BUILD_COMMIT = os.getenv("OPENSHIFT_BUILD_COMMIT")
+PRODSEC_EMAIL = os.getenv("PRODSEC_EMAIL")
+
 CORGI_DOMAIN = os.getenv("CORGI_DOMAIN")
 if CORGI_DOMAIN:
     CSRF_COOKIE_DOMAIN = CORGI_DOMAIN

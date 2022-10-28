@@ -20,32 +20,6 @@
           <strong>Component Registry</strong>
         </a>
       </div>
-      <div class="collapse navbar-collapse navbar-collapse-1">
-        <ul class="nav navbar-nav navbar-utility">
-          <li class="dropdown">
-            <button class="btn btn-link nav-item-iconic padding" id="horizontalDropdownMenu1"
-                    data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-              <span title="Help" class="fa pficon-help dropdown-title"></span>
-            </button>
-            <ul class="dropdown-menu" aria-labelledby="horizontalDropdownMenu1">
-              <li>
-                <a href="mailto:{% app_email %}" target="_blank" rel="noopener noreferrer">
-                  Contact Developers
-                  <em class="fa fa-envelope-o paddingleft"></em>
-                </a>
-              </li>
-              <li class="divider"></li>
-              <li>
-                <a href="https:///github.com/RedHatProductSecurity/component-registry/tree/main/docs" target="_blank"
-                   rel="noopener noreferrer">
-                  Docs
-                  <em class="fa fa-external-link paddingleft"></em>
-                </a>
-              </li>
-            </ul>
-          </li>
-        </ul>
-      </div>
     </nav>
     {% block body %}
     {% endblock %}
@@ -55,8 +29,14 @@
         |
         Version: {% app_version %}{% app_git_ref %}
         |
+        <a href="mailto:{% app_email %}" rel="noopener noreferrer" target="_blank">
+          Contact Developers
+          <em class="fa fa-envelope-o"></em>
+        </a>
+        |
         <a href="{% app_docs %}" rel="noopener noreferrer" target="_blank">
           Report Issue
+          <em class="fa fa-external-link"></em>
         </a>
       </div>
     </div>

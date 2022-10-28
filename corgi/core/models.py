@@ -878,15 +878,10 @@ class Component(TimeStampedModel):
             # Break down RHEL module version into its specific parts:
             # NSVC = Name, Stream, Version, Context
             version, _, context = self.release.partition(".")
-            qualifiers = {
-                "stream": self.version,
-                "version": version,
-                "context": context,
-            }
+            stream = self.version
             purl_data = dict(
                 name=self.name,
-                version=f"{self.version}-{self.release}",
-                qualifiers=qualifiers,
+                version=f"{stream}:{version}:{context}",
             )
         elif self.type == Component.Type.CONTAINER_IMAGE:
             digest = ""

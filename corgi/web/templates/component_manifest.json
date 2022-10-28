@@ -1,3 +1,4 @@
+{# Component manifest #}
 {% extends "base_manifest.json" %}
 {% block packages %}
 {% for node in obj.get_provides_nodes %}

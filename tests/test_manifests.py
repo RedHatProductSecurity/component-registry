@@ -38,13 +38,7 @@ def test_product_manifest_properties():
     # v2.2.2/schemas/spdx-schema.json
     with open("tests/data/spdx-22-spec.json", "r") as spec_file:
         schema = json.load(spec_file)
-    try:
-        jsonschema.validate(manifest, schema)
-    except jsonschema.exceptions.ValidationError as e:
-        print(e)
-        assert False
-
-    # Test will fail with JSONDecodeError if above isn't valid
+    jsonschema.validate(manifest, schema)
 
     # One component linked to this product
     num_components = len(stream.get_latest_components())
@@ -124,7 +118,7 @@ def test_product_manifest_properties():
 
 
 def test_component_manifest_properties():
-    """Test that all models inheriting from ProductModel have a .manifest property
+    """Test that all Components have a .manifest property
     And that it generates valid JSON."""
     component, _, provided, dev_provided = setup_products_and_components()
 
@@ -134,11 +128,7 @@ def test_component_manifest_properties():
     # v2.2.2/schemas/spdx-schema.json
     with open("tests/data/spdx-22-spec.json", "r") as spec_file:
         schema = json.load(spec_file)
-    try:
-        jsonschema.validate(manifest, schema)
-    except jsonschema.exceptions.ValidationError as e:
-        print(e)
-        assert False
+    jsonschema.validate(manifest, schema)
 
     num_provided = component.get_provides_nodes().count()
 

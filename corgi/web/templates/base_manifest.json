@@ -1,3 +1,4 @@
+{# Used as the base of all manifest.json templates #}
 {
     "creationInfo": {
         "created": "{% now 'Y-m-d' %}T{% now 'H:i:00' %}Z",

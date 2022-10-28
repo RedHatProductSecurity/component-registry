@@ -1,3 +1,4 @@
+{# ProductModel manifest #}
 {% extends "base_manifest.json" %}
 {% block packages %}
 {% for component in obj.get_latest_components %}{# Below will eventually become component.manifest #}

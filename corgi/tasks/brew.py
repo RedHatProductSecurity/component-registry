@@ -135,10 +135,11 @@ def fetch_modular_build(build_id: str, force_process: bool = False):
         return
     # TODO: Should we use update_or_create here?
     #  We don't currently handle reprocessing a modular build
+    # Note: module builds don't include arch information, only the individual RPMs that make up a
+    # module are built for specific architectures.
     obj, created = Component.objects.get_or_create(
         name=rhel_module_data["meta"]["name"],
-        type=Component.Type.RPMMOD,
-        arch=rhel_module_data["meta"].get("arch", ""),
+        type=rhel_module_data["type"],
         version=rhel_module_data["meta"]["version"],
         release=rhel_module_data["meta"]["release"],
         defaults={

@@ -199,7 +199,7 @@ class ComponentNode(MPTTModel, TimeStampedModel):
         super().save(*args, **kwargs)
 
 
-class Tag(models.Model):
+class Tag(TimeStampedModel):
     name = models.SlugField(
         max_length=200
     )  # Must not be empty; enforced by check constrain in child models.
@@ -305,7 +305,7 @@ class SoftwareBuild(TimeStampedModel):
         return None
 
 
-class SoftwareBuildTag(Tag, TimeStampedModel):
+class SoftwareBuildTag(Tag):
     software_build = models.ForeignKey(SoftwareBuild, on_delete=models.CASCADE, related_name="tags")
 
     class Meta:
@@ -317,7 +317,7 @@ class SoftwareBuildTag(Tag, TimeStampedModel):
         )
 
 
-class ProductModel(models.Model):
+class ProductModel(TimeStampedModel):
     """Abstract model that defines common fields for all product-related models."""
 
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -412,7 +412,7 @@ class ProductModel(models.Model):
         return str(self.name)
 
 
-class Product(ProductModel, TimeStampedModel):
+class Product(ProductModel):
 
     # Inherit product_versions, product_streams, and product_variants from ProductModel
     # Override only products which doesn't make sense for this model
@@ -445,7 +445,7 @@ class ProductTag(Tag):
         )
 
 
-class ProductVersion(ProductModel, TimeStampedModel):
+class ProductVersion(ProductModel):
 
     product_versions = None  # type: ignore
     pnodes = GenericRelation(ProductNode, related_query_name="product_version")
@@ -481,7 +481,7 @@ class ProductVersionTag(Tag):
         )
 
 
-class ProductStream(ProductModel, TimeStampedModel):
+class ProductStream(ProductModel):
 
     cpe = models.CharField(max_length=1000, default="")
 
@@ -557,7 +557,7 @@ class ProductStreamTag(Tag):
         )
 
 
-class ProductVariant(ProductModel, TimeStampedModel):
+class ProductVariant(ProductModel):
     """Product Variant model
 
     This directly relates to Errata Tool Variants which are mapped then mapped to CDN

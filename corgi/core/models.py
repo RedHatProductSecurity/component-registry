@@ -697,7 +697,7 @@ class ProductComponentRelation(TimeStampedModel):
     build_id = models.CharField(max_length=200, default="")
 
     class Meta:
-        ordering = ("external_system_id",)
+        ordering = ("external_system_id", "product_ref", "build_id")
         constraints = (
             models.UniqueConstraint(
                 name="unique_productcomponentrelation",
@@ -824,8 +824,11 @@ class Component(TimeStampedModel):
 
     class Meta:
         ordering = (
-            "type",
             "name",
+            "type",
+            "arch",
+            "version",
+            "release",
         )
         constraints = (
             models.UniqueConstraint(
@@ -1248,4 +1251,4 @@ class AppStreamLifeCycle(TimeStampedModel):
                 name="unique_lifecycle_entity",
             ),
         )
-        ordering = ("name",)
+        ordering = ("name", "type", "product", "initial_product_version", "stream")

@@ -1,0 +1,29 @@
+{# Used as the base of all manifest.json templates #}
+{
+    "creationInfo": {
+        "created": "{% now 'Y-m-d' %}T{% now 'H:i:00' %}Z",
+        "creators": [
+            "Organization: Red Hat Product Security (secalert@redhat.com)"
+        ],
+        "licenseListVersion": "3.8"
+    },
+    "dataLicense": "CC-BY-4.0",
+    "documentDescribes": [
+        "SPDXRef-{{obj.uuid}}"
+    ],
+    "documentNamespace": "https://access.redhat.com/security/data/manifest/spdx/{{obj.name}}-{{obj.uuid}}",
+    "name": "{{obj.name}}",
+    "packages": [
+      {% block packages %}{% endblock %}
+    ],
+    "relationships": [
+       {% block relationships %}{% endblock %}
+       {
+          "relatedSpdxElement": "SPDXRef-{{obj.uuid}}",{# Document describes stream or component being manifested #}
+          "relationshipType": "DESCRIBES",
+          "spdxElementId": "SPDXRef-DOCUMENT"
+       }
+    ],
+    "SPDXID": "SPDXRef-DOCUMENT",
+    "spdxVersion": "SPDX-2.2"
+}

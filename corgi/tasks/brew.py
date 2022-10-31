@@ -145,6 +145,7 @@ def fetch_modular_build(build_id: str, force_process: bool = False):
         defaults={
             # This gives us an indication as to which task (this or fetch_brew_build)
             # last processed the module
+            "namespace": rhel_module_data["namespace"],
             "meta_attr": rhel_module_data["analysis_meta"],
         },
     )
@@ -429,7 +430,6 @@ def save_module(softwarebuild, build_data) -> ComponentNode:
     obj, created = Component.objects.update_or_create(
         name=build_data["meta"]["name"],
         type=build_data["type"],
-        namespace=build_data["namespace"],
         arch=build_data["meta"].get("arch", ""),
         version=build_data["meta"].get("version", ""),
         release=build_data["meta"].get("release", ""),

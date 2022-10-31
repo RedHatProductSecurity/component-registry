@@ -69,19 +69,14 @@ def save_component(component: dict[str, Any], parent: ComponentNode):
 def slow_software_composition_analysis(build_id: int):
     logger.info("Started software composition analysis for %s", build_id)
     software_build = SoftwareBuild.objects.get(build_id=build_id)
-    try:
-        # Get a matching SRPM first
-        root_component = Component.objects.get(
-            software_build=software_build,
-            type__in=[Component.Type.SRPM, Component.Type.RHEL_MODULE],
-        )
-    except Component.DoesNotExist:
-        # It might be a container image, else fail the task if neither matched
-        root_component = Component.objects.get(
-            software_build=software_build,
-            type=Component.Type.CONTAINER_IMAGE,
-            arch="noarch",
-        )
+
+    # Get root component for this build; fail the task if it does not exist.
+    # TODO: ditch type:ignore when https://github.com/typeddjango/django-stubs/pull/1025 is released
+    root_component = (
+        Component.objects.filter(software_build=software_build)
+        .root_components()  # type:ignore
+        .get()
+    )
 
     if root_component.name == "kernel":
         logger.info("skipping scan of the kernel, see CORGI-270")

@@ -1,6 +1,7 @@
 import logging
 import re
 from datetime import timedelta
+from typing import Optional
 
 from celery_singleton import Singleton
 from django.conf import settings
@@ -82,11 +83,11 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
         logger.warning("SoftwareBuild with build_id %s already existed, not reprocessing", build_id)
         return
 
-    if component["type"] == "rpm":
+    if component["type"] == Component.Type.RPM:
         root_node = save_srpm(softwarebuild, component)
-    elif component["type"] == "image":
+    elif component["type"] == Component.Type.CONTAINER_IMAGE:
         root_node = save_container(softwarebuild, component)
-    elif component["type"] == "module":
+    elif component["type"] == Component.Type.RPMMOD:
         root_node = save_module(softwarebuild, component)
     else:
         logger.warning(f"Build {build_id} type is not supported: {component['type']}")
@@ -124,7 +125,7 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def fetch_modular_build(build_id: str, force_process: bool = False) -> None:
+def fetch_modular_build(build_id: str, force_process: bool = False):
     logger.info("Fetch modular build called with build id: %s", build_id)
     rhel_module_data = Brew.fetch_rhel_module(int(build_id))
     # Some compose build_ids in the relations table will be for SRPMs, skip those here
@@ -134,10 +135,11 @@ def fetch_modular_build(build_id: str, force_process: bool = False) -> None:
         return
     # TODO: Should we use update_or_create here?
     #  We don't currently handle reprocessing a modular build
+    # Note: module builds don't include arch information, only the individual RPMs that make up a
+    # module are built for specific architectures.
     obj, created = Component.objects.get_or_create(
         name=rhel_module_data["meta"]["name"],
-        type=Component.Type.RHEL_MODULE,
-        arch=rhel_module_data["meta"].get("arch", ""),
+        type=rhel_module_data["type"],
         version=rhel_module_data["meta"]["version"],
         release=rhel_module_data["meta"]["release"],
         defaults={
@@ -179,7 +181,9 @@ def find_package_file_name(sources: list[str]) -> str:
     return ""  # If sources was an empty list, or none of the filenames matched
 
 
-def save_component(component, parent, softwarebuild=None):
+def save_component(
+    component: dict, parent: ComponentNode, softwarebuild: Optional[SoftwareBuild] = None
+):
     logger.debug("Called save component with component %s", component)
     component_type = component.pop("type").upper()
     meta = component.get("meta", {})
@@ -194,19 +198,16 @@ def save_component(component, parent, softwarebuild=None):
 
     elif component_type == "PIP":
         component_type = "PYPI"
-    elif component_type not in Component.Type.names:
+
+    elif component_type not in Component.Type.values:
         logger.warning("Tried to create component with invalid component_type: %s", component_type)
         return
 
     # Only save softwarebuild for RPM where they are direct children of SRPMs
-    # This avoid the situation where only the latest build fetched has the softarebuild associated
+    # This avoids the situation where only the latest build fetched has the softarebuild associated
     # For example if we were processing a container image with embedded rpms this could be set to
     # the container build id, whereas we want it also to reflect the build id of the RPM build
-    if not (
-        softwarebuild
-        and component_type == Component.Type.RPM
-        and parent.obj.type == Component.Type.SRPM
-    ):
+    if not (softwarebuild and parent.obj is not None and parent.obj.is_srpm()):
         softwarebuild = None
 
     # Handle case when key is present but value is None
@@ -223,6 +224,7 @@ def save_component(component, parent, softwarebuild=None):
             "description": meta.pop("description", ""),
             "filename": find_package_file_name(meta.pop("source", [])),
             "license_declared_raw": meta.pop("license", ""),
+            "namespace": component.get("namespace", ""),
             "related_url": related_url,
             "software_build": softwarebuild,
         },
@@ -246,10 +248,10 @@ def save_component(component, parent, softwarebuild=None):
     recurse_components(component, node)
 
 
-def save_srpm(softwarebuild, build_data) -> ComponentNode:
+def save_srpm(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
     obj, created = Component.objects.get_or_create(
         name=build_data["meta"].get("name"),
-        type=Component.Type.SRPM,
+        type=build_data["type"],
         arch=build_data["meta"].get("arch", ""),
         version=build_data["meta"].get("version", ""),
         release=build_data["meta"].get("release", ""),
@@ -258,6 +260,7 @@ def save_srpm(softwarebuild, build_data) -> ComponentNode:
             "description": build_data["meta"].get("description", ""),
             "software_build": softwarebuild,
             "meta_attr": build_data["meta"],
+            "namespace": build_data["namespace"],
         },
     )
     node, _ = obj.cnodes.get_or_create(
@@ -273,7 +276,8 @@ def save_srpm(softwarebuild, build_data) -> ComponentNode:
     related_url = build_data["meta"].get("url", "")
     if related_url:
         new_upstream, created = Component.objects.get_or_create(
-            type=Component.Type.UPSTREAM,
+            type=build_data["type"],
+            namespace=Component.Namespace.UPSTREAM,
             name=build_data["meta"].get("name"),
             version=build_data["meta"].get("version", ""),
             # To avoid any future variance of license_declared and related_url
@@ -306,16 +310,17 @@ def process_image_components(image):
     return builds_to_fetch
 
 
-def save_container(softwarebuild, build_data) -> ComponentNode:
+def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
     obj, created = Component.objects.get_or_create(
         name=build_data["meta"]["name"],
-        type=Component.Type.CONTAINER_IMAGE,
+        type=build_data["type"],
         arch="noarch",
         version=build_data["meta"]["version"],
         release=build_data["meta"]["release"],
         defaults={
             "software_build": softwarebuild,
             "meta_attr": build_data["meta"],
+            "namespace": build_data.get("namespace", ""),
         },
     )
     root_node, _ = obj.cnodes.get_or_create(
@@ -336,6 +341,7 @@ def save_container(softwarebuild, build_data) -> ComponentNode:
                 # the upstream commit is included in the dist-git commit history, but is not
                 # exposed anywhere in the brew data that I can find
                 version="",
+                defaults={"namespace": Component.Namespace.UPSTREAM},
             )
             new_upstream.cnodes.get_or_create(
                 type=ComponentNode.ComponentNodeType.SOURCE,
@@ -351,13 +357,14 @@ def save_container(softwarebuild, build_data) -> ComponentNode:
         for image in build_data["image_components"]:
             obj, created = Component.objects.get_or_create(
                 name=image["meta"].pop("name"),
-                type=Component.Type.CONTAINER_IMAGE,
+                type=image["type"],
                 arch=image["meta"].pop("arch"),
                 version=image["meta"].pop("version"),
                 release=image["meta"].pop("release"),
                 defaults={
                     "software_build": softwarebuild,
                     "meta_attr": image["meta"],
+                    "namespace": image.get("namespace", ""),
                 },
             )
             image_arch_node, _ = obj.cnodes.get_or_create(
@@ -382,10 +389,14 @@ def save_container(softwarebuild, build_data) -> ComponentNode:
             if related_url is None:
                 related_url = ""
             new_upstream, created = Component.objects.get_or_create(
-                type=Component.Type.UPSTREAM,
+                type=source["type"],
                 name=source["meta"].pop("name"),
                 version=source["meta"].pop("version"),
-                defaults={"meta_attr": source["meta"], "related_url": related_url},
+                defaults={
+                    "meta_attr": source["meta"],
+                    "related_url": related_url,
+                    "namespace": Component.Namespace.UPSTREAM,
+                },
             )
             upstream_node, _ = new_upstream.cnodes.get_or_create(
                 type=ComponentNode.ComponentNodeType.SOURCE,
@@ -401,7 +412,7 @@ def save_container(softwarebuild, build_data) -> ComponentNode:
     return root_node
 
 
-def recurse_components(component, parent):
+def recurse_components(component: dict, parent: ComponentNode):
     if not parent:
         logger.warning(f"Failed to create ComponentNode for component: {component}")
     else:
@@ -420,7 +431,7 @@ def save_module(softwarebuild, build_data) -> ComponentNode:
     meta_attr.update(build_data["analysis_meta"])
     obj, created = Component.objects.update_or_create(
         name=build_data["meta"]["name"],
-        type=Component.Type.RHEL_MODULE,
+        type=build_data["type"],
         arch=build_data["meta"].get("arch", ""),
         version=build_data["meta"].get("version", ""),
         release=build_data["meta"].get("release", ""),
@@ -429,6 +440,7 @@ def save_module(softwarebuild, build_data) -> ComponentNode:
             "description": build_data["meta"].get("description", ""),
             "software_build": softwarebuild,
             "meta_attr": meta_attr,
+            "namespace": build_data["namespace"],
         },
     )
     node, _ = obj.cnodes.get_or_create(

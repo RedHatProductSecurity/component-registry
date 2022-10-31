@@ -16,7 +16,11 @@ from tests.data.image_archive_data import (
     RPM_BUILD_IDS,
     TEST_IMAGE_ARCHIVES,
 )
-from tests.factories import ComponentFactory, SoftwareBuildFactory
+from tests.factories import (
+    ContainerImageComponentFactory,
+    SoftwareBuildFactory,
+    SrpmComponentFactory,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -167,7 +171,6 @@ def test_get_component_data(
     elif build_type == "image":
         assert list(c.keys()) == [
             "type",
-            "namespace",
             "meta",
             "nested_builds",
             "sources",
@@ -188,10 +191,10 @@ def test_get_component_data(
     assert c["build_meta"]["build_info"]["source"] == build_source
     assert c["build_meta"]["build_info"]["build_id"] == build_id
     assert c["build_meta"]["build_info"]["name"] == build_name
+    assert c["build_meta"]["build_info"]["type"] == build_type
     # The "license_declared_raw" field on the Component model defaults to ""
     # But the Brew collector (via get_rpm_build_data) / Koji (via getRPMHeaders) may return None
     assert c["meta"].get("license", "") == license_declared_raw
-    assert c["type"] == build_type
 
 
 # build_info, list_archives,remote_sources_name
@@ -360,7 +363,9 @@ def test_extract_remote_sources(requests_mock):
     xtext_package_names = [p["meta"]["name"] for p in xtext_modules[0]["components"]]
     assert all([n.startswith("golang.org/x/text") for n in xtext_package_names])
     # verify_pypi_provides test
-    pip_modules = [d for d in source_components[0]["components"] if d["type"] == "pip"]
+    pip_modules = [
+        d for d in source_components[0]["components"] if d["type"] == Component.Type.PYPI
+    ]
     assert len(pip_modules) == 1
     assert pip_modules[0]["meta"]["name"] == "clair"
 
@@ -383,6 +388,7 @@ def test_extract_multiple_remote_sources(requests_mock):
     source_components = Brew()._extract_remote_sources(go_version, remote_sources)
     assert len(source_components) == 4
     components = [len(s["components"]) for s in source_components]
+    # TODO FAIL: what do these numbers mean?!?
     assert components == [2, 492, 142, 337]
 
     # Inspect quay components
@@ -407,8 +413,9 @@ def test_extract_multiple_remote_sources(requests_mock):
 
     # Inspect jwtproxy components
     jwtproxy_components = components[2]
-    assert jwtproxy_components[0]["type"] == "go-package"
+    assert jwtproxy_components[0]["type"] == Component.Type.GOLANG
     assert jwtproxy_components[0]["meta"]["name"] == "bufio"
+    assert jwtproxy_components[0]["meta"]["go_component_type"] == "go-package"
     assert jwtproxy_components[0]["meta"]["version"] == go_version
 
     # Inspect pushgateway components
@@ -504,28 +511,28 @@ def test_parsing_bundled_provides():
         "",
     ]
     # Add mock version; we're testing component name parsing here only
-    test_provides = [(provide, "0") for provide in test_provides]
+    test_provides = [(str(provide), "0") for provide in test_provides]
 
     expected_values = [
-        ("golang", "golang.org/x/crypto/acme"),
-        ("golang", "github.com/git-lfs/go-netrc"),
-        ("golang", "github.com/alexbrainman/sspi"),
-        ("golang", "golang.org/x/net"),
-        ("pypi", "certifi"),
-        ("pypi", "pip"),
-        ("pypi", "setuptools"),
-        ("pypi", "django-stubs"),
-        ("pypi", "selectors2"),
-        ("npm", "@babel/code-frame"),
-        ("npm", "yargs-parser"),
-        ("gem", "fileutils"),
-        ("gem", "example"),
-        ("gem", "another-example"),
-        ("crate", "aho-corasick/default"),
-        ("unknown", "rh-nodejs12-zlib"),
-        ("npm", "backbone"),
-        ("unknown:cocoa", "hello-world"),
-        ("unknown", "libsomething"),
+        ("GOLANG", "golang.org/x/crypto/acme"),
+        ("GOLANG", "github.com/git-lfs/go-netrc"),
+        ("GOLANG", "github.com/alexbrainman/sspi"),
+        ("GOLANG", "golang.org/x/net"),
+        ("PYPI", "certifi"),
+        ("PYPI", "pip"),
+        ("PYPI", "setuptools"),
+        ("PYPI", "django-stubs"),
+        ("PYPI", "selectors2"),
+        ("NPM", "@babel/code-frame"),
+        ("NPM", "yargs-parser"),
+        ("GEM", "fileutils"),
+        ("GEM", "example"),
+        ("GEM", "another-example"),
+        ("CARGO", "aho-corasick/default"),
+        ("GENERIC", "rh-nodejs12-zlib"),
+        ("NPM", "backbone"),
+        ("GENERIC", "hello-world"),
+        ("GENERIC", "libsomething"),
     ]
     expected_values = [parsed + ("0",) for parsed in expected_values]
 
@@ -543,8 +550,10 @@ extract_golang_test_data = [
     (
         "tests/data/remote-source-submariner-operator.json",
         {
-            "type": "gomod",
+            "type": Component.Type.GOLANG,
+            "namespace": Component.Namespace.UPSTREAM,
             "meta": {
+                "go_component_type": "gomod",
                 "name": "github.com/asaskevich/govalidator",
                 "version": "v0.0.0-20210307081110-f21760c49a8d",
             },
@@ -554,8 +563,10 @@ extract_golang_test_data = [
     (
         "tests/data/remote-source-poison-pill.json",
         {
-            "type": "go-package",
+            "type": Component.Type.GOLANG,
+            "namespace": Component.Namespace.UPSTREAM,
             "meta": {
+                "go_component_type": "go-package",
                 "name": "bufio",
                 "version": "1.15.0",
             },
@@ -584,31 +595,36 @@ def test_save_component():
     software_build = SoftwareBuildFactory()
 
     # Simulate saving an RPM in a Container
-    image_component = ComponentFactory(type=Component.Type.CONTAINER_IMAGE)
+    image_component = ContainerImageComponentFactory()
     root_node, _ = image_component.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
         purl=image_component.purl,
     )
-    rpm_dict = {"type": Component.Type.RPM, "meta": {"name": "myrpm"}}
+    rpm_dict = {
+        "type": Component.Type.RPM,
+        "namespace": Component.Namespace.REDHAT,
+        "meta": {"name": "myrpm", "arch": "ppc"},
+    }
     save_component(rpm_dict, root_node, software_build)
-    saved_rpm = Component.objects.get(type=Component.Type.RPM)
-    assert saved_rpm
-    # Verify the rpm's software build is None
-    assert not saved_rpm.software_build
+    # Verify the RPM's software build is None
+    assert Component.objects.filter(type=Component.Type.RPM, software_build__isnull=True).exists()
 
-    # This time save the same RPM in a SRPM
-    srpm_component = ComponentFactory(type=Component.Type.SRPM)
+    # Add an SRPM component for that same RPM.
+    srpm_component = SrpmComponentFactory()
     root_node, _ = srpm_component.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
         purl=srpm_component.purl,
     )
-    rpm_dict = {"type": Component.Type.RPM, "meta": {"name": "myrpm"}}
+    rpm_dict = {
+        "type": Component.Type.RPM,
+        "namespace": Component.Namespace.REDHAT,
+        "meta": {"name": "mysrpm", "arch": "src"},
+    }
     save_component(rpm_dict, root_node, software_build)
-    saved_rpm = Component.objects.get(type=Component.Type.RPM)
     # Now it should have a software_build
-    assert saved_rpm.software_build == software_build
+    assert Component.objects.filter(type=Component.Type.RPM, software_build=software_build).exists()
 
 
 @pytest.mark.vcr(match_on=["method", "scheme", "host", "port", "path", "body"])
@@ -638,8 +654,7 @@ def test_extract_image_components():
 @patch("corgi.tasks.sca.slow_software_composition_analysis.delay")
 def test_fetch_rpm_build(mock_sca):
     slow_fetch_brew_build(1705913)
-    srpm = Component.objects.get(name="cockpit", type=Component.Type.SRPM)
-    assert srpm
+    srpm = Component.objects.srpms().get(name="cockpit")
     assert srpm.description
     assert srpm.license_declared_raw
     assert srpm.software_build
@@ -649,8 +664,8 @@ def test_fetch_rpm_build(mock_sca):
     assert len(provides) == 30
     for package in [
         "pkg:npm/jquery@3.5.1",
-        "pkg:unknown/xstatic-patternfly-common@3.59.5",
-        "pkg:unknown/xstatic-bootstrap-datepicker-common@1.9.0",
+        "pkg:generic/xstatic-patternfly-common@3.59.5",
+        "pkg:generic/xstatic-bootstrap-datepicker-common@1.9.0",
         "pkg:rpm/redhat/cockpit-system@251-1.el8?arch=noarch",
     ]:
         assert package in provides
@@ -658,22 +673,35 @@ def test_fetch_rpm_build(mock_sca):
     # SRPM has no sources of its own (nor is it embedded in any other component)
     assert len(srpm.get_source()) == 0
     cockpit_system = Component.objects.get(
-        type=Component.Type.RPM, name="cockpit-system", version="251", release="1.el8"
+        type=Component.Type.RPM,
+        namespace=Component.Namespace.REDHAT,
+        name="cockpit-system",
+        version="251",
+        release="1.el8",
+        arch="noarch",
     )
     assert cockpit_system.software_build
     # Cockpit has its own SRPM
     assert cockpit_system.get_source() == ["pkg:rpm/redhat/cockpit@251-1.el8?arch=src"]
-    jquery = Component.objects.get(type=Component.Type.NPM, name="jquery", version="3.5.1")
+    jquery = Component.objects.get(
+        type=Component.Type.NPM,
+        namespace=Component.Namespace.UPSTREAM,
+        name="jquery",
+        version="3.5.1",
+    )
     assert not jquery.software_build
     # jQuery is embedded in Cockpit
     assert jquery.get_source() == ["pkg:rpm/redhat/cockpit@251-1.el8?arch=src"]
 
 
-@pytest.mark.vcr(match_on=["method", "scheme", "host", "port", "path", "body"])
+@patch("corgi.tasks.brew.Brew")
 @patch("corgi.tasks.brew.slow_software_composition_analysis.delay")
 @patch("corgi.tasks.brew.slow_load_errata.delay")
 @patch("corgi.tasks.brew.slow_fetch_brew_build.delay")
-def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, mock_sca):
+def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, mock_sca, mock_brew):
+    with open("tests/data/brew/1781353/component_data.json", "r") as component_data_file:
+        mock_brew.return_value.get_component_data.return_value = json.load(component_data_file)
+
     slow_fetch_brew_build(1781353)
     image_index = Component.objects.get(
         name="subctl-container", type=Component.Type.CONTAINER_IMAGE, arch="noarch"
@@ -705,10 +733,7 @@ def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, moc
         [call(build_id) for build_id in RPM_BUILD_IDS],
         any_order=True,
     )
-
-    # Verify that slow_load_errata didn't try to fetch the only build in this errata again
-    # TODO: Below should be a method call(), but changing it makes tests fail
-    mock_load_errata.assert_not_called
+    mock_load_errata.assert_called_with("RHEA-2021:4610")
     mock_sca.assert_called_with(1781353)
 
 

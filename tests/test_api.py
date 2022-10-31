@@ -17,6 +17,7 @@ from .factories import (
     ProductVariantFactory,
     ProductVersionFactory,
     SoftwareBuildFactory,
+    SrpmComponentFactory,
 )
 
 pytestmark = pytest.mark.unit
@@ -144,12 +145,16 @@ def test_component_detail_olcs_put(client, api_path):
 
 def test_component_detail_dev(client, api_path):
     upstream = ComponentFactory(
-        type=Component.Type.UPSTREAM, related_url="https://example.org/related"
+        type=Component.Type.GENERIC,
+        namespace=Component.Namespace.UPSTREAM,
+        related_url="https://example.org/related",
     )
     upstream_node, _ = upstream.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=upstream.purl
     )
-    dev_comp = ComponentFactory(name="dev", type=Component.Type.NPM)
+    dev_comp = ComponentFactory(
+        name="dev", type=Component.Type.NPM, namespace=Component.Namespace.REDHAT
+    )
     dev_comp.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.PROVIDES_DEV, parent=upstream_node, purl=dev_comp.purl
     )
@@ -158,7 +163,7 @@ def test_component_detail_dev(client, api_path):
     upstream.save()
     assert dev_comp.purl in upstream.provides
 
-    response = client.get(f"{api_path}/components?type=UPSTREAM")
+    response = client.get(f"{api_path}/components?namespace=UPSTREAM")
     assert response.status_code == 200
     assert response.json()["count"] == 1
     # TODO - bug in pytest loses request.META['HTTP_HOST'] fixing as part of another MR
@@ -264,16 +269,16 @@ def test_component_add_uri(client, api_path):
 
 
 def test_srpm_detail(client, api_path):
-    c1 = ComponentFactory(type=Component.Type.SRPM, name="curl-7.19.7-35.el6.src")
-    response = client.get(f"{api_path}/components?type=SRPM")
+    c1 = SrpmComponentFactory(name="curl-7.19.7-35.el6.src")
+    response = client.get(f"{api_path}/components?type=RPM&arch=src")
     assert response.status_code == 200
     response = client.get(f"{api_path}/components/{c1.uuid}")
     assert response.status_code == 200
     assert response.json()["name"] == "curl-7.19.7-35.el6.src"
-    response = client.get(f"{api_path}/components?type=SRPM&name=curl-7.19.7-35.el6.src")
+    response = client.get(f"{api_path}/components?type=RPM&name=curl-7.19.7-35.el6.src")
     assert response.status_code == 200
     assert response.json()["count"] == 1
-    response = client.get(f"{api_path}/components?type=SRPM&re_purl=curl")
+    response = client.get(f"{api_path}/components?type=RPM&re_purl=curl")
     assert response.status_code == 200
     assert response.json()["count"] == 1
 
@@ -323,7 +328,9 @@ def test_re_name_filter(client, api_path):
 
 
 def test_re_purl_filter(client, api_path):
-    c1 = ComponentFactory(type=Component.Type.RPM, name="autotrace-devel")
+    c1 = ComponentFactory(
+        type=Component.Type.RPM, namespace=Component.Namespace.REDHAT, name="autotrace-devel"
+    )
     response = client.get(f"{api_path}/components?type=RPM")
     assert response.status_code == 200
     response = client.get(f"{api_path}/components/{c1.uuid}")
@@ -336,16 +343,23 @@ def test_re_purl_filter(client, api_path):
 
 
 def test_nvr_nevra_filter(client, api_path):
-    c1 = ComponentFactory(type=Component.Type.RPM, meta_attr={"epoch": "1"}, name="autotrace-devel")
+    c1 = ComponentFactory(
+        type=Component.Type.RPM,
+        meta_attr={"epoch": "1"},
+        name="autotrace-devel",
+        version="3.2.1",
+        release="1.0.1e",
+        arch="noarch",
+    )
     response = client.get(f"{api_path}/components?type=RPM")
     assert response.status_code == 200
     response = client.get(f"{api_path}/components/{c1.uuid}")
     assert response.json()["epoch"] == "1"
     assert response.json()["nvr"] == "autotrace-devel-3.2.1-1.0.1e"
-    assert response.json()["nevra"] == "autotrace-devel:1-3.2.1-1.0.1e.testarch"
+    assert response.json()["nevra"] == "autotrace-devel:1-3.2.1-1.0.1e.noarch"
     response = client.get(f"{api_path}/components?nvr=autotrace-devel-3.2.1-1.0.1e")
     assert response.json()["count"] == 1
-    response = client.get(f"{api_path}/components?nevra=autotrace-devel:1-3.2.1-1.0.1e.testarch")
+    response = client.get(f"{api_path}/components?nevra=autotrace-devel:1-3.2.1-1.0.1e.noarch")
     assert response.json()["count"] == 1
 
 
@@ -544,9 +558,7 @@ def test_product_components_ofuri(client, api_path):
         completion_time=datetime.strptime("2017-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z")
     )
     old_sb1.save()
-    old_openssl = ComponentFactory(
-        type=Component.Type.SRPM, name="openssl", software_build=old_sb1, release="1"
-    )
+    old_openssl = SrpmComponentFactory(name="openssl", software_build=old_sb1, release="1")
     old_openssl.product_streams = [ps1.ofuri]
     old_openssl.save()
 
@@ -554,9 +566,7 @@ def test_product_components_ofuri(client, api_path):
         completion_time=datetime.strptime("2018-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z")
     )
     sb1.save()
-    openssl = ComponentFactory(
-        type=Component.Type.SRPM, name="openssl", software_build=sb1, release="2"
-    )
+    openssl = SrpmComponentFactory(name="openssl", software_build=sb1, release="2")
     openssl.product_streams = [ps1.ofuri]
     openssl.save()
 
@@ -564,9 +574,7 @@ def test_product_components_ofuri(client, api_path):
         completion_time=datetime.strptime("2017-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z")
     )
     old_sb2.save()
-    old_curl = ComponentFactory(
-        type=Component.Type.SRPM, name="curl", software_build=old_sb2, release="1"
-    )
+    old_curl = SrpmComponentFactory(name="curl", software_build=old_sb2, release="1")
     old_curl.product_streams = [ps2.ofuri]
     old_curl.save()
 
@@ -574,7 +582,7 @@ def test_product_components_ofuri(client, api_path):
         completion_time=datetime.strptime("2018-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z")
     )
     sb1.save()
-    curl = ComponentFactory(type=Component.Type.SRPM, name="curl", software_build=sb2, release="2")
+    curl = SrpmComponentFactory(name="curl", software_build=sb2, release="2")
     curl.product_streams = [ps2.ofuri]
     curl.save()
 
@@ -604,7 +612,7 @@ def test_product_components_versions(client, api_path):
     )
     openssl.product_streams = [ps2.ofuri]
     openssl.save()
-    openssl_srpm = ComponentFactory(type=Component.Type.SRPM, name="openssl", software_build=sb1)
+    openssl_srpm = SrpmComponentFactory(name="openssl", software_build=sb1)
     openssl_srpm.product_streams = [ps2.ofuri]
     openssl_srpm.save()
 
@@ -615,7 +623,7 @@ def test_product_components_versions(client, api_path):
     curl = ComponentFactory(type=Component.Type.RPM, arch="x86_64", name="curl", software_build=sb2)
     curl.product_streams = [ps1.ofuri]
     curl.save()
-    curl_srpm = ComponentFactory(type=Component.Type.SRPM, name="curl", software_build=sb2)
+    curl_srpm = SrpmComponentFactory(name="curl", software_build=sb2)
     curl_srpm.product_streams = [ps1.ofuri]
     curl_srpm.save()
 

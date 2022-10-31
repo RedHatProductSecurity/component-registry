@@ -33,7 +33,7 @@ class ComponentFilter(FilterSet):
         model = Component
         # Fields that are matched to a filter using their Django model field type and default
         # __exact lookups.
-        fields = ("type", "version", "release", "arch", "nvr", "nevra")
+        fields = ("type", "namespace", "version", "release", "arch", "nvr", "nevra")
 
     # Custom filters
     name = CharFilter()

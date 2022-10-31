@@ -7,13 +7,13 @@ import pytest
 from corgi.core.models import ComponentNode, ProductComponentRelation, ProductNode
 
 from .factories import (
-    ComponentFactory,
     ProductComponentRelationFactory,
     ProductFactory,
     ProductStreamFactory,
     ProductVariantFactory,
     ProductVersionFactory,
     SoftwareBuildFactory,
+    SrpmComponentFactory,
 )
 
 logger = logging.getLogger()
@@ -39,9 +39,9 @@ def test_product_manifest_properties():
         build_id=1,
         completion_time=datetime.strptime("2017-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z"),
     )
-    component = ComponentFactory(
+    build.save()
+    component = SrpmComponentFactory(
         software_build=build,
-        type="SRPM",
         product_variants=[variant.ofuri],
         product_streams=[stream.ofuri],
     )

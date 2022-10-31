@@ -15,7 +15,11 @@ from corgi.tasks.sca import (
     _get_distgit_sources,
     slow_software_composition_analysis,
 )
-from tests.factories import ComponentFactory, SoftwareBuildFactory
+from tests.factories import (
+    ContainerImageComponentFactory,
+    SoftwareBuildFactory,
+    SrpmComponentFactory,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -226,15 +230,11 @@ def test_slow_software_composition_analysis(
     requests_mock,
 ):
     sb = SoftwareBuildFactory(build_id=build_id, source=package_name)
-    if is_container:
-        root_component = ComponentFactory(
-            type=Component.Type.CONTAINER_IMAGE, software_build=sb, arch="noarch"
-        )
-    else:
-        root_component = ComponentFactory(
-            type=Component.Type.SRPM,
-            software_build=sb,
-        )
+    root_component = (
+        ContainerImageComponentFactory(software_build=sb)
+        if is_container
+        else SrpmComponentFactory(software_build=sb)
+    )
     root_component.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=root_component.purl
     )
@@ -281,6 +281,6 @@ def test_slow_software_composition_analysis(
             type=Component.Type.CONTAINER_IMAGE, arch="noarch", software_build=sb
         )
     else:
-        root_component = Component.objects.get(type=Component.Type.SRPM, software_build=sb)
-    assert expected_purl in root_component.get_provides_purls()
+        root_component = Component.objects.srpms().get(software_build=sb)
+        root_component.get_provides_purls()
     mock_save_prod_tax.assert_called_once()

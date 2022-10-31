@@ -223,7 +223,6 @@ class SoftwareBuild(TimeStampedModel):
 
     class Type(models.TextChoices):
         BREW = "BREW"  # Red Hat Brew build system
-        PNC = "PNC"  # Red Hat PNC (Project Newcastle) build system
         KOJI = "KOJI"  # Fedora's Koji build system, the upstream equivalent of Red Hat's Brew
 
     build_id = models.IntegerField(primary_key=True)
@@ -526,9 +525,9 @@ class ProductStream(ProductModel, TimeStampedModel):
     def get_latest_components(self):
         """Return root components from latest builds."""
         root_components = (
-            Q(type=Component.Type.SRPM)
+            Q(type=Component.Type.RPM, arch="src")
             | Q(type=Component.Type.CONTAINER_IMAGE, arch="noarch")
-            | Q(type=Component.Type.RHEL_MODULE)
+            | Q(type=Component.Type.RPMMOD)
         )
         return (
             Component.objects.filter(
@@ -726,18 +725,31 @@ def get_product_details(variant_ids: list[str], stream_ids: list[str]) -> dict[s
     return product_details
 
 
+class ComponentQuerySet(models.QuerySet):
+    def srpms(self) -> models.QuerySet["Component"]:
+        return self.filter(Q(type=Component.Type.RPM) & Q(arch="src"))
+
+    def root_components(self) -> models.QuerySet["Component"]:
+        return self.filter(
+            Q(Q(type=Component.Type.RPM) & Q(arch="src"))
+            | Q(type=Component.Type.RPMMOD)
+            | Q(Q(type=Component.Type.CONTAINER_IMAGE) & Q(arch="noarch"))
+        )
+
+
 class Component(TimeStampedModel):
     class Type(models.TextChoices):
-        CONTAINER_IMAGE = "CONTAINER_IMAGE"
+        CARGO = "CARGO"  # Rust packages
+        CONTAINER_IMAGE = "OCI"  # Container images and other OCI artifacts
+        GEM = "GEM"  # Rubygem packages
+        GENERIC = "GENERIC"  # Fallback if no other type can be used
+        GITHUB = "GITHUB"
         GOLANG = "GOLANG"
         MAVEN = "MAVEN"
         NPM = "NPM"
-        RHEL_MODULE = "RHEL_MODULE"
-        RPM = "RPM"
-        SRPM = "SRPM"
+        RPMMOD = "RPMMOD"  # RHEL/Fedora modules; not an actual purl type, see CORGI-226
+        RPM = "RPM"  # Includes SRPMs, which can be identified with arch=src; see also is_srpm().
         PYPI = "PYPI"
-        UNKNOWN = "UNKNOWN"
-        UPSTREAM = "UPSTREAM"
 
     class Namespace(models.TextChoices):
         UPSTREAM = "UPSTREAM"
@@ -749,6 +761,7 @@ class Component(TimeStampedModel):
     meta_attr = models.JSONField(default=dict)
 
     type = models.CharField(choices=Type.choices, max_length=20)
+    namespace = models.CharField(choices=Namespace.choices, max_length=20)
     version = models.CharField(max_length=1024)
     release = models.CharField(max_length=1024, default="")
     arch = models.CharField(max_length=1024, default="")
@@ -793,6 +806,8 @@ class Component(TimeStampedModel):
     data_score = models.IntegerField(default=0)
     data_report = fields.ArrayField(models.CharField(max_length=200), default=list)
 
+    objects = ComponentQuerySet.as_manager()
+
     class Meta:
         ordering = (
             "type",
@@ -804,10 +819,6 @@ class Component(TimeStampedModel):
                 fields=("name", "type", "arch", "version", "release"),
             ),
         ]
-        # 0040_auto_20221020_1057.py contains the following custom performance indexes
-        #    core_compon_latest_idx
-        #    core_compon_latest_name_type_idx
-        #    core_compon_latest_type_name_idx
         indexes = [
             models.Index(fields=("name", "type", "arch", "version", "release")),
             models.Index(fields=("type", "name")),
@@ -818,6 +829,33 @@ class Component(TimeStampedModel):
             models.Index(fields=["product_streams"]),
             models.Index(fields=["product_variants"]),
             models.Index(fields=("type", "product_streams")),
+            models.Index(
+                fields=("type", "name", "arch"),
+                name="compon_latest_name_type_idx",
+                condition=Q(
+                    Q(Q(type="RPM") & Q(arch="src"))
+                    | Q(type="RPMMOD")
+                    | Q(Q(type="OCI") & Q(arch="noarch"))
+                ),
+            ),
+            models.Index(
+                fields=("name", "type", "arch"),
+                name="compon_latest_type_name_idx",
+                condition=Q(
+                    Q(Q(type="RPM") & Q(arch="src"))
+                    | Q(type="RPMMOD")
+                    | Q(Q(type="OCI") & Q(arch="noarch"))
+                ),
+            ),
+            models.Index(
+                fields=("uuid", "software_build_id", "type", "name", "arch", "product_streams"),
+                name="compon_latest_idx",
+                condition=Q(
+                    Q(Q(type="RPM") & Q(arch="src"))
+                    | Q(type="RPMMOD")
+                    | Q(Q(type="OCI") & Q(arch="noarch"))
+                ),
+            ),
         ]
 
     def __str__(self) -> str:
@@ -825,81 +863,74 @@ class Component(TimeStampedModel):
         return str(self.name)
 
     def get_purl(self) -> PackageURL:
-        if self.type in (Component.Type.RPM, Component.Type.SRPM):
+        if self.type == Component.Type.RPM:
             qualifiers = {
                 "arch": self.arch,
             }
             if self.epoch:
                 qualifiers["epoch"] = str(self.epoch)
-            return PackageURL(
-                type="rpm",  # Purl defines no type specific to SRPMs
-                namespace=self.Namespace.REDHAT.lower(),
+            purl_data = dict(
                 name=self.name,
                 version=f"{self.version}-{self.release}",
                 qualifiers=qualifiers,
             )
-        elif self.type == Component.Type.RHEL_MODULE:
+        elif self.type == Component.Type.RPMMOD:
             # Break down RHEL module version into its specific parts:
             # NSVC = Name, Stream, Version, Context
             version, _, context = self.release.partition(".")
-            qualifiers = {
-                "stream": self.version,
-                "version": version,
-                "context": context,
-            }
-            return PackageURL(
-                # Purl does not define a type for RHEL/CentOS modules; TODO: propose rpmmod
-                type="rpmmod",
-                namespace=self.Namespace.REDHAT.lower(),
+            stream = self.version
+            purl_data = dict(
                 name=self.name,
-                version=f"{self.version}-{self.release}",
-                qualifiers=qualifiers,
+                version=f"{stream}:{version}:{context}",
             )
         elif self.type == Component.Type.CONTAINER_IMAGE:
-            digest = None
+            digest = ""
             if self.meta_attr.get("digests"):
                 for digest_fmt in CONTAINER_DIGEST_FORMATS:
                     digest = self.meta_attr["digests"].get(digest_fmt)
                     if digest:
                         break
-            return PackageURL(
-                type="container",
-                namespace=self.Namespace.REDHAT.lower(),
-                name=self.name,
-                version=f"{self.version}-{self.release}",
-                qualifiers={
-                    "arch": self.arch,
-                    "digest": digest,
-                },
-                subpath=None,
-            )
-        elif self.type == Component.Type.UPSTREAM:
-            # Upstream components should default to the "generic" purl type and not use any
-            # namespaces. In the future, we may extend this to map to upstream-defined purls.
-            version = self.version
-            if self.release:
-                version = f"{version}-{self.release}"
-            return PackageURL(
-                type="generic",
-                name=self.name,
-                version=version,
+            purl_name = self.name
+            name_from_label = self.meta_attr.get("name_from_label")
+            if name_from_label:
+                purl_name = name_from_label
+            qualifiers = {
+                "tag": f"{self.version}-{self.release}",
+            }
+            if self.arch != "noarch":
+                qualifiers["arch"] = self.arch
+            repository_url = self.meta_attr.get("repository_url")
+            if repository_url:
+                qualifiers["repository_url"] = repository_url
+            purl_data = dict(
+                name=purl_name,
+                version=digest,
+                qualifiers=qualifiers,
             )
         else:
-            # Unknown
             version = self.version
             if self.release:
                 version = f"{version}-{self.release}"
-            return PackageURL(
-                type=self.type,
+            purl_data = dict(
                 name=self.name,
                 version=version,
             )
+
+        # Red Hat components should be namespaced, everything else is assumed to be upstream.
+        if self.namespace == Component.Namespace.REDHAT:
+            purl_data["namespace"] = str(self.namespace).lower()
+
+        purl = PackageURL(type=str(self.type).lower(), **purl_data)
+        return purl
 
     def save_component_taxonomy(self):
         self.upstreams = self.get_upstreams()
         self.provides = list(self.get_provides_purls())
         self.sources = self.get_source()
         self.save()
+
+    def is_srpm(self):
+        return self.type == Component.Type.RPM and self.arch == "src"
 
     def get_nvr(self) -> str:
         return f"{self.name}-{self.version}-{self.release}"
@@ -921,9 +952,9 @@ class Component(TimeStampedModel):
     def get_roots(self) -> list[ComponentNode]:
         """Return component root entities."""
         roots: list[ComponentNode] = []
-        # If a component does have not have a softwarebuild that means it's not built at Red Hat
-        # therefore it doesn't need it's upstream's listed. If we start using the get_roots property
-        # for functions other that get_upstreams we might to revisit this check
+        # If a component does not have a softwarebuild that means it's not built at Red Hat
+        # therefore it doesn't need its upstreams listed. If we start using the get_roots property
+        # for functions other than get_upstreams we might need to revisit this check
         if not self.software_build:
             return roots
         for cnode in self.cnodes.get_queryset():
@@ -934,7 +965,7 @@ class Component(TimeStampedModel):
                 # container -> rpm relationship here.
                 # RPMs are included as children of Containers as well as SRPMs
                 # We don't want to include Containers in the RPMs roots.
-                # Partly because RPMs in containers can have unprocesses SRPMs
+                # Partly because RPMs in containers can have unprocessed SRPMs
                 # And partly because we use roots to find upstream components,
                 # and it's not true to say that rpms share upstreams with containers
                 rpm_descendant = False
@@ -1074,7 +1105,7 @@ class Component(TimeStampedModel):
                         a.purl
                         for a in self.cnodes.get_queryset().first().get_ancestors(include_self=True)
                         if a.type == ComponentNode.ComponentNodeType.SOURCE
-                        and a.obj.type == Component.Type.UPSTREAM
+                        and a.obj.namespace == Component.Namespace.UPSTREAM
                     ]
                 )
             else:
@@ -1084,7 +1115,7 @@ class Component(TimeStampedModel):
     def save_datascore(self):
         score = 0
         report = set()
-        if self.type == Component.Type.UPSTREAM and not self.related_url:
+        if self.namespace == Component.Namespace.UPSTREAM and not self.related_url:
             score += 20
             report.add("upstream has no related_url")
         if not self.description:

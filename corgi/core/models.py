@@ -1,6 +1,7 @@
 import logging
 import re
 import uuid as uuid
+from abc import abstractmethod
 from collections import defaultdict
 
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
@@ -203,10 +204,18 @@ class Tag(TimeStampedModel):
     name = models.SlugField(max_length=200)  # Must not be empty
     value = models.CharField(max_length=1024, default="")
 
+    @property
+    @abstractmethod
+    def tagged_model(self):
+        pass
+
     class Meta:
         abstract = True
         constraints = (
             models.CheckConstraint(name="%(class)s_name_required", check=~models.Q(name="")),
+            models.UniqueConstraint(
+                name="unique_%(class)s", fields=("name", "value", "tagged_model")
+            ),
         )
 
     def __str__(self):
@@ -307,15 +316,7 @@ class SoftwareBuild(TimeStampedModel):
 
 
 class SoftwareBuildTag(Tag):
-    software_build = models.ForeignKey(SoftwareBuild, on_delete=models.CASCADE, related_name="tags")
-
-    class Meta(Tag.Meta):
-        constraints = (
-            *Tag.Meta.constraints,
-            models.UniqueConstraint(
-                name="unique_%(class)s", fields=("name", "value", "software_build")
-            ),
-        )
+    tagged_model = models.ForeignKey(SoftwareBuild, on_delete=models.CASCADE, related_name="tags")
 
 
 class ProductModel(TimeStampedModel):
@@ -437,13 +438,7 @@ class Product(ProductModel):
 
 
 class ProductTag(Tag):
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="tags")
-
-    class Meta(Tag.Meta):
-        constraints = (
-            *Tag.Meta.constraints,
-            models.UniqueConstraint(name="unique_%(class)s", fields=("name", "value", "product")),
-        )
+    tagged_model = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="tags")
 
 
 class ProductVersion(ProductModel):
@@ -469,17 +464,7 @@ class ProductVersion(ProductModel):
 
 
 class ProductVersionTag(Tag):
-    product_version = models.ForeignKey(
-        ProductVersion, on_delete=models.CASCADE, related_name="tags"
-    )
-
-    class Meta(Tag.Meta):
-        constraints = (
-            *Tag.Meta.constraints,
-            models.UniqueConstraint(
-                name="unique_%(class)s", fields=("name", "value", "product_version")
-            ),
-        )
+    tagged_model = models.ForeignKey(ProductVersion, on_delete=models.CASCADE, related_name="tags")
 
 
 class ProductStream(ProductModel):
@@ -547,15 +532,7 @@ class ProductStream(ProductModel):
 
 
 class ProductStreamTag(Tag):
-    product_stream = models.ForeignKey(ProductStream, on_delete=models.CASCADE, related_name="tags")
-
-    class Meta(Tag.Meta):
-        constraints = (
-            *Tag.Meta.constraints,
-            models.UniqueConstraint(
-                name="unique_%(class)s", fields=("name", "value", "product_stream")
-            ),
-        )
+    tagged_model = models.ForeignKey(ProductStream, on_delete=models.CASCADE, related_name="tags")
 
 
 class ProductVariant(ProductModel):
@@ -599,17 +576,7 @@ class ProductVariant(ProductModel):
 
 
 class ProductVariantTag(Tag):
-    product_variant = models.ForeignKey(
-        ProductVariant, on_delete=models.CASCADE, related_name="tags"
-    )
-
-    class Meta(Tag.Meta):
-        constraints = (
-            *Tag.Meta.constraints,
-            models.UniqueConstraint(
-                name="unique_%(class)s", fields=("name", "value", "product_variant")
-            ),
-        )
+    tagged_model = models.ForeignKey(ProductVariant, on_delete=models.CASCADE, related_name="tags")
 
 
 class Channel(TimeStampedModel):
@@ -1159,13 +1126,7 @@ class Component(TimeStampedModel):
 
 
 class ComponentTag(Tag):
-    component = models.ForeignKey(Component, on_delete=models.CASCADE, related_name="tags")
-
-    class Meta(Tag.Meta):
-        constraints = (
-            *Tag.Meta.constraints,
-            models.UniqueConstraint(name="unique_%(class)s", fields=("name", "value", "component")),
-        )
+    tagged_model = models.ForeignKey(Component, on_delete=models.CASCADE, related_name="tags")
 
 
 class AppStreamLifeCycle(TimeStampedModel):

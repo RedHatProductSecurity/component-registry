@@ -27,7 +27,7 @@ class SoftwareBuildFactory(factory.django.DjangoModelFactory):
 
     build_id = factory.sequence(lambda n: n + 100)
     name = factory.Faker("word")
-    tag = factory.RelatedFactory(SoftwareBuildTagFactory, factory_related_name="software_build")
+    tag = factory.RelatedFactory(SoftwareBuildTagFactory, factory_related_name="tagged_model")
     completion_time = timezone.now()
 
 
@@ -43,7 +43,7 @@ class ProductFactory(factory.django.DjangoModelFactory):
     name = factory.Faker("word")
     version = ""
     description = factory.Faker("word")
-    tag = factory.RelatedFactory(ProductTagFactory, factory_related_name="product")
+    tag = factory.RelatedFactory(ProductTagFactory, factory_related_name="tagged_model")
 
 
 class ProductVersionTagFactory(TagFactory):
@@ -58,7 +58,7 @@ class ProductVersionFactory(factory.django.DjangoModelFactory):
     name = factory.Faker("word")
     version = "8"
     description = factory.Faker("word")
-    tag = factory.RelatedFactory(ProductVersionTagFactory, factory_related_name="product_version")
+    tag = factory.RelatedFactory(ProductVersionTagFactory, factory_related_name="tagged_model")
 
 
 class ProductStreamTagFactory(TagFactory):
@@ -74,7 +74,7 @@ class ProductStreamFactory(factory.django.DjangoModelFactory):
     version = "8.2.z"
     description = factory.Faker("word")
     cpe = "cpe:/o:redhat:enterprise_linux:9"
-    tag = factory.RelatedFactory(ProductStreamTagFactory, factory_related_name="product_stream")
+    tag = factory.RelatedFactory(ProductStreamTagFactory, factory_related_name="tagged_model")
     active = True
 
 
@@ -90,7 +90,7 @@ class ProductVariantFactory(factory.django.DjangoModelFactory):
     name = factory.Faker("word")
     version = ""
     description = factory.Faker("word")
-    tag = factory.RelatedFactory(ProductVariantTagFactory, factory_related_name="product_variant")
+    tag = factory.RelatedFactory(ProductVariantTagFactory, factory_related_name="tagged_model")
 
 
 def random_erratum_name(n):
@@ -129,7 +129,7 @@ class ComponentFactory(factory.django.DjangoModelFactory):
     license_declared_raw = "BSD-3-Clause or (GPLv3+ and LGPLv3+)"
 
     software_build = factory.SubFactory(SoftwareBuildFactory)
-    tag = factory.RelatedFactory(ComponentTagFactory, factory_related_name="component")
+    tag = factory.RelatedFactory(ComponentTagFactory, factory_related_name="tagged_model")
 
     meta_attr = {}
 

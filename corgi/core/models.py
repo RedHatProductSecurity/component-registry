@@ -34,7 +34,7 @@ class ProductNode(MPTTModel, TimeStampedModel):
         root_node_ordering = False
 
     class Meta:
-        constraints = [
+        constraints = (
             # Add unique constraint + index so get_or_create behaves atomically
             # Otherwise duplicate rows may be inserted into DB
             # Second constraint needed for case when parent is NULL
@@ -49,13 +49,13 @@ class ProductNode(MPTTModel, TimeStampedModel):
                 fields=("object_id",),
                 condition=models.Q(parent__isnull=True),
             ),
-        ]
-        indexes = [
+        )
+        indexes = (
             models.Index(fields=("object_id", "parent")),
             # Add index on foreign-key fields here, to speed up iterating over pnodes
             # GenericForeignKey doesn't get these by default, only ForeignKey
             models.Index(fields=("content_type", "object_id")),
-        ]
+        )
 
     # Tree-traversal methods for product-related models below.
     #
@@ -155,7 +155,7 @@ class ComponentNode(MPTTModel, TimeStampedModel):
         root_node_ordering = False
 
     class Meta:
-        constraints = [
+        constraints = (
             # Add unique constraint + index so get_or_create behaves atomically
             # Otherwise duplicate rows may be inserted into DB
             # Second constraint needed for case when parent is NULL
@@ -170,21 +170,21 @@ class ComponentNode(MPTTModel, TimeStampedModel):
                 fields=("type", "purl"),
                 condition=models.Q(parent__isnull=True),
             ),
-        ]
+        )
         # 0037_custom_indexes.py contains the following custom performance indexes
         #    core_componentnode_tree_parent_lft_idx
         #    core_cn_tree_lft_purl_parent_idx
         #    core_cn_lft_tree_idx
         #    core_cn_lft_rght_tree_idx
-        indexes = [
+        indexes = (
             models.Index(fields=("type", "parent", "purl")),
-            models.Index(fields=["type"]),
-            models.Index(fields=["parent"]),
-            models.Index(fields=["purl"]),
+            models.Index(fields=("type",)),
+            models.Index(fields=("parent",)),
+            models.Index(fields=("purl",)),
             # Add index on foreign-key fields here, to speed up iterating over cnodes
             # GenericForeignKey doesn't get these by default, only ForeignKey
             models.Index(fields=("content_type", "object_id")),
-        ]
+        )
 
     @property
     def name(self):
@@ -234,11 +234,9 @@ class SoftwareBuild(TimeStampedModel):
     meta_attr = models.JSONField(default=dict)
 
     class Meta:
-        ordering = ["-build_id"]
+        ordering = ("-build_id",)
 
-        indexes = [
-            models.Index(fields=["completion_time"]),
-        ]
+        indexes = (models.Index(fields=("completion_time",)),)
 
     def save_datascore(self):
         for component in Component.objects.filter(software_build__build_id=self.build_id):
@@ -313,12 +311,12 @@ class SoftwareBuildTag(Tag, TimeStampedModel):
     software_build = models.ForeignKey(SoftwareBuild, on_delete=models.CASCADE, related_name="tags")
 
     class Meta:
-        constraints = [
+        constraints = (
             models.CheckConstraint(name="%(class)s_name_required", check=~models.Q(name="")),
             models.UniqueConstraint(
                 name="unique_%(class)s", fields=("name", "value", "software_build")
             ),
-        ]
+        )
 
 
 class ProductModel(models.Model):
@@ -410,10 +408,8 @@ class ProductModel(models.Model):
 
     class Meta:
         abstract = True
-        ordering = ["name"]
-        indexes = [
-            models.Index(fields=["ofuri"]),
-        ]
+        ordering = ("name",)
+        indexes = (models.Index(fields=("ofuri",)),)
 
     def __str__(self) -> str:
         return str(self.name)
@@ -446,10 +442,10 @@ class ProductTag(Tag):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="tags")
 
     class Meta:
-        constraints = [
+        constraints = (
             models.CheckConstraint(name="%(class)s_name_required", check=~models.Q(name="")),
             models.UniqueConstraint(name="unique_%(class)s", fields=("name", "value", "product")),
-        ]
+        )
 
 
 class ProductVersion(ProductModel, TimeStampedModel):
@@ -480,12 +476,12 @@ class ProductVersionTag(Tag):
     )
 
     class Meta:
-        constraints = [
+        constraints = (
             models.CheckConstraint(name="%(class)s_name_required", check=~models.Q(name="")),
             models.UniqueConstraint(
                 name="unique_%(class)s", fields=("name", "value", "product_version")
             ),
-        ]
+        )
 
 
 class ProductStream(ProductModel, TimeStampedModel):
@@ -533,14 +529,14 @@ class ProductStream(ProductModel, TimeStampedModel):
         return (
             Component.objects.filter(
                 root_components,
-                product_streams__overlap=[self.ofuri],
+                product_streams__overlap=(self.ofuri,),
             )
             .annotate(
                 latest=Subquery(
                     Component.objects.filter(
                         root_components,
                         name=OuterRef("name"),
-                        product_streams__overlap=[self.ofuri],
+                        product_streams__overlap=(self.ofuri,),
                     )
                     .order_by("-software_build__completion_time")
                     .values("uuid")[:1]
@@ -556,12 +552,12 @@ class ProductStreamTag(Tag):
     product_stream = models.ForeignKey(ProductStream, on_delete=models.CASCADE, related_name="tags")
 
     class Meta:
-        constraints = [
+        constraints = (
             models.CheckConstraint(name="%(class)s_name_required", check=~models.Q(name="")),
             models.UniqueConstraint(
                 name="unique_%(class)s", fields=("name", "value", "product_stream")
             ),
-        ]
+        )
 
 
 class ProductVariant(ProductModel, TimeStampedModel):
@@ -610,12 +606,12 @@ class ProductVariantTag(Tag):
     )
 
     class Meta:
-        constraints = [
+        constraints = (
             models.CheckConstraint(name="%(class)s_name_required", check=~models.Q(name="")),
             models.UniqueConstraint(
                 name="unique_%(class)s", fields=("name", "value", "product_variant")
             ),
-        ]
+        )
 
 
 class Channel(TimeStampedModel):
@@ -642,7 +638,7 @@ class Channel(TimeStampedModel):
     product_variants = fields.ArrayField(models.CharField(max_length=200), default=list)
 
     class Meta:
-        ordering = ["name"]
+        ordering = ("name",)
 
     def __str__(self) -> str:
         return str(self.name)
@@ -701,22 +697,22 @@ class ProductComponentRelation(TimeStampedModel):
     build_id = models.CharField(max_length=200, default="")
 
     class Meta:
-        ordering = ["external_system_id"]
-        constraints = [
+        ordering = ("external_system_id",)
+        constraints = (
             models.UniqueConstraint(
                 name="unique_productcomponentrelation",
                 fields=("external_system_id", "product_ref", "build_id"),
             ),
-        ]
-        indexes = [
+        )
+        indexes = (
             models.Index(fields=("external_system_id", "product_ref", "build_id")),
             models.Index(fields=("type", "build_id")),
-            models.Index(fields=["external_system_id"]),
-            models.Index(fields=["product_ref"]),
-            models.Index(fields=["build_id"]),
-            models.Index(fields=["type"]),
+            models.Index(fields=("external_system_id",)),
+            models.Index(fields=("product_ref",)),
+            models.Index(fields=("build_id",)),
+            models.Index(fields=("type",)),
             models.Index(fields=("product_ref", "type")),
-        ]
+        )
 
 
 def get_product_streams_from_variants(variant_ids: list[str]):
@@ -759,7 +755,7 @@ class Component(TimeStampedModel):
     class Type(models.TextChoices):
         CARGO = "CARGO"  # Rust packages
         CONTAINER_IMAGE = "OCI"  # Container images and other OCI artifacts
-        GEM = "GEM"  # Rubygem packages
+        GEM = "GEM"  # Ruby gem packages
         GENERIC = "GENERIC"  # Fallback if no other type can be used
         GITHUB = "GITHUB"
         GOLANG = "GOLANG"
@@ -831,21 +827,21 @@ class Component(TimeStampedModel):
             "type",
             "name",
         )
-        constraints = [
+        constraints = (
             models.UniqueConstraint(
                 name="unique_components",
                 fields=("name", "type", "arch", "version", "release"),
             ),
-        ]
-        indexes = [
+        )
+        indexes = (
             models.Index(fields=("name", "type", "arch", "version", "release")),
             models.Index(fields=("type", "name")),
-            models.Index(fields=["name"]),
-            models.Index(fields=["type"]),
-            models.Index(fields=["nvr"]),
-            models.Index(fields=["purl"]),
-            models.Index(fields=["product_streams"]),
-            models.Index(fields=["product_variants"]),
+            models.Index(fields=("name",)),
+            models.Index(fields=("type",)),
+            models.Index(fields=("nvr",)),
+            models.Index(fields=("purl",)),
+            models.Index(fields=("product_streams",)),
+            models.Index(fields=("product_variants",)),
             models.Index(fields=("type", "product_streams")),
             models.Index(
                 fields=("type", "name", "arch"),
@@ -874,7 +870,7 @@ class Component(TimeStampedModel):
                     | Q(Q(type="OCI") & Q(arch="noarch"))
                 ),
             ),
-        ]
+        )
 
     def __str__(self) -> str:
         """return name"""
@@ -1106,10 +1102,10 @@ class Component(TimeStampedModel):
             return []
         upstreams = set()
         for root in roots:
-            # For SRRPM/RPMS, and noarch containers, these are the cnodes we want.
-            source_children = [
+            # For SRPM/RPMS, and noarch containers, these are the cnodes we want.
+            source_children = tuple(
                 c for c in root.get_children().filter(type=ComponentNode.ComponentNodeType.SOURCE)
-            ]
+            )
             # Cachito builds nest components under the relevant source component for that
             # container build, eg. buildID=1911112. In that case we need to walk up the
             # tree from the current node to find its relevant source
@@ -1119,12 +1115,10 @@ class Component(TimeStampedModel):
                 and len(source_children) > 1
             ):
                 upstreams.update(
-                    [
-                        a.purl
-                        for a in self.cnodes.get_queryset().first().get_ancestors(include_self=True)
-                        if a.type == ComponentNode.ComponentNodeType.SOURCE
-                        and a.obj.namespace == Component.Namespace.UPSTREAM
-                    ]
+                    a.purl
+                    for a in self.cnodes.get_queryset().first().get_ancestors(include_self=True)
+                    if a.type == ComponentNode.ComponentNodeType.SOURCE
+                    and a.obj.namespace == Component.Namespace.UPSTREAM
                 )
             else:
                 upstreams.update(c.purl for c in source_children)
@@ -1178,10 +1172,10 @@ class ComponentTag(Tag):
     component = models.ForeignKey(Component, on_delete=models.CASCADE, related_name="tags")
 
     class Meta:
-        constraints = [
+        constraints = (
             models.CheckConstraint(name="%(class)s_name_required", check=~models.Q(name="")),
             models.UniqueConstraint(name="unique_%(class)s", fields=("name", "value", "component")),
-        ]
+        )
 
 
 class AppStreamLifeCycle(TimeStampedModel):
@@ -1237,7 +1231,7 @@ class AppStreamLifeCycle(TimeStampedModel):
         return f"{self.name}@{self.initial_product_version}.{self.stream}"
 
     class Meta:
-        constraints = [
+        constraints = (
             # FIXME: value range is what the 'lifecycle-defs' repo suggests, but there are
             # exceptional cases in the yaml which fail the range constraint.
             # models.CheckConstraint(
@@ -1250,8 +1244,8 @@ class AppStreamLifeCycle(TimeStampedModel):
             # ),
             models.UniqueConstraint(
                 # assuming below fields are 'unique_together'.
-                fields=["name", "type", "product", "initial_product_version", "stream"],
+                fields=("name", "type", "product", "initial_product_version", "stream"),
                 name="unique_lifecycle_entity",
-            )
-        ]
-        ordering = ["name"]
+            ),
+        )
+        ordering = ("name",)

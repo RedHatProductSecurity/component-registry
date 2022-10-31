@@ -5,10 +5,7 @@ from koji import GenericError
 
 from corgi.collectors.brew import Brew
 from corgi.core.models import ProductStream
-from corgi.tasks.brew import (
-    slow_fetch_brew_build,
-    slow_fetch_unprocessed_brew_tag_relations,
-)
+from corgi.tasks.brew import fetch_unprocessed_brew_tag_relations, slow_fetch_brew_build
 
 
 class Command(BaseCommand):
@@ -66,11 +63,11 @@ class Command(BaseCommand):
         elif options["all"]:
             self.stdout.write(self.style.NOTICE("Fetching all unprocessed brew_tag relations"))
             if options["inline"]:
-                slow_fetch_unprocessed_brew_tag_relations(
+                fetch_unprocessed_brew_tag_relations(
                     force_process=options["force"], created_since=0
                 )
             else:
-                slow_fetch_unprocessed_brew_tag_relations.delay(
+                fetch_unprocessed_brew_tag_relations.delay(
                     force_process=options["force"], created_since=0
                 )
             sys.exit(0)

@@ -125,9 +125,9 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def fetch_modular_build(build_id: str, force_process: bool = False):
+def slow_fetch_modular_build(build_id: str, force_process: bool = False) -> None:
     logger.info("Fetch modular build called with build id: %s", build_id)
-    rhel_module_data = Brew.fetch_rhel_module(int(build_id))
+    rhel_module_data = Brew.fetch_rhel_module(build_id)
     # Some compose build_ids in the relations table will be for SRPMs, skip those here
     if not rhel_module_data:
         logger.info("No module data fetched for build %s from Brew, exiting...", build_id)
@@ -462,6 +462,7 @@ def load_brew_tags() -> None:
         brew = Brew()
         for brew_tag, inherit in ps.brew_tags.items():
             # Always load all builds in tag when saving relations
+            # TODO: Use _create_relations here and in other places
             builds = brew.get_builds_with_tag(brew_tag, inherit=inherit, latest=False)
             no_of_created = 0
             for build in builds:
@@ -478,30 +479,36 @@ def load_brew_tags() -> None:
 
 def fetch_modular_builds(relations_query: QuerySet, force_process: bool = False) -> None:
     for build_id in relations_query:
-        fetch_modular_build.delay(build_id, force_process=force_process)
+        slow_fetch_modular_build.delay(build_id, force_process=force_process)
 
 
-def fetch_unprocessed_relations(relation_type, created_since, force_process=False):
+def fetch_unprocessed_relations(
+    relation_type: ProductComponentRelation.Type,
+    created_since: timedelta,
+    force_process: bool = False,
+) -> int:
     relations_query = ProductComponentRelation.objects.filter(type=relation_type)
     if created_since:
-        created_during = timezone.now() - timedelta(days=created_since)
+        created_during = timezone.now() - created_since
         relations_query = relations_query.filter(created_at__gte=created_during)
     # batch process to avoid exhausting the memory limit for the pod
-    relation_count = relations_query.count()
+    distinct_ids = (
+        relations_query.order_by("build_id").values_list("build_id", flat=True).distinct()
+    )
+    relation_count = distinct_ids.count()
     logger.info("Found %s %s relations", relation_count, relation_type)
     offset = 0
     limit = 10000
     processed_builds = 0
     while offset < relation_count:
         logger.info("Processing CDN relations with offset %s and limit %s", offset, limit)
-        for build_id in (
-            relations_query.order_by("build_id")
-            .values_list("build_id", flat=True)
-            .distinct()[offset : offset + limit]
-        ):
+        for build_id in distinct_ids[offset : offset + limit]:
+            if not build_id:
+                # build_id defaults to "" and int() will fail in this case
+                continue
             if not SoftwareBuild.objects.filter(build_id=int(build_id)).exists():
                 logger.info("Processing CDN relation build with id: %s", build_id)
-                fetch_modular_build.delay(build_id, force_process=force_process)
+                slow_fetch_modular_build.delay(build_id, force_process=force_process)
                 processed_builds += 1
         offset = offset + limit
     return processed_builds
@@ -513,9 +520,11 @@ def fetch_unprocessed_relations(relation_type, created_since, force_process=Fals
     retry_kwargs=RETRY_KWARGS,
     soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
 )
-def slow_fetch_unprocessed_brew_tag_relations(force_process=False, created_since=2):
+def fetch_unprocessed_brew_tag_relations(
+    force_process: bool = False, created_since: int = 2
+) -> int:
     return fetch_unprocessed_relations(
         ProductComponentRelation.Type.BREW_TAG,
         force_process=force_process,
-        created_since=created_since,
+        created_since=timedelta(days=created_since),
     )

@@ -1,4 +1,5 @@
 import logging
+from datetime import timedelta
 
 from celery_singleton import Singleton
 from django.conf import settings
@@ -19,11 +20,11 @@ logger = logging.getLogger(__name__)
     retry_kwargs=RETRY_KWARGS,
     soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
 )
-def slow_fetch_unprocessed_cdn_relations(force_process=False, created_since=8) -> int:
+def fetch_unprocessed_cdn_relations(force_process: bool = False, created_since: int = 8) -> int:
     return fetch_unprocessed_relations(
         ProductComponentRelation.Type.CDN_REPO,
         force_process=force_process,
-        created_since=created_since,
+        created_since=timedelta(days=created_since),
     )
 
 

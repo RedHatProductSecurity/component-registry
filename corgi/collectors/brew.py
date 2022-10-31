@@ -710,6 +710,9 @@ class Brew:
         build = self.koji_session.getBuild(build_id)
         if not build:
             raise BrewBuildNotFound(f"Build {build_id} was not found")
+        # getBuild will accept an NVR
+        # but later brew calls require an integer ID
+        build_id = build["id"]
         # Determine build state
         state = build.get("state")
         if state != koji.BUILD_STATES["COMPLETE"]:
@@ -832,8 +835,8 @@ class Brew:
     def brew_rpm_lookup(self, rpms) -> tuple:
         """The Koji API getRPM call can except rpm in NVR"""
         with self.koji_session.multicall() as multicall:
-            find_build_id_calls = tuple((rpm, multicall.getRPM(rpm)) for rpm in rpms)
-        return find_build_id_calls
+            get_rpm_calls = tuple((rpm, multicall.getRPM(rpm)) for rpm in rpms)
+        return get_rpm_calls
 
     def sans_epoch(self, rpm) -> str:
         """This removed the epoch part of a SRPM or RPM so the RPM name is in NVR format"""
@@ -849,7 +852,7 @@ class Brew:
         module_parts = module_key.split(":")
         return f"{module_parts[0]}-{module_parts[1]}-{module_parts[2]}.{module_parts[3]}"
 
-    def persist_modules(self, rhel_modules) -> Generator[str, None, None]:
+    def persist_modules(self, rhel_modules: dict[str, list[str]]) -> Generator[str, None, None]:
         # For each rhel_module look up it's build_id
         find_build_id_calls = self.brew_srpm_lookup(rhel_modules.keys())
         for srpm, call in find_build_id_calls:
@@ -872,7 +875,9 @@ class Brew:
 
             yield build_id
 
-    def lookup_build_ids(self, rpm_filenames_by_srpm) -> Generator[str, None, None]:
+    def lookup_build_ids(
+        self, rpm_filenames_by_srpm: dict[str, list[str]]
+    ) -> Generator[str, None, None]:
         # For each srpm look up it's build id
         find_build_id_calls = self.brew_srpm_lookup(rpm_filenames_by_srpm.keys())
         for srpm, call in find_build_id_calls:
@@ -900,9 +905,14 @@ class Brew:
             yield build_id
 
     @classmethod
-    def fetch_rhel_module(cls, build_id: int) -> dict[str, Any]:
+    def fetch_rhel_module(cls, build_id: str) -> dict[str, Any]:
+        """Look up a RHEL module by either an integer build_id or an NVR."""
         try:
-            rhel_module = CollectorRhelModule.objects.get(build_id=build_id)
+            lookup: dict = {"build_id": int(build_id)}
+        except ValueError:
+            lookup = {"nvr": build_id}
+        try:
+            rhel_module = CollectorRhelModule.objects.get(**lookup)
         except CollectorRhelModule.DoesNotExist:
             logger.debug("Did not find %s in CollectorRhelModule data", build_id)
             return {}

@@ -188,7 +188,7 @@ def setup_products_and_components():
         build_id=1,
         completion_time=datetime.strptime("2017-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z"),
     )
-    provided = ComponentFactory(type=Component.Type.RPM)
+    provided = ComponentFactory(type=Component.Type.RPM, arch="x86_64")
     dev_provided = ComponentFactory(type=Component.Type.NPM)
     component = SrpmComponentFactory(
         software_build=build,

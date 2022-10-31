@@ -200,13 +200,14 @@ class ComponentNode(MPTTModel, TimeStampedModel):
 
 
 class Tag(TimeStampedModel):
-    name = models.SlugField(
-        max_length=200
-    )  # Must not be empty; enforced by check constrain in child models.
+    name = models.SlugField(max_length=200)  # Must not be empty
     value = models.CharField(max_length=1024, default="")
 
     class Meta:
         abstract = True
+        constraints = (
+            models.CheckConstraint(name="%(class)s_name_required", check=~models.Q(name="")),
+        )
 
     def __str__(self):
         if self.value:
@@ -308,9 +309,9 @@ class SoftwareBuild(TimeStampedModel):
 class SoftwareBuildTag(Tag):
     software_build = models.ForeignKey(SoftwareBuild, on_delete=models.CASCADE, related_name="tags")
 
-    class Meta:
+    class Meta(Tag.Meta):
         constraints = (
-            models.CheckConstraint(name="%(class)s_name_required", check=~models.Q(name="")),
+            *Tag.Meta.constraints,
             models.UniqueConstraint(
                 name="unique_%(class)s", fields=("name", "value", "software_build")
             ),
@@ -438,9 +439,9 @@ class Product(ProductModel):
 class ProductTag(Tag):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="tags")
 
-    class Meta:
+    class Meta(Tag.Meta):
         constraints = (
-            models.CheckConstraint(name="%(class)s_name_required", check=~models.Q(name="")),
+            *Tag.Meta.constraints,
             models.UniqueConstraint(name="unique_%(class)s", fields=("name", "value", "product")),
         )
 
@@ -472,9 +473,9 @@ class ProductVersionTag(Tag):
         ProductVersion, on_delete=models.CASCADE, related_name="tags"
     )
 
-    class Meta:
+    class Meta(Tag.Meta):
         constraints = (
-            models.CheckConstraint(name="%(class)s_name_required", check=~models.Q(name="")),
+            *Tag.Meta.constraints,
             models.UniqueConstraint(
                 name="unique_%(class)s", fields=("name", "value", "product_version")
             ),
@@ -548,9 +549,9 @@ class ProductStream(ProductModel):
 class ProductStreamTag(Tag):
     product_stream = models.ForeignKey(ProductStream, on_delete=models.CASCADE, related_name="tags")
 
-    class Meta:
+    class Meta(Tag.Meta):
         constraints = (
-            models.CheckConstraint(name="%(class)s_name_required", check=~models.Q(name="")),
+            *Tag.Meta.constraints,
             models.UniqueConstraint(
                 name="unique_%(class)s", fields=("name", "value", "product_stream")
             ),
@@ -602,9 +603,9 @@ class ProductVariantTag(Tag):
         ProductVariant, on_delete=models.CASCADE, related_name="tags"
     )
 
-    class Meta:
+    class Meta(Tag.Meta):
         constraints = (
-            models.CheckConstraint(name="%(class)s_name_required", check=~models.Q(name="")),
+            *Tag.Meta.constraints,
             models.UniqueConstraint(
                 name="unique_%(class)s", fields=("name", "value", "product_variant")
             ),
@@ -1160,9 +1161,9 @@ class Component(TimeStampedModel):
 class ComponentTag(Tag):
     component = models.ForeignKey(Component, on_delete=models.CASCADE, related_name="tags")
 
-    class Meta:
+    class Meta(Tag.Meta):
         constraints = (
-            models.CheckConstraint(name="%(class)s_name_required", check=~models.Q(name="")),
+            *Tag.Meta.constraints,
             models.UniqueConstraint(name="unique_%(class)s", fields=("name", "value", "component")),
         )
 

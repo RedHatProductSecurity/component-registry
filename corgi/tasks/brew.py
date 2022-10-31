@@ -217,7 +217,6 @@ def save_component(
         related_url = ""
     obj, _ = Component.objects.update_or_create(
         type=component_type,
-        namespace=component.get("namespace", ""),
         name=meta.pop("name", ""),
         version=component_version,
         release=meta.pop("release", ""),
@@ -225,6 +224,7 @@ def save_component(
         defaults={
             "description": meta.pop("description", ""),
             "filename": find_package_file_name(meta.pop("source", [])),
+            "namespace": component.get("namespace", ""),
             "license_declared_raw": meta.pop("license", ""),
             "related_url": related_url,
             "software_build": softwarebuild,

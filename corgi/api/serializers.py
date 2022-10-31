@@ -13,6 +13,7 @@ from corgi.core.models import (
     Component,
     Product,
     ProductComponentRelation,
+    ProductModel,
     ProductStream,
     ProductVariant,
     ProductVersion,
@@ -62,6 +63,33 @@ def get_model_ofuri_link(
     if view:
         link += f"&view={view}"
     return link
+
+
+def get_model_ofuri_type(ofuri: str) -> tuple[Optional[ProductModel], str]:
+    """Return a tuple of (model instance, model name) given some ofuri
+    Returns (None, "model name") if no matching product / variant was found
+    Returns (None, "") if no matching version / stream was found
+    Returns (None, "") if an ofuri does not have 3, 4, or 5 parts"""
+    missing_or_invalid = None, ""
+    if not ofuri:
+        return missing_or_invalid
+    ofuri_len = len(ofuri.split(":"))
+
+    if ofuri_len == 3:
+        return Product.objects.filter(ofuri=ofuri).first(), "Product"
+    elif ofuri_len == 5:
+        return ProductVariant.objects.filter(ofuri=ofuri).first(), "ProductVariant"
+    elif ofuri_len != 4:
+        return missing_or_invalid
+
+    # ProductVersions and ProductStreams both have 4 parts in their ofuri
+    if version := ProductVersion.objects.filter(ofuri=ofuri).first():
+        return version, "ProductVersion"
+    elif stream := ProductStream.objects.filter(ofuri=ofuri).first():
+        return stream, "ProductStream"
+    # TODO: Channels don't define an ofuri - should they?
+    # else we know it's a version / stream but couldn't find a match
+    return missing_or_invalid
 
 
 def get_upstream_link(

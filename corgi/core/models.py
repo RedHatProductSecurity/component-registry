@@ -234,8 +234,6 @@ class SoftwareBuild(TimeStampedModel):
     meta_attr = models.JSONField(default=dict)
 
     class Meta:
-        ordering = ("-build_id",)
-
         indexes = (models.Index(fields=("completion_time",)),)
 
     def save_datascore(self):
@@ -408,7 +406,6 @@ class ProductModel(models.Model):
 
     class Meta:
         abstract = True
-        ordering = ("name",)
         indexes = (models.Index(fields=("ofuri",)),)
 
     def __str__(self) -> str:
@@ -637,9 +634,6 @@ class Channel(TimeStampedModel):
     product_streams = fields.ArrayField(models.CharField(max_length=200), default=list)
     product_variants = fields.ArrayField(models.CharField(max_length=200), default=list)
 
-    class Meta:
-        ordering = ("name",)
-
     def __str__(self) -> str:
         return str(self.name)
 
@@ -697,7 +691,6 @@ class ProductComponentRelation(TimeStampedModel):
     build_id = models.CharField(max_length=200, default="")
 
     class Meta:
-        ordering = ("external_system_id", "product_ref", "build_id")
         constraints = (
             models.UniqueConstraint(
                 name="unique_productcomponentrelation",
@@ -823,13 +816,6 @@ class Component(TimeStampedModel):
     objects = ComponentQuerySet.as_manager()
 
     class Meta:
-        ordering = (
-            "name",
-            "type",
-            "arch",
-            "version",
-            "release",
-        )
         constraints = (
             models.UniqueConstraint(
                 name="unique_components",
@@ -1251,4 +1237,3 @@ class AppStreamLifeCycle(TimeStampedModel):
                 name="unique_lifecycle_entity",
             ),
         )
-        ordering = ("name", "type", "product", "initial_product_version", "stream")

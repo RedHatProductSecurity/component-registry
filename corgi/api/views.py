@@ -46,6 +46,7 @@ from .serializers import (
     SoftwareBuildSerializer,
     get_component_purl_link,
     get_model_ofuri_link,
+    get_model_ofuri_type,
 )
 
 logger = logging.getLogger(__name__)
@@ -60,7 +61,7 @@ def healthy(request: Request) -> Response:
 
 class StatusViewSet(GenericViewSet):
     # Note-including a dummy queryset as scheme generation is complaining for reasons unknown
-    queryset = Product.objects.all()
+    queryset = Product.objects.none()
 
     @extend_schema(
         request=None,
@@ -164,9 +165,9 @@ class StatusViewSet(GenericViewSet):
         )
 
 
-def recursive_component_node_to_dict(node, componenttype):
+def recursive_component_node_to_dict(node, component_type):
     result = {}
-    if node.type in componenttype:
+    if node.type in component_type:
         result = {
             "purl": node.purl,
             # "node_id": node.pk,
@@ -175,7 +176,7 @@ def recursive_component_node_to_dict(node, componenttype):
             # "uuid": node.obj.uuid,
             "description": node.obj.description,
         }
-    children = [recursive_component_node_to_dict(c, componenttype) for c in node.get_children()]
+    children = [recursive_component_node_to_dict(c, component_type) for c in node.get_children()]
     if children:
         result["deps"] = children
     return result
@@ -213,7 +214,7 @@ def recursive_product_node_to_dict(node):
 class SoftwareBuildViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled until auth is added
     """View for api/v1/builds"""
 
-    queryset = SoftwareBuild.objects.all()
+    queryset = SoftwareBuild.objects.order_by("-build_id")
     serializer_class = SoftwareBuildSerializer
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend, filters.SearchFilter]
     filterset_class = SoftwareBuildFilter
@@ -225,12 +226,14 @@ class ProductDataViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled u
     search_fields = ["name", "description", "meta_attr"]
     filterset_class = ProductDataFilter
     lookup_url_kwarg = "uuid"
+    ordering_field = "name"
 
 
 class ProductViewSet(ProductDataViewSet):
     """View for api/v1/products"""
 
-    queryset = Product.objects.get_queryset()
+    # Can't use self / super() yet
+    queryset = Product.objects.order_by(ProductDataViewSet.ordering_field)
     serializer_class = ProductSerializer
 
     def list(self, request, *args, **kwargs):
@@ -260,7 +263,7 @@ class ProductViewSet(ProductDataViewSet):
 class ProductVersionViewSet(ProductDataViewSet):
     """View for api/v1/product_versions"""
 
-    queryset = ProductVersion.objects.get_queryset()
+    queryset = ProductVersion.objects.order_by(ProductDataViewSet.ordering_field)
     serializer_class = ProductVersionSerializer
 
     def list(self, request, *args, **kwargs):
@@ -290,14 +293,14 @@ class ProductVersionViewSet(ProductDataViewSet):
 class ProductStreamViewSetSet(ProductDataViewSet):
     """View for api/v1/product_streams"""
 
-    queryset = ProductStream.objects.filter(active=True)
+    queryset = ProductStream.objects.filter(active=True).order_by(ProductDataViewSet.ordering_field)
     serializer_class = ProductStreamSerializer
 
     def list(self, request, *args, **kwargs):
         req = self.request
         active = request.query_params.get("active")
         if active == "all":
-            self.queryset = ProductStream.objects.filter()
+            self.queryset = ProductStream.objects.order_by(super().ordering_field)
         ofuri = req.query_params.get("ofuri")
         if not ofuri:
             return super().list(request)
@@ -331,7 +334,7 @@ class ProductStreamViewSetSet(ProductDataViewSet):
 class ProductVariantViewSetSet(ProductDataViewSet):
     """View for api/v1/product_variants"""
 
-    queryset = ProductVariant.objects.get_queryset()
+    queryset = ProductVariant.objects.order_by(ProductDataViewSet.ordering_field)
     serializer_class = ProductVariantSerializer
 
     def list(self, request, *args, **kwargs):
@@ -361,7 +364,7 @@ class ProductVariantViewSetSet(ProductDataViewSet):
 class ChannelViewSet(ReadOnlyModelViewSet):
     """View for api/v1/channels"""
 
-    queryset = Channel.objects.get_queryset()
+    queryset = Channel.objects.order_by("name")
     serializer_class = ChannelSerializer
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend, filters.SearchFilter]
     filterset_class = ChannelFilter
@@ -371,7 +374,7 @@ class ChannelViewSet(ReadOnlyModelViewSet):
 class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled until auth is added
     """View for api/v1/components"""
 
-    queryset = Component.objects.get_queryset()
+    queryset = Component.objects.order_by("name", "type", "arch", "version", "release")
     serializer_class = ComponentSerializer
     search_fields = ["name", "description", "release", "version", "meta_attr"]
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend, filters.SearchFilter]
@@ -379,21 +382,26 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
     lookup_url_kwarg = "uuid"
 
     def get_queryset(self):
-        # 'latest' filter only relevent in terms of a specific offering/product
+        # 'latest' filter only relevant in terms of a specific offering/product
         ofuri = self.request.query_params.get("ofuri")
-        if ofuri:
-            # Note - originally ofuri explicitly embedded product type (eg. Product,
-            # Product Version, Product Stream, Product Variant)
-            # ... which would have simplified this code.
-            if ProductStream.objects.filter(ofuri=ofuri).exists():
-                return ProductStream.objects.get(ofuri=ofuri).get_latest_components()
-            if ProductVariant.objects.filter(ofuri=ofuri).exists():
-                return Component.objects.filter(product_variants=[ofuri])
-            if ProductVersion.objects.filter(ofuri=ofuri).exists():
-                return Component.objects.filter(product_versions=[ofuri])
-            if Product.objects.filter(ofuri=ofuri).exists():
-                return Component.objects.filter(products=[ofuri])
-        return Component.objects.all()
+        if not ofuri:
+            return self.queryset
+
+        model, _ = get_model_ofuri_type(ofuri)
+        if isinstance(model, Product):
+            return self.queryset.filter(products__contains=(ofuri,))
+        elif isinstance(model, ProductVersion):
+            return self.queryset.filter(product_versions__contains=(ofuri,))
+        elif isinstance(model, ProductStream):
+            # only ProductStream defines get_latest_components()
+            # TODO: Should this be a ProductModel method? For e.g. Products,
+            #  we could return get_latest_components() for each child stream
+            return model.get_latest_components()
+        elif isinstance(model, ProductVariant):
+            return self.queryset.filter(product_variants__contains=(ofuri,))
+        else:
+            # No matching model instance found, or invalid ofuri
+            return self.queryset
 
     def list(self, request, *args, **kwargs):
         # purl are stored with each segment url encoded as per the specification. The purl query
@@ -509,5 +517,7 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
 class AppStreamLifeCycleViewSet(ReadOnlyModelViewSet):
     """View for api/v1/lifecycles"""
 
-    queryset = AppStreamLifeCycle.objects.get_queryset()
+    queryset = AppStreamLifeCycle.objects.order_by(
+        "name", "type", "product", "initial_product_version", "stream"
+    )
     serializer_class = AppStreamLifeCycleSerializer

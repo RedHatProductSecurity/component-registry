@@ -492,9 +492,7 @@ def fetch_unprocessed_relations(
         created_during = timezone.now() - created_since
         relations_query = relations_query.filter(created_at__gte=created_during)
     # batch process to avoid exhausting the memory limit for the pod
-    distinct_ids = (
-        relations_query.order_by("build_id").values_list("build_id", flat=True).distinct()
-    )
+    distinct_ids = relations_query.values_list("build_id", flat=True).distinct()
     relation_count = distinct_ids.count()
     logger.info("Found %s %s relations", relation_count, relation_type)
     offset = 0

@@ -272,30 +272,28 @@ class SoftwareBuild(TimeStampedModel):
     def save_product_taxonomy(self):
         """update ('materialize') product taxonomy on all build components"""
         variant_ids = list(
-            ProductComponentRelation.objects.filter(build_id=self.build_id)
-            .order_by("build_id")
-            .filter(
+            ProductComponentRelation.objects.filter(
+                build_id=self.build_id,
                 type__in=(
                     ProductComponentRelation.Type.CDN_REPO,
                     ProductComponentRelation.Type.ERRATA,
-                )
+                ),
             )
-            .distinct()
             .values_list("product_ref", flat=True)
+            .distinct()
         )
 
         stream_ids = list(
-            ProductComponentRelation.objects.filter(build_id=self.build_id)
-            .order_by("build_id")
-            .filter(
+            ProductComponentRelation.objects.filter(
+                build_id=self.build_id,
                 type__in=(
                     ProductComponentRelation.Type.BREW_TAG,
                     ProductComponentRelation.Type.COMPOSE,
                     ProductComponentRelation.Type.YUM_REPO,
-                )
+                ),
             )
-            .distinct()
             .values_list("product_ref", flat=True)
+            .distinct()
         )
 
         product_details = get_product_details(variant_ids, stream_ids)
@@ -353,7 +351,7 @@ class ProductModel(TimeStampedModel):
             for build_id in build_ids:
                 query |= Q(software_build=build_id)
             # TODO get component descendants as well
-            return Component.objects.filter(query).distinct().order_by(sort_field)
+            return Component.objects.filter(query).order_by(sort_field).distinct(sort_field)
         # Else self.builds is an empty QuerySet
         return Component.objects.none()
 
@@ -375,7 +373,6 @@ class ProductModel(TimeStampedModel):
         if product_refs:
             return (
                 ProductComponentRelation.objects.filter(product_ref__in=product_refs)
-                .order_by("build_id")
                 .values_list("build_id", flat=True)
                 .distinct()
             )
@@ -528,6 +525,7 @@ class ProductStream(ProductModel):
                         name=OuterRef("name"),
                         product_streams__overlap=(self.ofuri,),
                     )
+                    .exclude(software_build__isnull=True)
                     .order_by("-software_build__completion_time")
                     .values("uuid")[:1]
                 )
@@ -971,7 +969,6 @@ class Component(TimeStampedModel):
                 type=ProductComponentRelation.Type.ERRATA,
                 build_id=self.software_build.build_id,
             )
-            .order_by("external_system_id")
             .values_list("external_system_id", flat=True)
             .distinct()
         )
@@ -1045,8 +1042,6 @@ class Component(TimeStampedModel):
         """return a QuerySet of unique descendant PURLs with PROVIDES ComponentNode type"""
         # Used in serializers / taxonomies. Returns identifiers (purls) to track relationships
         return (
-            # No need for .order_by() to prevent duplicate values in list
-            # ComponentNode.Meta has no ordering, so .distinct() works automatically
             self.get_provides_nodes(include_dev=include_dev)
             .values_list("purl", flat=True)
             .distinct()

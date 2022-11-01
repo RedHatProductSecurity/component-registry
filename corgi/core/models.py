@@ -9,6 +9,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
 from django.db import models
 from django.db.models import F, OuterRef, Q, QuerySet, Subquery
+from mptt.managers import TreeManager
 from mptt.models import MPTTModel, TreeForeignKey
 from packageurl import PackageURL
 
@@ -19,8 +20,18 @@ from corgi.core.mixins import TimeStampedModel
 logger = logging.getLogger(__name__)
 
 
-class ProductNode(MPTTModel, TimeStampedModel):
-    """Product taxonomy node."""
+class NodeManager(TreeManager):
+    """Custom manager to remove ordering from TreeQuerySets (cnodes and pnodes)
+    to allow calling .distinct() without first calling .order_by() every time
+    """
+
+    def get_queryset(self, *args, **kwargs):
+        return super().get_queryset(*args, **kwargs).order_by()
+
+
+class NodeModel(MPTTModel, TimeStampedModel):
+    """Generic model for component and product taxonomies
+    that factors out some common behavior and adds some helper logic"""
 
     parent = TreeForeignKey("self", on_delete=models.CASCADE, null=True, related_name="children")
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
@@ -30,11 +41,34 @@ class ProductNode(MPTTModel, TimeStampedModel):
         "object_id",
     )
 
+    objects = NodeManager()
+
     class MPTTMeta:
         level_attr = "level"
         root_node_ordering = False
 
     class Meta:
+        abstract = True
+        indexes = (
+            models.Index(fields=("object_id", "parent")),
+            # Add index on foreign-key fields here, to speed up iterating over cnodes / pnodes
+            # GenericForeignKey doesn't get these by default, only ForeignKey
+            models.Index(fields=("content_type", "object_id")),
+        )
+
+    @property
+    def name(self):
+        return self.obj.name
+
+    @property
+    def desc(self):
+        return self.obj.description
+
+
+class ProductNode(NodeModel):
+    """Product taxonomy node."""
+
+    class Meta(NodeModel.Meta):
         constraints = (
             # Add unique constraint + index so get_or_create behaves atomically
             # Otherwise duplicate rows may be inserted into DB
@@ -50,12 +84,6 @@ class ProductNode(MPTTModel, TimeStampedModel):
                 fields=("object_id",),
                 condition=models.Q(parent__isnull=True),
             ),
-        )
-        indexes = (
-            models.Index(fields=("object_id", "parent")),
-            # Add index on foreign-key fields here, to speed up iterating over pnodes
-            # GenericForeignKey doesn't get these by default, only ForeignKey
-            models.Index(fields=("content_type", "object_id")),
         )
 
     # Tree-traversal methods for product-related models below.
@@ -126,7 +154,7 @@ class ProductNode(MPTTModel, TimeStampedModel):
         )
 
 
-class ComponentNode(MPTTModel, TimeStampedModel):
+class ComponentNode(NodeModel):
     """Component taxonomy node."""
 
     class ComponentNodeType(models.TextChoices):
@@ -137,13 +165,6 @@ class ComponentNode(MPTTModel, TimeStampedModel):
         # https://github.com/containerbuildsystem/cachito/#feature-definitions
         PROVIDES_DEV = "PROVIDES_DEV"
 
-    parent = TreeForeignKey("self", on_delete=models.CASCADE, null=True, related_name="children")
-    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-    object_id = models.UUIDField()
-    obj = GenericForeignKey(
-        "content_type",
-        "object_id",
-    )
     # TODO: This shadows built-in name "type" and creates a warning when updating openapi.yml
     type = models.CharField(
         choices=ComponentNodeType.choices, default=ComponentNodeType.SOURCE, max_length=20
@@ -151,11 +172,7 @@ class ComponentNode(MPTTModel, TimeStampedModel):
     # Saves an expensive django dereference into node object
     purl = models.CharField(max_length=1024, default="")
 
-    class MPTTMeta:
-        level_attr = "level"
-        root_node_ordering = False
-
-    class Meta:
+    class Meta(NodeModel.Meta):
         constraints = (
             # Add unique constraint + index so get_or_create behaves atomically
             # Otherwise duplicate rows may be inserted into DB
@@ -177,23 +194,13 @@ class ComponentNode(MPTTModel, TimeStampedModel):
         #    core_cn_tree_lft_purl_parent_idx
         #    core_cn_lft_tree_idx
         #    core_cn_lft_rght_tree_idx
-        indexes = (
+        indexes = (  # type: ignore
             models.Index(fields=("type", "parent", "purl")),
             models.Index(fields=("type",)),
             models.Index(fields=("parent",)),
             models.Index(fields=("purl",)),
-            # Add index on foreign-key fields here, to speed up iterating over cnodes
-            # GenericForeignKey doesn't get these by default, only ForeignKey
-            models.Index(fields=("content_type", "object_id")),
+            *NodeModel.Meta.indexes,
         )
-
-    @property
-    def name(self):
-        return self.obj.name
-
-    @property
-    def desc(self):
-        return self.desc.name
 
     def save(self, *args, **kwargs):
         self.purl = self.obj.purl

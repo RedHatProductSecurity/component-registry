@@ -394,7 +394,6 @@ def test_querysets_are_unordered_by_default():
         assert "Sort " not in model.objects.get_queryset().explain()
 
 
-@pytest.mark.xfail
 def test_mptt_properties_are_unordered_by_default():
     """Assert that MPTT model properties (pnodes, cnodes) don't define an ordering"""
 

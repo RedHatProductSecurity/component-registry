@@ -1,5 +1,6 @@
 import pytest
-from django.db.utils import IntegrityError
+from django.apps import apps
+from django.db.utils import IntegrityError, ProgrammingError
 
 from corgi.core.constants import CONTAINER_DIGEST_FORMATS
 from corgi.core.models import (
@@ -382,3 +383,84 @@ def test_duplicate_insert_fails_for_null_parent():
         ComponentNode.objects.create(
             type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl="root", obj=component
         )
+
+
+def test_querysets_are_unordered_by_default():
+    """For all models, assert that the model Meta doesn't define an ordering
+    Also assert that the base .objects queryset does not contain SQL to sort the objects
+    """
+    for model in apps.get_app_config("core").get_models():
+        assert model._meta.ordering == []
+        assert "Sort " not in model.objects.get_queryset().explain()
+
+
+@pytest.mark.xfail
+def test_mptt_properties_are_unordered_by_default():
+    """Assert that MPTT model properties (pnodes, cnodes) don't define an ordering"""
+
+    c = ComponentFactory()
+    cnode = ComponentNode(
+        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=c.purl, obj=c
+    )
+    cnode.save()
+    assert "Sort " not in c.cnodes.explain()
+    assert cnode._meta.ordering == []
+    assert c._meta.ordering == []
+
+    p = ProductFactory()
+    pnode = ProductNode(parent=None, obj=p)
+    pnode.save()
+    assert "Sort " not in p.pnodes.explain()
+    assert pnode._meta.ordering == []
+    assert p._meta.ordering == []
+
+
+def test_queryset_ordering_succeeds():
+    """Test that .distinct() without field name or order_by() works correctly
+    Also test that .distinct() with field name or order_by() works correctly
+    """
+    # Ordered by version: (a, a), (c, c), (first_b, b), (last_b, b)
+    # Ordered by description: (a, a), (first_b, b), (last_b, b), (c, c)
+    ProductFactory(version="a", description="a")
+    ProductFactory(version="first_b", description="b")
+    ProductFactory(version="last_b", description="b")
+    ProductFactory(version="c", description="c")
+
+    # .values_list("description", flat=True).distinct() will succeed, with any of:
+    # nothing, .order_by(), or .order_by("description") in front of .values_list
+
+    # no order_by at all inherits any ordering fields the model Meta defines (None)
+    unordered_products = Product.objects.get_queryset()
+    assert len(unordered_products.values_list("description", flat=True).distinct()) == 3
+
+    # .order_by() removes any ordering field from the result queryset
+    ordered_products = unordered_products.order_by()
+    assert len(ordered_products.values_list("description", flat=True).distinct()) == 3
+
+    # .order_by("description") adds "description" ordering field to the result queryset
+    ordered_products = unordered_products.order_by("description")
+    assert len(ordered_products.values_list("description", flat=True).distinct()) == 3
+
+
+def test_queryset_ordering_fails():
+    """Test that .distinct() with non-matching ordering fails the way we expect
+    Also test that .distinct("field") with non-matching ordering fails the way we expect
+    """
+    ProductFactory(version="a", description="a")
+    ProductFactory(version="first_b", description="b")
+    ProductFactory(version="last_b", description="b")
+    ProductFactory(version="c", description="c")
+
+    # .order_by("version").values_list("description", flat=True).distinct() will fail
+    # because order_by("version") adds a hidden field to the result queryset we're SELECTing
+    # .distinct() looks at (order_by field, values_list field) together when checking duplicates
+    unordered_products = Product.objects.get_queryset()
+
+    # .distinct() with no field name looks at both "description" field from values_list
+    # and "version" field from order_by, even though only "description" is in the final result
+    misordered_products = unordered_products.order_by("version")
+    assert len(misordered_products.values_list("description", flat=True).distinct()) == 4
+
+    # SELECT DISTINCT ON expressions must match initial ORDER BY expressions
+    with pytest.raises(ProgrammingError):
+        len(misordered_products.distinct("description"))

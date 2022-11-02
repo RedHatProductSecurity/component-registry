@@ -1,7 +1,7 @@
 {
  "artifacts": [
   {
-   "id": "74030751c0c72e5b",
+   "id": "4994e391d5e79c25",
    "name": "cassalog",
    "version": "0.7.0.redhat-1",
    "type": "java-archive",
@@ -46,7 +46,7 @@
    }
   },
   {
-   "id": "fc04ff3e1114763a",
+   "id": "cb8d5d05f545f03d",
    "name": "cassandra-driver-core",
    "version": "3.3.0.redhat-1",
    "type": "java-archive",
@@ -93,7 +93,7 @@
    }
   },
   {
-   "id": "3c6598f998749dc9",
+   "id": "5eba543053aa5330",
    "name": "guava",
    "version": "18.0.0.redhat-1",
    "type": "java-archive",
@@ -124,7 +124,7 @@
    }
   },
   {
-   "id": "16e236b6d9c49172",
+   "id": "f66047ce1569149a",
    "name": "hawkular-metrics-configuration-service",
    "version": "0.31.0.Final-redhat-1",
    "type": "java-archive",
@@ -169,7 +169,7 @@
    }
   },
   {
-   "id": "63734115cd772ccf",
+   "id": "cccd8640eb42c27e",
    "name": "hawkular-metrics-datetime-service",
    "version": "0.31.0.Final-redhat-1",
    "type": "java-archive",
@@ -214,7 +214,7 @@
    }
   },
   {
-   "id": "9d4fcf7648ca1941",
+   "id": "3a7988475afb60aa",
    "name": "hawkular-metrics-job-scheduler",
    "version": "0.31.0.Final-redhat-1",
    "type": "java-archive",
@@ -259,7 +259,7 @@
    }
   },
   {
-   "id": "859b7f4787d3b7b",
+   "id": "64e02fd28208ccf5",
    "name": "hawkular-metrics-rx-java-driver",
    "version": "0.31.0.Final-redhat-1",
    "type": "java-archive",
@@ -308,7 +308,7 @@
    }
   },
   {
-   "id": "75c75a8bc7e030b0",
+   "id": "3009d2dd27f467f7",
    "name": "hawkular-metrics-schema",
    "version": "0.31.0.Final-redhat-1",
    "type": "java-archive",
@@ -349,7 +349,7 @@
    }
   },
   {
-   "id": "4da7433a6982daf",
+   "id": "411401f5c0c7155d",
    "name": "hawkular-metrics-schema-installer",
    "version": "0.31.0.Final-redhat-1",
    "type": "java-archive",
@@ -422,7 +422,7 @@
    }
   },
   {
-   "id": "8740e8c085202764",
+   "id": "b7dbab57333fb75f",
    "name": "jboss-logging",
    "version": "3.3.0.Final",
    "type": "java-archive",
@@ -477,7 +477,7 @@
    }
   },
   {
-   "id": "7bc8073597538b0",
+   "id": "cc3401df60167d91",
    "name": "jctools-core",
    "version": "2.0.1",
    "type": "java-archive",
@@ -521,7 +521,7 @@
    }
   },
   {
-   "id": "d6117c95ed030b6f",
+   "id": "33e06d18df86f255",
    "name": "jffi",
    "version": "1.2.10.redhat-1",
    "type": "java-archive",
@@ -569,7 +569,7 @@
    }
   },
   {
-   "id": "79fe3861bb5efebf",
+   "id": "e8052a7b8f5eb463",
    "name": "jnr-constants",
    "version": "0.9.0.redhat-1",
    "type": "java-archive",
@@ -630,7 +630,7 @@
    }
   },
   {
-   "id": "af20732034be6280",
+   "id": "87ab4769368c0b3d",
    "name": "jnr-ffi",
    "version": "2.0.7.redhat-1",
    "type": "java-archive",
@@ -691,7 +691,7 @@
    }
   },
   {
-   "id": "dd7cbafb66ee243d",
+   "id": "469de9ee64caabf7",
    "name": "jnr-posix",
    "version": "3.0.27.redhat-1",
    "type": "java-archive",
@@ -751,7 +751,7 @@
    }
   },
   {
-   "id": "58f391cb44db7da",
+   "id": "4d8084fdea7a599e",
    "name": "jnr-x86asm",
    "version": "1.0.2.redhat-1",
    "type": "java-archive",
@@ -812,7 +812,7 @@
    }
   },
   {
-   "id": "47b06b0d77093b19",
+   "id": "99c0c2228b08bb33",
    "name": "joda-time",
    "version": "2.9.5.redhat-1",
    "type": "java-archive",
@@ -863,7 +863,7 @@
    }
   },
   {
-   "id": "855525b3e5ddb7c8",
+   "id": "8d41e4303491c9ba",
    "name": "logback-classic",
    "version": "1.1.3",
    "type": "java-archive",
@@ -898,7 +898,7 @@
    }
   },
   {
-   "id": "5417fa19ae624e2b",
+   "id": "6103bc901d93ab3c",
    "name": "logback-core",
    "version": "1.1.3",
    "type": "java-archive",
@@ -933,7 +933,7 @@
    }
   },
   {
-   "id": "2047c7981b9c7654",
+   "id": "aa116a7a39ce15cd",
    "name": "metrics-core",
    "version": "3.2.2.redhat-1",
    "type": "java-archive",
@@ -974,7 +974,7 @@
    }
   },
   {
-   "id": "fd78a7b5251f290f",
+   "id": "9d1522b1569300e9",
    "name": "netty-buffer",
    "version": "4.0.47.Final-redhat-2",
    "type": "java-archive",
@@ -1009,7 +1009,7 @@
    }
   },
   {
-   "id": "8677cf3f687a14ab",
+   "id": "4482101dfa82f3f8",
    "name": "netty-codec",
    "version": "4.0.47.Final-redhat-2",
    "type": "java-archive",
@@ -1044,7 +1044,7 @@
    }
   },
   {
-   "id": "4ddd19a5d66dc6d2",
+   "id": "bada621ccdf212d7",
    "name": "netty-common",
    "version": "4.0.47.Final-redhat-2",
    "type": "java-archive",
@@ -1079,7 +1079,7 @@
    }
   },
   {
-   "id": "b631e2b15acb0b9",
+   "id": "d3feb94c111ebb9c",
    "name": "netty-handler",
    "version": "4.0.47.Final-redhat-2",
    "type": "java-archive",
@@ -1114,7 +1114,7 @@
    }
   },
   {
-   "id": "2de4b8032d99a937",
+   "id": "16457b8da203855d",
    "name": "netty-transport",
    "version": "4.0.47.Final-redhat-2",
    "type": "java-archive",
@@ -1149,7 +1149,7 @@
    }
   },
   {
-   "id": "3160b76b6f3c200c",
+   "id": "f07c308589a4ee0a",
    "name": "netty-transport-native-epoll",
    "version": "4.0.47.Final-redhat-2",
    "type": "java-archive",
@@ -1192,7 +1192,7 @@
    }
   },
   {
-   "id": "80b9d5ba58dd2ba1",
+   "id": "4105acbf52be2c96",
    "name": "rxjava",
    "version": "1.3.0.redhat-3",
    "type": "java-archive",
@@ -1230,7 +1230,7 @@
    }
   },
   {
-   "id": "78574007e2cb7ea",
+   "id": "47a817a87c3c2bd",
    "name": "rxjava-guava",
    "version": "1.0.3.redhat-1",
    "type": "java-archive",
@@ -1283,7 +1283,7 @@
    }
   },
   {
-   "id": "170daeede1aca61a",
+   "id": "d812aa880a293c52",
    "name": "slf4j-api",
    "version": "1.7.7.redhat-2",
    "type": "java-archive",
@@ -1318,15 +1318,162 @@
    }
   }
  ],
- "artifactRelationships": [],
+ "artifactRelationships": [
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "16457b8da203855d",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "3009d2dd27f467f7",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "33e06d18df86f255",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "3a7988475afb60aa",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "4105acbf52be2c96",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "411401f5c0c7155d",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "4482101dfa82f3f8",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "469de9ee64caabf7",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "47a817a87c3c2bd",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "4994e391d5e79c25",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "4d8084fdea7a599e",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "5eba543053aa5330",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "6103bc901d93ab3c",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "64e02fd28208ccf5",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "87ab4769368c0b3d",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "8d41e4303491c9ba",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "99c0c2228b08bb33",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "9d1522b1569300e9",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "aa116a7a39ce15cd",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "b7dbab57333fb75f",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "bada621ccdf212d7",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "cb8d5d05f545f03d",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "cc3401df60167d91",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "cccd8640eb42c27e",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "d3feb94c111ebb9c",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "d812aa880a293c52",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "e8052a7b8f5eb463",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "f07c308589a4ee0a",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "f66047ce1569149a",
+   "type": "contains"
+  }
+ ],
  "source": {
+  "id": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
   "type": "file",
   "target": "hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar"
  },
  "distro": {},
  "descriptor": {
   "name": "syft",
-  "version": "0.48.1",
+  "version": "0.60.1",
   "configuration": {
    "configPath": "",
    "verbosity": 0,
@@ -1334,24 +1481,19 @@
    "output": [
     "syft-json"
    ],
+   "output-template-path": "",
    "file": "",
    "check-for-app-update": true,
-   "anchore": {
-    "host": "",
-    "path": "",
-    "dockerfile": "",
-    "overwrite-existing-image": false,
-    "import-timeout": 30
-   },
    "dev": {
     "profile-cpu": false,
     "profile-mem": false
    },
    "log": {
     "structured": false,
-    "level": "warning",
+    "level": "warn",
     "file-location": ""
    },
+   "catalogers": null,
    "package": {
     "cataloger": {
      "enabled": true,
@@ -1418,7 +1560,7 @@
   }
  },
  "schema": {
-  "version": "3.3.0",
-  "url": "https://raw.githubusercontent.com/anchore/syft/main/schema/json/schema-3.3.0.json"
+  "version": "4.1.0",
+  "url": "https://raw.githubusercontent.com/anchore/syft/main/schema/json/schema-4.1.0.json"
  }
 }

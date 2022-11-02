@@ -33,7 +33,7 @@ def test_parse_components():
     # directives in nested go.mod files
     assert "../" not in names
     assert "github.com/Microsoft/go-winio" in names
-    assert results[0]["analysis_meta"] == {"source": "syft", "version": "0.48.1"}
+    assert results[0]["analysis_meta"] == {"source": "syft-0.60.1"}
 
 
 def test_parse_maven_components():
@@ -297,5 +297,5 @@ def test_slow_software_composition_analysis(
     assert mock_syft.call_args_list == expected_syft_call_arg_list
     expected_component = Component.objects.get(purl=expected_purl)
     assert expected_component
-    assert expected_component.meta_attr["source"] == "syft-0.48.1"
+    assert expected_component.meta_attr["source"] == "syft-0.60.1"
     mock_save_prod_tax.assert_called_once()

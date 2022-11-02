@@ -34,7 +34,7 @@
  "distro": {},
  "descriptor": {
   "name": "syft",
-  "version": "0.48.1",
+  "version": "0.60.1",
   "configuration": {
    "configPath": "",
    "verbosity": 0,

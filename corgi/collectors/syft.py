@@ -47,9 +47,8 @@ class Syft:
         if "descriptor" in raw_result:
             syft_version = raw_result["descriptor"].get("version", "")
         if "artifacts" in raw_result:
-            # Syft packages types https://github.com/anchore/syft/blob/
-            # 73262c7258cac24cbccf38cb9b97b67091d8f830/syft/pkg/type.go#L8
-            # TODO add gem type to models and match it with "gem"
+            # Syft packages types https://github.com/anchore/syft/
+            # blob/v0.60.1/syft/pkg/type.go#L8
             for artifact in raw_result["artifacts"]:
                 if artifact["type"] == "go-module":
                     pkg_type = Component.Type.GOLANG
@@ -61,6 +60,10 @@ class Syft:
                     pkg_type = Component.Type.MAVEN
                 elif artifact["type"] == "rpm":
                     pkg_type = Component.Type.RPM
+                elif artifact["type"] == "gem":
+                    pkg_type = Component.Type.GEM
+                elif artifact["type"] == "rust-crate":
+                    pkg_type = Component.Type.CARGO
                 else:
                     logger.warning("Skipping unknown Syft type: %s", artifact["type"])
                     continue

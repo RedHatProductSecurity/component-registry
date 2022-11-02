@@ -263,9 +263,12 @@ def test_component_add_uri(client, api_path):
     )
     response = client.get(f"{api_path}/components/{c1.uuid}")
     assert response.status_code == 200
-    assert response.json()["tags"] == [
-        {"name": "component_review", "value": "https://someexample.org/review/curl.doc"}
-    ]
+    tags = response.json()["tags"]
+    assert len(tags) == 1
+    tags = tags[0]
+    # Fail if timestamp not present - we can't set value directly so can't assert it
+    assert tags.pop("created_at", None)
+    assert tags == {"name": "component_review", "value": "https://someexample.org/review/curl.doc"}
 
 
 def test_srpm_detail(client, api_path):
@@ -365,13 +368,13 @@ def test_nvr_nevra_filter(client, api_path):
 
 def test_filter_component_tags(client, api_path):
     openssl = ComponentFactory(name="openssl", type=Component.Type.RPM, tag=None)
-    ComponentTagFactory(component=openssl, name="prodsec_priority", value="")
-    ComponentTagFactory(component=openssl, name="ubi8", value="")
-    ComponentTagFactory(component=openssl, name="status", value="yellow")
+    ComponentTagFactory(tagged_model=openssl, name="prodsec_priority", value="")
+    ComponentTagFactory(tagged_model=openssl, name="ubi8", value="")
+    ComponentTagFactory(tagged_model=openssl, name="status", value="yellow")
 
     curl = ComponentFactory(name="curl", type=Component.Type.RPM, tag=None)
-    ComponentTagFactory(component=curl, name="prodsec_priority", value="")
-    ComponentTagFactory(component=curl, name="status", value="green")
+    ComponentTagFactory(tagged_model=curl, name="prodsec_priority", value="")
+    ComponentTagFactory(tagged_model=curl, name="status", value="green")
 
     response = client.get(f"{api_path}/components?type=RPM")
     assert response.status_code == 200

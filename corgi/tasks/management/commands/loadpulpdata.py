@@ -49,7 +49,6 @@ class Command(BaseCommand):
                 product_ref__in=stream_or_variant_names,
                 type=ProductComponentRelation.Type.CDN_REPO,
             )
-            .order_by("build_id")
             .values_list("build_id", flat=True)
             .distinct()
         )

@@ -1,6 +1,7 @@
 import logging
 import re
 import uuid as uuid
+from abc import abstractmethod
 from collections import defaultdict
 
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
@@ -8,6 +9,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
 from django.db import models
 from django.db.models import F, OuterRef, Q, QuerySet, Subquery
+from mptt.managers import TreeManager
 from mptt.models import MPTTModel, TreeForeignKey
 from packageurl import PackageURL
 
@@ -18,8 +20,18 @@ from corgi.core.mixins import TimeStampedModel
 logger = logging.getLogger(__name__)
 
 
-class ProductNode(MPTTModel, TimeStampedModel):
-    """Product taxonomy node."""
+class NodeManager(TreeManager):
+    """Custom manager to remove ordering from TreeQuerySets (cnodes and pnodes)
+    to allow calling .distinct() without first calling .order_by() every time
+    """
+
+    def get_queryset(self, *args, **kwargs):
+        return super().get_queryset(*args, **kwargs).order_by()
+
+
+class NodeModel(MPTTModel, TimeStampedModel):
+    """Generic model for component and product taxonomies
+    that factors out some common behavior and adds some helper logic"""
 
     parent = TreeForeignKey("self", on_delete=models.CASCADE, null=True, related_name="children")
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
@@ -29,12 +41,35 @@ class ProductNode(MPTTModel, TimeStampedModel):
         "object_id",
     )
 
+    objects = NodeManager()
+
     class MPTTMeta:
         level_attr = "level"
         root_node_ordering = False
 
     class Meta:
-        constraints = [
+        abstract = True
+        indexes = (
+            models.Index(fields=("object_id", "parent")),
+            # Add index on foreign-key fields here, to speed up iterating over cnodes / pnodes
+            # GenericForeignKey doesn't get these by default, only ForeignKey
+            models.Index(fields=("content_type", "object_id")),
+        )
+
+    @property
+    def name(self):
+        return self.obj.name
+
+    @property
+    def desc(self):
+        return self.obj.description
+
+
+class ProductNode(NodeModel):
+    """Product taxonomy node."""
+
+    class Meta(NodeModel.Meta):
+        constraints = (
             # Add unique constraint + index so get_or_create behaves atomically
             # Otherwise duplicate rows may be inserted into DB
             # Second constraint needed for case when parent is NULL
@@ -49,13 +84,7 @@ class ProductNode(MPTTModel, TimeStampedModel):
                 fields=("object_id",),
                 condition=models.Q(parent__isnull=True),
             ),
-        ]
-        indexes = [
-            models.Index(fields=("object_id", "parent")),
-            # Add index on foreign-key fields here, to speed up iterating over pnodes
-            # GenericForeignKey doesn't get these by default, only ForeignKey
-            models.Index(fields=("content_type", "object_id")),
-        ]
+        )
 
     # Tree-traversal methods for product-related models below.
     #
@@ -125,7 +154,7 @@ class ProductNode(MPTTModel, TimeStampedModel):
         )
 
 
-class ComponentNode(MPTTModel, TimeStampedModel):
+class ComponentNode(NodeModel):
     """Component taxonomy node."""
 
     class ComponentNodeType(models.TextChoices):
@@ -136,13 +165,6 @@ class ComponentNode(MPTTModel, TimeStampedModel):
         # https://github.com/containerbuildsystem/cachito/#feature-definitions
         PROVIDES_DEV = "PROVIDES_DEV"
 
-    parent = TreeForeignKey("self", on_delete=models.CASCADE, null=True, related_name="children")
-    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-    object_id = models.UUIDField()
-    obj = GenericForeignKey(
-        "content_type",
-        "object_id",
-    )
     # TODO: This shadows built-in name "type" and creates a warning when updating openapi.yml
     type = models.CharField(
         choices=ComponentNodeType.choices, default=ComponentNodeType.SOURCE, max_length=20
@@ -150,12 +172,8 @@ class ComponentNode(MPTTModel, TimeStampedModel):
     # Saves an expensive django dereference into node object
     purl = models.CharField(max_length=1024, default="")
 
-    class MPTTMeta:
-        level_attr = "level"
-        root_node_ordering = False
-
-    class Meta:
-        constraints = [
+    class Meta(NodeModel.Meta):
+        constraints = (
             # Add unique constraint + index so get_or_create behaves atomically
             # Otherwise duplicate rows may be inserted into DB
             # Second constraint needed for case when parent is NULL
@@ -170,43 +188,42 @@ class ComponentNode(MPTTModel, TimeStampedModel):
                 fields=("type", "purl"),
                 condition=models.Q(parent__isnull=True),
             ),
-        ]
+        )
         # 0037_custom_indexes.py contains the following custom performance indexes
         #    core_componentnode_tree_parent_lft_idx
         #    core_cn_tree_lft_purl_parent_idx
         #    core_cn_lft_tree_idx
         #    core_cn_lft_rght_tree_idx
-        indexes = [
+        indexes = (  # type: ignore
             models.Index(fields=("type", "parent", "purl")),
-            models.Index(fields=["type"]),
-            models.Index(fields=["parent"]),
-            models.Index(fields=["purl"]),
-            # Add index on foreign-key fields here, to speed up iterating over cnodes
-            # GenericForeignKey doesn't get these by default, only ForeignKey
-            models.Index(fields=("content_type", "object_id")),
-        ]
-
-    @property
-    def name(self):
-        return self.obj.name
-
-    @property
-    def desc(self):
-        return self.desc.name
+            models.Index(fields=("type",)),
+            models.Index(fields=("parent",)),
+            models.Index(fields=("purl",)),
+            *NodeModel.Meta.indexes,
+        )
 
     def save(self, *args, **kwargs):
         self.purl = self.obj.purl
         super().save(*args, **kwargs)
 
 
-class Tag(models.Model):
-    name = models.SlugField(
-        max_length=200
-    )  # Must not be empty; enforced by check constrain in child models.
+class Tag(TimeStampedModel):
+    name = models.SlugField(max_length=200)  # Must not be empty
     value = models.CharField(max_length=1024, default="")
+
+    @property
+    @abstractmethod
+    def tagged_model(self):
+        pass
 
     class Meta:
         abstract = True
+        constraints = (
+            models.CheckConstraint(name="%(class)s_name_required", check=~models.Q(name="")),
+            models.UniqueConstraint(
+                name="unique_%(class)s", fields=("name", "value", "tagged_model")
+            ),
+        )
 
     def __str__(self):
         if self.value:
@@ -234,11 +251,7 @@ class SoftwareBuild(TimeStampedModel):
     meta_attr = models.JSONField(default=dict)
 
     class Meta:
-        ordering = ["-build_id"]
-
-        indexes = [
-            models.Index(fields=["completion_time"]),
-        ]
+        indexes = (models.Index(fields=("completion_time",)),)
 
     def save_datascore(self):
         for component in Component.objects.filter(software_build__build_id=self.build_id):
@@ -259,30 +272,28 @@ class SoftwareBuild(TimeStampedModel):
     def save_product_taxonomy(self):
         """update ('materialize') product taxonomy on all build components"""
         variant_ids = list(
-            ProductComponentRelation.objects.filter(build_id=self.build_id)
-            .order_by("build_id")
-            .filter(
+            ProductComponentRelation.objects.filter(
+                build_id=self.build_id,
                 type__in=(
                     ProductComponentRelation.Type.CDN_REPO,
                     ProductComponentRelation.Type.ERRATA,
-                )
+                ),
             )
-            .distinct()
             .values_list("product_ref", flat=True)
+            .distinct()
         )
 
         stream_ids = list(
-            ProductComponentRelation.objects.filter(build_id=self.build_id)
-            .order_by("build_id")
-            .filter(
+            ProductComponentRelation.objects.filter(
+                build_id=self.build_id,
                 type__in=(
                     ProductComponentRelation.Type.BREW_TAG,
                     ProductComponentRelation.Type.COMPOSE,
                     ProductComponentRelation.Type.YUM_REPO,
-                )
+                ),
             )
-            .distinct()
             .values_list("product_ref", flat=True)
+            .distinct()
         )
 
         product_details = get_product_details(variant_ids, stream_ids)
@@ -309,19 +320,11 @@ class SoftwareBuild(TimeStampedModel):
         return None
 
 
-class SoftwareBuildTag(Tag, TimeStampedModel):
-    software_build = models.ForeignKey(SoftwareBuild, on_delete=models.CASCADE, related_name="tags")
-
-    class Meta:
-        constraints = [
-            models.CheckConstraint(name="%(class)s_name_required", check=~models.Q(name="")),
-            models.UniqueConstraint(
-                name="unique_%(class)s", fields=("name", "value", "software_build")
-            ),
-        ]
+class SoftwareBuildTag(Tag):
+    tagged_model = models.ForeignKey(SoftwareBuild, on_delete=models.CASCADE, related_name="tags")
 
 
-class ProductModel(models.Model):
+class ProductModel(TimeStampedModel):
     """Abstract model that defines common fields for all product-related models."""
 
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -348,7 +351,7 @@ class ProductModel(models.Model):
             for build_id in build_ids:
                 query |= Q(software_build=build_id)
             # TODO get component descendants as well
-            return Component.objects.filter(query).distinct().order_by(sort_field)
+            return Component.objects.filter(query).order_by(sort_field).distinct(sort_field)
         # Else self.builds is an empty QuerySet
         return Component.objects.none()
 
@@ -370,7 +373,6 @@ class ProductModel(models.Model):
         if product_refs:
             return (
                 ProductComponentRelation.objects.filter(product_ref__in=product_refs)
-                .order_by("build_id")
                 .values_list("build_id", flat=True)
                 .distinct()
             )
@@ -410,16 +412,13 @@ class ProductModel(models.Model):
 
     class Meta:
         abstract = True
-        ordering = ["name"]
-        indexes = [
-            models.Index(fields=["ofuri"]),
-        ]
+        indexes = (models.Index(fields=("ofuri",)),)
 
     def __str__(self) -> str:
         return str(self.name)
 
 
-class Product(ProductModel, TimeStampedModel):
+class Product(ProductModel):
 
     # Inherit product_versions, product_streams, and product_variants from ProductModel
     # Override only products which doesn't make sense for this model
@@ -443,16 +442,10 @@ class Product(ProductModel, TimeStampedModel):
 
 
 class ProductTag(Tag):
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="tags")
-
-    class Meta:
-        constraints = [
-            models.CheckConstraint(name="%(class)s_name_required", check=~models.Q(name="")),
-            models.UniqueConstraint(name="unique_%(class)s", fields=("name", "value", "product")),
-        ]
+    tagged_model = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="tags")
 
 
-class ProductVersion(ProductModel, TimeStampedModel):
+class ProductVersion(ProductModel):
 
     product_versions = None  # type: ignore
     pnodes = GenericRelation(ProductNode, related_query_name="product_version")
@@ -475,20 +468,10 @@ class ProductVersion(ProductModel, TimeStampedModel):
 
 
 class ProductVersionTag(Tag):
-    product_version = models.ForeignKey(
-        ProductVersion, on_delete=models.CASCADE, related_name="tags"
-    )
-
-    class Meta:
-        constraints = [
-            models.CheckConstraint(name="%(class)s_name_required", check=~models.Q(name="")),
-            models.UniqueConstraint(
-                name="unique_%(class)s", fields=("name", "value", "product_version")
-            ),
-        ]
+    tagged_model = models.ForeignKey(ProductVersion, on_delete=models.CASCADE, related_name="tags")
 
 
-class ProductStream(ProductModel, TimeStampedModel):
+class ProductStream(ProductModel):
 
     cpe = models.CharField(max_length=1000, default="")
 
@@ -533,15 +516,16 @@ class ProductStream(ProductModel, TimeStampedModel):
         return (
             Component.objects.filter(
                 root_components,
-                product_streams__overlap=[self.ofuri],
+                product_streams__overlap=(self.ofuri,),
             )
             .annotate(
                 latest=Subquery(
                     Component.objects.filter(
                         root_components,
                         name=OuterRef("name"),
-                        product_streams__overlap=[self.ofuri],
+                        product_streams__overlap=(self.ofuri,),
                     )
+                    .exclude(software_build__isnull=True)
                     .order_by("-software_build__completion_time")
                     .values("uuid")[:1]
                 )
@@ -553,18 +537,10 @@ class ProductStream(ProductModel, TimeStampedModel):
 
 
 class ProductStreamTag(Tag):
-    product_stream = models.ForeignKey(ProductStream, on_delete=models.CASCADE, related_name="tags")
-
-    class Meta:
-        constraints = [
-            models.CheckConstraint(name="%(class)s_name_required", check=~models.Q(name="")),
-            models.UniqueConstraint(
-                name="unique_%(class)s", fields=("name", "value", "product_stream")
-            ),
-        ]
+    tagged_model = models.ForeignKey(ProductStream, on_delete=models.CASCADE, related_name="tags")
 
 
-class ProductVariant(ProductModel, TimeStampedModel):
+class ProductVariant(ProductModel):
     """Product Variant model
 
     This directly relates to Errata Tool Variants which are mapped then mapped to CDN
@@ -605,17 +581,7 @@ class ProductVariant(ProductModel, TimeStampedModel):
 
 
 class ProductVariantTag(Tag):
-    product_variant = models.ForeignKey(
-        ProductVariant, on_delete=models.CASCADE, related_name="tags"
-    )
-
-    class Meta:
-        constraints = [
-            models.CheckConstraint(name="%(class)s_name_required", check=~models.Q(name="")),
-            models.UniqueConstraint(
-                name="unique_%(class)s", fields=("name", "value", "product_variant")
-            ),
-        ]
+    tagged_model = models.ForeignKey(ProductVariant, on_delete=models.CASCADE, related_name="tags")
 
 
 class Channel(TimeStampedModel):
@@ -640,9 +606,6 @@ class Channel(TimeStampedModel):
     product_versions = fields.ArrayField(models.CharField(max_length=200), default=list)
     product_streams = fields.ArrayField(models.CharField(max_length=200), default=list)
     product_variants = fields.ArrayField(models.CharField(max_length=200), default=list)
-
-    class Meta:
-        ordering = ["name"]
 
     def __str__(self) -> str:
         return str(self.name)
@@ -701,22 +664,21 @@ class ProductComponentRelation(TimeStampedModel):
     build_id = models.CharField(max_length=200, default="")
 
     class Meta:
-        ordering = ["external_system_id"]
-        constraints = [
+        constraints = (
             models.UniqueConstraint(
                 name="unique_productcomponentrelation",
                 fields=("external_system_id", "product_ref", "build_id"),
             ),
-        ]
-        indexes = [
+        )
+        indexes = (
             models.Index(fields=("external_system_id", "product_ref", "build_id")),
             models.Index(fields=("type", "build_id")),
-            models.Index(fields=["external_system_id"]),
-            models.Index(fields=["product_ref"]),
-            models.Index(fields=["build_id"]),
-            models.Index(fields=["type"]),
+            models.Index(fields=("external_system_id",)),
+            models.Index(fields=("product_ref",)),
+            models.Index(fields=("build_id",)),
+            models.Index(fields=("type",)),
             models.Index(fields=("product_ref", "type")),
-        ]
+        )
 
 
 def get_product_streams_from_variants(variant_ids: list[str]):
@@ -759,7 +721,7 @@ class Component(TimeStampedModel):
     class Type(models.TextChoices):
         CARGO = "CARGO"  # Rust packages
         CONTAINER_IMAGE = "OCI"  # Container images and other OCI artifacts
-        GEM = "GEM"  # Rubygem packages
+        GEM = "GEM"  # Ruby gem packages
         GENERIC = "GENERIC"  # Fallback if no other type can be used
         GITHUB = "GITHUB"
         GOLANG = "GOLANG"
@@ -827,25 +789,21 @@ class Component(TimeStampedModel):
     objects = ComponentQuerySet.as_manager()
 
     class Meta:
-        ordering = (
-            "type",
-            "name",
-        )
-        constraints = [
+        constraints = (
             models.UniqueConstraint(
                 name="unique_components",
                 fields=("name", "type", "arch", "version", "release"),
             ),
-        ]
-        indexes = [
+        )
+        indexes = (
             models.Index(fields=("name", "type", "arch", "version", "release")),
             models.Index(fields=("type", "name")),
-            models.Index(fields=["name"]),
-            models.Index(fields=["type"]),
-            models.Index(fields=["nvr"]),
-            models.Index(fields=["purl"]),
-            models.Index(fields=["product_streams"]),
-            models.Index(fields=["product_variants"]),
+            models.Index(fields=("name",)),
+            models.Index(fields=("type",)),
+            models.Index(fields=("nvr",)),
+            models.Index(fields=("purl",)),
+            models.Index(fields=("product_streams",)),
+            models.Index(fields=("product_variants",)),
             models.Index(fields=("type", "product_streams")),
             models.Index(
                 fields=("type", "name", "arch"),
@@ -874,7 +832,7 @@ class Component(TimeStampedModel):
                     | Q(Q(type="OCI") & Q(arch="noarch"))
                 ),
             ),
-        ]
+        )
 
     def __str__(self) -> str:
         """return name"""
@@ -1011,7 +969,6 @@ class Component(TimeStampedModel):
                 type=ProductComponentRelation.Type.ERRATA,
                 build_id=self.software_build.build_id,
             )
-            .order_by("external_system_id")
             .values_list("external_system_id", flat=True)
             .distinct()
         )
@@ -1085,8 +1042,6 @@ class Component(TimeStampedModel):
         """return a QuerySet of unique descendant PURLs with PROVIDES ComponentNode type"""
         # Used in serializers / taxonomies. Returns identifiers (purls) to track relationships
         return (
-            # No need for .order_by() to prevent duplicate values in list
-            # ComponentNode.Meta has no ordering, so .distinct() works automatically
             self.get_provides_nodes(include_dev=include_dev)
             .values_list("purl", flat=True)
             .distinct()
@@ -1106,10 +1061,10 @@ class Component(TimeStampedModel):
             return []
         upstreams = set()
         for root in roots:
-            # For SRRPM/RPMS, and noarch containers, these are the cnodes we want.
-            source_children = [
+            # For SRPM/RPMS, and noarch containers, these are the cnodes we want.
+            source_children = tuple(
                 c for c in root.get_children().filter(type=ComponentNode.ComponentNodeType.SOURCE)
-            ]
+            )
             # Cachito builds nest components under the relevant source component for that
             # container build, eg. buildID=1911112. In that case we need to walk up the
             # tree from the current node to find its relevant source
@@ -1119,12 +1074,10 @@ class Component(TimeStampedModel):
                 and len(source_children) > 1
             ):
                 upstreams.update(
-                    [
-                        a.purl
-                        for a in self.cnodes.get_queryset().first().get_ancestors(include_self=True)
-                        if a.type == ComponentNode.ComponentNodeType.SOURCE
-                        and a.obj.namespace == Component.Namespace.UPSTREAM
-                    ]
+                    a.purl
+                    for a in self.cnodes.get_queryset().first().get_ancestors(include_self=True)
+                    if a.type == ComponentNode.ComponentNodeType.SOURCE
+                    and a.obj.namespace == Component.Namespace.UPSTREAM
                 )
             else:
                 upstreams.update(c.purl for c in source_children)
@@ -1175,13 +1128,7 @@ class Component(TimeStampedModel):
 
 
 class ComponentTag(Tag):
-    component = models.ForeignKey(Component, on_delete=models.CASCADE, related_name="tags")
-
-    class Meta:
-        constraints = [
-            models.CheckConstraint(name="%(class)s_name_required", check=~models.Q(name="")),
-            models.UniqueConstraint(name="unique_%(class)s", fields=("name", "value", "component")),
-        ]
+    tagged_model = models.ForeignKey(Component, on_delete=models.CASCADE, related_name="tags")
 
 
 class AppStreamLifeCycle(TimeStampedModel):
@@ -1237,7 +1184,7 @@ class AppStreamLifeCycle(TimeStampedModel):
         return f"{self.name}@{self.initial_product_version}.{self.stream}"
 
     class Meta:
-        constraints = [
+        constraints = (
             # FIXME: value range is what the 'lifecycle-defs' repo suggests, but there are
             # exceptional cases in the yaml which fail the range constraint.
             # models.CheckConstraint(
@@ -1250,8 +1197,7 @@ class AppStreamLifeCycle(TimeStampedModel):
             # ),
             models.UniqueConstraint(
                 # assuming below fields are 'unique_together'.
-                fields=["name", "type", "product", "initial_product_version", "stream"],
+                fields=("name", "type", "product", "initial_product_version", "stream"),
                 name="unique_lifecycle_entity",
-            )
-        ]
-        ordering = ["name"]
+            ),
+        )

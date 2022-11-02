@@ -12,6 +12,8 @@ ALLOWED_HOSTS = [
     ".redhat.com",
 ]
 
+CSP_UPGRADE_INSECURE_REQUESTS = True
+
 # We trust OpenShift's HAProxy to strip the X-Forwarded-Proto header and to set it to "https" if
 # the request came over HTTPS from the client to HAProxy.
 USE_X_FORWARDED_HOST = True

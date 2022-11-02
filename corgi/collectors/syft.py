@@ -72,7 +72,7 @@ class Syft:
                         "version": artifact["version"],
                         "purl": artifact["purl"],
                     },
-                    "analysis_meta": {"source": "syft", "version": syft_version},
+                    "analysis_meta": {"source": f"syft-{syft_version}"},
                 }
 
                 if pkg_type == Component.Type.MAVEN:

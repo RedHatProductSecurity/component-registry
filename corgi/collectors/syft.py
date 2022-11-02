@@ -4,6 +4,8 @@ import subprocess  # nosec B404
 from pathlib import Path
 from typing import Any
 
+from packageurl import PackageURL
+
 from corgi.core.models import Component
 
 logger = logging.getLogger(__name__)
@@ -72,5 +74,10 @@ class Syft:
                     },
                     "analysis_meta": {"source": "syft", "version": syft_version},
                 }
+
+                if pkg_type == Component.Type.MAVEN:
+                    purl = PackageURL.from_string(artifact["purl"])
+                    typed_component["meta"]["group_id"] = purl.namespace
+
                 components.append(typed_component)
         return components

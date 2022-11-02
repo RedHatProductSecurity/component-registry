@@ -36,6 +36,15 @@ def test_parse_components():
     assert results[0]["analysis_meta"] == {"source": "syft", "version": "0.48.1"}
 
 
+def test_parse_maven_components():
+    with open("tests/data/hawkular-metrics-schema-installer-syft.json", "r") as maven_test_data:
+        results = Syft.parse_components(maven_test_data.read())
+    assert len(results) > 0
+    group_ids = [r["meta"].get("group_id") for r in results if r["type"] == Component.Type.MAVEN]
+    assert "" not in group_ids
+    assert "com.github.jnr" in group_ids
+
+
 archive_source_test_data = [
     (
         f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
@@ -191,6 +200,17 @@ slow_software_composition_analysis_test_data = [
         "",
         "tests/data/cnf-tests-syft.json",
         "pkg:pypi/requests@2.26.0",
+    ),
+    (
+        2096033,
+        True,
+        "metrics-schema-installer",
+        "587372-hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar",
+        "rpms/metrics-schema-installer/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar/"
+        "md5/587372e4c72d1eddfab8e848457f574e/"
+        "hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar",
+        "tests/data/hawkular-metrics-schema-installer-syft.json",
+        "pkg:maven/com.github.jnr/jffi@1.2.10.redhat-1",
     ),
 ]
 

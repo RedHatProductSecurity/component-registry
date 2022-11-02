@@ -33,6 +33,13 @@ def save_component(component: dict[str, Any], parent: ComponentNode):
     if component["type"] not in Component.Type:
         logger.warning("Tried to save component with unknown type: %s", component["type"])
 
+    meta_attr = component["analysis_meta"]
+
+    if component["type"] == Component.Type.MAVEN:
+        group_id = meta.get("group_id")
+        if group_id:
+            meta_attr["group_id"] = group_id
+
     # Use all fields from Component index and uniqueness constraint
     obj, created = Component.objects.get_or_create(
         type=component["type"],
@@ -40,6 +47,7 @@ def save_component(component: dict[str, Any], parent: ComponentNode):
         version=meta.pop("version", ""),
         release="",
         arch="",
+        defaults={"meta_attr": meta_attr},
     )
 
     if "purl" in meta and obj.purl != meta["purl"]:

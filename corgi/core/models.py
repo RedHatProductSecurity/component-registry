@@ -845,6 +845,9 @@ class Component(TimeStampedModel):
             purl_data = self._build_module_purl()
         elif self.type == Component.Type.CONTAINER_IMAGE:
             purl_data = self._build_container_purl()
+        elif self.type == Component.Type.MAVEN:
+            purl_data = self._build_maven_purl()
+
         else:
             version = self.version
             if self.release:
@@ -858,19 +861,24 @@ class Component(TimeStampedModel):
         if self.namespace == Component.Namespace.REDHAT:
             purl_data["namespace"] = str(self.namespace).lower()
 
-        purl = PackageURL(type=str(self.type).lower(), **purl_data)
-        return purl
+        return PackageURL(type=str(self.type).lower(), **purl_data)
+
+    def _build_maven_purl(self):
+        group_id = self.meta_attr.get("group_id")
+        purl_data = dict(name=self.name, version=self.version)
+        if group_id:
+            purl_data["namespace"] = group_id
+        return purl_data
 
     def _build_module_purl(self):
         # Break down RHEL module version into its specific parts:
         # NSVC = Name, Stream, Version, Context
         version, _, context = self.release.partition(".")
         stream = self.version
-        purl_data = dict(
+        return dict(
             name=self.name,
             version=f"{stream}:{version}:{context}",
         )
-        return purl_data
 
     def _build_rpm_purl(self):
         qualifiers = {
@@ -880,12 +888,11 @@ class Component(TimeStampedModel):
             qualifiers["epoch"] = str(self.epoch)
         # Don't append '-' unless release is populated
         release = f"-{self.release}" if self.release else ""
-        purl_data = dict(
+        return dict(
             name=self.name,
             version=f"{self.version}{release}",
             qualifiers=qualifiers,
         )
-        return purl_data
 
     def _build_container_purl(self):
         digest = ""
@@ -911,12 +918,11 @@ class Component(TimeStampedModel):
         repository_url = self.meta_attr.get("repository_url")
         if repository_url:
             qualifiers["repository_url"] = repository_url
-        purl_data = dict(
+        return dict(
             name=purl_name,
             version=digest,
             qualifiers=qualifiers,
         )
-        return purl_data
 
     def save_component_taxonomy(self):
         self.upstreams = self.get_upstreams()

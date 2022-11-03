@@ -1,6 +1,7 @@
 # To compile C bindings in certain Python dependencies
 gcc-8.5.0
 git-2.31.1
+golang-bin-1.17.12-1.module+el8.6.0+16014+a372c00b
 # For gssapi compilation
 krb5-devel-1.18.2
 # Kerberos-related utils such as kinit

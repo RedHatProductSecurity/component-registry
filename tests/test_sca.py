@@ -7,6 +7,7 @@ from unittest.mock import call, patch
 import pytest
 from django.conf import settings
 
+from corgi.collectors.go_list import GoList
 from corgi.collectors.syft import Syft
 from corgi.core.models import Component, ComponentNode
 from corgi.tasks.sca import (
@@ -43,6 +44,16 @@ def test_parse_maven_components():
     group_ids = [r["meta"].get("group_id") for r in results if r["type"] == Component.Type.MAVEN]
     assert None not in group_ids
     assert "com.github.jnr" in group_ids
+
+
+def test_parse_golist_components():
+    with open("tests/data/go/runc-1.1.3-golist.json", "r") as runc_go_list_data:
+        results = GoList.parse_components(runc_go_list_data)
+    assert len(results) > 0
+    names = [r["meta"]["name"] for r in results]
+    print(names)
+    assert len(set(names)) == len(results)
+    assert "crypto/tls" in names
 
 
 archive_source_test_data = [

@@ -76,6 +76,16 @@ def test_cpes():
     ]
 
 
+def test_nevra():
+    no_release = ComponentFactory(release="")
+    assert not no_release.nvr.endswith("-")
+    # epoch is a property of Component which retrieves the value for meta_attr
+    no_epoch = ComponentFactory()
+    assert ":" not in no_epoch.nevra
+    no_arch = ComponentFactory(arch="")
+    assert not no_arch.nevra.endswith("-")
+
+
 def test_product_taxonomic_queries():
     rhel, rhel_7, _, rhel_8, _, rhel_8_2, _ = create_product_hierarchy()
 

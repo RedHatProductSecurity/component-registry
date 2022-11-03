@@ -909,13 +909,15 @@ class Component(TimeStampedModel):
         return self.type == Component.Type.RPM and self.arch == "src"
 
     def get_nvr(self) -> str:
-        return f"{self.name}-{self.version}-{self.release}"
+        release = f"-{self.release}" if self.release else ""
+        return f"{self.name}-{self.version}{release}"
 
     def get_nevra(self) -> str:
-        return (
-            f"{self.name}{f':{self.epoch}' if self.epoch else ''}"
-            f"-{self.version}-{self.release}.{self.arch}"
-        )
+        epoch = f":{self.epoch}" if self.epoch else ""
+        release = f"-{self.release}" if self.release else ""
+        arch = f".{self.arch}" if self.arch else ""
+
+        return f"{self.name}{epoch}-{self.version}{release}{arch}"
 
     def save(self, *args, **kwargs):
         self.nvr = self.get_nvr()

@@ -1,6 +1,7 @@
 import pytest
 from django.apps import apps
 from django.db.utils import IntegrityError, ProgrammingError
+from packageurl import PackageURL
 
 from corgi.core.constants import CONTAINER_DIGEST_FORMATS
 from corgi.core.models import (
@@ -79,6 +80,7 @@ def test_cpes():
 def test_nevra():
     no_release = ComponentFactory(release="")
     assert not no_release.nvr.endswith("-")
+    assert not PackageURL.from_string(no_release.purl).version.endswith("-")
     # epoch is a property of Component which retrieves the value for meta_attr
     no_epoch = ComponentFactory()
     assert ":" not in no_epoch.nevra

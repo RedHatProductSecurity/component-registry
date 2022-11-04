@@ -41,7 +41,7 @@ def test_parse_maven_components():
         results = Syft.parse_components(maven_test_data.read())
     assert len(results) > 0
     group_ids = [r["meta"].get("group_id") for r in results if r["type"] == Component.Type.MAVEN]
-    assert "" not in group_ids
+    assert None not in group_ids
     assert "com.github.jnr" in group_ids
 
 
@@ -296,6 +296,10 @@ def test_slow_software_composition_analysis(
         )
     assert mock_syft.call_args_list == expected_syft_call_arg_list
     expected_component = Component.objects.get(purl=expected_purl)
-    assert expected_component
+    if is_container:
+        root_component = Component.objects.get(type=Component.Type.CONTAINER_IMAGE, arch="noarch", software_build=sb
+        )
+    else:
+        root_component = Component.objects.srpms().get(software_build=sb)
     assert expected_component.meta_attr["source"] == "syft-0.60.1"
     mock_save_prod_tax.assert_called_once()

@@ -78,7 +78,7 @@ def test_cpes():
 
 
 def test_nevra():
-    no_release = ComponentFactory(release="")
+    no_release = ComponentFactory(release="", version="1")
     assert not no_release.nvr.endswith("-")
     assert not PackageURL.from_string(no_release.purl).version.endswith("-")
     # epoch is a property of Component which retrieves the value for meta_attr

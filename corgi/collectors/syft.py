@@ -12,6 +12,18 @@ logger = logging.getLogger(__name__)
 
 
 class Syft:
+    # Syft packages types https://github.com/anchore/syft/
+    # blob/v0.60.1/syft/pkg/type.go#L8
+    SYFT_PKG_TYPE_MAPPING = {
+        "go-module": Component.Type.GOLANG,
+        "npm": Component.Type.NPM,
+        "python": Component.Type.PYPI,
+        "java-archive": Component.Type.MAVEN,
+        "rpm": Component.Type.RPM,
+        "gem": Component.Type.GEM,
+        "rust-crate": Component.Type.CARGO,
+    }
+
     @classmethod
     def scan_files(cls, target_files: list[Path]) -> list[dict[str, Any]]:
         scan_results: list[dict[str, Any]] = []
@@ -50,20 +62,8 @@ class Syft:
             # Syft packages types https://github.com/anchore/syft/
             # blob/v0.60.1/syft/pkg/type.go#L8
             for artifact in raw_result["artifacts"]:
-                if artifact["type"] == "go-module":
-                    pkg_type = Component.Type.GOLANG
-                elif artifact["type"] == "npm":
-                    pkg_type = Component.Type.NPM
-                elif artifact["type"] == "python":
-                    pkg_type = Component.Type.PYPI
-                elif artifact["type"] == "java-archive":
-                    pkg_type = Component.Type.MAVEN
-                elif artifact["type"] == "rpm":
-                    pkg_type = Component.Type.RPM
-                elif artifact["type"] == "gem":
-                    pkg_type = Component.Type.GEM
-                elif artifact["type"] == "rust-crate":
-                    pkg_type = Component.Type.CARGO
+                if artifact["type"] in cls.SYFT_PKG_TYPE_MAPPING:
+                    pkg_type = cls.SYFT_PKG_TYPE_MAPPING[artifact["type"]]
                 else:
                     logger.warning("Skipping unknown Syft type: %s", artifact["type"])
                     continue

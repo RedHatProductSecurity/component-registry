@@ -2,14 +2,13 @@ import logging
 import re
 import uuid as uuid
 from abc import abstractmethod
-from collections import defaultdict
 from typing import Union
 
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
 from django.db import models
-from django.db.models import Q, QuerySet
+from django.db.models import QuerySet
 from mptt.managers import TreeManager
 from mptt.models import MPTTModel, TreeForeignKey
 from packageurl import PackageURL
@@ -266,18 +265,25 @@ class SoftwareBuild(TimeStampedModel):
     completion_time = models.DateTimeField(null=True)  # meta_attr["completion_time"]
     # Store meta attributes relevant to different build system types.
     meta_attr = models.JSONField(default=dict)
+    # implicit field "components" from Component model's ForeignKey
+    components: models.Manager["Component"]
 
     class Meta:
         indexes = (models.Index(fields=("completion_time",)),)
 
     def save_datascore(self):
-        for component in Component.objects.filter(software_build__build_id=self.build_id):
+        for component in self.components.get_queryset():
             component.save_datascore()
         return None
 
     def save_product_taxonomy(self):
-        """update ('materialize') product taxonomy on all build components"""
-        variant_ids = list(
+        """update ('materialize') product taxonomy on all build components
+
+        This method is defined on SoftwareBuild and not Component,
+        because the ProductComponentRelation table refers to build IDs,
+        which we use to look up which products a certain component should be linked to
+        """
+        variant_names = tuple(
             ProductComponentRelation.objects.filter(
                 build_id=self.build_id,
                 type__in=ProductComponentRelation.VARIANT_TYPES,
@@ -286,7 +292,7 @@ class SoftwareBuild(TimeStampedModel):
             .distinct()
         )
 
-        stream_ids = list(
+        stream_names = list(
             ProductComponentRelation.objects.filter(
                 build_id=self.build_id,
                 type__in=ProductComponentRelation.STREAM_TYPES,
@@ -295,10 +301,10 @@ class SoftwareBuild(TimeStampedModel):
             .distinct()
         )
 
-        product_details = get_product_details(variant_ids, stream_ids)
+        product_details = get_product_details(variant_names, stream_names)
 
         components = set()
-        for component in Component.objects.filter(software_build__build_id=self.build_id):
+        for component in self.components.get_queryset():
             # This is needed for container image builds which pull in components not
             # built at Red Hat, and therefore not assigned a build_id
             for d in component.cnodes.get_queryset().get_descendants(include_self=True):
@@ -306,15 +312,8 @@ class SoftwareBuild(TimeStampedModel):
                     continue
                 components.add(d.obj)
 
-        for component in list(components):
-            for attr in ("products", "product_versions", "product_streams"):
-                # Since we're only setting the product details for a specific build id we need
-                # to ensure we are only updating, not replacing the existing product details.
-                interim_set = set(getattr(component, attr))
-                interim_set.update(product_details[attr])
-                setattr(component, attr, list(interim_set))
-            component.channels = component.get_channels()
-            component.save()
+        for component in components:
+            component.save_product_taxonomy(product_details)
 
         return None
 
@@ -799,27 +798,48 @@ class ProductComponentRelation(TimeStampedModel):
         )
 
 
-def get_product_streams_from_variants(variant_ids: list[str]):
-    product_variants = ProductVariant.objects.filter(name__in=variant_ids)
-    product_streams = []
-    for pv in product_variants:
-        product_streams.extend(pv.productstreams)
-    return list(set(product_streams))
+def get_product_details(variant_names: tuple[str], stream_names: list[str]) -> dict[str, set[str]]:
+    """
+    Given stream / variant names from the PCR table, look up all related ProductModel subclasses
 
+    In other words, builds relate to variants and streams through the PCR table
+    Components relate to builds, and products / versions relate to variants / streams
+    We want to link all build components to their related products, versions, streams, and variants
+    """
+    if variant_names:
+        variant_streams = ProductVariant.objects.filter(name__in=variant_names).values_list(
+            "productstreams__name", flat=True
+        )
+        stream_names.extend(variant_streams)
 
-def get_product_details(variant_ids: list[str], stream_ids: list[str]) -> dict[str, set[str]]:
-    if variant_ids:
-        stream_ids.extend(get_product_streams_from_variants(variant_ids))
-    product_streams = ProductStream.objects.filter(name__in=stream_ids)
-    product_details = defaultdict(set)
-    for product_stream in product_streams:
-        for ancestor in product_stream.pnodes.get_queryset().get_ancestors(include_self=True):
-            if type(ancestor.obj) is Product:
-                product_details["products"].add(ancestor.obj.ofuri)
-            if type(ancestor.obj) is ProductVersion:
-                product_details["product_versions"].add(ancestor.obj.ofuri)
-            if type(ancestor.obj) is ProductStream:
-                product_details["product_streams"].add(ancestor.obj.ofuri)
+    product_details: dict[str, set[str]] = {
+        "products": set(),
+        "productversions": set(),
+        "productstreams": set(),
+        "productvariants": set(),
+        "channels": set(),
+    }
+
+    for pnode in ProductNode.objects.filter(
+        level=MODEL_NODE_LEVEL_MAPPING["ProductStream"], productstream__name__in=stream_names
+    ):
+        family = pnode.get_family()
+
+        products = ProductNode.get_products(family)
+        product_details["products"].update(products)
+
+        product_versions = ProductNode.get_product_versions(family)
+        product_details["productversions"].update(product_versions)
+
+        product_streams = ProductNode.get_product_streams(family)
+        product_details["productstreams"].update(product_streams)
+
+        product_variants = ProductNode.get_product_variants(family)
+        product_details["productvariants"].update(product_variants)
+
+        channels = ProductNode.get_channels(family)
+        product_details["channels"].update(channels)
+    # For some build, return a mapping of ProductModel type to all related ProductModel UUIDs
     return product_details
 
 
@@ -1061,26 +1081,27 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     def save_product_taxonomy(
         self, product_pks_dict: Union[dict[str, QuerySet], None] = None
     ) -> None:
-        """Save links between ProductModel subclasses and this Component"""
-        # TODO
+        """
+        Save links between ProductModel subclasses and this Component
+
+        product_pks_dict should contain a mapping of ProductModel type to IDs
+        These are all the products / versions / etc. that relate to some build
+        As determined by the PCR table and ProductModel taxonomy.
+        We call save_product_taxonomy() on the build, which calls this method
+        for each of the build's related components.
+        """
         if not product_pks_dict:
             raise ValueError(
                 "Call SoftwareBuild.save_product_taxonomy(),"
                 "instead of Component.save_product_taxonomy() directly"
             )
-        for attr in (
-            "products",
-            "productversions",
-            "productstreams",
-            "productvariants",
-            "channels",
-        ):
-            # Since we're only setting the product details for a specific build id we need
-            # to ensure we are only updating, not replacing the existing product details.
-            interim_set = set(getattr(self, attr))
-            interim_set.update(product_pks_dict[attr])
-            setattr(self, attr, list(interim_set))
-        self.channels = self.get_channels()
+        # Since we're only setting the product details for a specific build id we need
+        # to ensure we are only updating, not replacing the existing product details.
+        self.products.add(*product_pks_dict["products"])
+        self.productversions.add(*product_pks_dict["productversions"])
+        self.productstreams.add(*product_pks_dict["productstreams"])
+        self.productvariants.add(*product_pks_dict["productvariants"])
+        self.channels.add(*product_pks_dict["channels"])
 
         return None
 
@@ -1203,21 +1224,6 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     @property
     def epoch(self) -> str:
         return self.meta_attr.get("epoch", "")
-
-    def get_channels(self):
-        variant_ids = self.product_variants
-        if not variant_ids:
-            return []
-        query = Q()
-        for variant_id in variant_ids:
-            query = query | Q(name__contains=variant_id)
-        product_variants = ProductVariant.objects.filter(query)
-        channels = []
-        for product_variant in product_variants:
-            for descendant in product_variant.pnodes.get_queryset().get_descendants():
-                if isinstance(descendant.obj, Channel):
-                    channels.append(descendant.obj.name)
-        return list(set(channels))
 
     def get_provides_nodes(self, include_dev: bool = True) -> QuerySet[ComponentNode]:
         """return a QuerySet of descendants with PROVIDES ComponentNode type"""

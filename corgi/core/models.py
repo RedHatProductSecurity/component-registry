@@ -840,49 +840,11 @@ class Component(TimeStampedModel):
 
     def get_purl(self) -> PackageURL:
         if self.type == Component.Type.RPM:
-            qualifiers = {
-                "arch": self.arch,
-            }
-            if self.epoch:
-                qualifiers["epoch"] = str(self.epoch)
-            purl_data = dict(
-                name=self.name,
-                version=f"{self.version}-{self.release}",
-                qualifiers=qualifiers,
-            )
+            purl_data = self._build_rpm_purl()
         elif self.type == Component.Type.RPMMOD:
-            # Break down RHEL module version into its specific parts:
-            # NSVC = Name, Stream, Version, Context
-            version, _, context = self.release.partition(".")
-            stream = self.version
-            purl_data = dict(
-                name=self.name,
-                version=f"{stream}:{version}:{context}",
-            )
+            purl_data = self._build_module_purl()
         elif self.type == Component.Type.CONTAINER_IMAGE:
-            digest = ""
-            if self.meta_attr.get("digests"):
-                for digest_fmt in CONTAINER_DIGEST_FORMATS:
-                    digest = self.meta_attr["digests"].get(digest_fmt)
-                    if digest:
-                        break
-            purl_name = self.name
-            name_from_label = self.meta_attr.get("name_from_label")
-            if name_from_label:
-                purl_name = name_from_label
-            qualifiers = {
-                "tag": f"{self.version}-{self.release}",
-            }
-            if self.arch != "noarch":
-                qualifiers["arch"] = self.arch
-            repository_url = self.meta_attr.get("repository_url")
-            if repository_url:
-                qualifiers["repository_url"] = repository_url
-            purl_data = dict(
-                name=purl_name,
-                version=digest,
-                qualifiers=qualifiers,
-            )
+            purl_data = self._build_container_purl()
         else:
             version = self.version
             if self.release:
@@ -899,6 +861,63 @@ class Component(TimeStampedModel):
         purl = PackageURL(type=str(self.type).lower(), **purl_data)
         return purl
 
+    def _build_module_purl(self):
+        # Break down RHEL module version into its specific parts:
+        # NSVC = Name, Stream, Version, Context
+        version, _, context = self.release.partition(".")
+        stream = self.version
+        purl_data = dict(
+            name=self.name,
+            version=f"{stream}:{version}:{context}",
+        )
+        return purl_data
+
+    def _build_rpm_purl(self):
+        qualifiers = {
+            "arch": self.arch,
+        }
+        if self.epoch:
+            qualifiers["epoch"] = str(self.epoch)
+        # Don't append '-' unless release is populated
+        release = f"-{self.release}" if self.release else ""
+        purl_data = dict(
+            name=self.name,
+            version=f"{self.version}{release}",
+            qualifiers=qualifiers,
+        )
+        return purl_data
+
+    def _build_container_purl(self):
+        digest = ""
+        if self.meta_attr.get("digests"):
+            for digest_fmt in CONTAINER_DIGEST_FORMATS:
+                digest = self.meta_attr["digests"].get(digest_fmt)
+                if digest:
+                    break
+        # Use the last path of the repository_url if available
+        purl_name = self.name
+        name_from_label = self.meta_attr.get("name_from_label")
+        if name_from_label:
+            purl_name = name_from_label
+        # Add the tag which matches version+release (check for empty release)
+        release = f"-{self.release}" if self.release else ""
+        qualifiers = {
+            "tag": f"{self.version}{release}",
+        }
+        # Only add the arch qualify if it's not an image_index
+        if self.arch != "noarch":
+            qualifiers["arch"] = self.arch
+        # Add fully repository_url as well
+        repository_url = self.meta_attr.get("repository_url")
+        if repository_url:
+            qualifiers["repository_url"] = repository_url
+        purl_data = dict(
+            name=purl_name,
+            version=digest,
+            qualifiers=qualifiers,
+        )
+        return purl_data
+
     def save_component_taxonomy(self):
         self.upstreams = self.get_upstreams()
         self.provides = list(self.get_provides_purls())
@@ -909,13 +928,15 @@ class Component(TimeStampedModel):
         return self.type == Component.Type.RPM and self.arch == "src"
 
     def get_nvr(self) -> str:
-        return f"{self.name}-{self.version}-{self.release}"
+        release = f"-{self.release}" if self.release else ""
+        return f"{self.name}-{self.version}{release}"
 
     def get_nevra(self) -> str:
-        return (
-            f"{self.name}{f':{self.epoch}' if self.epoch else ''}"
-            f"-{self.version}-{self.release}.{self.arch}"
-        )
+        epoch = f":{self.epoch}" if self.epoch else ""
+        release = f"-{self.release}" if self.release else ""
+        arch = f".{self.arch}" if self.arch else ""
+
+        return f"{self.name}{epoch}-{self.version}{release}{arch}"
 
     def save(self, *args, **kwargs):
         self.nvr = self.get_nvr()

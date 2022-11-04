@@ -191,6 +191,7 @@ coverage[toml]==6.3.2 \
     --hash=sha256:fd9e830e9d8d89b20ab1e5af09b32d33e1a08ef4c4e14411e559556fd788e6b2
     # via
     #   -r requirements/test.txt
+    #   django-coverage-plugin
     #   pytest-cov
 decorator==5.1.0 \
     --hash=sha256:7b12e7c3c6ab203a29e157335e9122cb03de9ab7264b137594103fd4a683b374 \
@@ -233,6 +234,10 @@ django-celery-results==2.3.1 \
     # via
     #   -r requirements/base.txt
     #   -r requirements/test.txt
+django-coverage-plugin==2.0.4 \
+    --hash=sha256:3b0aa1ed26b52c5844c88510995f4a4b60b4fb0679970d11f82654bb8a2bd16a \
+    --hash=sha256:f662efe592bf98baf2e540312059c918daa8d8379244a2a6b6f984c4a1dda015
+    # via -r requirements/test.txt
 django-csp==3.7 \
     --hash=sha256:01443a07723f9a479d498bd7bb63571aaa771e690f64bde515db6cdb76e8041a \
     --hash=sha256:01eda02ad3f10261c74131cdc0b5a6a62b7c7ad4fd017fbefb7a14776e0a9727
@@ -1033,6 +1038,7 @@ six==1.16.0 \
     #   -r requirements/base.txt
     #   -r requirements/test.txt
     #   click-repl
+    #   django-coverage-plugin
     #   koji
     #   python-dateutil
     #   requests-mock

@@ -21,3 +21,6 @@ DATABASES = {
 }
 
 SESSION_COOKIE_SECURE = False
+
+# Report test coverage in templates
+TEMPLATES[0]["OPTIONS"]["debug"] = True  # noqa: F405

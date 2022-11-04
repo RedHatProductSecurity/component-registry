@@ -1,4 +1,4 @@
-{# Component manifest #}
+{# Component manifest, obj is a Component here #}
 {% extends "base_manifest.json" %}
 {% block packages %}
 {% for node in obj.get_provides_nodes %}
@@ -28,5 +28,5 @@
     }
 {% endblock %}
 {% block relationships %}
-    {% include "provided_relationships_manifest.json" with obj=obj %}
+    {% include "provided_relationships_manifest.json" with component=obj %}
 {% endblock %}

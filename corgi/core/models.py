@@ -8,12 +8,17 @@ from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelatio
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
 from django.db import models
-from django.db.models import F, OuterRef, Q, QuerySet, Subquery
+from django.db.models import Q, QuerySet
 from mptt.managers import TreeManager
 from mptt.models import MPTTModel, TreeForeignKey
 from packageurl import PackageURL
 
-from corgi.core.constants import CONTAINER_DIGEST_FORMATS, MODEL_NODE_LEVEL_MAPPING
+from corgi.core.constants import (
+    CONTAINER_DIGEST_FORMATS,
+    MODEL_NODE_LEVEL_MAPPING,
+    ROOT_COMPONENTS_CONDITION,
+    SRPM_CONDITION,
+)
 from corgi.core.files import ComponentManifestFile, ProductManifestFile
 from corgi.core.mixins import TimeStampedModel
 
@@ -495,21 +500,16 @@ class ProductStream(ProductModel):
 
     def get_latest_components(self):
         """Return root components from latest builds."""
-        root_components = (
-            Q(type=Component.Type.RPM, arch="src")
-            | Q(type=Component.Type.CONTAINER_IMAGE, arch="noarch")
-            | Q(type=Component.Type.RPMMOD)
-        )
         return (
             Component.objects.filter(
-                root_components,
+                ROOT_COMPONENTS_CONDITION,
                 product_streams__overlap=(self.ofuri,),
             )
             .annotate(
-                latest=Subquery(
+                latest=models.Subquery(
                     Component.objects.filter(
-                        root_components,
-                        name=OuterRef("name"),
+                        ROOT_COMPONENTS_CONDITION,
+                        name=models.OuterRef("name"),
                         product_streams__overlap=(self.ofuri,),
                     )
                     .exclude(software_build__isnull=True)
@@ -518,7 +518,7 @@ class ProductStream(ProductModel):
                 )
             )
             .filter(
-                uuid=F("latest"),
+                uuid=models.F("latest"),
             )
         )
 
@@ -701,14 +701,10 @@ def get_product_details(variant_ids: list[str], stream_ids: list[str]) -> dict[s
 
 class ComponentQuerySet(models.QuerySet):
     def srpms(self) -> models.QuerySet["Component"]:
-        return self.filter(Q(type=Component.Type.RPM) & Q(arch="src"))
+        return self.filter(SRPM_CONDITION)
 
     def root_components(self) -> models.QuerySet["Component"]:
-        return self.filter(
-            Q(Q(type=Component.Type.RPM) & Q(arch="src"))
-            | Q(type=Component.Type.RPMMOD)
-            | Q(Q(type=Component.Type.CONTAINER_IMAGE) & Q(arch="noarch"))
-        )
+        return self.filter(ROOT_COMPONENTS_CONDITION)
 
 
 class Component(TimeStampedModel):
@@ -802,29 +798,17 @@ class Component(TimeStampedModel):
             models.Index(
                 fields=("type", "name", "arch"),
                 name="compon_latest_name_type_idx",
-                condition=Q(
-                    Q(Q(type="RPM") & Q(arch="src"))
-                    | Q(type="RPMMOD")
-                    | Q(Q(type="OCI") & Q(arch="noarch"))
-                ),
+                condition=ROOT_COMPONENTS_CONDITION,
             ),
             models.Index(
                 fields=("name", "type", "arch"),
                 name="compon_latest_type_name_idx",
-                condition=Q(
-                    Q(Q(type="RPM") & Q(arch="src"))
-                    | Q(type="RPMMOD")
-                    | Q(Q(type="OCI") & Q(arch="noarch"))
-                ),
+                condition=ROOT_COMPONENTS_CONDITION,
             ),
             models.Index(
                 fields=("uuid", "software_build_id", "type", "name", "arch", "product_streams"),
                 name="compon_latest_idx",
-                condition=Q(
-                    Q(Q(type="RPM") & Q(arch="src"))
-                    | Q(type="RPMMOD")
-                    | Q(Q(type="OCI") & Q(arch="noarch"))
-                ),
+                condition=ROOT_COMPONENTS_CONDITION,
             ),
         )
 

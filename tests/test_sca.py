@@ -33,7 +33,16 @@ def test_parse_components():
     # directives in nested go.mod files
     assert "../" not in names
     assert "github.com/Microsoft/go-winio" in names
-    assert results[0]["analysis_meta"] == {"source": "syft", "version": "0.48.1"}
+    assert results[0]["analysis_meta"] == {"source": "syft-0.60.1"}
+
+
+def test_parse_maven_components():
+    with open("tests/data/hawkular-metrics-schema-installer-syft.json", "r") as maven_test_data:
+        results = Syft.parse_components(maven_test_data.read())
+    assert len(results) > 0
+    group_ids = [r["meta"].get("group_id") for r in results if r["type"] == Component.Type.MAVEN]
+    assert None not in group_ids
+    assert "com.github.jnr" in group_ids
 
 
 archive_source_test_data = [
@@ -192,6 +201,17 @@ slow_software_composition_analysis_test_data = [
         "tests/data/cnf-tests-syft.json",
         "pkg:pypi/requests@2.26.0",
     ),
+    (
+        2096033,
+        True,
+        "metrics-schema-installer",
+        "587372-hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar",
+        "rpms/metrics-schema-installer/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar/"
+        "md5/587372e4c72d1eddfab8e848457f574e/"
+        "hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar",
+        "tests/data/hawkular-metrics-schema-installer-syft.json",
+        "pkg:maven/com.github.jnr/jffi@1.2.10.redhat-1",
+    ),
 ]
 
 
@@ -275,12 +295,11 @@ def test_slow_software_composition_analysis(
             )
         )
     assert mock_syft.call_args_list == expected_syft_call_arg_list
-    assert Component.objects.filter(purl=expected_purl).exists()
+    expected_component = Component.objects.get(purl=expected_purl)
     if is_container:
-        root_component = Component.objects.get(
-            type=Component.Type.CONTAINER_IMAGE, arch="noarch", software_build=sb
+        root_component = Component.objects.get(type=Component.Type.CONTAINER_IMAGE, arch="noarch", software_build=sb
         )
     else:
         root_component = Component.objects.srpms().get(software_build=sb)
-        root_component.get_provides_purls()
+    assert expected_component.meta_attr["source"] == "syft-0.60.1"
     mock_save_prod_tax.assert_called_once()

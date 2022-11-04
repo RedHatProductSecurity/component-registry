@@ -4,12 +4,26 @@ import subprocess  # nosec B404
 from pathlib import Path
 from typing import Any
 
+from packageurl import PackageURL
+
 from corgi.core.models import Component
 
 logger = logging.getLogger(__name__)
 
 
 class Syft:
+    # Syft packages types https://github.com/anchore/syft/
+    # blob/v0.60.1/syft/pkg/type.go#L8
+    SYFT_PKG_TYPE_MAPPING = {
+        "go-module": Component.Type.GOLANG,
+        "npm": Component.Type.NPM,
+        "python": Component.Type.PYPI,
+        "java-archive": Component.Type.MAVEN,
+        "rpm": Component.Type.RPM,
+        "gem": Component.Type.GEM,
+        "rust-crate": Component.Type.CARGO,
+    }
+
     @classmethod
     def scan_files(cls, target_files: list[Path]) -> list[dict[str, Any]]:
         scan_results: list[dict[str, Any]] = []
@@ -45,20 +59,11 @@ class Syft:
         if "descriptor" in raw_result:
             syft_version = raw_result["descriptor"].get("version", "")
         if "artifacts" in raw_result:
-            # Syft packages types https://github.com/anchore/syft/blob/
-            # 73262c7258cac24cbccf38cb9b97b67091d8f830/syft/pkg/type.go#L8
-            # TODO add gem type to models and match it with "gem"
+            # Syft packages types https://github.com/anchore/syft/
+            # blob/v0.60.1/syft/pkg/type.go#L8
             for artifact in raw_result["artifacts"]:
-                if artifact["type"] == "go-module":
-                    pkg_type = Component.Type.GOLANG
-                elif artifact["type"] == "npm":
-                    pkg_type = Component.Type.NPM
-                elif artifact["type"] == "python":
-                    pkg_type = Component.Type.PYPI
-                elif artifact["type"] == "java-archive":
-                    pkg_type = Component.Type.MAVEN
-                elif artifact["type"] == "rpm":
-                    pkg_type = Component.Type.RPM
+                if artifact["type"] in cls.SYFT_PKG_TYPE_MAPPING:
+                    pkg_type = cls.SYFT_PKG_TYPE_MAPPING[artifact["type"]]
                 else:
                     logger.warning("Skipping unknown Syft type: %s", artifact["type"])
                     continue
@@ -70,7 +75,12 @@ class Syft:
                         "version": artifact["version"],
                         "purl": artifact["purl"],
                     },
-                    "analysis_meta": {"source": "syft", "version": syft_version},
+                    "analysis_meta": {"source": f"syft-{syft_version}"},
                 }
+
+                if pkg_type == Component.Type.MAVEN:
+                    purl = PackageURL.from_string(artifact["purl"])
+                    typed_component["meta"]["group_id"] = purl.namespace
+
                 components.append(typed_component)
         return components

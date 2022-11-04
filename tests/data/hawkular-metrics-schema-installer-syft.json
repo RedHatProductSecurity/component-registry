@@ -1,0 +1,1566 @@
+{
+ "artifacts": [
+  {
+   "id": "4994e391d5e79c25",
+   "name": "cassalog",
+   "version": "0.7.0.redhat-1",
+   "type": "java-archive",
+   "foundBy": "java-cataloger",
+   "locations": [
+    {
+     "path": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar"
+    }
+   ],
+   "licenses": [],
+   "language": "java",
+   "cpes": [
+    "cpe:2.3:a:cassalog:cassalog:0.7.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jboss:cassalog:0.7.0.redhat-1:*:*:*:*:*:*:*"
+   ],
+   "purl": "pkg:maven/org.cassalog/cassalog@0.7.0.redhat-1",
+   "metadataType": "JavaMetadata",
+   "metadata": {
+    "virtualPath": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar:cassalog",
+    "pomProperties": {
+     "path": "META-INF/maven/org.cassalog/cassalog/pom.properties",
+     "name": "",
+     "groupId": "org.cassalog",
+     "artifactId": "cassalog",
+     "version": "0.7.0.redhat-1",
+     "extraFields": {}
+    },
+    "pomProject": {
+     "path": "META-INF/maven/org.cassalog/cassalog/pom.xml",
+     "parent": {
+      "groupId": "org.jboss",
+      "artifactId": "jboss-parent",
+      "version": "19.0.0.redhat-2"
+     },
+     "groupId": "org.cassalog",
+     "artifactId": "cassalog",
+     "version": "0.7.0.redhat-1",
+     "name": "Cassalog",
+     "description": "A Cassandra schema change management tool for applications running on the JVM",
+     "url": "https://github.com/jsanda/cassalog"
+    }
+   }
+  },
+  {
+   "id": "cb8d5d05f545f03d",
+   "name": "cassandra-driver-core",
+   "version": "3.3.0.redhat-1",
+   "type": "java-archive",
+   "foundBy": "java-cataloger",
+   "locations": [
+    {
+     "path": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar"
+    }
+   ],
+   "licenses": [],
+   "language": "java",
+   "cpes": [
+    "cpe:2.3:a:cassandra-driver-core:cassandra-driver-core:3.3.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:cassandra-driver-core:cassandra_driver_core:3.3.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:cassandra_driver_core:cassandra-driver-core:3.3.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:cassandra_driver_core:cassandra_driver_core:3.3.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:cassandra-driver:cassandra-driver-core:3.3.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:cassandra-driver:cassandra_driver_core:3.3.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:cassandra_driver:cassandra-driver-core:3.3.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:cassandra_driver:cassandra_driver_core:3.3.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:cassandra-driver-core:cassandra:3.3.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:cassandra:cassandra-driver-core:3.3.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:cassandra:cassandra_driver_core:3.3.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:cassandra_driver_core:cassandra:3.3.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:datastax:cassandra-driver-core:3.3.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:datastax:cassandra_driver_core:3.3.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:cassandra-driver:cassandra:3.3.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:cassandra_driver:cassandra:3.3.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:cassandra:cassandra:3.3.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:datastax:cassandra:3.3.0.redhat-1:*:*:*:*:*:*:*"
+   ],
+   "purl": "pkg:maven/com.datastax.cassandra/cassandra-driver-core@3.3.0.redhat-1",
+   "metadataType": "JavaMetadata",
+   "metadata": {
+    "virtualPath": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar:cassandra-driver-core",
+    "pomProperties": {
+     "path": "META-INF/maven/com.datastax.cassandra/cassandra-driver-core/pom.properties",
+     "name": "",
+     "groupId": "com.datastax.cassandra",
+     "artifactId": "cassandra-driver-core",
+     "version": "3.3.0.redhat-1",
+     "extraFields": {}
+    }
+   }
+  },
+  {
+   "id": "5eba543053aa5330",
+   "name": "guava",
+   "version": "18.0.0.redhat-1",
+   "type": "java-archive",
+   "foundBy": "java-cataloger",
+   "locations": [
+    {
+     "path": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar"
+    }
+   ],
+   "licenses": [],
+   "language": "java",
+   "cpes": [
+    "cpe:2.3:a:google:guava:18.0.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:guava:guava:18.0.0.redhat-1:*:*:*:*:*:*:*"
+   ],
+   "purl": "pkg:maven/com.google.guava/guava@18.0.0.redhat-1",
+   "metadataType": "JavaMetadata",
+   "metadata": {
+    "virtualPath": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar:guava",
+    "pomProperties": {
+     "path": "META-INF/maven/com.google.guava/guava/pom.properties",
+     "name": "",
+     "groupId": "com.google.guava",
+     "artifactId": "guava",
+     "version": "18.0.0.redhat-1",
+     "extraFields": {}
+    }
+   }
+  },
+  {
+   "id": "f66047ce1569149a",
+   "name": "hawkular-metrics-configuration-service",
+   "version": "0.31.0.Final-redhat-1",
+   "type": "java-archive",
+   "foundBy": "java-cataloger",
+   "locations": [
+    {
+     "path": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar"
+    }
+   ],
+   "licenses": [],
+   "language": "java",
+   "cpes": [
+    "cpe:2.3:a:hawkular-metrics-configuration-service:hawkular-metrics-configuration-service:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular-metrics-configuration-service:hawkular_metrics_configuration_service:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics_configuration_service:hawkular-metrics-configuration-service:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics_configuration_service:hawkular_metrics_configuration_service:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular-metrics-configuration:hawkular-metrics-configuration-service:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular-metrics-configuration:hawkular_metrics_configuration_service:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics_configuration:hawkular-metrics-configuration-service:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics_configuration:hawkular_metrics_configuration_service:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular-metrics:hawkular-metrics-configuration-service:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular-metrics:hawkular_metrics_configuration_service:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics:hawkular-metrics-configuration-service:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics:hawkular_metrics_configuration_service:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular:hawkular-metrics-configuration-service:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular:hawkular_metrics_configuration_service:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:metrics:hawkular-metrics-configuration-service:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:metrics:hawkular_metrics_configuration_service:0.31.0.Final-redhat-1:*:*:*:*:*:*:*"
+   ],
+   "purl": "pkg:maven/org.hawkular.metrics/hawkular-metrics-configuration-service@0.31.0.Final-redhat-1",
+   "metadataType": "JavaMetadata",
+   "metadata": {
+    "virtualPath": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar:hawkular-metrics-configuration-service",
+    "pomProperties": {
+     "path": "META-INF/maven/org.hawkular.metrics/hawkular-metrics-configuration-service/pom.properties",
+     "name": "",
+     "groupId": "org.hawkular.metrics",
+     "artifactId": "hawkular-metrics-configuration-service",
+     "version": "0.31.0.Final-redhat-1",
+     "extraFields": {}
+    }
+   }
+  },
+  {
+   "id": "cccd8640eb42c27e",
+   "name": "hawkular-metrics-datetime-service",
+   "version": "0.31.0.Final-redhat-1",
+   "type": "java-archive",
+   "foundBy": "java-cataloger",
+   "locations": [
+    {
+     "path": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar"
+    }
+   ],
+   "licenses": [],
+   "language": "java",
+   "cpes": [
+    "cpe:2.3:a:hawkular-metrics-datetime-service:hawkular-metrics-datetime-service:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular-metrics-datetime-service:hawkular_metrics_datetime_service:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics_datetime_service:hawkular-metrics-datetime-service:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics_datetime_service:hawkular_metrics_datetime_service:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular-metrics-datetime:hawkular-metrics-datetime-service:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular-metrics-datetime:hawkular_metrics_datetime_service:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics_datetime:hawkular-metrics-datetime-service:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics_datetime:hawkular_metrics_datetime_service:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular-metrics:hawkular-metrics-datetime-service:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular-metrics:hawkular_metrics_datetime_service:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics:hawkular-metrics-datetime-service:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics:hawkular_metrics_datetime_service:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular:hawkular-metrics-datetime-service:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular:hawkular_metrics_datetime_service:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:metrics:hawkular-metrics-datetime-service:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:metrics:hawkular_metrics_datetime_service:0.31.0.Final-redhat-1:*:*:*:*:*:*:*"
+   ],
+   "purl": "pkg:maven/org.hawkular.metrics/hawkular-metrics-datetime-service@0.31.0.Final-redhat-1",
+   "metadataType": "JavaMetadata",
+   "metadata": {
+    "virtualPath": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar:hawkular-metrics-datetime-service",
+    "pomProperties": {
+     "path": "META-INF/maven/org.hawkular.metrics/hawkular-metrics-datetime-service/pom.properties",
+     "name": "",
+     "groupId": "org.hawkular.metrics",
+     "artifactId": "hawkular-metrics-datetime-service",
+     "version": "0.31.0.Final-redhat-1",
+     "extraFields": {}
+    }
+   }
+  },
+  {
+   "id": "3a7988475afb60aa",
+   "name": "hawkular-metrics-job-scheduler",
+   "version": "0.31.0.Final-redhat-1",
+   "type": "java-archive",
+   "foundBy": "java-cataloger",
+   "locations": [
+    {
+     "path": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar"
+    }
+   ],
+   "licenses": [],
+   "language": "java",
+   "cpes": [
+    "cpe:2.3:a:hawkular-metrics-job-scheduler:hawkular-metrics-job-scheduler:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular-metrics-job-scheduler:hawkular_metrics_job_scheduler:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics_job_scheduler:hawkular-metrics-job-scheduler:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics_job_scheduler:hawkular_metrics_job_scheduler:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular-metrics-job:hawkular-metrics-job-scheduler:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular-metrics-job:hawkular_metrics_job_scheduler:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics_job:hawkular-metrics-job-scheduler:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics_job:hawkular_metrics_job_scheduler:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular-metrics:hawkular-metrics-job-scheduler:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular-metrics:hawkular_metrics_job_scheduler:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics:hawkular-metrics-job-scheduler:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics:hawkular_metrics_job_scheduler:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular:hawkular-metrics-job-scheduler:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular:hawkular_metrics_job_scheduler:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:metrics:hawkular-metrics-job-scheduler:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:metrics:hawkular_metrics_job_scheduler:0.31.0.Final-redhat-1:*:*:*:*:*:*:*"
+   ],
+   "purl": "pkg:maven/org.hawkular.metrics/hawkular-metrics-job-scheduler@0.31.0.Final-redhat-1",
+   "metadataType": "JavaMetadata",
+   "metadata": {
+    "virtualPath": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar:hawkular-metrics-job-scheduler",
+    "pomProperties": {
+     "path": "META-INF/maven/org.hawkular.metrics/hawkular-metrics-job-scheduler/pom.properties",
+     "name": "",
+     "groupId": "org.hawkular.metrics",
+     "artifactId": "hawkular-metrics-job-scheduler",
+     "version": "0.31.0.Final-redhat-1",
+     "extraFields": {}
+    }
+   }
+  },
+  {
+   "id": "64e02fd28208ccf5",
+   "name": "hawkular-metrics-rx-java-driver",
+   "version": "0.31.0.Final-redhat-1",
+   "type": "java-archive",
+   "foundBy": "java-cataloger",
+   "locations": [
+    {
+     "path": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar"
+    }
+   ],
+   "licenses": [],
+   "language": "java",
+   "cpes": [
+    "cpe:2.3:a:hawkular-metrics-rx-java-driver:hawkular-metrics-rx-java-driver:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular-metrics-rx-java-driver:hawkular_metrics_rx_java_driver:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics_rx_java_driver:hawkular-metrics-rx-java-driver:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics_rx_java_driver:hawkular_metrics_rx_java_driver:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular-metrics-rx-java:hawkular-metrics-rx-java-driver:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular-metrics-rx-java:hawkular_metrics_rx_java_driver:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics_rx_java:hawkular-metrics-rx-java-driver:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics_rx_java:hawkular_metrics_rx_java_driver:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular-metrics-rx:hawkular-metrics-rx-java-driver:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular-metrics-rx:hawkular_metrics_rx_java_driver:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics_rx:hawkular-metrics-rx-java-driver:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics_rx:hawkular_metrics_rx_java_driver:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular-metrics:hawkular-metrics-rx-java-driver:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular-metrics:hawkular_metrics_rx_java_driver:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics:hawkular-metrics-rx-java-driver:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics:hawkular_metrics_rx_java_driver:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular:hawkular-metrics-rx-java-driver:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular:hawkular_metrics_rx_java_driver:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:metrics:hawkular-metrics-rx-java-driver:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:metrics:hawkular_metrics_rx_java_driver:0.31.0.Final-redhat-1:*:*:*:*:*:*:*"
+   ],
+   "purl": "pkg:maven/org.hawkular.metrics/hawkular-metrics-rx-java-driver@0.31.0.Final-redhat-1",
+   "metadataType": "JavaMetadata",
+   "metadata": {
+    "virtualPath": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar:hawkular-metrics-rx-java-driver",
+    "pomProperties": {
+     "path": "META-INF/maven/org.hawkular.metrics/hawkular-metrics-rx-java-driver/pom.properties",
+     "name": "",
+     "groupId": "org.hawkular.metrics",
+     "artifactId": "hawkular-metrics-rx-java-driver",
+     "version": "0.31.0.Final-redhat-1",
+     "extraFields": {}
+    }
+   }
+  },
+  {
+   "id": "3009d2dd27f467f7",
+   "name": "hawkular-metrics-schema",
+   "version": "0.31.0.Final-redhat-1",
+   "type": "java-archive",
+   "foundBy": "java-cataloger",
+   "locations": [
+    {
+     "path": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar"
+    }
+   ],
+   "licenses": [],
+   "language": "java",
+   "cpes": [
+    "cpe:2.3:a:hawkular-metrics-schema:hawkular-metrics-schema:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular-metrics-schema:hawkular_metrics_schema:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics_schema:hawkular-metrics-schema:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics_schema:hawkular_metrics_schema:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular-metrics:hawkular-metrics-schema:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular-metrics:hawkular_metrics_schema:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics:hawkular-metrics-schema:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics:hawkular_metrics_schema:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular:hawkular-metrics-schema:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular:hawkular_metrics_schema:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:metrics:hawkular-metrics-schema:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:metrics:hawkular_metrics_schema:0.31.0.Final-redhat-1:*:*:*:*:*:*:*"
+   ],
+   "purl": "pkg:maven/org.hawkular.metrics/hawkular-metrics-schema@0.31.0.Final-redhat-1",
+   "metadataType": "JavaMetadata",
+   "metadata": {
+    "virtualPath": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar:hawkular-metrics-schema",
+    "pomProperties": {
+     "path": "META-INF/maven/org.hawkular.metrics/hawkular-metrics-schema/pom.properties",
+     "name": "",
+     "groupId": "org.hawkular.metrics",
+     "artifactId": "hawkular-metrics-schema",
+     "version": "0.31.0.Final-redhat-1",
+     "extraFields": {}
+    }
+   }
+  },
+  {
+   "id": "411401f5c0c7155d",
+   "name": "hawkular-metrics-schema-installer",
+   "version": "0.31.0.Final-redhat-1",
+   "type": "java-archive",
+   "foundBy": "java-cataloger",
+   "locations": [
+    {
+     "path": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar"
+    }
+   ],
+   "licenses": [],
+   "language": "java",
+   "cpes": [
+    "cpe:2.3:a:hawkular-metrics-schema-installer:hawkular-metrics-schema-installer:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular-metrics-schema-installer:hawkular_metrics_schema_installer:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics_schema_installer:hawkular-metrics-schema-installer:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics_schema_installer:hawkular_metrics_schema_installer:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular-metrics-schema:hawkular-metrics-schema-installer:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular-metrics-schema:hawkular_metrics_schema_installer:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics_schema:hawkular-metrics-schema-installer:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics_schema:hawkular_metrics_schema_installer:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular-metrics:hawkular-metrics-schema-installer:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular-metrics:hawkular_metrics_schema_installer:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics:hawkular-metrics-schema-installer:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular_metrics:hawkular_metrics_schema_installer:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:red-hat\\,-inc-:hawkular-metrics-schema-installer:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:red-hat\\,-inc-:hawkular_metrics_schema_installer:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:red_hat\\,_inc_:hawkular-metrics-schema-installer:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:red_hat\\,_inc_:hawkular_metrics_schema_installer:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular:hawkular-metrics-schema-installer:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:hawkular:hawkular_metrics_schema_installer:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:metrics:hawkular-metrics-schema-installer:0.31.0.Final-redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:metrics:hawkular_metrics_schema_installer:0.31.0.Final-redhat-1:*:*:*:*:*:*:*"
+   ],
+   "purl": "pkg:maven/org.hawkular.metrics/hawkular-metrics-schema-installer@0.31.0.Final-redhat-1",
+   "metadataType": "JavaMetadata",
+   "metadata": {
+    "virtualPath": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar",
+    "manifest": {
+     "main": {
+      "Archiver-Version": "Plexus Archiver",
+      "Build-Jdk": "1.8.0_181",
+      "Built-By": "mockbuild",
+      "Built-From-Git-Branch": "master",
+      "Built-From-Git-SHA1": "72a93bbbf56cf50df8c97c8bcb5e45aeb30df42a",
+      "Built-On": "2018-09-04T12:40:37-04",
+      "Created-By": "Apache Maven 3.3.3",
+      "Implementation-Title": "Hawkular Metrics Schema Installer",
+      "Implementation-URL": "http://www.hawkular.org/core/hawkular-metrics-schema-installer/",
+      "Implementation-Vendor": "Red Hat, Inc.",
+      "Implementation-Vendor-Id": "org.hawkular.metrics",
+      "Implementation-Version": "0.31.0.Final-redhat-1",
+      "Main-Class": "org.hawkular.metrics.schema.Installer",
+      "Manifest-Version": "1.0"
+     }
+    },
+    "pomProperties": {
+     "path": "META-INF/maven/org.hawkular.metrics/hawkular-metrics-schema-installer/pom.properties",
+     "name": "",
+     "groupId": "org.hawkular.metrics",
+     "artifactId": "hawkular-metrics-schema-installer",
+     "version": "0.31.0.Final-redhat-1",
+     "extraFields": {}
+    },
+    "digest": [
+     {
+      "algorithm": "sha1",
+      "value": "3984d1e91a6afbbd4784e140420e6060d18d6947"
+     }
+    ]
+   }
+  },
+  {
+   "id": "b7dbab57333fb75f",
+   "name": "jboss-logging",
+   "version": "3.3.0.Final",
+   "type": "java-archive",
+   "foundBy": "java-cataloger",
+   "locations": [
+    {
+     "path": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar"
+    }
+   ],
+   "licenses": [],
+   "language": "java",
+   "cpes": [
+    "cpe:2.3:a:jboss-logging:jboss-logging:3.3.0.Final:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jboss-logging:jboss_logging:3.3.0.Final:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jboss_logging:jboss-logging:3.3.0.Final:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jboss_logging:jboss_logging:3.3.0.Final:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jboss-logging:logging:3.3.0.Final:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jboss_logging:logging:3.3.0.Final:*:*:*:*:*:*:*",
+    "cpe:2.3:a:logging:jboss-logging:3.3.0.Final:*:*:*:*:*:*:*",
+    "cpe:2.3:a:logging:jboss_logging:3.3.0.Final:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jboss:jboss-logging:3.3.0.Final:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jboss:jboss_logging:3.3.0.Final:*:*:*:*:*:*:*",
+    "cpe:2.3:a:logging:logging:3.3.0.Final:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jboss:logging:3.3.0.Final:*:*:*:*:*:*:*"
+   ],
+   "purl": "pkg:maven/org.jboss.logging/jboss-logging@3.3.0.Final",
+   "metadataType": "JavaMetadata",
+   "metadata": {
+    "virtualPath": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar:jboss-logging",
+    "pomProperties": {
+     "path": "META-INF/maven/org.jboss.logging/jboss-logging/pom.properties",
+     "name": "",
+     "groupId": "org.jboss.logging",
+     "artifactId": "jboss-logging",
+     "version": "3.3.0.Final",
+     "extraFields": {}
+    },
+    "pomProject": {
+     "path": "META-INF/maven/org.jboss.logging/jboss-logging/pom.xml",
+     "parent": {
+      "groupId": "org.jboss",
+      "artifactId": "jboss-parent",
+      "version": "15"
+     },
+     "groupId": "org.jboss.logging",
+     "artifactId": "jboss-logging",
+     "version": "3.3.0.Final",
+     "name": "JBoss Logging 3",
+     "description": "The JBoss Logging Framework",
+     "url": "http://www.jboss.org"
+    }
+   }
+  },
+  {
+   "id": "cc3401df60167d91",
+   "name": "jctools-core",
+   "version": "2.0.1",
+   "type": "java-archive",
+   "foundBy": "java-cataloger",
+   "locations": [
+    {
+     "path": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar"
+    }
+   ],
+   "licenses": [],
+   "language": "java",
+   "cpes": [
+    "cpe:2.3:a:jctools-core:jctools-core:2.0.1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jctools-core:jctools_core:2.0.1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jctools_core:jctools-core:2.0.1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jctools_core:jctools_core:2.0.1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jctools:jctools-core:2.0.1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jctools:jctools_core:2.0.1:*:*:*:*:*:*:*"
+   ],
+   "purl": "pkg:maven/org.jctools/jctools-core@2.0.1",
+   "metadataType": "JavaMetadata",
+   "metadata": {
+    "virtualPath": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar:jctools-core",
+    "pomProperties": {
+     "path": "META-INF/maven/org.jctools/jctools-core/pom.properties",
+     "name": "",
+     "groupId": "org.jctools",
+     "artifactId": "jctools-core",
+     "version": "2.0.1",
+     "extraFields": {}
+    },
+    "pomProject": {
+     "path": "META-INF/maven/org.jctools/jctools-core/pom.xml",
+     "groupId": "org.jctools",
+     "artifactId": "jctools-core",
+     "version": "2.0.1",
+     "name": "Java Concurrency Tools Core Library",
+     "description": "Java Concurrency Tools Core Library",
+     "url": "https://github.com/JCTools"
+    }
+   }
+  },
+  {
+   "id": "33e06d18df86f255",
+   "name": "jffi",
+   "version": "1.2.10.redhat-1",
+   "type": "java-archive",
+   "foundBy": "java-cataloger",
+   "locations": [
+    {
+     "path": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar"
+    }
+   ],
+   "licenses": [],
+   "language": "java",
+   "cpes": [
+    "cpe:2.3:a:sonatype:jffi:1.2.10.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:github:jffi:1.2.10.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jffi:jffi:1.2.10.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr:jffi:1.2.10.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:oss:jffi:1.2.10.redhat-1:*:*:*:*:*:*:*"
+   ],
+   "purl": "pkg:maven/com.github.jnr/jffi@1.2.10.redhat-1",
+   "metadataType": "JavaMetadata",
+   "metadata": {
+    "virtualPath": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar:jffi",
+    "pomProperties": {
+     "path": "META-INF/maven/com.github.jnr/jffi/pom.properties",
+     "name": "",
+     "groupId": "com.github.jnr",
+     "artifactId": "jffi",
+     "version": "1.2.10.redhat-1",
+     "extraFields": {}
+    },
+    "pomProject": {
+     "path": "META-INF/maven/com.github.jnr/jffi/pom.xml",
+     "parent": {
+      "groupId": "org.sonatype.oss",
+      "artifactId": "oss-parent",
+      "version": "7"
+     },
+     "groupId": "com.github.jnr",
+     "artifactId": "jffi",
+     "version": "1.2.10.redhat-1",
+     "name": "jffi",
+     "description": "Java Foreign Function Interface",
+     "url": "http://github.com/jnr/jffi"
+    }
+   }
+  },
+  {
+   "id": "e8052a7b8f5eb463",
+   "name": "jnr-constants",
+   "version": "0.9.0.redhat-1",
+   "type": "java-archive",
+   "foundBy": "java-cataloger",
+   "locations": [
+    {
+     "path": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar"
+    }
+   ],
+   "licenses": [],
+   "language": "java",
+   "cpes": [
+    "cpe:2.3:a:jnr-constants:jnr-constants:0.9.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr-constants:jnr_constants:0.9.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr_constants:jnr-constants:0.9.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr_constants:jnr_constants:0.9.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:sonatype:jnr-constants:0.9.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:sonatype:jnr_constants:0.9.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:github:jnr-constants:0.9.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:github:jnr_constants:0.9.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr-constants:jnr:0.9.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr:jnr-constants:0.9.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr:jnr_constants:0.9.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr_constants:jnr:0.9.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:oss:jnr-constants:0.9.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:oss:jnr_constants:0.9.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:sonatype:jnr:0.9.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:github:jnr:0.9.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr:jnr:0.9.0.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:oss:jnr:0.9.0.redhat-1:*:*:*:*:*:*:*"
+   ],
+   "purl": "pkg:maven/com.github.jnr/jnr-constants@0.9.0.redhat-1",
+   "metadataType": "JavaMetadata",
+   "metadata": {
+    "virtualPath": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar:jnr-constants",
+    "pomProperties": {
+     "path": "META-INF/maven/com.github.jnr/jnr-constants/pom.properties",
+     "name": "",
+     "groupId": "com.github.jnr",
+     "artifactId": "jnr-constants",
+     "version": "0.9.0.redhat-1",
+     "extraFields": {}
+    },
+    "pomProject": {
+     "path": "META-INF/maven/com.github.jnr/jnr-constants/pom.xml",
+     "parent": {
+      "groupId": "org.sonatype.oss",
+      "artifactId": "oss-parent",
+      "version": "7"
+     },
+     "groupId": "com.github.jnr",
+     "artifactId": "jnr-constants",
+     "version": "0.9.0.redhat-1",
+     "name": "jnr-constants",
+     "description": "A set of platform constants (e.g. errno values)",
+     "url": "http://github.com/jnr/jnr-constants"
+    }
+   }
+  },
+  {
+   "id": "87ab4769368c0b3d",
+   "name": "jnr-ffi",
+   "version": "2.0.7.redhat-1",
+   "type": "java-archive",
+   "foundBy": "java-cataloger",
+   "locations": [
+    {
+     "path": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar"
+    }
+   ],
+   "licenses": [],
+   "language": "java",
+   "cpes": [
+    "cpe:2.3:a:sonatype:jnr-ffi:2.0.7.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:sonatype:jnr_ffi:2.0.7.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr-ffi:jnr-ffi:2.0.7.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr-ffi:jnr_ffi:2.0.7.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr_ffi:jnr-ffi:2.0.7.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr_ffi:jnr_ffi:2.0.7.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:github:jnr-ffi:2.0.7.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:github:jnr_ffi:2.0.7.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:sonatype:jnr:2.0.7.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr-ffi:jnr:2.0.7.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr:jnr-ffi:2.0.7.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr:jnr_ffi:2.0.7.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr_ffi:jnr:2.0.7.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:oss:jnr-ffi:2.0.7.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:oss:jnr_ffi:2.0.7.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:github:jnr:2.0.7.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr:jnr:2.0.7.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:oss:jnr:2.0.7.redhat-1:*:*:*:*:*:*:*"
+   ],
+   "purl": "pkg:maven/com.github.jnr/jnr-ffi@2.0.7.redhat-1",
+   "metadataType": "JavaMetadata",
+   "metadata": {
+    "virtualPath": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar:jnr-ffi",
+    "pomProperties": {
+     "path": "META-INF/maven/com.github.jnr/jnr-ffi/pom.properties",
+     "name": "",
+     "groupId": "com.github.jnr",
+     "artifactId": "jnr-ffi",
+     "version": "2.0.7.redhat-1",
+     "extraFields": {}
+    },
+    "pomProject": {
+     "path": "META-INF/maven/com.github.jnr/jnr-ffi/pom.xml",
+     "parent": {
+      "groupId": "org.sonatype.oss",
+      "artifactId": "oss-parent",
+      "version": "7"
+     },
+     "groupId": "com.github.jnr",
+     "artifactId": "jnr-ffi",
+     "version": "2.0.7.redhat-1",
+     "name": "jnr-ffi",
+     "description": "A library for invoking native functions from java",
+     "url": "http://github.com/jnr/jnr-ffi"
+    }
+   }
+  },
+  {
+   "id": "469de9ee64caabf7",
+   "name": "jnr-posix",
+   "version": "3.0.27.redhat-1",
+   "type": "java-archive",
+   "foundBy": "java-cataloger",
+   "locations": [
+    {
+     "path": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar"
+    }
+   ],
+   "licenses": [],
+   "language": "java",
+   "cpes": [
+    "cpe:2.3:a:jnr-posix:jnr-posix:3.0.27.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr-posix:jnr_posix:3.0.27.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr_posix:jnr-posix:3.0.27.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr_posix:jnr_posix:3.0.27.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:sonatype:jnr-posix:3.0.27.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:sonatype:jnr_posix:3.0.27.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:github:jnr-posix:3.0.27.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:github:jnr_posix:3.0.27.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr-posix:jnr:3.0.27.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr:jnr-posix:3.0.27.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr:jnr_posix:3.0.27.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr_posix:jnr:3.0.27.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:oss:jnr-posix:3.0.27.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:oss:jnr_posix:3.0.27.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:sonatype:jnr:3.0.27.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:github:jnr:3.0.27.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr:jnr:3.0.27.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:oss:jnr:3.0.27.redhat-1:*:*:*:*:*:*:*"
+   ],
+   "purl": "pkg:maven/com.github.jnr/jnr-posix@3.0.27.redhat-1",
+   "metadataType": "JavaMetadata",
+   "metadata": {
+    "virtualPath": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar:jnr-posix",
+    "pomProperties": {
+     "path": "META-INF/maven/com.github.jnr/jnr-posix/pom.properties",
+     "name": "",
+     "groupId": "com.github.jnr",
+     "artifactId": "jnr-posix",
+     "version": "3.0.27.redhat-1",
+     "extraFields": {}
+    },
+    "pomProject": {
+     "path": "META-INF/maven/com.github.jnr/jnr-posix/pom.xml",
+     "parent": {
+      "groupId": "org.sonatype.oss",
+      "artifactId": "oss-parent",
+      "version": "7"
+     },
+     "groupId": "com.github.jnr",
+     "artifactId": "jnr-posix",
+     "version": "3.0.27.redhat-1",
+     "name": "jnr-posix",
+     "description": "Common cross-project/cross-platform POSIX APIs"
+    }
+   }
+  },
+  {
+   "id": "4d8084fdea7a599e",
+   "name": "jnr-x86asm",
+   "version": "1.0.2.redhat-1",
+   "type": "java-archive",
+   "foundBy": "java-cataloger",
+   "locations": [
+    {
+     "path": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar"
+    }
+   ],
+   "licenses": [],
+   "language": "java",
+   "cpes": [
+    "cpe:2.3:a:jnr-x86asm:jnr-x86asm:1.0.2.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr-x86asm:jnr_x86asm:1.0.2.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr_x86asm:jnr-x86asm:1.0.2.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr_x86asm:jnr_x86asm:1.0.2.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:sonatype:jnr-x86asm:1.0.2.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:sonatype:jnr_x86asm:1.0.2.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:github:jnr-x86asm:1.0.2.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:github:jnr_x86asm:1.0.2.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr-x86asm:jnr:1.0.2.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr:jnr-x86asm:1.0.2.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr:jnr_x86asm:1.0.2.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr_x86asm:jnr:1.0.2.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:oss:jnr-x86asm:1.0.2.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:oss:jnr_x86asm:1.0.2.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:sonatype:jnr:1.0.2.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:github:jnr:1.0.2.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jnr:jnr:1.0.2.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:oss:jnr:1.0.2.redhat-1:*:*:*:*:*:*:*"
+   ],
+   "purl": "pkg:maven/com.github.jnr/jnr-x86asm@1.0.2.redhat-1",
+   "metadataType": "JavaMetadata",
+   "metadata": {
+    "virtualPath": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar:jnr-x86asm",
+    "pomProperties": {
+     "path": "META-INF/maven/com.github.jnr/jnr-x86asm/pom.properties",
+     "name": "",
+     "groupId": "com.github.jnr",
+     "artifactId": "jnr-x86asm",
+     "version": "1.0.2.redhat-1",
+     "extraFields": {}
+    },
+    "pomProject": {
+     "path": "META-INF/maven/com.github.jnr/jnr-x86asm/pom.xml",
+     "parent": {
+      "groupId": "org.sonatype.oss",
+      "artifactId": "oss-parent",
+      "version": "7"
+     },
+     "groupId": "com.github.jnr",
+     "artifactId": "jnr-x86asm",
+     "version": "1.0.2.redhat-1",
+     "name": "jnr-x86asm",
+     "description": "A pure-java X86 and X86_64 assembler",
+     "url": "http://github.com/jnr/jnr-x86asm"
+    }
+   }
+  },
+  {
+   "id": "99c0c2228b08bb33",
+   "name": "joda-time",
+   "version": "2.9.5.redhat-1",
+   "type": "java-archive",
+   "foundBy": "java-cataloger",
+   "locations": [
+    {
+     "path": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar"
+    }
+   ],
+   "licenses": [],
+   "language": "java",
+   "cpes": [
+    "cpe:2.3:a:joda-time:joda-time:2.9.5.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:joda-time:joda_time:2.9.5.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:joda_time:joda-time:2.9.5.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:joda_time:joda_time:2.9.5.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jboss:joda-time:2.9.5.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jboss:joda_time:2.9.5.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:joda:joda-time:2.9.5.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:joda:joda_time:2.9.5.redhat-1:*:*:*:*:*:*:*"
+   ],
+   "purl": "pkg:maven/org.jboss/joda-time@2.9.5.redhat-1",
+   "metadataType": "JavaMetadata",
+   "metadata": {
+    "virtualPath": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar:joda-time",
+    "pomProperties": {
+     "path": "META-INF/maven/joda-time/joda-time/pom.properties",
+     "name": "",
+     "groupId": "joda-time",
+     "artifactId": "joda-time",
+     "version": "2.9.5.redhat-1",
+     "extraFields": {}
+    },
+    "pomProject": {
+     "path": "META-INF/maven/joda-time/joda-time/pom.xml",
+     "parent": {
+      "groupId": "org.jboss",
+      "artifactId": "jboss-parent",
+      "version": "19.0.0.redhat-1"
+     },
+     "groupId": "joda-time",
+     "artifactId": "joda-time",
+     "version": "2.9.5.redhat-1",
+     "name": "Joda-Time",
+     "description": "Date and time library to replace JDK date handling",
+     "url": "http://www.joda.org/joda-time/"
+    }
+   }
+  },
+  {
+   "id": "8d41e4303491c9ba",
+   "name": "logback-classic",
+   "version": "1.1.3",
+   "type": "java-archive",
+   "foundBy": "java-cataloger",
+   "locations": [
+    {
+     "path": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar"
+    }
+   ],
+   "licenses": [],
+   "language": "java",
+   "cpes": [
+    "cpe:2.3:a:logback-classic:logback-classic:1.1.3:*:*:*:*:*:*:*",
+    "cpe:2.3:a:logback-classic:logback_classic:1.1.3:*:*:*:*:*:*:*",
+    "cpe:2.3:a:logback_classic:logback-classic:1.1.3:*:*:*:*:*:*:*",
+    "cpe:2.3:a:logback_classic:logback_classic:1.1.3:*:*:*:*:*:*:*",
+    "cpe:2.3:a:logback:logback-classic:1.1.3:*:*:*:*:*:*:*",
+    "cpe:2.3:a:logback:logback_classic:1.1.3:*:*:*:*:*:*:*"
+   ],
+   "purl": "pkg:maven/logback-classic/logback-classic@1.1.3",
+   "metadataType": "JavaMetadata",
+   "metadata": {
+    "virtualPath": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar:logback-classic",
+    "pomProperties": {
+     "path": "META-INF/maven/ch.qos.logback/logback-classic/pom.properties",
+     "name": "",
+     "groupId": "ch.qos.logback",
+     "artifactId": "logback-classic",
+     "version": "1.1.3",
+     "extraFields": {}
+    }
+   }
+  },
+  {
+   "id": "6103bc901d93ab3c",
+   "name": "logback-core",
+   "version": "1.1.3",
+   "type": "java-archive",
+   "foundBy": "java-cataloger",
+   "locations": [
+    {
+     "path": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar"
+    }
+   ],
+   "licenses": [],
+   "language": "java",
+   "cpes": [
+    "cpe:2.3:a:logback-core:logback-core:1.1.3:*:*:*:*:*:*:*",
+    "cpe:2.3:a:logback-core:logback_core:1.1.3:*:*:*:*:*:*:*",
+    "cpe:2.3:a:logback_core:logback-core:1.1.3:*:*:*:*:*:*:*",
+    "cpe:2.3:a:logback_core:logback_core:1.1.3:*:*:*:*:*:*:*",
+    "cpe:2.3:a:logback:logback-core:1.1.3:*:*:*:*:*:*:*",
+    "cpe:2.3:a:logback:logback_core:1.1.3:*:*:*:*:*:*:*"
+   ],
+   "purl": "pkg:maven/logback-core/logback-core@1.1.3",
+   "metadataType": "JavaMetadata",
+   "metadata": {
+    "virtualPath": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar:logback-core",
+    "pomProperties": {
+     "path": "META-INF/maven/ch.qos.logback/logback-core/pom.properties",
+     "name": "",
+     "groupId": "ch.qos.logback",
+     "artifactId": "logback-core",
+     "version": "1.1.3",
+     "extraFields": {}
+    }
+   }
+  },
+  {
+   "id": "aa116a7a39ce15cd",
+   "name": "metrics-core",
+   "version": "3.2.2.redhat-1",
+   "type": "java-archive",
+   "foundBy": "java-cataloger",
+   "locations": [
+    {
+     "path": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar"
+    }
+   ],
+   "licenses": [],
+   "language": "java",
+   "cpes": [
+    "cpe:2.3:a:metrics-core:metrics-core:3.2.2.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:metrics-core:metrics_core:3.2.2.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:metrics_core:metrics-core:3.2.2.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:metrics_core:metrics_core:3.2.2.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:dropwizard:metrics-core:3.2.2.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:dropwizard:metrics_core:3.2.2.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:metrics-core:metrics:3.2.2.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:metrics:metrics-core:3.2.2.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:metrics:metrics_core:3.2.2.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:metrics_core:metrics:3.2.2.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:dropwizard:metrics:3.2.2.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:metrics:metrics:3.2.2.redhat-1:*:*:*:*:*:*:*"
+   ],
+   "purl": "pkg:maven/io.dropwizard.metrics/metrics-core@3.2.2.redhat-1",
+   "metadataType": "JavaMetadata",
+   "metadata": {
+    "virtualPath": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar:metrics-core",
+    "pomProperties": {
+     "path": "META-INF/maven/io.dropwizard.metrics/metrics-core/pom.properties",
+     "name": "",
+     "groupId": "io.dropwizard.metrics",
+     "artifactId": "metrics-core",
+     "version": "3.2.2.redhat-1",
+     "extraFields": {}
+    }
+   }
+  },
+  {
+   "id": "9d1522b1569300e9",
+   "name": "netty-buffer",
+   "version": "4.0.47.Final-redhat-2",
+   "type": "java-archive",
+   "foundBy": "java-cataloger",
+   "locations": [
+    {
+     "path": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar"
+    }
+   ],
+   "licenses": [],
+   "language": "java",
+   "cpes": [
+    "cpe:2.3:a:netty-buffer:netty-buffer:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty-buffer:netty_buffer:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty_buffer:netty-buffer:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty_buffer:netty_buffer:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty:netty-buffer:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty:netty_buffer:4.0.47.Final-redhat-2:*:*:*:*:*:*:*"
+   ],
+   "purl": "pkg:maven/io.netty/netty-buffer@4.0.47.Final-redhat-2",
+   "metadataType": "JavaMetadata",
+   "metadata": {
+    "virtualPath": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar:netty-buffer",
+    "pomProperties": {
+     "path": "META-INF/maven/io.netty/netty-buffer/pom.properties",
+     "name": "",
+     "groupId": "io.netty",
+     "artifactId": "netty-buffer",
+     "version": "4.0.47.Final-redhat-2",
+     "extraFields": {}
+    }
+   }
+  },
+  {
+   "id": "4482101dfa82f3f8",
+   "name": "netty-codec",
+   "version": "4.0.47.Final-redhat-2",
+   "type": "java-archive",
+   "foundBy": "java-cataloger",
+   "locations": [
+    {
+     "path": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar"
+    }
+   ],
+   "licenses": [],
+   "language": "java",
+   "cpes": [
+    "cpe:2.3:a:netty-codec:netty-codec:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty-codec:netty_codec:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty_codec:netty-codec:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty_codec:netty_codec:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty:netty-codec:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty:netty_codec:4.0.47.Final-redhat-2:*:*:*:*:*:*:*"
+   ],
+   "purl": "pkg:maven/io.netty/netty-codec@4.0.47.Final-redhat-2",
+   "metadataType": "JavaMetadata",
+   "metadata": {
+    "virtualPath": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar:netty-codec",
+    "pomProperties": {
+     "path": "META-INF/maven/io.netty/netty-codec/pom.properties",
+     "name": "",
+     "groupId": "io.netty",
+     "artifactId": "netty-codec",
+     "version": "4.0.47.Final-redhat-2",
+     "extraFields": {}
+    }
+   }
+  },
+  {
+   "id": "bada621ccdf212d7",
+   "name": "netty-common",
+   "version": "4.0.47.Final-redhat-2",
+   "type": "java-archive",
+   "foundBy": "java-cataloger",
+   "locations": [
+    {
+     "path": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar"
+    }
+   ],
+   "licenses": [],
+   "language": "java",
+   "cpes": [
+    "cpe:2.3:a:netty-common:netty-common:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty-common:netty_common:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty_common:netty-common:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty_common:netty_common:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty:netty-common:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty:netty_common:4.0.47.Final-redhat-2:*:*:*:*:*:*:*"
+   ],
+   "purl": "pkg:maven/io.netty/netty-common@4.0.47.Final-redhat-2",
+   "metadataType": "JavaMetadata",
+   "metadata": {
+    "virtualPath": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar:netty-common",
+    "pomProperties": {
+     "path": "META-INF/maven/io.netty/netty-common/pom.properties",
+     "name": "",
+     "groupId": "io.netty",
+     "artifactId": "netty-common",
+     "version": "4.0.47.Final-redhat-2",
+     "extraFields": {}
+    }
+   }
+  },
+  {
+   "id": "d3feb94c111ebb9c",
+   "name": "netty-handler",
+   "version": "4.0.47.Final-redhat-2",
+   "type": "java-archive",
+   "foundBy": "java-cataloger",
+   "locations": [
+    {
+     "path": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar"
+    }
+   ],
+   "licenses": [],
+   "language": "java",
+   "cpes": [
+    "cpe:2.3:a:netty-handler:netty-handler:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty-handler:netty_handler:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty_handler:netty-handler:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty_handler:netty_handler:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty:netty-handler:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty:netty_handler:4.0.47.Final-redhat-2:*:*:*:*:*:*:*"
+   ],
+   "purl": "pkg:maven/io.netty/netty-handler@4.0.47.Final-redhat-2",
+   "metadataType": "JavaMetadata",
+   "metadata": {
+    "virtualPath": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar:netty-handler",
+    "pomProperties": {
+     "path": "META-INF/maven/io.netty/netty-handler/pom.properties",
+     "name": "",
+     "groupId": "io.netty",
+     "artifactId": "netty-handler",
+     "version": "4.0.47.Final-redhat-2",
+     "extraFields": {}
+    }
+   }
+  },
+  {
+   "id": "16457b8da203855d",
+   "name": "netty-transport",
+   "version": "4.0.47.Final-redhat-2",
+   "type": "java-archive",
+   "foundBy": "java-cataloger",
+   "locations": [
+    {
+     "path": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar"
+    }
+   ],
+   "licenses": [],
+   "language": "java",
+   "cpes": [
+    "cpe:2.3:a:netty-transport:netty-transport:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty-transport:netty_transport:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty_transport:netty-transport:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty_transport:netty_transport:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty:netty-transport:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty:netty_transport:4.0.47.Final-redhat-2:*:*:*:*:*:*:*"
+   ],
+   "purl": "pkg:maven/io.netty/netty-transport@4.0.47.Final-redhat-2",
+   "metadataType": "JavaMetadata",
+   "metadata": {
+    "virtualPath": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar:netty-transport",
+    "pomProperties": {
+     "path": "META-INF/maven/io.netty/netty-transport/pom.properties",
+     "name": "",
+     "groupId": "io.netty",
+     "artifactId": "netty-transport",
+     "version": "4.0.47.Final-redhat-2",
+     "extraFields": {}
+    }
+   }
+  },
+  {
+   "id": "f07c308589a4ee0a",
+   "name": "netty-transport-native-epoll",
+   "version": "4.0.47.Final-redhat-2",
+   "type": "java-archive",
+   "foundBy": "java-cataloger",
+   "locations": [
+    {
+     "path": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar"
+    }
+   ],
+   "licenses": [],
+   "language": "java",
+   "cpes": [
+    "cpe:2.3:a:netty-transport-native-epoll:netty-transport-native-epoll:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty-transport-native-epoll:netty_transport_native_epoll:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty_transport_native_epoll:netty-transport-native-epoll:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty_transport_native_epoll:netty_transport_native_epoll:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty-transport-native:netty-transport-native-epoll:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty-transport-native:netty_transport_native_epoll:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty_transport_native:netty-transport-native-epoll:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty_transport_native:netty_transport_native_epoll:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty-transport:netty-transport-native-epoll:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty-transport:netty_transport_native_epoll:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty_transport:netty-transport-native-epoll:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty_transport:netty_transport_native_epoll:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty:netty-transport-native-epoll:4.0.47.Final-redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:netty:netty_transport_native_epoll:4.0.47.Final-redhat-2:*:*:*:*:*:*:*"
+   ],
+   "purl": "pkg:maven/io.netty/netty-transport-native-epoll@4.0.47.Final-redhat-2",
+   "metadataType": "JavaMetadata",
+   "metadata": {
+    "virtualPath": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar:netty-transport-native-epoll",
+    "pomProperties": {
+     "path": "META-INF/maven/io.netty/netty-transport-native-epoll/pom.properties",
+     "name": "",
+     "groupId": "io.netty",
+     "artifactId": "netty-transport-native-epoll",
+     "version": "4.0.47.Final-redhat-2",
+     "extraFields": {}
+    }
+   }
+  },
+  {
+   "id": "4105acbf52be2c96",
+   "name": "rxjava",
+   "version": "1.3.0.redhat-3",
+   "type": "java-archive",
+   "foundBy": "java-cataloger",
+   "locations": [
+    {
+     "path": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar"
+    }
+   ],
+   "licenses": [],
+   "language": "java",
+   "cpes": [
+    "cpe:2.3:a:reactivex:rxjava:1.3.0.redhat-3:*:*:*:*:*:*:*",
+    "cpe:2.3:a:rxjava:rxjava:1.3.0.redhat-3:*:*:*:*:*:*:*"
+   ],
+   "purl": "pkg:maven/io.reactivex/rxjava@1.3.0.redhat-3",
+   "metadataType": "JavaMetadata",
+   "metadata": {
+    "virtualPath": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar:rxjava",
+    "pomProperties": {
+     "path": "META-INF/maven/io.reactivex/rxjava/pom.properties",
+     "name": "",
+     "groupId": "io.reactivex",
+     "artifactId": "rxjava",
+     "version": "1.3.0.redhat-3",
+     "extraFields": {}
+    },
+    "pomProject": {
+     "path": "META-INF/maven/io.reactivex/rxjava/pom.xml",
+     "groupId": "io.reactivex",
+     "artifactId": "rxjava",
+     "version": "1.3.0.redhat-3",
+     "name": ""
+    }
+   }
+  },
+  {
+   "id": "47a817a87c3c2bd",
+   "name": "rxjava-guava",
+   "version": "1.0.3.redhat-1",
+   "type": "java-archive",
+   "foundBy": "java-cataloger",
+   "locations": [
+    {
+     "path": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar"
+    }
+   ],
+   "licenses": [],
+   "language": "java",
+   "cpes": [
+    "cpe:2.3:a:rxjava-guava:rxjava-guava:1.0.3.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:rxjava-guava:rxjava_guava:1.0.3.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:rxjava_guava:rxjava-guava:1.0.3.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:rxjava_guava:rxjava_guava:1.0.3.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:reactivex:rxjava-guava:1.0.3.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:reactivex:rxjava_guava:1.0.3.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:rxjava:rxjava-guava:1.0.3.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:rxjava:rxjava_guava:1.0.3.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jboss:rxjava-guava:1.0.3.redhat-1:*:*:*:*:*:*:*",
+    "cpe:2.3:a:jboss:rxjava_guava:1.0.3.redhat-1:*:*:*:*:*:*:*"
+   ],
+   "purl": "pkg:maven/io.reactivex/rxjava-guava@1.0.3.redhat-1",
+   "metadataType": "JavaMetadata",
+   "metadata": {
+    "virtualPath": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar:rxjava-guava",
+    "pomProperties": {
+     "path": "META-INF/maven/io.reactivex/rxjava-guava/pom.properties",
+     "name": "",
+     "groupId": "io.reactivex",
+     "artifactId": "rxjava-guava",
+     "version": "1.0.3.redhat-1",
+     "extraFields": {}
+    },
+    "pomProject": {
+     "path": "META-INF/maven/io.reactivex/rxjava-guava/pom.xml",
+     "parent": {
+      "groupId": "org.jboss",
+      "artifactId": "jboss-parent",
+      "version": "19.0.0.redhat-1"
+     },
+     "groupId": "io.reactivex",
+     "artifactId": "rxjava-guava",
+     "version": "1.0.3.redhat-1",
+     "name": "rxjava-guava",
+     "description": "rxjava-guava",
+     "url": "https://github.com/ReactiveX/RxJavaGuava"
+    }
+   }
+  },
+  {
+   "id": "d812aa880a293c52",
+   "name": "slf4j-api",
+   "version": "1.7.7.redhat-2",
+   "type": "java-archive",
+   "foundBy": "java-cataloger",
+   "locations": [
+    {
+     "path": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar"
+    }
+   ],
+   "licenses": [],
+   "language": "java",
+   "cpes": [
+    "cpe:2.3:a:slf4j-api:slf4j-api:1.7.7.redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:slf4j-api:slf4j_api:1.7.7.redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:slf4j_api:slf4j-api:1.7.7.redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:slf4j_api:slf4j_api:1.7.7.redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:slf4j:slf4j-api:1.7.7.redhat-2:*:*:*:*:*:*:*",
+    "cpe:2.3:a:slf4j:slf4j_api:1.7.7.redhat-2:*:*:*:*:*:*:*"
+   ],
+   "purl": "pkg:maven/org.slf4j/slf4j-api@1.7.7.redhat-2",
+   "metadataType": "JavaMetadata",
+   "metadata": {
+    "virtualPath": "/tmp/hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar:slf4j-api",
+    "pomProperties": {
+     "path": "META-INF/maven/org.slf4j/slf4j-api/pom.properties",
+     "name": "",
+     "groupId": "org.slf4j",
+     "artifactId": "slf4j-api",
+     "version": "1.7.7.redhat-2",
+     "extraFields": {}
+    }
+   }
+  }
+ ],
+ "artifactRelationships": [
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "16457b8da203855d",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "3009d2dd27f467f7",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "33e06d18df86f255",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "3a7988475afb60aa",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "4105acbf52be2c96",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "411401f5c0c7155d",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "4482101dfa82f3f8",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "469de9ee64caabf7",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "47a817a87c3c2bd",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "4994e391d5e79c25",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "4d8084fdea7a599e",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "5eba543053aa5330",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "6103bc901d93ab3c",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "64e02fd28208ccf5",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "87ab4769368c0b3d",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "8d41e4303491c9ba",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "99c0c2228b08bb33",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "9d1522b1569300e9",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "aa116a7a39ce15cd",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "b7dbab57333fb75f",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "bada621ccdf212d7",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "cb8d5d05f545f03d",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "cc3401df60167d91",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "cccd8640eb42c27e",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "d3feb94c111ebb9c",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "d812aa880a293c52",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "e8052a7b8f5eb463",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "f07c308589a4ee0a",
+   "type": "contains"
+  },
+  {
+   "parent": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+   "child": "f66047ce1569149a",
+   "type": "contains"
+  }
+ ],
+ "source": {
+  "id": "a996ab7b42095f9f8dc9a3cd5e4b18634dbf7ca4cc1d4a461ec41e67323b1e64",
+  "type": "file",
+  "target": "hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar"
+ },
+ "distro": {},
+ "descriptor": {
+  "name": "syft",
+  "version": "0.60.1",
+  "configuration": {
+   "configPath": "",
+   "verbosity": 0,
+   "quiet": false,
+   "output": [
+    "syft-json"
+   ],
+   "output-template-path": "",
+   "file": "",
+   "check-for-app-update": true,
+   "dev": {
+    "profile-cpu": false,
+    "profile-mem": false
+   },
+   "log": {
+    "structured": false,
+    "level": "warn",
+    "file-location": ""
+   },
+   "catalogers": null,
+   "package": {
+    "cataloger": {
+     "enabled": true,
+     "scope": "Squashed"
+    },
+    "search-unindexed-archives": false,
+    "search-indexed-archives": true
+   },
+   "file-metadata": {
+    "cataloger": {
+     "enabled": false,
+     "scope": "Squashed"
+    },
+    "digests": [
+     "sha256"
+    ]
+   },
+   "file-classification": {
+    "cataloger": {
+     "enabled": false,
+     "scope": "Squashed"
+    }
+   },
+   "file-contents": {
+    "cataloger": {
+     "enabled": false,
+     "scope": "Squashed"
+    },
+    "skip-files-above-size": 1048576,
+    "globs": []
+   },
+   "secrets": {
+    "cataloger": {
+     "enabled": false,
+     "scope": "AllLayers"
+    },
+    "additional-patterns": {},
+    "exclude-pattern-names": [],
+    "reveal-values": false,
+    "skip-files-above-size": 1048576
+   },
+   "registry": {
+    "insecure-skip-tls-verify": false,
+    "insecure-use-http": false,
+    "auth": []
+   },
+   "exclude": [],
+   "attest": {
+    "key": "",
+    "cert": "",
+    "noUpload": false,
+    "force": false,
+    "recursive": false,
+    "replace": false,
+    "fulcioUrl": "https://fulcio.sigstore.dev",
+    "fulcio_identity_token": "",
+    "insecure_skip_verify": false,
+    "rekorUrl": "https://rekor.sigstore.dev",
+    "oidcIssuer": "https://oauth2.sigstore.dev/auth",
+    "oidcClientId": "sigstore",
+    "OIDCRedirectURL": ""
+   },
+   "platform": ""
+  }
+ },
+ "schema": {
+  "version": "4.1.0",
+  "url": "https://raw.githubusercontent.com/anchore/syft/main/schema/json/schema-4.1.0.json"
+ }
+}

@@ -47,11 +47,12 @@ def test_parse_maven_components():
 
 
 def test_parse_golist_components():
-    with open("tests/data/go/runc-1.1.3-golist.json", "r") as runc_go_list_data:
-        results = GoList.parse_components(runc_go_list_data)
-    assert len(results) > 0
+    results = []
+    with open("tests/data/go/runc-1.1.3-golist.json") as runc_go_list_data:
+        for result in GoList.parse_components(runc_go_list_data):
+            results.append(result)
+
     names = [r["meta"]["name"] for r in results]
-    print(names)
     assert len(set(names)) == len(results)
     assert "crypto/tls" in names
 

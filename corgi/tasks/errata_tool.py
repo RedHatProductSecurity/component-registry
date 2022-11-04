@@ -89,7 +89,7 @@ def slow_load_errata(erratum_name):
             # slow_fetch_brew_build task, eg CORGI-21. We call save_product_taxonomy from
             # this task only after all the builds in the errata have been loaded instead.
             logger.info("Calling slow_fetch_brew_build for %s", build_id)
-            app.send_task("corgi.tasks.brew.slow_fetch_brew_build", args=[build_id, False])
+            app.send_task("corgi.tasks.brew.slow_fetch_brew_build", args=(build_id, False))
     else:
         logger.info("Finished processing %s", erratum_id)
 
@@ -127,7 +127,6 @@ def update_variant_repos() -> None:
 
             pv_node = pv.pnodes.first()
 
-            pv_channels = []
             for repo in et_variant_data["repos"]:
                 # Filter out inactive repos in pulp and get content_set
                 try:
@@ -143,7 +142,6 @@ def update_variant_repos() -> None:
                         "meta_attr": {"content_set": rpm_repo.content_set},
                     },
                 )
-                pv_channels.append(repo.name)
                 if created:
                     logger.info("Created new channel %s for variant %s", repo, pv.name)
                 # TODO: investigate whether we need to delete CDN repos that were removed from a
@@ -153,15 +151,6 @@ def update_variant_repos() -> None:
                 # CDN repo (since we run update_or_create above) can be linked to
                 # multiple product nodes, each linked to a different Variant.
                 repo.pnodes.get_or_create(object_id=repo.pk, parent=pv_node, defaults={"obj": repo})
+                # Saving the Channel's taxonomy automatically links it to all other models
+                # Those other models don't need to have their taxonomies saved separately
                 repo.save_product_taxonomy()
-
-            # Update list of channels for this Variant so that we don't have to call
-            # the more expensive save_product_taxonomy() method just to update channels.
-            # TODO: Below wipes out any existing values in the field
-            #  Which were set by the full save_product_taxonomy()
-            pv.channels = pv_channels
-            pv.save()
-            # Call the full save_product_taxonomy() method for parent ProductModels
-            pv.productstreams.save_product_taxonomy()
-            pv.productversions.save_product_taxonomy()
-            pv.products.save_product_taxonomy()

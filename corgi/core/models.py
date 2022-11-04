@@ -362,7 +362,10 @@ class ProductModel(TimeStampedModel):
     def productvariants(self) -> Union["ProductVariant", models.Manager["ProductVariant"]]:
         pass
 
-    channels = fields.ArrayField(models.CharField(max_length=200), default=list)
+    @property
+    @abstractmethod
+    def channels(self) -> models.Manager["Channel"]:
+        pass
 
     @staticmethod
     def get_related_components(build_ids: QuerySet, sort_field: str) -> QuerySet["Component"]:
@@ -456,6 +459,7 @@ class ProductModel(TimeStampedModel):
         productvariants = tuple(
             node.obj for node in ProductNode.get_product_variants(family, lookup="")
         )
+        channels = ProductNode.get_channels(family)
 
         # Avoid setting fields on models which don't have them
         # Also set fields correctly based on which side of the relationship we see
@@ -489,6 +493,9 @@ class ProductModel(TimeStampedModel):
                 f"Add behavior for class {type(self)} in ProductModel.save_product_taxonomy()"
             )
 
+        # All ProductModels have a set of descendant channels
+        self.channels.set(channels)
+
     def save(self, *args, **kwargs):
         self.ofuri = self.get_ofuri()
         super().save(*args, **kwargs)
@@ -517,6 +524,10 @@ class Product(ProductModel):
     # implicit "productvariants" field on Product model
     # is created by products field on ProductVariant model
     productvariants: models.Manager["ProductVariant"]
+
+    # implicit "channels" field on Product model
+    # is created by products field on Channel model
+    channels: models.Manager["Channel"]
 
     def get_ofuri(self) -> str:
         """Return product URI
@@ -547,6 +558,10 @@ class ProductVersion(ProductModel):
     # implicit "productvariants" field on ProductVersion model
     # is created by productversions field on ProductVariant model
     productvariants: models.Manager["ProductVariant"]
+
+    # implicit "channels" field on ProductVersion model
+    # is created by productversions field on Channel model
+    channels: models.Manager["Channel"]
 
     def get_ofuri(self) -> str:
         """Return product version URI.
@@ -587,6 +602,10 @@ class ProductStream(ProductModel):
     # implicit "productvariants" field on ProductStream model
     # is created by productstreams field on ProductVariant model
     productvariants: models.Manager["ProductVariant"]
+
+    # implicit "channels" field on ProductStream model
+    # is created by productstreams field on Channel model
+    channels: models.Manager["Channel"]
 
     def get_ofuri(self) -> str:
         """Return product stream URI
@@ -656,6 +675,10 @@ class ProductVariant(ProductModel):
     def productvariants(self) -> "ProductVariant":
         return self
 
+    # implicit "channels" field on ProductVariant model
+    # is created by productvariants field on Channel model
+    channels: models.Manager["Channel"]
+
     @property
     def cpes(self) -> tuple[str]:
         # Split to fix warning that linter and IDE disagree about
@@ -674,7 +697,24 @@ class ProductVariantTag(Tag):
     tagged_model = models.ForeignKey(ProductVariant, on_delete=models.CASCADE, related_name="tags")
 
 
-class Channel(TimeStampedModel):
+class ProductTaxonomyMixin(models.Model):
+    """Add product taxonomy fields and a method to save them for Channels and Components."""
+
+    # related_name like "channels" or "components" - first "s" is a format specifier
+    products = models.ManyToManyField(Product, related_name="%(class)ss")
+    productversions = models.ManyToManyField(ProductVersion, related_name="%(class)ss")
+    productstreams = models.ManyToManyField(ProductStream, related_name="%(class)ss")
+    productvariants = models.ManyToManyField(ProductVariant, related_name="%(class)ss")
+
+    class Meta:
+        abstract = True
+
+    @abstractmethod
+    def save_product_taxonomy(self) -> None:
+        pass
+
+
+class Channel(TimeStampedModel, ProductTaxonomyMixin):
     """A model that represents a specific type of delivery channel.
 
     A Channel is essentially the "location" of where a specific artifact is available from to
@@ -692,45 +732,22 @@ class Channel(TimeStampedModel):
     description = models.TextField(default="")
     meta_attr = models.JSONField(default=dict)
     pnodes = GenericRelation(ProductNode, related_query_name="channel")
-    products = fields.ArrayField(models.CharField(max_length=200), default=list)
-    product_versions = fields.ArrayField(models.CharField(max_length=200), default=list)
-    product_streams = fields.ArrayField(models.CharField(max_length=200), default=list)
-    product_variants = fields.ArrayField(models.CharField(max_length=200), default=list)
 
     def __str__(self) -> str:
         return str(self.name)
 
-    def save_product_taxonomy(self):
-        # TODO: Below doesn't match ProductModel's save_product_taxonomy
-        # We use ofuri here to identify the taxonomy
-        # But ProductModel subclasses all use name to identify the taxonomy
-        # And in Component, we use ofuri to identify the taxonomy
-        # But the Component taxonomy properties don't seem to be set anywhere
-        # and all Components in stage have an empty [] list of product_variants
-        product_set = set()
-        version_set = set()
-        stream_set = set()
-        variant_set = set()
-        for n in self.pnodes.first().get_ancestors():
-            if isinstance(n.obj, Product):
-                product_set.add(n.obj.ofuri)
-            elif isinstance(n.obj, ProductVersion):
-                version_set.add(n.obj.ofuri)
-            elif isinstance(n.obj, ProductStream):
-                stream_set.add(n.obj.ofuri)
-            elif isinstance(n.obj, ProductVariant):
-                variant_set.add(n.obj.ofuri)
-            else:
-                raise ValueError(
-                    f"Unknown type {type(n.obj)} for {n.obj.ofuri}"
-                    f"when saving product taxonomy for channel {self.name}"
-                )
+    def save_product_taxonomy(self) -> None:
+        """Save taxonomy fields using ancestors of this Channel"""
+        ancestors = self.pnodes.get_queryset().get_ancestors()
+        products = ProductNode.get_products(ancestors)
+        versions = ProductNode.get_product_versions(ancestors)
+        streams = ProductNode.get_product_streams(ancestors)
+        variants = ProductNode.get_product_variants(ancestors)
 
-        self.products = list(product_set)
-        self.product_versions = list(version_set)
-        self.product_streams = list(stream_set)
-        self.product_variants = list(variant_set)
-        self.save()
+        self.products.set(products)
+        self.productversions.set(versions)
+        self.productstreams.set(streams)
+        self.productvariants.set(variants)
 
 
 class ProductComponentRelation(TimeStampedModel):

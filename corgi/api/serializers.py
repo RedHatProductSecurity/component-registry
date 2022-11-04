@@ -1,9 +1,11 @@
 import logging
 from abc import abstractmethod
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Union
 from urllib.parse import quote
+from uuid import UUID
 
 from django.conf import settings
+from django.db.models.manager import Manager
 from rest_framework import serializers
 
 from config import utils
@@ -16,6 +18,7 @@ from corgi.core.models import (
     ProductComponentRelation,
     ProductModel,
     ProductStream,
+    ProductTaxonomyMixin,
     ProductVariant,
     ProductVersion,
     SoftwareBuild,
@@ -104,10 +107,22 @@ def get_upstream_link(
     return link
 
 
-def get_model_id_link(model_name: str, uuid_or_build_id, manifest=False) -> str:
+def get_model_id_link(
+    model_name: str, uuid_or_build_id: Union[int, str, UUID], manifest=False
+) -> str:
     """Generic method to get an ID-based link for an arbitrary Model subclass."""
     link = f"{CORGI_API_URL}/{model_name}/{uuid_or_build_id}"
     return link if not manifest else f"{link}/manifest"
+
+
+def get_channel_data_list(manager: Manager["Channel"]) -> list[dict[str, str]]:
+    """Generic method to get a list of {name, link, uuid} data for a ProductModel subclass."""
+    # A little different than get_product_data_list - we're always iterating over a manager
+    # And channels have no ofuri, so we return a model UUID link instead
+    return [
+        {"name": name, "link": get_model_id_link("channel", uuid), "uuid": str(uuid)}
+        for (name, uuid) in manager.values_list("name", "uuid")
+    ]
 
 
 def get_product_data_list(
@@ -206,6 +221,37 @@ class SoftwareBuildSummarySerializer(serializers.ModelSerializer):
     class Meta:
         model = SoftwareBuild
         fields = ["link", "build_id", "type", "name", "source"]
+
+
+class ProductTaxonomySerializer(serializers.ModelSerializer):
+    @staticmethod
+    def get_products(instance: Union[ProductModel, ProductTaxonomyMixin]) -> list[dict[str, str]]:
+        return get_product_data_list(Product, "products", instance.products)
+
+    @staticmethod
+    def get_product_versions(
+        instance: Union[ProductModel, ProductTaxonomyMixin]
+    ) -> list[dict[str, str]]:
+        return get_product_data_list(ProductVersion, "product_versions", instance.productversions)
+
+    @staticmethod
+    def get_product_streams(
+        instance: Union[ProductModel, ProductTaxonomyMixin]
+    ) -> list[dict[str, str]]:
+        return get_product_data_list(ProductStream, "product_streams", instance.productstreams)
+
+    @staticmethod
+    def get_product_variants(
+        instance: Union[ProductModel, ProductTaxonomyMixin]
+    ) -> list[dict[str, str]]:
+        return get_product_data_list(ProductVariant, "product_variants", instance.productvariants)
+
+    @staticmethod
+    def get_channels(instance: ProductModel) -> list[dict[str, str]]:
+        return get_channel_data_list(instance.channels)
+
+    class Meta:
+        abstract = True
 
 
 class ComponentSerializer(serializers.ModelSerializer):
@@ -328,13 +374,14 @@ class ComponentListSerializer(serializers.ModelSerializer):
         ]
 
 
-class ProductModelSerializer(serializers.ModelSerializer):
+class ProductModelSerializer(ProductTaxonomySerializer):
     tags = TagSerializer(many=True, read_only=True)
     components = serializers.SerializerMethodField()
     upstreams = serializers.SerializerMethodField()
     builds = serializers.SerializerMethodField()
     link = serializers.SerializerMethodField()
     build_count = serializers.SerializerMethodField()
+    channels = serializers.SerializerMethodField()
 
     @staticmethod
     @abstractmethod
@@ -358,26 +405,6 @@ class ProductModelSerializer(serializers.ModelSerializer):
         return instance.builds.count()
 
     @staticmethod
-    def get_products(instance: ProductModel) -> list[dict[str, str]]:
-        return get_product_data_list(Product, "products", instance.products)
-
-    @staticmethod
-    def get_product_versions(instance: ProductModel) -> list[dict[str, str]]:
-        return get_product_data_list(ProductVersion, "product_versions", instance.productversions)
-
-    @staticmethod
-    def get_product_streams(instance: ProductModel) -> list[dict[str, str]]:
-        return get_product_data_list(ProductStream, "product_streams", instance.productstreams)
-
-    @staticmethod
-    def get_product_variants(instance: ProductModel) -> list[dict[str, str]]:
-        return get_product_data_list(ProductVariant, "product_variants", instance.productvariants)
-
-    @staticmethod
-    def get_channels(instance: ProductModel) -> list[dict[str, str]]:
-        return get_product_data_list(Channel, "channels", instance.channels)
-
-    @staticmethod
     def get_manifest(instance: ProductStream) -> str:
         return get_model_id_link("product_streams", instance.uuid, manifest=True)
 
@@ -398,6 +425,7 @@ class ProductModelSerializer(serializers.ModelSerializer):
             "components",
             "upstreams",
             "tags",
+            "channels",
         ]
 
 
@@ -494,38 +522,34 @@ class ProductVariantSerializer(ProductModelSerializer):
         ]
 
 
-class ChannelSerializer(serializers.ModelSerializer):
+class ChannelSerializer(ProductTaxonomySerializer):
     link = serializers.SerializerMethodField()
+    products = serializers.SerializerMethodField()
+    product_versions = serializers.SerializerMethodField()
+    product_streams = serializers.SerializerMethodField()
+    product_variants = serializers.SerializerMethodField()
 
     class Meta:
         model = Channel
-        fields = "__all__"
+        fields = [
+            "uuid",
+            "link",
+            "last_changed",
+            "created_at",
+            "name",
+            "relative_url",
+            "type",
+            "description",
+            "meta_attr",
+            "products",
+            "product_versions",
+            "product_streams",
+            "product_variants",
+        ]
 
     @staticmethod
     def get_link(instance: ProductVariant) -> str:
         return get_model_id_link("channels", instance.uuid)
-
-    @staticmethod
-    def get_products(instance: Channel) -> list[dict[str, str]]:
-        return get_product_data_list_by_ofuri(Product, "products", instance.products)
-
-    @staticmethod
-    def get_product_versions(instance: Channel) -> list[dict[str, str]]:
-        return get_product_data_list_by_ofuri(
-            ProductVersion, "product_versions", instance.product_versions
-        )
-
-    @staticmethod
-    def get_product_streams(instance: Channel) -> list[dict[str, str]]:
-        return get_product_data_list_by_ofuri(
-            ProductStream, "product_streams", instance.product_streams
-        )
-
-    @staticmethod
-    def get_product_variants(instance: Channel) -> list[dict[str, str]]:
-        return get_product_data_list_by_ofuri(
-            ProductVariant, "product_variants", instance.product_variants
-        )
 
 
 class AppStreamLifeCycleSerializer(serializers.ModelSerializer):

@@ -13,7 +13,7 @@ from mptt.managers import TreeManager
 from mptt.models import MPTTModel, TreeForeignKey
 from packageurl import PackageURL
 
-from corgi.core.constants import CONTAINER_DIGEST_FORMATS
+from corgi.core.constants import CONTAINER_DIGEST_FORMATS, MODEL_NODE_LEVEL_MAPPING
 from corgi.core.files import ComponentManifestFile, ProductManifestFile
 from corgi.core.mixins import TimeStampedModel
 
@@ -104,54 +104,48 @@ class ProductNode(NodeModel):
     #   attribute's related query name.
 
     @staticmethod
-    def get_products(node_model):
-        return list(
-            node_model.pnodes.first()
-            .get_family()
-            .filter(content_type=ContentType.objects.get_for_model(Product))
-            .values_list("product__name", flat=True)
-            .distinct()
+    def get_node_pks_for_type(qs: QuerySet["ProductNode"], target_model: str) -> QuerySet:
+        """For a given ProductNode queryset, find all nodes with the given type
+        and return the primary keys of their related objects"""
+        # "product_version" -> "ProductVersion"
+        mapping_model = target_model.title().replace("_", "")
+        return qs.filter(level=MODEL_NODE_LEVEL_MAPPING[mapping_model]).values_list(
+            f"{target_model}__pk", flat=True
         )
 
     @staticmethod
-    def get_product_versions(node_model):
-        return list(
-            node_model.pnodes.first()
+    def get_node_names_for_type(product_model: "ProductModel", target_model: str) -> QuerySet:
+        """For a given ProductModel / Channel, find all related nodes with the given type
+        and return the names of their related objects"""
+        # "product_version" -> "ProductVersion"
+        mapping_model = target_model.title().replace("_", "")
+        # No .distinct() since __name on all ProductModel subclasses + Channel is always unique
+        return (
+            product_model.pnodes.first()
             .get_family()
-            .filter(content_type=ContentType.objects.get_for_model(ProductVersion))
-            .values_list("product_version__name", flat=True)
-            .distinct()
+            .filter(level=MODEL_NODE_LEVEL_MAPPING[mapping_model])
+            .values_list(f"{target_model}__name", flat=True)
         )
 
-    @staticmethod
-    def get_product_streams(node_model):
-        return list(
-            node_model.pnodes.first()
-            .get_family()
-            .filter(content_type=ContentType.objects.get_for_model(ProductStream))
-            .values_list("product_stream__name", flat=True)
-            .distinct()
-        )
+    @classmethod
+    def get_products(cls, product_model: "ProductModel") -> list[str]:
+        return list(cls.get_node_names_for_type(product_model, "product"))
 
-    @staticmethod
-    def get_product_variants(node_model):
-        return list(
-            node_model.pnodes.first()
-            .get_family()
-            .filter(content_type=ContentType.objects.get_for_model(ProductVariant))
-            .values_list("product_variant__name", flat=True)
-            .distinct()
-        )
+    @classmethod
+    def get_product_versions(cls, product_model: "ProductModel") -> list[str]:
+        return list(cls.get_node_names_for_type(product_model, "product_version"))
 
-    @staticmethod
-    def get_channels(node_model):
-        return list(
-            node_model.pnodes.first()
-            .get_family()
-            .filter(content_type=ContentType.objects.get_for_model(Channel))
-            .values_list("channel__name", flat=True)
-            .distinct()
-        )
+    @classmethod
+    def get_product_streams(cls, product_model: "ProductModel") -> list[str]:
+        return list(cls.get_node_names_for_type(product_model, "product_stream"))
+
+    @classmethod
+    def get_product_variants(cls, product_model: "ProductModel") -> list[str]:
+        return list(cls.get_node_names_for_type(product_model, "product_variant"))
+
+    @classmethod
+    def get_channels(cls, product_model: "ProductModel") -> list[str]:
+        return list(cls.get_node_names_for_type(product_model, "channel"))
 
 
 class ComponentNode(NodeModel):

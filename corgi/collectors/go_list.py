@@ -3,6 +3,7 @@ import logging
 import shlex
 import subprocess
 import tempfile
+from os import walk
 from pathlib import Path
 from shutil import ReadError, unpack_archive
 from typing import IO, Any, Generator, Optional
@@ -26,16 +27,31 @@ class GoList:
                     try:
                         unpack_archive(target_path, extract_dir)
                     except ReadError:
-                        logger.debug(f"Cannot unpack file: {target_path}")
+                        logger.debug("Cannot unpack file: %s", target_path)
                         continue
-                    for result in cls.invoke_process_popen_poll_live(
-                        GO_LIST_COMMAND, Path(extract_dir)
-                    ):
-                        results.append(result)
+                    go_source_dir = cls.find_go_dir(extract_dir)
+                    if go_source_dir:
+                        for result in cls.invoke_process_popen_poll_live(
+                            GO_LIST_COMMAND, go_source_dir
+                        ):
+                            results.append(result)
+                    else:
+                        logger.debug("Did not find go.mod in %s", target_path)
             else:
                 for result in cls.invoke_process_popen_poll_live(GO_LIST_COMMAND, target_path):
                     results.append(result)
         return results
+
+    @classmethod
+    def find_go_dir(cls, extract_dir):
+        go_source_dir = None
+        # Walk traverses directories in a top-down fashion meaning we can break on the first
+        # detected go.mod file to avoid setting the root directory to a subdirectory by mistake
+        for root, _, filenames in walk(extract_dir):
+            if "go.mod" in filenames:
+                go_source_dir = Path(root)
+                break
+        return go_source_dir
 
     @classmethod
     def invoke_process_popen_poll_live(

@@ -13,6 +13,7 @@ from django.conf import settings
 from requests import Response
 
 from config.celery import app
+from corgi.collectors.go_list import GoList
 from corgi.collectors.syft import Syft
 from corgi.core.models import Component, ComponentNode, SoftwareBuild
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
@@ -55,7 +56,7 @@ def save_component(component: dict[str, Any], parent: ComponentNode):
             "Saved component purl %s, does not match Syft purl: %s", obj.purl, meta["purl"]
         )
 
-    node, _ = obj.cnodes.get_or_create(
+    node, node_created = obj.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=parent,
         purl=obj.purl,
@@ -65,7 +66,7 @@ def save_component(component: dict[str, Any], parent: ComponentNode):
         },
     )
 
-    return created
+    return created or node_created
 
 
 @app.task(
@@ -118,7 +119,11 @@ def _scan_files(anchor_node, sources) -> int:
         "Scan files called with anchor node: %s, and sources: %s", anchor_node.obj.purl, sources
     )
     new_components = 0
-    for component in Syft.scan_files(sources):
+    detected_components = Syft.scan_files(sources)
+    # TODO get go version from container meta_attr
+    detected_components.extend(GoList.scan_files(sources))
+
+    for component in detected_components:
         if save_component(component, anchor_node):
             new_components += 1
     logger.info("Detected %s new components using Syft scan", new_components)

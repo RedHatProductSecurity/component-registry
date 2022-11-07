@@ -297,7 +297,8 @@ def test_slow_software_composition_analysis(
     assert mock_syft.call_args_list == expected_syft_call_arg_list
     expected_component = Component.objects.get(purl=expected_purl)
     if is_container:
-        root_component = Component.objects.get(type=Component.Type.CONTAINER_IMAGE, arch="noarch", software_build=sb
+        root_component = Component.objects.get(
+            type=Component.Type.CONTAINER_IMAGE, arch="noarch", software_build=sb
         )
     else:
         root_component = Component.objects.srpms().get(software_build=sb)

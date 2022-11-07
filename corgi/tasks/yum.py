@@ -4,6 +4,7 @@ from urllib.parse import urlparse
 
 from celery_singleton import Singleton
 from django.conf import settings
+from django.utils import timezone
 
 from config.celery import app
 from corgi.collectors.yum import Yum
@@ -27,13 +28,13 @@ logger = logging.getLogger(__name__)
 )
 def fetch_unprocessed_yum_relations(force_process: bool = False, created_since: int = 0) -> int:
     if created_since:
-        created_delta = timedelta(days=created_since)
+        created_dt = timezone.now() - timedelta(days=created_since)
     else:
-        created_delta = get_last_success_for_task("corgi.tasks.yum.fetch_unprocessed_yum_relations")
+        created_dt = get_last_success_for_task("corgi.tasks.yum.fetch_unprocessed_yum_relations")
     return fetch_unprocessed_relations(
         ProductComponentRelation.Type.YUM_REPO,
         force_process=force_process,
-        created_since=created_delta,
+        created_since=created_dt,
     )
 
 

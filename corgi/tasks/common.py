@@ -44,7 +44,7 @@ def fatal_code(e):
         return 400 <= e.response.status_code < 500 and e.response.status_code != 408
 
 
-def get_last_success_for_task(task_name):
+def get_last_success_for_task(task_name: str) -> timezone.datetime:
     """Return the timestamp of the last successful task so we can fetch updates since that time.
 
     For extra measure, the last success timestamp is offset by 30 minutes to overlap. If no record

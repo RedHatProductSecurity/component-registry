@@ -484,13 +484,12 @@ def fetch_modular_builds(relations_query: QuerySet, force_process: bool = False)
 
 def fetch_unprocessed_relations(
     relation_type: ProductComponentRelation.Type,
-    created_since: timedelta,
+    created_since: timezone.datetime,
     force_process: bool = False,
 ) -> int:
     relations_query = ProductComponentRelation.objects.filter(type=relation_type)
     if created_since:
-        created_during = timezone.now() - created_since
-        relations_query = relations_query.filter(created_at__gte=created_during)
+        relations_query = relations_query.filter(created_at__gte=created_since)
     # batch process to avoid exhausting the memory limit for the pod
     distinct_ids = relations_query.values_list("build_id", flat=True).distinct()
     relation_count = distinct_ids.count()
@@ -521,8 +520,9 @@ def fetch_unprocessed_relations(
 def fetch_unprocessed_brew_tag_relations(
     force_process: bool = False, created_since: int = 2
 ) -> int:
+    created_dt = timezone.now() - timedelta(days=created_since)
     return fetch_unprocessed_relations(
         ProductComponentRelation.Type.BREW_TAG,
         force_process=force_process,
-        created_since=timedelta(days=created_since),
+        created_since=created_dt,
     )

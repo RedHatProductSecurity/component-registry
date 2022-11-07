@@ -3,6 +3,7 @@ from datetime import timedelta
 
 from celery_singleton import Singleton
 from django.conf import settings
+from django.utils import timezone
 
 from config.celery import app
 from corgi.collectors.pulp import Pulp
@@ -21,10 +22,11 @@ logger = logging.getLogger(__name__)
     soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
 )
 def fetch_unprocessed_cdn_relations(force_process: bool = False, created_since: int = 8) -> int:
+    created_dt = timezone.now() - timedelta(days=created_since)
     return fetch_unprocessed_relations(
         ProductComponentRelation.Type.CDN_REPO,
         force_process=force_process,
-        created_since=timedelta(days=created_since),
+        created_since=created_dt,
     )
 
 

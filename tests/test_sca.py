@@ -57,6 +57,15 @@ def test_parse_golist_components():
     assert "crypto/tls" in names
 
 
+def test_golist_scan_files():
+    file = Path("Dockerfile")
+    assert not file.is_dir()
+    assert not GoList.scan_files([file])
+    archive = Path("tests/data/go/runc-1.1.3.tar.gz")
+    results = GoList.scan_files([archive])
+    assert results
+
+
 archive_source_test_data = [
     (
         f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below

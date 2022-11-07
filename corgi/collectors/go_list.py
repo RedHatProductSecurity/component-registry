@@ -2,24 +2,40 @@ import json
 import logging
 import shlex
 import subprocess
+import tempfile
 from pathlib import Path
+from shutil import ReadError, unpack_archive
 from typing import IO, Any, Generator, Optional
 
 from splitstream import splitfile
 
 from corgi.core.models import Component
 
+GO_LIST_COMMAND = "/usr/bin/go list -json -deps ./..."
+
 logger = logging.getLogger(__name__)
 
 
 class GoList:
     @classmethod
-    def scan_files(cls, target_path: Path) -> Generator[dict[str, Any], None, None]:
-        if not target_path.is_dir():
-            raise ValueError("Target path %s is not a directory", target_path)
-        # TODO unpack archives here?
-        command = "/usr/bin/go list -json -deps ./..."
-        yield from cls.invoke_process_popen_poll_live(command, target_path)
+    def scan_files(cls, target_paths: list[Path]) -> list[dict[str, Any]]:
+        results = []
+        for target_path in target_paths:
+            if not target_path.is_dir():
+                with tempfile.TemporaryDirectory() as extract_dir:
+                    try:
+                        unpack_archive(target_path, extract_dir)
+                    except ReadError:
+                        logger.debug(f"Cannot unpack file: {target_path}")
+                        continue
+                    for result in cls.invoke_process_popen_poll_live(
+                        GO_LIST_COMMAND, Path(extract_dir)
+                    ):
+                        results.append(result)
+            else:
+                for result in cls.invoke_process_popen_poll_live(GO_LIST_COMMAND, target_path):
+                    results.append(result)
+        return results
 
     @classmethod
     def invoke_process_popen_poll_live(

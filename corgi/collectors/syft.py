@@ -39,7 +39,7 @@ class Syft:
             # We might consider more adding more sanitization if we accept ad-hoc source for scans
             scan_result = subprocess.check_output(  # nosec B603
                 [
-                    "/usr/local/bin/syft",
+                    "/usr/bin/syft",
                     "packages",
                     "-q",
                     "-o=syft-json",

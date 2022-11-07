@@ -270,7 +270,7 @@ def test_slow_software_composition_analysis(
     expected_syft_call_arg_list = [
         call(
             [
-                "/usr/local/bin/syft",
+                "/usr/bin/syft",
                 "packages",
                 "-q",
                 "-o=syft-json",
@@ -284,7 +284,7 @@ def test_slow_software_composition_analysis(
         expected_syft_call_arg_list.append(
             call(
                 [
-                    "/usr/local/bin/syft",
+                    "/usr/bin/syft",
                     "packages",
                     "-q",
                     "-o=syft-json",

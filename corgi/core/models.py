@@ -268,10 +268,7 @@ class SoftwareBuild(TimeStampedModel):
         variant_ids = list(
             ProductComponentRelation.objects.filter(
                 build_id=self.build_id,
-                type__in=(
-                    ProductComponentRelation.Type.CDN_REPO,
-                    ProductComponentRelation.Type.ERRATA,
-                ),
+                type__in=ProductComponentRelation.VARIANT_TYPES,
             )
             .values_list("product_ref", flat=True)
             .distinct()
@@ -280,11 +277,7 @@ class SoftwareBuild(TimeStampedModel):
         stream_ids = list(
             ProductComponentRelation.objects.filter(
                 build_id=self.build_id,
-                type__in=(
-                    ProductComponentRelation.Type.BREW_TAG,
-                    ProductComponentRelation.Type.COMPOSE,
-                    ProductComponentRelation.Type.YUM_REPO,
-                ),
+                type__in=ProductComponentRelation.STREAM_TYPES,
             )
             .values_list("product_ref", flat=True)
             .distinct()
@@ -646,6 +639,13 @@ class ProductComponentRelation(TimeStampedModel):
         BREW_TAG = "BREW_TAG"
         CDN_REPO = "CDN_REPO"
         YUM_REPO = "YUM_REPO"
+
+    # Below not defined in constants to avoid circular imports
+    # ProductComponentRelation types which refer to ProductStreams
+    STREAM_TYPES = (Type.BREW_TAG, Type.COMPOSE, Type.YUM_REPO)
+
+    # ProductComponentRelation types which refer to ProductVariants
+    VARIANT_TYPES = (Type.CDN_REPO, Type.ERRATA)
 
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     type = models.CharField(choices=Type.choices, max_length=50)

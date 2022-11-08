@@ -9,7 +9,7 @@
     {% endfor %}
     {
         "copyrightText": "NOASSERTION",
-        "downloadLocation": {% if obj.channels %}"{{obj.channels.0}}"{% else %}"NOASSERTION"{% endif %},
+        "downloadLocation": "NOASSERTION",
         "externalRefs": [{% for cpe in obj.cpes %}
             {
                 "referenceCategory": "SECURITY",

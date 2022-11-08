@@ -1,7 +1,7 @@
 {# Template for the SPDX package object #}
 {
     "copyrightText": {% if component.copyright_text %}"{{component.copyright_text}}"{% else %}"NOASSERTION"{% endif %},
-    "downloadLocation": {% if component.channels %}"{{component.channels.0}}"{% else %}"NOASSERTION"{% endif %},
+    "downloadLocation": {% if component.download_url %}"{{component.download_url}}"{% else %}"NOASSERTION"{% endif %},
     "externalRefs": [
         {
             "referenceCategory": "PACKAGE_MANAGER",

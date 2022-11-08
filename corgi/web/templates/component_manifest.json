@@ -6,7 +6,7 @@
     {% endfor %}
     {
         "copyrightText": {% if obj.copyright_text %}"{{obj.copyright_text}}"{% else %}"NOASSERTION"{% endif %},
-        "downloadLocation": {% if obj.channels %}"{{obj.channels.0}}"{% else %}"NOASSERTION"{% endif %},
+        "downloadLocation": {% if obj.download_url %}"{{obj.download_url}}"{% else %}"NOASSERTION"{% endif %},
         "externalRefs": [
             {
                 "referenceCategory": "PACKAGE_MANAGER",

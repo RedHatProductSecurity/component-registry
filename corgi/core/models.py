@@ -965,6 +965,35 @@ class Component(TimeStampedModel):
         return self.software_build.meta_attr
 
     @property
+    def download_url(self) -> str:
+        """Report a URL for RPMs and container images that can be used in manifests"""
+        # RPM ex:
+        # /downloads/content/aspell-devel/0.60.8-8.el9/aarch64/fd431d51/package
+        # We can't build URLs like above because the fd431d51 signing key is required,
+        # but isn't available in the meta_attr / other properties (CORGI-342). Get it with:
+        # rpm -q --qf %{SIGPGP:pgpsig} aspell-devel-0.60.8-8.el9.x86_64 | tail -c8
+        if self.type == Component.Type.RPM:
+            return "https://access.redhat.com/downloads/content/package-browser"
+
+        # Image ex:
+        # /software/containers/container-native-virtualization/hco-bundle-registry/5ccae1925a13467289f2475b
+        # /software/containers/openshift/ose-local-storage-diskmaker/
+        # 5d9347b8dd19c70159f2f6e4?architecture=s390x&tag=v4.4.0-202007171809.p0
+        # We can't build URLs like above because the hash is required,
+        # but doesn't match any hash in the meta_attr / other properties.
+        # We could use repository_url instead, if we decide to store it on the model.
+        # Currently it's only in the meta_attr and should not be used (CORGI-341).
+
+        # TODO: self.filename, AKA the filename of the image archive a container is included in,
+        #  is always unset. This is not the digest SHA but the config layer SHA.
+        elif self.type == Component.Type.CONTAINER_IMAGE:
+            return "https://catalog.redhat.com/software/containers/search"
+
+        # All other component types are either not currently supported or have no downloadable
+        # artifacts (e.g. RHEL module builds).
+        return ""
+
+    @property
     def errata(self) -> list[str]:
         """Return errata that contain component."""
         if not self.software_build:

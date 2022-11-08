@@ -43,7 +43,7 @@ class GoList:
         return results
 
     @classmethod
-    def find_go_dir(cls, extract_dir):
+    def find_go_dir(cls, extract_dir: str) -> Optional[Path]:
         go_source_dir = None
         # Walk traverses directories in a top-down fashion meaning we can break on the first
         # detected go.mod file to avoid setting the root directory to a subdirectory by mistake
@@ -75,8 +75,10 @@ class GoList:
             artifact = json.loads(jsonstr)
             typed_component: dict[str, Any] = {
                 "type": Component.Type.GOLANG,
+                "namespace": Component.Namespace.UPSTREAM,
                 "meta": {
                     "name": artifact["ImportPath"],
+                    "go_component_type": "go-package",
                 },
                 "analysis_meta": {"source": "go-list"},
             }

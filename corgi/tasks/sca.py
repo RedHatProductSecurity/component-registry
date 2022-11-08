@@ -41,6 +41,9 @@ def save_component(component: dict[str, Any], parent: ComponentNode):
         if group_id:
             meta_attr["group_id"] = group_id
 
+    if "go_component_type" in meta:
+        meta_attr["go_component_type"] = meta["go_component_type"]
+
     # Use all fields from Component index and uniqueness constraint
     obj, created = Component.objects.get_or_create(
         type=component["type"],

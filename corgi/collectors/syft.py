@@ -81,6 +81,8 @@ class Syft:
                 if pkg_type == Component.Type.MAVEN:
                     purl = PackageURL.from_string(artifact["purl"])
                     typed_component["meta"]["group_id"] = purl.namespace
+                elif pkg_type == Component.Type.GOLANG:
+                    typed_component["meta"]["go_component_type"] = "gomod"
 
                 components.append(typed_component)
         return components

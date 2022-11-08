@@ -121,6 +121,29 @@ def test_go_package_with_version(go_list_scan_files):
     assert go_package.version == GO_PACKAGE_VERSION
 
 
+@patch("corgi.collectors.go_list.GoList.scan_files")
+def test_go_package_type(go_list_scan_files):
+    go_list_scan_files.return_value = [
+        {
+            "type": Component.Type.GOLANG,
+            "meta": {
+                "name": "go-package",
+                "version": GO_PACKAGE_VERSION,
+                "go_component_type": "go-package",
+            },
+            "analysis_meta": {},
+        }
+    ]
+    root_component = ContainerImageComponentFactory()
+    anchor_node = root_component.cnodes.create(
+        parent=None, object_id=root_component.pk, obj=root_component
+    )
+    _scan_files(anchor_node, [])
+    go_package = Component.objects.get(type=Component.Type.GOLANG, name="go-package")
+    # Verify there was no modification to the go package version if it was set by the collector
+    assert go_package.meta_attr["go_component_type"] == "go-package"
+
+
 archive_source_test_data = [
     (
         f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below

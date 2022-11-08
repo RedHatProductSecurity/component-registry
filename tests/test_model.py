@@ -70,7 +70,7 @@ def test_cpes():
     node3c = ProductNode.objects.create(parent=node2b, obj=ps3, object_id=ps3.pk)
     assert node3c
 
-    assert pv1a.cpes == ["cpe:/o:redhat:enterprise_linux:9"]
+    assert pv1a.cpes == ("cpe:/o:redhat:enterprise_linux:9",)
     assert sorted(p1.cpes) == [
         "cpe:/o:redhat:Brantabernicla:8",
         "cpe:/o:redhat:enterprise_linux:9",

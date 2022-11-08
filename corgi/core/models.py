@@ -390,6 +390,27 @@ class ProductModel(TimeStampedModel):
                 has_build += 1
         return round(has_build / pnode_children.count(), 2)
 
+    @property
+    def cpes(self) -> tuple[str, ...]:
+        """Return CPEs for child streams / variants."""
+        # include_self=True so we don't have to override this property for streams
+        descendants = self.pnodes.get_queryset().get_descendants(include_self=True)
+        stream_cpes = (
+            descendants.filter(level=MODEL_NODE_LEVEL_MAPPING["ProductStream"])
+            .values_list("product_stream__cpe", flat=True)
+            .distinct()
+        )
+        variant_cpes = (
+            descendants.filter(level=MODEL_NODE_LEVEL_MAPPING["ProductVariant"])
+            .values_list("product_variant__cpe", flat=True)
+            .distinct()
+        )
+        return *stream_cpes, *variant_cpes
+
+    @abstractmethod
+    def get_ofuri(self) -> str:
+        pass
+
     def save_product_taxonomy(self):
         self.product_variants = ProductNode.get_product_variants(self)
         self.product_streams = ProductNode.get_product_streams(self)
@@ -424,14 +445,6 @@ class Product(ProductModel):
         """
         return f"o:redhat:{self.name}"
 
-    @property
-    def cpes(self):
-        cpes = []
-        for p in self.pnodes.get_queryset().get_descendants():
-            if hasattr(p.obj, "cpe"):
-                cpes.append(p.obj.cpe)
-        return list(set(cpes))
-
 
 class ProductTag(Tag):
     tagged_model = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="tags")
@@ -449,14 +462,6 @@ class ProductVersion(ProductModel):
         """
         version_name = re.sub(r"(-|_|)" + self.version + "$", "", self.name)
         return f"o:redhat:{version_name}:{self.version}"
-
-    @property
-    def cpes(self):
-        cpes = []
-        for p in self.pnodes.get_queryset().get_descendants():
-            if hasattr(p.obj, "cpe"):
-                cpes.append(p.obj.cpe)
-        return list(set(cpes))
 
 
 class ProductVersionTag(Tag):
@@ -478,10 +483,6 @@ class ProductStream(ProductModel):
     # redefined from parent class
     product_streams = None  # type: ignore
     pnodes = GenericRelation(ProductNode, related_query_name="product_stream")
-
-    @property
-    def cpes(self) -> list[str]:
-        return [self.cpe]
 
     def get_ofuri(self) -> str:
         """Return product stream URI
@@ -541,8 +542,10 @@ class ProductVariant(ProductModel):
     pnodes = GenericRelation(ProductNode, related_query_name="product_variant")
 
     @property
-    def cpes(self) -> list[str]:
-        return [self.cpe]
+    def cpes(self) -> tuple[str]:
+        # Split to fix warning that linter and IDE disagree about
+        cpes = (self.cpe,)
+        return cpes
 
     def get_ofuri(self) -> str:
         """Return product variant URI

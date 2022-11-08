@@ -381,7 +381,7 @@ class ProductModel(TimeStampedModel):
     def coverage(self) -> int:
         if not self.pnodes.exists():
             return 0
-        pnode_children = self.pnodes.first().get_children()
+        pnode_children = self.pnodes.get_queryset().get_descendants()
         if not pnode_children.exists():
             return 0
         has_build = 0
@@ -1067,8 +1067,10 @@ class Component(TimeStampedModel):
         upstreams = set()
         for root in roots:
             # For SRPM/RPMS, and noarch containers, these are the cnodes we want.
-            source_children = tuple(
-                c for c in root.get_children().filter(type=ComponentNode.ComponentNodeType.SOURCE)
+            source_descendant_purls = (
+                root.get_descendants()
+                .filter(type=ComponentNode.ComponentNodeType.SOURCE)
+                .values_list("purl", flat=True)
             )
             # Cachito builds nest components under the relevant source component for that
             # container build, eg. buildID=1911112. In that case we need to walk up the
@@ -1076,16 +1078,18 @@ class Component(TimeStampedModel):
             if (
                 root.obj.type == Component.Type.CONTAINER_IMAGE
                 and root.obj.arch == "noarch"
-                and len(source_children) > 1
+                and source_descendant_purls.count() > 1
             ):
                 upstreams.update(
-                    a.purl
-                    for a in self.cnodes.get_queryset().first().get_ancestors(include_self=True)
-                    if a.type == ComponentNode.ComponentNodeType.SOURCE
-                    and a.obj.namespace == Component.Namespace.UPSTREAM
+                    ancestor.purl
+                    for ancestor in self.cnodes.get_queryset()
+                    .get_ancestors(include_self=True)
+                    .filter(type=ComponentNode.ComponentNodeType.SOURCE)
+                    # Can't filter on obj fields when obj is linked using a GenericForeignKey
+                    if ancestor.obj.namespace == Component.Namespace.UPSTREAM
                 )
             else:
-                upstreams.update(c.purl for c in source_children)
+                upstreams.update(source_descendant_purls)
         return list(upstreams)
 
     def save_datascore(self):

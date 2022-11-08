@@ -116,18 +116,31 @@ def slow_software_composition_analysis(build_id: int):
 
 def _scan_files(anchor_node, sources) -> int:
     logger.info(
-        "Scan files called with anchor node: %s, and sources: %s", anchor_node.obj.purl, sources
+        "Scan files called with anchor node: %s, and sources: %s", anchor_node.purl, sources
     )
     new_components = 0
     detected_components = Syft.scan_files(sources)
-    # TODO get go version from container meta_attr
-    detected_components.extend(GoList.scan_files(sources))
+    # get go version from container meta_attr
+    go_packages = GoList.scan_files(sources)
+    _assign_go_stdlib_version(anchor_node.obj, go_packages)
+    detected_components.extend(go_packages)
 
     for component in detected_components:
         if save_component(component, anchor_node):
             new_components += 1
     logger.info("Detected %s new components using Syft scan", new_components)
     return new_components
+
+
+def _assign_go_stdlib_version(anchor_obj, go_packages):
+    for go_package in go_packages:
+        if (
+            "version" not in go_package["meta"]
+            and anchor_obj.type == Component.Type.CONTAINER_IMAGE
+            and anchor_obj.arch == "noarch"
+        ):
+            if "go_stdlib_version" in anchor_obj.meta_attr:
+                go_package["meta"]["version"] = anchor_obj.meta_attr["go_stdlib_version"]
 
 
 def _get_distgit_sources(source_url: str, build_id: int) -> list[Path]:

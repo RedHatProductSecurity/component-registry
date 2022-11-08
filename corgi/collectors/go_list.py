@@ -80,6 +80,10 @@ class GoList:
                 },
                 "analysis_meta": {"source": "go-list"},
             }
+            # `go list` returns packages which are part of modules, as well as those which are part
+            # of the standard library. Packages which are part of the standard library don't have a
+            # version set so we do some post-processing in sca._scan_files to get the go standard
+            # library version
             if "Module" in artifact:
                 if "Version" in artifact["Module"]:
                     typed_component["version"] = artifact["Module"]["Version"]

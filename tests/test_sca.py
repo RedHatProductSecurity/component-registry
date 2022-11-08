@@ -14,6 +14,7 @@ from corgi.tasks.sca import (
     _clone_source,
     _download_lookaside_sources,
     _get_distgit_sources,
+    _scan_files,
     slow_software_composition_analysis,
 )
 from tests.factories import (
@@ -21,6 +22,10 @@ from tests.factories import (
     SoftwareBuildFactory,
     SrpmComponentFactory,
 )
+
+GO_PACKAGE_VERSION = "1.0.0"
+
+GO_STDLIB_VERSION = "1.18.0"
 
 pytestmark = pytest.mark.unit
 
@@ -64,6 +69,56 @@ def test_golist_scan_files():
     archive = Path("tests/data/go/runc-1.1.3.tar.gz")
     results = GoList.scan_files([archive])
     assert results
+
+
+@patch("corgi.collectors.go_list.GoList.scan_files")
+def test_add_go_stdlib_version(go_list_scan_files):
+    go_list_scan_files.return_value = [
+        {"type": Component.Type.GOLANG, "meta": {"name": "go-package"}, "analysis_meta": {}}
+    ]
+    root_component = ContainerImageComponentFactory(
+        meta_attr={"go_stdlib_version": GO_STDLIB_VERSION}
+    )
+    anchor_node = root_component.cnodes.create(
+        parent=None, object_id=root_component.pk, obj=root_component
+    )
+    _scan_files(anchor_node, [])
+    # Verify we can look-up the detected go package with stdlib version added from root node
+    Component.objects.get(type=Component.Type.GOLANG, name="go-package", version=GO_STDLIB_VERSION)
+
+
+@patch("corgi.collectors.go_list.GoList.scan_files")
+def test_anchor_node_without_go_stdlib_version(go_list_scan_files):
+    go_list_scan_files.return_value = [
+        {"type": Component.Type.GOLANG, "meta": {"name": "go-package"}, "analysis_meta": {}}
+    ]
+    root_component = ContainerImageComponentFactory()
+    anchor_node = root_component.cnodes.create(
+        parent=None, object_id=root_component.pk, obj=root_component
+    )
+    _scan_files(anchor_node, [])
+    go_package = Component.objects.get(type=Component.Type.GOLANG, name="go-package")
+    # Verify we can lookup there was go no stdlib version added to the detected go packed
+    assert go_package.version == ""
+
+
+@patch("corgi.collectors.go_list.GoList.scan_files")
+def test_go_package_with_version(go_list_scan_files):
+    go_list_scan_files.return_value = [
+        {
+            "type": Component.Type.GOLANG,
+            "meta": {"name": "go-package", "version": GO_PACKAGE_VERSION},
+            "analysis_meta": {},
+        }
+    ]
+    root_component = ContainerImageComponentFactory()
+    anchor_node = root_component.cnodes.create(
+        parent=None, object_id=root_component.pk, obj=root_component
+    )
+    _scan_files(anchor_node, [])
+    go_package = Component.objects.get(type=Component.Type.GOLANG, name="go-package")
+    # Verify there was no modification to the go package version if it was set by the collector
+    assert go_package.version == GO_PACKAGE_VERSION
 
 
 archive_source_test_data = [

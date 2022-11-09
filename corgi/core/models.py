@@ -895,10 +895,12 @@ class Component(TimeStampedModel):
         # Only add the arch qualify if it's not an image_index
         if self.arch != "noarch":
             qualifiers["arch"] = self.arch
-        # Add fully repository_url as well
+        # Add full repository_url as well
         repository_url = self.meta_attr.get("repository_url")
         if repository_url:
             qualifiers["repository_url"] = repository_url
+        # Note that if no container digest format matched, the digest below is ""
+        # and the constructed purl has no .version attribute
         return dict(
             name=purl_name,
             version=digest,

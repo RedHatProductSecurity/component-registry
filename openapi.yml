@@ -1191,6 +1191,13 @@ components:
             additionalProperties:
               type: string
           readOnly: true
+        channels:
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
+          readOnly: true
         sources:
           type: array
           items:
@@ -1213,6 +1220,7 @@ components:
               type: string
           readOnly: true
       required:
+      - channels
       - description
       - download_url
       - epoch

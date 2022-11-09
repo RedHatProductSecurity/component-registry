@@ -126,34 +126,25 @@ def get_channel_data_list(manager: Manager["Channel"]) -> list[dict[str, str]]:
 
 
 def get_product_data_list(
-    model_class, model_name: str, name_list: Iterable[str]
+    model_name: str, obj_or_manager: Union[ProductModel, Manager]
 ) -> list[dict[str, str]]:
     """Generic method to get a list of {name, link, ofuri} data for a ProductModel subclass."""
-    data_list = []
-    for name in name_list:
-        data = {"name": name}
-        obj = model_class.objects.filter(name=name).first()
-        if obj:
-            data["link"] = get_model_ofuri_link(model_name, obj.ofuri)
-            data["ofuri"] = obj.ofuri
-        data_list.append(data)
-    return data_list
-
-
-def get_product_data_list_by_ofuri(
-    model_class, model_name: str, ofuri_list: Iterable[str]
-) -> list[dict[str, str]]:
-    """Special method to get a list of {ofuri, link, name} data for a ProductModel subclass.
-    Filters by ofuri instead of name."""
-    data_list = []
-    for ofuri in ofuri_list:
-        data = {"ofuri": ofuri}
-        obj = model_class.objects.filter(ofuri=ofuri).first()
-        if obj:
-            data["link"] = get_model_ofuri_link(model_name, ofuri)
-            data["name"] = obj.name
-        data_list.append(data)
-    return data_list
+    if isinstance(obj_or_manager, ProductModel):
+        # When this method receives e.g. a ProductVersion's products property,
+        # we're accessing the forward side of a relation with only one object
+        return [
+            {
+                "name": obj_or_manager.name,
+                "link": get_model_ofuri_link(model_name, obj_or_manager.ofuri),
+                "ofuri": obj_or_manager.ofuri,
+            },
+        ]
+    # When this method receives e.g. a ProductVersion's productstreams property,
+    # we're accessing the reverse side of a relation with many objects (via a manager)
+    return [
+        {"name": name, "link": get_model_ofuri_link(model_name, ofuri), "ofuri": ofuri}
+        for (name, ofuri) in obj_or_manager.values_list("name", "ofuri")
+    ]
 
 
 def get_product_relations(instance_name: str) -> list[dict[str, str]]:
@@ -226,35 +217,35 @@ class SoftwareBuildSummarySerializer(serializers.ModelSerializer):
 class ProductTaxonomySerializer(serializers.ModelSerializer):
     @staticmethod
     def get_products(instance: Union[ProductModel, ProductTaxonomyMixin]) -> list[dict[str, str]]:
-        return get_product_data_list(Product, "products", instance.products)
+        return get_product_data_list("products", instance.products)
 
     @staticmethod
     def get_product_versions(
         instance: Union[ProductModel, ProductTaxonomyMixin]
     ) -> list[dict[str, str]]:
-        return get_product_data_list(ProductVersion, "product_versions", instance.productversions)
+        return get_product_data_list("product_versions", instance.productversions)
 
     @staticmethod
     def get_product_streams(
         instance: Union[ProductModel, ProductTaxonomyMixin]
     ) -> list[dict[str, str]]:
-        return get_product_data_list(ProductStream, "product_streams", instance.productstreams)
+        return get_product_data_list("product_streams", instance.productstreams)
 
     @staticmethod
     def get_product_variants(
         instance: Union[ProductModel, ProductTaxonomyMixin]
     ) -> list[dict[str, str]]:
-        return get_product_data_list(ProductVariant, "product_variants", instance.productvariants)
+        return get_product_data_list("product_variants", instance.productvariants)
 
     @staticmethod
-    def get_channels(instance: ProductModel) -> list[dict[str, str]]:
+    def get_channels(instance: Union[Component, ProductModel]) -> list[dict[str, str]]:
         return get_channel_data_list(instance.channels)
 
     class Meta:
         abstract = True
 
 
-class ComponentSerializer(serializers.ModelSerializer):
+class ComponentSerializer(ProductTaxonomySerializer):
     software_build = SoftwareBuildSummarySerializer(many=False)
     tags = TagSerializer(many=True, read_only=True)
 
@@ -264,6 +255,7 @@ class ComponentSerializer(serializers.ModelSerializer):
     product_versions = serializers.SerializerMethodField()
     product_streams = serializers.SerializerMethodField()
     product_variants = serializers.SerializerMethodField()
+    channels = serializers.SerializerMethodField()
 
     provides = serializers.SerializerMethodField()
     sources = serializers.SerializerMethodField()
@@ -274,37 +266,16 @@ class ComponentSerializer(serializers.ModelSerializer):
         return get_component_purl_link(instance.purl)
 
     @staticmethod
-    def get_products(instance: Component) -> list[dict[str, str]]:
-        return get_product_data_list_by_ofuri(Product, "products", instance.products)
-
-    @staticmethod
-    def get_product_versions(instance: Component) -> list[dict[str, str]]:
-        return get_product_data_list_by_ofuri(
-            ProductVersion, "product_versions", instance.product_versions
-        )
-
-    @staticmethod
-    def get_product_streams(instance: Component) -> list[dict[str, str]]:
-        return get_product_data_list_by_ofuri(
-            ProductStream, "product_streams", instance.product_streams
-        )
-
-    # Above 3 are special - they filter on ofuri= instead of name=
-    @staticmethod
-    def get_product_variants(instance: Component) -> list[dict[str, str]]:
-        return get_product_data_list(ProductVariant, "product_variants", instance.product_variants)
-
-    @staticmethod
     def get_provides(instance: Component) -> list[dict[str, str]]:
         return get_component_data_list(instance.get_provides_purls())
 
     @staticmethod
     def get_sources(instance: Component) -> list[dict[str, str]]:
-        return get_component_data_list(instance.get_source())
+        return get_component_data_list(instance.get_sources_purls())
 
     @staticmethod
     def get_upstreams(instance: Component) -> list[dict[str, str]]:
-        return get_component_data_list(instance.get_upstreams())
+        return get_component_data_list(instance.get_upstreams_purls())
 
     class Meta:
         model = Component
@@ -338,11 +309,10 @@ class ComponentSerializer(serializers.ModelSerializer):
             "product_versions",
             "product_streams",
             "product_variants",
-            # "channels",
+            "channels",
             "sources",
             "provides",
             "upstreams",
-            # "meta_attr",
         ]
 
 

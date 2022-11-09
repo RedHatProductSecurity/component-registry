@@ -1,5 +1,4 @@
 import logging
-from string import Template
 
 from django_filters.rest_framework import CharFilter, Filter, FilterSet
 
@@ -42,22 +41,29 @@ class ComponentFilter(FilterSet):
     description = CharFilter(lookup_expr="icontains")
     tags = TagFilter()
 
-    products = CharFilter(method="filter_arrayfield")
-    product_versions = CharFilter(method="filter_arrayfield")
-    product_streams = CharFilter(method="filter_arrayfield")
-    product_variants = CharFilter(method="filter_arrayfield")
-    channels = CharFilter(method="filter_arrayfield")
+    products = CharFilter(method="filter_productmodel")
+    product_versions = CharFilter(method="filter_productmodel")
+    product_streams = CharFilter(method="filter_productmodel")
+    product_variants = CharFilter(method="filter_productmodel")
+    channels = CharFilter(method="filter_productmodel")
+
     sources = CharFilter(lookup_expr="icontains")
     provides = CharFilter(lookup_expr="icontains")
     upstreams = CharFilter(lookup_expr="icontains")
     re_upstream = CharFilter(lookup_expr="regex", field_name="upstreams")
 
-    def filter_arrayfield(self, queryset, name, value):
-        array_value = Template("{$value}").substitute(value=value)
+    @staticmethod
+    def filter_productmodel(queryset, name, value):
         if name == "ofuri":
-            name = "product_streams"
-        lookup = f"{name}__overlap"
-        return queryset.filter(**{lookup: array_value})
+            # User gave a filter like ?ofuri= in URL, assume they wanted a stream
+            name = "productstreams"
+        if name == "channels":
+            # Linked channels have no ofuri, look up by name instead
+            lookup = f"{name}__name"
+        else:
+            # All ProductModel subclasses define an ofuri field
+            lookup = f"{name.replace('_', '')}__ofuri"
+        return queryset.filter(**{lookup: value})
 
 
 class ProductDataFilter(FilterSet):

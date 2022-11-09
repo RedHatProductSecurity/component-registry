@@ -367,6 +367,11 @@ class ProductModel(TimeStampedModel):
     def channels(self) -> models.Manager["Channel"]:
         pass
 
+    @property
+    @abstractmethod
+    def components(self) -> models.Manager["Component"]:
+        pass
+
     @staticmethod
     def get_related_components(build_ids: QuerySet, sort_field: str) -> QuerySet["Component"]:
         """Returns unique components with matching build_id, ordered by sort_field"""
@@ -529,6 +534,10 @@ class Product(ProductModel):
     # is created by products field on Channel model
     channels: models.Manager["Channel"]
 
+    # implicit "components" field on Product model
+    # is created by products field on Component model
+    components: models.Manager["Component"]
+
     def get_ofuri(self) -> str:
         """Return product URI
 
@@ -562,6 +571,10 @@ class ProductVersion(ProductModel):
     # implicit "channels" field on ProductVersion model
     # is created by productversions field on Channel model
     channels: models.Manager["Channel"]
+
+    # implicit "components" field on ProductVersion model
+    # is created by productversions field on Component model
+    components: models.Manager["Component"]
 
     def get_ofuri(self) -> str:
         """Return product version URI.
@@ -607,6 +620,10 @@ class ProductStream(ProductModel):
     # is created by productstreams field on Channel model
     channels: models.Manager["Channel"]
 
+    # implicit "components" field on ProductStream model
+    # is created by productstreams field on Component model
+    components: models.Manager["Component"]
+
     def get_ofuri(self) -> str:
         """Return product stream URI
 
@@ -627,14 +644,14 @@ class ProductStream(ProductModel):
         return (
             Component.objects.filter(
                 ROOT_COMPONENTS_CONDITION,
-                product_streams__overlap=(self.ofuri,),
+                productstreams__ofuri=self.ofuri,
             )
             .annotate(
                 latest=models.Subquery(
                     Component.objects.filter(
                         ROOT_COMPONENTS_CONDITION,
                         name=models.OuterRef("name"),
-                        product_streams__overlap=(self.ofuri,),
+                        productstreams__ofuri=self.ofuri,
                     )
                     .exclude(software_build__isnull=True)
                     .order_by("-software_build__completion_time")
@@ -678,6 +695,10 @@ class ProductVariant(ProductModel):
     # implicit "channels" field on ProductVariant model
     # is created by productvariants field on Channel model
     channels: models.Manager["Channel"]
+
+    # implicit "components" field on ProductVariant model
+    # is created by productvariants field on Component model
+    components: models.Manager["Component"]
 
     @property
     def cpes(self) -> tuple[str]:
@@ -827,7 +848,7 @@ class ComponentQuerySet(models.QuerySet):
         return self.filter(ROOT_COMPONENTS_CONDITION)
 
 
-class Component(TimeStampedModel):
+class Component(TimeStampedModel, ProductTaxonomyMixin):
     class Type(models.TextChoices):
         CARGO = "CARGO"  # Rust packages
         CONTAINER_IMAGE = "OCI"  # Container images and other OCI artifacts
@@ -860,16 +881,20 @@ class Component(TimeStampedModel):
     nvr = models.CharField(max_length=1024, default="")
     nevra = models.CharField(max_length=1024, default="")
 
-    products = fields.ArrayField(models.CharField(max_length=200), default=list)
-    product_versions = fields.ArrayField(models.CharField(max_length=200), default=list)
-    product_streams = fields.ArrayField(models.CharField(max_length=200), default=list)
-    product_variants = fields.ArrayField(models.CharField(max_length=200), default=list)
-    channels = fields.ArrayField(models.CharField(max_length=200), default=list)
-    provides = fields.ArrayField(models.CharField(max_length=1024), default=list)
-    sources = fields.ArrayField(models.CharField(max_length=1024), default=list)
-    upstreams = fields.ArrayField(models.CharField(max_length=1024), default=list)
+    # related_name defaults to fieldname_set if not specified
+    # e.g. channels_set, upstreams_set
+    channels = models.ManyToManyField(Channel)
+    upstreams = models.ManyToManyField("Component")
 
-    cnodes = GenericRelation(ComponentNode)
+    # sources is the inverse of provides. One container can provide many RPMs
+    # and one RPM can have many different containers as a source (as well as modules and SRPMs)
+    sources = models.ManyToManyField("Component", related_name="provides")
+    provides: models.ManyToManyField
+
+    # Specify related_query_name to add e.g. component field
+    # that can be used to filter from a cnode to its related component
+    # TODO: Or just switch from GenericForeignKey to regular ForeignKey?
+    cnodes = GenericRelation(ComponentNode, related_query_name="%(class)s")
     software_build = models.ForeignKey(
         SoftwareBuild, on_delete=models.CASCADE, null=True, related_name="components"
     )
@@ -912,9 +937,6 @@ class Component(TimeStampedModel):
             models.Index(fields=("type",)),
             models.Index(fields=("nvr",)),
             models.Index(fields=("purl",)),
-            models.Index(fields=("product_streams",)),
-            models.Index(fields=("product_variants",)),
-            models.Index(fields=("type", "product_streams")),
             models.Index(
                 fields=("type", "name", "arch"),
                 name="compon_latest_name_type_idx",
@@ -926,7 +948,7 @@ class Component(TimeStampedModel):
                 condition=ROOT_COMPONENTS_CONDITION,
             ),
             models.Index(
-                fields=("uuid", "software_build_id", "type", "name", "arch", "product_streams"),
+                fields=("uuid", "software_build_id", "type", "name", "arch"),
                 name="compon_latest_idx",
                 condition=ROOT_COMPONENTS_CONDITION,
             ),
@@ -1025,10 +1047,12 @@ class Component(TimeStampedModel):
         )
 
     def save_component_taxonomy(self):
-        self.upstreams = self.get_upstreams()
-        self.provides = list(self.get_provides_purls())
-        self.sources = self.get_source()
-        self.save()
+        upstreams = self.get_upstreams_pks()
+        self.upstreams.set(upstreams)
+        provides = self.get_provides_nodes().values_list("component__pk", flat=True)
+        self.provides.set(provides)
+        sources = self.get_sources_nodes().values_list("component__pk", flat=True)
+        self.sources.set(sources)
 
     def is_srpm(self):
         return self.type == Component.Type.RPM and self.arch == "src"
@@ -1051,6 +1075,32 @@ class Component(TimeStampedModel):
         self.purl = purl.to_string()
         super().save(*args, **kwargs)
 
+    def save_product_taxonomy(
+        self, product_pks_dict: Union[dict[str, QuerySet], None] = None
+    ) -> None:
+        """Save links between ProductModel subclasses and this Component"""
+        # TODO
+        if not product_pks_dict:
+            raise ValueError(
+                "Call SoftwareBuild.save_product_taxonomy(),"
+                "instead of Component.save_product_taxonomy() directly"
+            )
+        for attr in (
+            "products",
+            "productversions",
+            "productstreams",
+            "productvariants",
+            "channels",
+        ):
+            # Since we're only setting the product details for a specific build id we need
+            # to ensure we are only updating, not replacing the existing product details.
+            interim_set = set(getattr(self, attr))
+            interim_set.update(product_pks_dict[attr])
+            setattr(self, attr, list(interim_set))
+        self.channels = self.get_channels()
+
+        return None
+
     @property
     def get_roots(self) -> list[ComponentNode]:
         """Return component root entities."""
@@ -1071,16 +1121,16 @@ class Component(TimeStampedModel):
                 # Partly because RPMs in containers can have unprocessed SRPMs
                 # And partly because we use roots to find upstream components,
                 # and it's not true to say that rpms share upstreams with containers
-                rpm_descendant = False
-                for ancestor in cnode.get_ancestors(include_self=True):
-                    if ancestor.obj.type == Component.Type.RPM:
-                        rpm_descendant = True
-                        break
+                rpm_descendant = (
+                    cnode.get_ancestors(include_self=True)
+                    .filter(component__type=Component.Type.RPM)
+                    .exists()
+                )
                 if not rpm_descendant:
                     roots.append(root)
             else:
                 roots.append(root)
-        return list(set(roots))
+        return roots
 
     @property
     def build_meta(self):
@@ -1188,7 +1238,7 @@ class Component(TimeStampedModel):
 
     def get_provides_nodes(self, include_dev: bool = True) -> QuerySet[ComponentNode]:
         """return a QuerySet of descendants with PROVIDES ComponentNode type"""
-        # Used in manifests. Returns whole objects to access their properties
+        # Used in manifests / taxonomies. Returns whole objects to access their properties
         type_list = [ComponentNode.ComponentNodeType.PROVIDES]
         if include_dev:
             type_list.append(ComponentNode.ComponentNodeType.PROVIDES_DEV)
@@ -1196,50 +1246,63 @@ class Component(TimeStampedModel):
 
     def get_provides_purls(self, include_dev: bool = True) -> QuerySet:
         """return a QuerySet of unique descendant PURLs with PROVIDES ComponentNode type"""
-        # Used in serializers / taxonomies. Returns identifiers (purls) to track relationships
+        # Used in serializers. Returns identifiers (purls) to track relationships
         return (
             self.get_provides_nodes(include_dev=include_dev)
             .values_list("purl", flat=True)
             .distinct()
         )
 
-    def get_source(self) -> list:
-        """return all root nodes"""
-        purl_cn = ComponentNode.objects.filter(purl=self.purl).get_ancestors(include_self=False)
-        return list(purl_cn.filter(parent=None).values_list("purl", flat=True).distinct())
+    def get_sources_nodes(self) -> QuerySet[ComponentNode]:
+        """return all root node objects"""
+        return self.cnodes.get_queryset().get_ancestors(include_self=False).filter(parent=None)
 
-    def get_upstreams(self):
+    def get_sources_purls(self) -> QuerySet:
+        """return all root node purls"""
+        return self.get_sources_nodes().values_list("purl", flat=True).distinct()
+
+    def get_upstreams_nodes(self) -> list[ComponentNode]:
         """return upstreams component ancestors in family trees"""
+        # The get_roots logic is too complicated to use only Django filtering
+        # So it has to use Python logic and return a set, instead of a QuerySet
+        # which forces us to use Python in this + all other get_upstreams_* methods
+        upstreams = []
         roots = self.get_roots
-        if not roots:
-            return []
-        upstreams = set()
         for root in roots:
             # For SRPM/RPMS, and noarch containers, these are the cnodes we want.
-            source_descendant_purls = (
-                root.get_descendants()
-                .filter(type=ComponentNode.ComponentNodeType.SOURCE)
-                .values_list("purl", flat=True)
+            source_descendants = root.get_descendants().filter(
+                type=ComponentNode.ComponentNodeType.SOURCE
             )
             # Cachito builds nest components under the relevant source component for that
             # container build, eg. buildID=1911112. In that case we need to walk up the
             # tree from the current node to find its relevant source
+            root_obj = root.obj
             if (
-                root.obj.type == Component.Type.CONTAINER_IMAGE
-                and root.obj.arch == "noarch"
-                and source_descendant_purls.count() > 1
+                root_obj
+                and root_obj.type == Component.Type.CONTAINER_IMAGE
+                and root_obj.arch == "noarch"
+                and source_descendants.count() > 1
             ):
-                upstreams.update(
-                    ancestor.purl
-                    for ancestor in self.cnodes.get_queryset()
+                upstreams.extend(
+                    self.cnodes.get_queryset()
                     .get_ancestors(include_self=True)
-                    .filter(type=ComponentNode.ComponentNodeType.SOURCE)
-                    # Can't filter on obj fields when obj is linked using a GenericForeignKey
-                    if ancestor.obj.namespace == Component.Namespace.UPSTREAM
+                    .filter(
+                        type=ComponentNode.ComponentNodeType.SOURCE,
+                        component__namespace=Component.Namespace.UPSTREAM,
+                    )
                 )
             else:
-                upstreams.update(source_descendant_purls)
-        return list(upstreams)
+                upstreams.extend(source_descendants)
+        return upstreams
+
+    def get_upstreams_pks(self) -> tuple[str, ...]:
+        """Return only the primary keys from the set of all upstream nodes"""
+        linked_pks = set(node.component.pk for node in self.get_upstreams_nodes())
+        return tuple(linked_pks)
+
+    def get_upstreams_purls(self) -> set[str]:
+        """Return only the purls from the set of all upstream nodes"""
+        return set(node.purl for node in self.get_upstreams_nodes())
 
     def save_datascore(self):
         score = 0
@@ -1256,25 +1319,25 @@ class Component(TimeStampedModel):
         if not self.license_declared_raw:
             score += 10
             report.add("no license declared")
-        if not self.products:
+        if not self.products.exists():
             score += 10
             report.add("no products")
-        if not self.product_versions:
+        if not self.productversions.exists():
             score += 10
             report.add("no product versions")
-        if not self.product_streams:
+        if not self.productstreams.exists():
             score += 10
             report.add("no product streams")
-        if not self.product_variants:
+        if not self.productvariants.exists():
             score += 20
             report.add("no product variants")
-        if not self.sources:
+        if not self.sources.exists():
             score += 10
             report.add("no sources")
-        if not self.provides:
+        if not self.provides.exists():
             score += 10
             report.add("no provides")
-        if not self.upstreams:
+        if not self.upstreams.exists():
             score += 10
             report.add("no upstream")
         if not self.software_build:

@@ -16,6 +16,7 @@ from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet
 
 from config import utils
 from corgi import __version__
+from corgi.core.constants import NODE_LEVEL_MODEL_MAPPING
 from corgi.core.models import (
     AppStreamLifeCycle,
     Channel,
@@ -184,22 +185,16 @@ def recursive_component_node_to_dict(node, component_type):
 
 
 def recursive_product_node_to_dict(node):
-    product_type = ""
-    child_product_type = ""
-    if node.level == 0:
-        product_type = "products"
-        child_product_type = "product_versions"
-    if node.level == 1:
-        product_type = "product_versions"
-        child_product_type = "product_streams"
-    if node.level == 2:
-        product_type = "product_streams"
-        child_product_type = "product_variants"
-    if node.level == 3:
-        product_type = "product_variants"
-        child_product_type = "channels"
-    if node.level == 4:
-        product_type = "channels"
+    product_type = NODE_LEVEL_MODEL_MAPPING.get(node.level, "")
+    if not product_type:
+        raise ValueError(f"Node {node} had level {node.level} which is invalid")
+
+    # Usually e.g. "products" and "product_versions"
+    # or "channels" and "" since channels is the lowest level in our taxonomy
+    product_type = f"{product_type}s"
+    child_product_type = NODE_LEVEL_MODEL_MAPPING.get(node.level + 1, "")
+    child_product_type = f"{child_product_type}s" if child_product_type else ""
+
     result = {
         "link": get_model_ofuri_link(product_type, node.obj.ofuri),
         "ofuri": node.obj.ofuri,
@@ -393,16 +388,16 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
 
         model, _ = get_model_ofuri_type(ofuri)
         if isinstance(model, Product):
-            return self.queryset.filter(products__contains=(ofuri,))
+            return self.queryset.filter(products__ofuri=ofuri)
         elif isinstance(model, ProductVersion):
-            return self.queryset.filter(product_versions__contains=(ofuri,))
+            return self.queryset.filter(productversions__ofuri=ofuri)
         elif isinstance(model, ProductStream):
             # only ProductStream defines get_latest_components()
             # TODO: Should this be a ProductModel method? For e.g. Products,
             #  we could return get_latest_components() for each child stream
             return model.get_latest_components()
         elif isinstance(model, ProductVariant):
-            return self.queryset.filter(product_variants__contains=(ofuri,))
+            return self.queryset.filter(productvariants__ofuri=ofuri)
         else:
             # No matching model instance found, or invalid ofuri
             return self.queryset

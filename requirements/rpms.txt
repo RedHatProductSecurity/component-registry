@@ -1,6 +1,7 @@
 # To compile C bindings in certain Python dependencies
 gcc-8.5.0
 git-2.31.1
+golang-1.18.4-1.module+el8.7.0+16015+724888d8
 # For gssapi compilation
 krb5-devel-1.18.2
 # Kerberos-related utils such as kinit
@@ -11,8 +12,8 @@ openldap-devel-2.4.46
 # Dependency for SSL support in the python-qpid-proton Python package
 openssl-1.1.1k
 openssl-devel-1.1.1k
-python39-3.9.7
-python39-devel-3.9.7
+python39-3.9.13-1.module+el8.7.0+15656+ffd4a257
+python39-devel-3.9.13-1.module+el8.7.0+15656+ffd4a257
 python39-pip-20.2.4
 python39-setuptools-50.3.2
 python39-wheel-0.35.1

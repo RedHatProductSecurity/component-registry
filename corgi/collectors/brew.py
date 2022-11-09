@@ -335,6 +335,7 @@ class Brew:
                     if "go-toolset" in build_name or "golang" in build_name:
                         build_parent_nvrs.append(build_name)
                         go_stdlib_version = build_version.removeprefix("v")
+                        component["meta"]["go_stdlib_version"] = go_stdlib_version
 
                 component["meta"]["build_parent_nvrs"] = build_parent_nvrs
 

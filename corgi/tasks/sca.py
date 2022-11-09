@@ -13,6 +13,7 @@ from django.conf import settings
 from requests import Response
 
 from config.celery import app
+from corgi.collectors.go_list import GoList
 from corgi.collectors.syft import Syft
 from corgi.core.models import Component, ComponentNode, SoftwareBuild
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
@@ -40,6 +41,9 @@ def save_component(component: dict[str, Any], parent: ComponentNode):
         if group_id:
             meta_attr["group_id"] = group_id
 
+    if "go_component_type" in meta:
+        meta_attr["go_component_type"] = meta["go_component_type"]
+
     # Use all fields from Component index and uniqueness constraint
     obj, created = Component.objects.get_or_create(
         type=component["type"],
@@ -55,7 +59,7 @@ def save_component(component: dict[str, Any], parent: ComponentNode):
             "Saved component purl %s, does not match Syft purl: %s", obj.purl, meta["purl"]
         )
 
-    node, _ = obj.cnodes.get_or_create(
+    node, node_created = obj.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=parent,
         purl=obj.purl,
@@ -65,7 +69,7 @@ def save_component(component: dict[str, Any], parent: ComponentNode):
         },
     )
 
-    return created
+    return created or node_created
 
 
 @app.task(
@@ -115,14 +119,31 @@ def slow_software_composition_analysis(build_id: int):
 
 def _scan_files(anchor_node, sources) -> int:
     logger.info(
-        "Scan files called with anchor node: %s, and sources: %s", anchor_node.obj.purl, sources
+        "Scan files called with anchor node: %s, and sources: %s", anchor_node.purl, sources
     )
     new_components = 0
-    for component in Syft.scan_files(sources):
+    detected_components = Syft.scan_files(sources)
+    # get go version from container meta_attr
+    go_packages = GoList.scan_files(sources)
+    _assign_go_stdlib_version(anchor_node.obj, go_packages)
+    detected_components.extend(go_packages)
+
+    for component in detected_components:
         if save_component(component, anchor_node):
             new_components += 1
     logger.info("Detected %s new components using Syft scan", new_components)
     return new_components
+
+
+def _assign_go_stdlib_version(anchor_obj, go_packages):
+    for go_package in go_packages:
+        if (
+            "version" not in go_package["meta"]
+            and anchor_obj.type == Component.Type.CONTAINER_IMAGE
+            and anchor_obj.arch == "noarch"
+        ):
+            if "go_stdlib_version" in anchor_obj.meta_attr:
+                go_package["meta"]["version"] = anchor_obj.meta_attr["go_stdlib_version"]
 
 
 def _get_distgit_sources(source_url: str, build_id: int) -> list[Path]:

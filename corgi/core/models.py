@@ -212,7 +212,6 @@ class ComponentNode(NodeModel):
         #    core_cn_lft_rght_tree_idx
         indexes = (  # type: ignore[assignment]
             models.Index(fields=("type", "parent", "purl")),
-            models.Index(fields=("type",)),
             models.Index(fields=("parent",)),
             models.Index(fields=("purl",)),
             *NodeModel.Meta.indexes,
@@ -790,10 +789,7 @@ class ProductComponentRelation(TimeStampedModel):
         indexes = (
             models.Index(fields=("external_system_id", "product_ref", "build_id")),
             models.Index(fields=("type", "build_id")),
-            models.Index(fields=("external_system_id",)),
-            models.Index(fields=("product_ref",)),
             models.Index(fields=("build_id",)),
-            models.Index(fields=("type",)),
             models.Index(fields=("product_ref", "type")),
         )
 
@@ -936,8 +932,6 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         indexes = (
             models.Index(fields=("name", "type", "arch", "version", "release")),
             models.Index(fields=("type", "name")),
-            models.Index(fields=("name",)),
-            models.Index(fields=("type",)),
             models.Index(fields=("nvr",)),
             models.Index(fields=("purl",)),
             models.Index(

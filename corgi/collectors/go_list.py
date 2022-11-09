@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 class GoList:
     @classmethod
     def scan_files(cls, target_paths: list[Path]) -> list[dict[str, Any]]:
-        results = []
+        results: list[dict[str, Any]] = []
         for target_path in target_paths:
             if not target_path.is_dir():
                 with tempfile.TemporaryDirectory() as extract_dir:
@@ -29,18 +29,21 @@ class GoList:
                     except ReadError:
                         logger.debug("Cannot unpack file: %s", target_path)
                         continue
-                    go_source_dir = cls.find_go_dir(extract_dir)
-                    if go_source_dir:
-                        for result in cls.invoke_process_popen_poll_live(
-                            GO_LIST_COMMAND, go_source_dir
-                        ):
-                            results.append(result)
-                    else:
-                        logger.debug("Did not find go.mod in %s", target_path)
+                    cls._check_and_scan(extract_dir, results, str(target_path))
             else:
-                for result in cls.invoke_process_popen_poll_live(GO_LIST_COMMAND, target_path):
-                    results.append(result)
+                cls._check_and_scan(str(target_path), results)
         return results
+
+    @classmethod
+    def _check_and_scan(cls, extract_dir: str, results, target_path: str = ""):
+        go_source_dir = cls.find_go_dir(extract_dir)
+        if go_source_dir:
+            for result in cls.invoke_process_popen_poll_live(GO_LIST_COMMAND, go_source_dir):
+                results.append(result)
+        else:
+            if not target_path:
+                target_path = extract_dir
+            logger.debug("Did not find go.mod in %s", target_path)
 
     @classmethod
     def find_go_dir(cls, extract_dir: str) -> Optional[Path]:

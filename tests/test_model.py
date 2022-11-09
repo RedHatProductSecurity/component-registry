@@ -80,7 +80,12 @@ def test_cpes():
 def test_nevra():
     no_release = ComponentFactory(release="", version="1")
     assert not no_release.nvr.endswith("-")
-    assert not PackageURL.from_string(no_release.purl).version.endswith("-")
+    package_url = PackageURL.from_string(no_release.purl)
+    # container image components get their purl version from the digest value, not version & release
+    if no_release.type == Component.Type.CONTAINER_IMAGE:
+        assert not package_url.qualifiers["tag"].endswith("-")
+    else:
+        assert not package_url.version.endswith("-")
     # epoch is a property of Component which retrieves the value for meta_attr
     no_epoch = ComponentFactory()
     assert ":" not in no_epoch.nevra
@@ -432,10 +437,10 @@ def test_queryset_ordering_succeeds():
     """
     # Ordered by version: (a, a), (c, c), (first_b, b), (last_b, b)
     # Ordered by description: (a, a), (first_b, b), (last_b, b), (c, c)
-    ProductFactory(version="a", description="a")
-    ProductFactory(version="first_b", description="b")
-    ProductFactory(version="last_b", description="b")
-    ProductFactory(version="c", description="c")
+    ProductFactory(name="a", version="a", description="a")
+    ProductFactory(name="b", version="first_b", description="b")
+    ProductFactory(name="c", version="last_b", description="b")
+    ProductFactory(name="d", version="c", description="c")
 
     # .values_list("description", flat=True).distinct() will succeed, with any of:
     # nothing, .order_by(), or .order_by("description") in front of .values_list

@@ -70,7 +70,7 @@ def test_cpes():
     node3c = ProductNode.objects.create(parent=node2b, obj=ps3, object_id=ps3.pk)
     assert node3c
 
-    assert pv1a.cpes == ["cpe:/o:redhat:enterprise_linux:9"]
+    assert pv1a.cpes == ("cpe:/o:redhat:enterprise_linux:9",)
     assert sorted(p1.cpes) == [
         "cpe:/o:redhat:Brantabernicla:8",
         "cpe:/o:redhat:enterprise_linux:9",
@@ -78,19 +78,22 @@ def test_cpes():
 
 
 def test_nevra():
-    no_release = ComponentFactory(release="", version="1")
-    assert not no_release.nvr.endswith("-")
-    package_url = PackageURL.from_string(no_release.purl)
-    # container image components get their purl version from the digest value, not version & release
-    if no_release.type == Component.Type.CONTAINER_IMAGE:
-        assert not package_url.qualifiers["tag"].endswith("-")
-    else:
-        assert not package_url.version.endswith("-")
-    # epoch is a property of Component which retrieves the value for meta_attr
-    no_epoch = ComponentFactory()
-    assert ":" not in no_epoch.nevra
-    no_arch = ComponentFactory(arch="")
-    assert not no_arch.nevra.endswith("-")
+    for component_type in Component.Type.values:
+        no_release = ComponentFactory(
+            name=component_type, release="", version="1", type=component_type
+        )
+        assert not no_release.nvr.endswith("-")
+        package_url = PackageURL.from_string(no_release.purl)
+        # container images get their purl version from the digest value, not version & release
+        if component_type == Component.Type.CONTAINER_IMAGE:
+            assert not package_url.qualifiers["tag"].endswith("-")
+        else:
+            assert not package_url.version.endswith("-")
+        # epoch is a property of Component which retrieves the value for meta_attr
+        no_epoch = ComponentFactory(name=component_type, type=component_type)
+        assert ":" not in no_epoch.nevra
+        no_arch = ComponentFactory(name=component_type, arch="", type=component_type)
+        assert not no_arch.nevra.endswith("-")
 
 
 def test_product_taxonomic_queries():
@@ -462,10 +465,10 @@ def test_queryset_ordering_fails():
     """Test that .distinct() with non-matching ordering fails the way we expect
     Also test that .distinct("field") with non-matching ordering fails the way we expect
     """
-    ProductFactory(version="a", description="a")
-    ProductFactory(version="first_b", description="b")
-    ProductFactory(version="last_b", description="b")
-    ProductFactory(version="c", description="c")
+    ProductFactory(name="a", version="a", description="a")
+    ProductFactory(name="b", version="first_b", description="b")
+    ProductFactory(name="c", version="last_b", description="b")
+    ProductFactory(name="d", version="c", description="c")
 
     # .order_by("version").values_list("description", flat=True).distinct() will fail
     # because order_by("version") adds a hidden field to the result queryset we're SELECTing

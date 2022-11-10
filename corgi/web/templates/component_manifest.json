@@ -1,4 +1,4 @@
-{# Component manifest #}
+{# Component manifest, obj is a Component here #}
 {% extends "base_manifest.json" %}
 {% block packages %}
 {% for node in obj.get_provides_nodes %}
@@ -6,7 +6,7 @@
     {% endfor %}
     {
         "copyrightText": {% if obj.copyright_text %}"{{obj.copyright_text}}"{% else %}"NOASSERTION"{% endif %},
-        "downloadLocation": {% if obj.channels %}"{{obj.channels.0}}"{% else %}"NOASSERTION"{% endif %},
+        "downloadLocation": {% if obj.download_url %}"{{obj.download_url}}"{% else %}"NOASSERTION"{% endif %},
         "externalRefs": [
             {
                 "referenceCategory": "PACKAGE_MANAGER",
@@ -28,5 +28,5 @@
     }
 {% endblock %}
 {% block relationships %}
-    {% include "provided_relationships_manifest.json" with obj=obj %}
+    {% include "provided_relationships_manifest.json" with component=obj %}
 {% endblock %}

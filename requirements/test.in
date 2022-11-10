@@ -1,5 +1,6 @@
 -r base.txt
 mypy
+django-coverage-plugin
 django-stubs
 djangorestframework-stubs
 factory-boy

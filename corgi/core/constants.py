@@ -1,3 +1,5 @@
+from django.db.models import Q
+
 """
     model constants
 """
@@ -9,3 +11,18 @@ CONTAINER_DIGEST_FORMATS = (
 CONTAINER_REPOSITORY = "registry.redhat.io"
 CORGI_PRODUCT_TAXONOMY_VERSION = "v1"
 CORGI_COMPONENT_TAXONOMY_VERSION = "v1"
+
+# Map model names as defined in models.py to MPTT node levels in our product taxonomy
+MODEL_NODE_LEVEL_MAPPING = {
+    "Product": 0,
+    "ProductVersion": 1,
+    "ProductStream": 2,
+    "ProductVariant": 3,
+    "Channel": 4,
+}
+
+# Filter on "root components": SRPMs, modules, or index container images
+SRPM_CONDITION = Q(type="RPM", arch="src")
+MODULE_CONDITION = Q(type="RPMMOD")
+INDEX_CONTAINER_CONDITION = Q(type="OCI", arch="noarch")
+ROOT_COMPONENTS_CONDITION = SRPM_CONDITION | MODULE_CONDITION | INDEX_CONTAINER_CONDITION

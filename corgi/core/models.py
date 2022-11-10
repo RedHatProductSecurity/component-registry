@@ -8,12 +8,17 @@ from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelatio
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
 from django.db import models
-from django.db.models import F, OuterRef, Q, QuerySet, Subquery
+from django.db.models import Q, QuerySet
 from mptt.managers import TreeManager
 from mptt.models import MPTTModel, TreeForeignKey
 from packageurl import PackageURL
 
-from corgi.core.constants import CONTAINER_DIGEST_FORMATS
+from corgi.core.constants import (
+    CONTAINER_DIGEST_FORMATS,
+    MODEL_NODE_LEVEL_MAPPING,
+    ROOT_COMPONENTS_CONDITION,
+    SRPM_CONDITION,
+)
 from corgi.core.files import ComponentManifestFile, ProductManifestFile
 from corgi.core.mixins import TimeStampedModel
 
@@ -104,54 +109,48 @@ class ProductNode(NodeModel):
     #   attribute's related query name.
 
     @staticmethod
-    def get_products(node_model):
-        return list(
-            node_model.pnodes.first()
-            .get_family()
-            .filter(content_type=ContentType.objects.get_for_model(Product))
-            .values_list("product__name", flat=True)
-            .distinct()
+    def get_node_pks_for_type(qs: QuerySet["ProductNode"], target_model: str) -> QuerySet:
+        """For a given ProductNode queryset, find all nodes with the given type
+        and return the primary keys of their related objects"""
+        # "product_version" -> "ProductVersion"
+        mapping_model = target_model.title().replace("_", "")
+        return qs.filter(level=MODEL_NODE_LEVEL_MAPPING[mapping_model]).values_list(
+            f"{target_model}__pk", flat=True
         )
 
     @staticmethod
-    def get_product_versions(node_model):
-        return list(
-            node_model.pnodes.first()
+    def get_node_names_for_type(product_model: "ProductModel", target_model: str) -> QuerySet:
+        """For a given ProductModel / Channel, find all related nodes with the given type
+        and return the names of their related objects"""
+        # "product_version" -> "ProductVersion"
+        mapping_model = target_model.title().replace("_", "")
+        # No .distinct() since __name on all ProductModel subclasses + Channel is always unique
+        return (
+            product_model.pnodes.first()
             .get_family()
-            .filter(content_type=ContentType.objects.get_for_model(ProductVersion))
-            .values_list("product_version__name", flat=True)
-            .distinct()
+            .filter(level=MODEL_NODE_LEVEL_MAPPING[mapping_model])
+            .values_list(f"{target_model}__name", flat=True)
         )
 
-    @staticmethod
-    def get_product_streams(node_model):
-        return list(
-            node_model.pnodes.first()
-            .get_family()
-            .filter(content_type=ContentType.objects.get_for_model(ProductStream))
-            .values_list("product_stream__name", flat=True)
-            .distinct()
-        )
+    @classmethod
+    def get_products(cls, product_model: "ProductModel") -> list[str]:
+        return list(cls.get_node_names_for_type(product_model, "product"))
 
-    @staticmethod
-    def get_product_variants(node_model):
-        return list(
-            node_model.pnodes.first()
-            .get_family()
-            .filter(content_type=ContentType.objects.get_for_model(ProductVariant))
-            .values_list("product_variant__name", flat=True)
-            .distinct()
-        )
+    @classmethod
+    def get_product_versions(cls, product_model: "ProductModel") -> list[str]:
+        return list(cls.get_node_names_for_type(product_model, "product_version"))
 
-    @staticmethod
-    def get_channels(node_model):
-        return list(
-            node_model.pnodes.first()
-            .get_family()
-            .filter(content_type=ContentType.objects.get_for_model(Channel))
-            .values_list("channel__name", flat=True)
-            .distinct()
-        )
+    @classmethod
+    def get_product_streams(cls, product_model: "ProductModel") -> list[str]:
+        return list(cls.get_node_names_for_type(product_model, "product_stream"))
+
+    @classmethod
+    def get_product_variants(cls, product_model: "ProductModel") -> list[str]:
+        return list(cls.get_node_names_for_type(product_model, "product_variant"))
+
+    @classmethod
+    def get_channels(cls, product_model: "ProductModel") -> list[str]:
+        return list(cls.get_node_names_for_type(product_model, "channel"))
 
 
 class ComponentNode(NodeModel):
@@ -274,10 +273,7 @@ class SoftwareBuild(TimeStampedModel):
         variant_ids = list(
             ProductComponentRelation.objects.filter(
                 build_id=self.build_id,
-                type__in=(
-                    ProductComponentRelation.Type.CDN_REPO,
-                    ProductComponentRelation.Type.ERRATA,
-                ),
+                type__in=ProductComponentRelation.VARIANT_TYPES,
             )
             .values_list("product_ref", flat=True)
             .distinct()
@@ -286,11 +282,7 @@ class SoftwareBuild(TimeStampedModel):
         stream_ids = list(
             ProductComponentRelation.objects.filter(
                 build_id=self.build_id,
-                type__in=(
-                    ProductComponentRelation.Type.BREW_TAG,
-                    ProductComponentRelation.Type.COMPOSE,
-                    ProductComponentRelation.Type.YUM_REPO,
-                ),
+                type__in=ProductComponentRelation.STREAM_TYPES,
             )
             .values_list("product_ref", flat=True)
             .distinct()
@@ -389,7 +381,7 @@ class ProductModel(TimeStampedModel):
     def coverage(self) -> int:
         if not self.pnodes.exists():
             return 0
-        pnode_children = self.pnodes.first().get_children()
+        pnode_children = self.pnodes.get_queryset().get_descendants()
         if not pnode_children.exists():
             return 0
         has_build = 0
@@ -397,6 +389,27 @@ class ProductModel(TimeStampedModel):
             if pn.obj.builds.exists():
                 has_build += 1
         return round(has_build / pnode_children.count(), 2)
+
+    @property
+    def cpes(self) -> tuple[str, ...]:
+        """Return CPEs for child streams / variants."""
+        # include_self=True so we don't have to override this property for streams
+        descendants = self.pnodes.get_queryset().get_descendants(include_self=True)
+        stream_cpes = (
+            descendants.filter(level=MODEL_NODE_LEVEL_MAPPING["ProductStream"])
+            .values_list("product_stream__cpe", flat=True)
+            .distinct()
+        )
+        variant_cpes = (
+            descendants.filter(level=MODEL_NODE_LEVEL_MAPPING["ProductVariant"])
+            .values_list("product_variant__cpe", flat=True)
+            .distinct()
+        )
+        return *stream_cpes, *variant_cpes
+
+    @abstractmethod
+    def get_ofuri(self) -> str:
+        pass
 
     def save_product_taxonomy(self):
         self.product_variants = ProductNode.get_product_variants(self)
@@ -432,14 +445,6 @@ class Product(ProductModel):
         """
         return f"o:redhat:{self.name}"
 
-    @property
-    def cpes(self):
-        cpes = []
-        for p in self.pnodes.get_queryset().get_descendants():
-            if hasattr(p.obj, "cpe"):
-                cpes.append(p.obj.cpe)
-        return list(set(cpes))
-
 
 class ProductTag(Tag):
     tagged_model = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="tags")
@@ -457,14 +462,6 @@ class ProductVersion(ProductModel):
         """
         version_name = re.sub(r"(-|_|)" + self.version + "$", "", self.name)
         return f"o:redhat:{version_name}:{self.version}"
-
-    @property
-    def cpes(self):
-        cpes = []
-        for p in self.pnodes.get_queryset().get_descendants():
-            if hasattr(p.obj, "cpe"):
-                cpes.append(p.obj.cpe)
-        return list(set(cpes))
 
 
 class ProductVersionTag(Tag):
@@ -487,10 +484,6 @@ class ProductStream(ProductModel):
     product_streams = None  # type: ignore
     pnodes = GenericRelation(ProductNode, related_query_name="product_stream")
 
-    @property
-    def cpes(self) -> list[str]:
-        return [self.cpe]
-
     def get_ofuri(self) -> str:
         """Return product stream URI
 
@@ -508,21 +501,16 @@ class ProductStream(ProductModel):
 
     def get_latest_components(self):
         """Return root components from latest builds."""
-        root_components = (
-            Q(type=Component.Type.RPM, arch="src")
-            | Q(type=Component.Type.CONTAINER_IMAGE, arch="noarch")
-            | Q(type=Component.Type.RPMMOD)
-        )
         return (
             Component.objects.filter(
-                root_components,
+                ROOT_COMPONENTS_CONDITION,
                 product_streams__overlap=(self.ofuri,),
             )
             .annotate(
-                latest=Subquery(
+                latest=models.Subquery(
                     Component.objects.filter(
-                        root_components,
-                        name=OuterRef("name"),
+                        ROOT_COMPONENTS_CONDITION,
+                        name=models.OuterRef("name"),
                         product_streams__overlap=(self.ofuri,),
                     )
                     .exclude(software_build__isnull=True)
@@ -531,7 +519,7 @@ class ProductStream(ProductModel):
                 )
             )
             .filter(
-                uuid=F("latest"),
+                uuid=models.F("latest"),
             )
         )
 
@@ -554,8 +542,10 @@ class ProductVariant(ProductModel):
     pnodes = GenericRelation(ProductNode, related_query_name="product_variant")
 
     @property
-    def cpes(self) -> list[str]:
-        return [self.cpe]
+    def cpes(self) -> tuple[str]:
+        # Split to fix warning that linter and IDE disagree about
+        cpes = (self.cpe,)
+        return cpes
 
     def get_ofuri(self) -> str:
         """Return product variant URI
@@ -653,6 +643,13 @@ class ProductComponentRelation(TimeStampedModel):
         CDN_REPO = "CDN_REPO"
         YUM_REPO = "YUM_REPO"
 
+    # Below not defined in constants to avoid circular imports
+    # ProductComponentRelation types which refer to ProductStreams
+    STREAM_TYPES = (Type.BREW_TAG, Type.COMPOSE, Type.YUM_REPO)
+
+    # ProductComponentRelation types which refer to ProductVariants
+    VARIANT_TYPES = (Type.CDN_REPO, Type.ERRATA)
+
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     type = models.CharField(choices=Type.choices, max_length=50)
     meta_attr = models.JSONField(default=dict)
@@ -707,14 +704,10 @@ def get_product_details(variant_ids: list[str], stream_ids: list[str]) -> dict[s
 
 class ComponentQuerySet(models.QuerySet):
     def srpms(self) -> models.QuerySet["Component"]:
-        return self.filter(Q(type=Component.Type.RPM) & Q(arch="src"))
+        return self.filter(SRPM_CONDITION)
 
     def root_components(self) -> models.QuerySet["Component"]:
-        return self.filter(
-            Q(Q(type=Component.Type.RPM) & Q(arch="src"))
-            | Q(type=Component.Type.RPMMOD)
-            | Q(Q(type=Component.Type.CONTAINER_IMAGE) & Q(arch="noarch"))
-        )
+        return self.filter(ROOT_COMPONENTS_CONDITION)
 
 
 class Component(TimeStampedModel):
@@ -808,29 +801,17 @@ class Component(TimeStampedModel):
             models.Index(
                 fields=("type", "name", "arch"),
                 name="compon_latest_name_type_idx",
-                condition=Q(
-                    Q(Q(type="RPM") & Q(arch="src"))
-                    | Q(type="RPMMOD")
-                    | Q(Q(type="OCI") & Q(arch="noarch"))
-                ),
+                condition=ROOT_COMPONENTS_CONDITION,
             ),
             models.Index(
                 fields=("name", "type", "arch"),
                 name="compon_latest_type_name_idx",
-                condition=Q(
-                    Q(Q(type="RPM") & Q(arch="src"))
-                    | Q(type="RPMMOD")
-                    | Q(Q(type="OCI") & Q(arch="noarch"))
-                ),
+                condition=ROOT_COMPONENTS_CONDITION,
             ),
             models.Index(
                 fields=("uuid", "software_build_id", "type", "name", "arch", "product_streams"),
                 name="compon_latest_idx",
-                condition=Q(
-                    Q(Q(type="RPM") & Q(arch="src"))
-                    | Q(type="RPMMOD")
-                    | Q(Q(type="OCI") & Q(arch="noarch"))
-                ),
+                condition=ROOT_COMPONENTS_CONDITION,
             ),
         )
 
@@ -914,10 +895,12 @@ class Component(TimeStampedModel):
         # Only add the arch qualify if it's not an image_index
         if self.arch != "noarch":
             qualifiers["arch"] = self.arch
-        # Add fully repository_url as well
+        # Add full repository_url as well
         repository_url = self.meta_attr.get("repository_url")
         if repository_url:
             qualifiers["repository_url"] = repository_url
+        # Note that if no container digest format matched, the digest below is ""
+        # and the constructed purl has no .version attribute
         return dict(
             name=purl_name,
             version=digest,
@@ -985,6 +968,35 @@ class Component(TimeStampedModel):
     @property
     def build_meta(self):
         return self.software_build.meta_attr
+
+    @property
+    def download_url(self) -> str:
+        """Report a URL for RPMs and container images that can be used in manifests"""
+        # RPM ex:
+        # /downloads/content/aspell-devel/0.60.8-8.el9/aarch64/fd431d51/package
+        # We can't build URLs like above because the fd431d51 signing key is required,
+        # but isn't available in the meta_attr / other properties (CORGI-342). Get it with:
+        # rpm -q --qf %{SIGPGP:pgpsig} aspell-devel-0.60.8-8.el9.x86_64 | tail -c8
+        if self.type == Component.Type.RPM:
+            return "https://access.redhat.com/downloads/content/package-browser"
+
+        # Image ex:
+        # /software/containers/container-native-virtualization/hco-bundle-registry/5ccae1925a13467289f2475b
+        # /software/containers/openshift/ose-local-storage-diskmaker/
+        # 5d9347b8dd19c70159f2f6e4?architecture=s390x&tag=v4.4.0-202007171809.p0
+        # We can't build URLs like above because the hash is required,
+        # but doesn't match any hash in the meta_attr / other properties.
+        # We could use repository_url instead, if we decide to store it on the model.
+        # Currently it's only in the meta_attr and should not be used (CORGI-341).
+
+        # TODO: self.filename, AKA the filename of the image archive a container is included in,
+        #  is always unset. This is not the digest SHA but the config layer SHA.
+        elif self.type == Component.Type.CONTAINER_IMAGE:
+            return "https://catalog.redhat.com/software/containers/search"
+
+        # All other component types are either not currently supported or have no downloadable
+        # artifacts (e.g. RHEL module builds).
+        return ""
 
     @property
     def errata(self) -> list[str]:
@@ -1089,8 +1101,10 @@ class Component(TimeStampedModel):
         upstreams = set()
         for root in roots:
             # For SRPM/RPMS, and noarch containers, these are the cnodes we want.
-            source_children = tuple(
-                c for c in root.get_children().filter(type=ComponentNode.ComponentNodeType.SOURCE)
+            source_descendant_purls = (
+                root.get_descendants()
+                .filter(type=ComponentNode.ComponentNodeType.SOURCE)
+                .values_list("purl", flat=True)
             )
             # Cachito builds nest components under the relevant source component for that
             # container build, eg. buildID=1911112. In that case we need to walk up the
@@ -1098,16 +1112,18 @@ class Component(TimeStampedModel):
             if (
                 root.obj.type == Component.Type.CONTAINER_IMAGE
                 and root.obj.arch == "noarch"
-                and len(source_children) > 1
+                and source_descendant_purls.count() > 1
             ):
                 upstreams.update(
-                    a.purl
-                    for a in self.cnodes.get_queryset().first().get_ancestors(include_self=True)
-                    if a.type == ComponentNode.ComponentNodeType.SOURCE
-                    and a.obj.namespace == Component.Namespace.UPSTREAM
+                    ancestor.purl
+                    for ancestor in self.cnodes.get_queryset()
+                    .get_ancestors(include_self=True)
+                    .filter(type=ComponentNode.ComponentNodeType.SOURCE)
+                    # Can't filter on obj fields when obj is linked using a GenericForeignKey
+                    if ancestor.obj.namespace == Component.Namespace.UPSTREAM
                 )
             else:
-                upstreams.update(c.purl for c in source_children)
+                upstreams.update(source_descendant_purls)
         return list(upstreams)
 
     def save_datascore(self):

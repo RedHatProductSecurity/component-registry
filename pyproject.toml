@@ -33,6 +33,10 @@ line-length = 100
 
 [tool.coverage.run]
 omit = ["corgi/core/migrations/*"]
+plugins = ["django_coverage_plugin"]
+
+[tool.coverage.django_coverage_plugin]
+template_extensions = "html, json"
 
 [tool.isort]
 profile = "black"

@@ -196,6 +196,10 @@ paths:
         schema:
           type: integer
       - in: query
+        name: ofuri
+        schema:
+          type: string
+      - in: query
         name: product_streams
         schema:
           type: string
@@ -213,6 +217,10 @@ paths:
           type: string
       - in: query
         name: provides
+        schema:
+          type: string
+      - in: query
+        name: purl
         schema:
           type: string
       - in: query
@@ -267,6 +275,10 @@ paths:
           type: string
       - in: query
         name: version
+        schema:
+          type: string
+      - in: query
+        name: view
         schema:
           type: string
       tags:

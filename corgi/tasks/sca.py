@@ -33,6 +33,7 @@ def save_component(component: dict[str, Any], parent: ComponentNode):
     meta = component.get("meta", {})
     if component["type"] not in Component.Type:
         logger.warning("Tried to save component with unknown type: %s", component["type"])
+        # TODO: Missing return here?
 
     meta_attr = component["analysis_meta"]
 
@@ -136,9 +137,9 @@ def _assign_go_stdlib_version(anchor_obj, go_packages):
             "version" not in go_package["meta"]
             and anchor_obj.type == Component.Type.CONTAINER_IMAGE
             and anchor_obj.arch == "noarch"
+            and "go_stdlib_version" in anchor_obj.meta_attr
         ):
-            if "go_stdlib_version" in anchor_obj.meta_attr:
-                go_package["meta"]["version"] = anchor_obj.meta_attr["go_stdlib_version"]
+            go_package["meta"]["version"] = anchor_obj.meta_attr["go_stdlib_version"]
 
 
 def _get_distgit_sources(source_url: str, build_id: int) -> list[Path]:
@@ -232,7 +233,8 @@ def _download_source(download_url: str, target_filepath: Path) -> None:
     package_dir.mkdir(parents=True, exist_ok=True)
     logger.info("Downloading sources from: %s, to: %s", download_url, target_filepath)
     r: Response = requests.get(download_url)
-    target_filepath.open("wb").write(r.content)
+    with target_filepath.open("wb") as target_file:
+        target_file.write(r.content)
 
 
 def get_tarinfo(members, archived_filename) -> Optional[tarfile.TarInfo]:

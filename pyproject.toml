@@ -23,6 +23,7 @@ markers = [
     "integration",
 ]
 filterwarnings = [
+    "error",
     "ignore::UserWarning",
     "ignore::DeprecationWarning",
     "ignore::PendingDeprecationWarning",

@@ -1,8 +1,8 @@
 {# Component manifest, obj is a Component here #}
 {% extends "base_manifest.json" %}
 {% block packages %}
-{% for node in obj.get_provides_nodes %}
-        {% include "package_manifest.json" with component=node.obj %}
+{% for component in obj.provides.get_queryset %}
+        {% include "package_manifest.json" %}
     {% endfor %}
     {
         "copyrightText": {% if obj.copyright_text %}"{{obj.copyright_text}}"{% else %}"NOASSERTION"{% endif %},

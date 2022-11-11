@@ -402,6 +402,10 @@ paths:
       description: View for api/v1/product_streams
       parameters:
       - in: query
+        name: active
+        schema:
+          type: string
+      - in: query
         name: channels
         schema:
           type: string

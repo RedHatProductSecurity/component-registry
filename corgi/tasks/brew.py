@@ -507,7 +507,6 @@ def fetch_unprocessed_relations(
     return processed_builds
 
 
-#
 @app.task(
     base=Singleton,
     autorety_for=RETRYABLE_ERRORS,

@@ -346,6 +346,7 @@ SCA_SCRATCH_DIR = os.getenv("CORGI_SCA_SCATCH_DIR", "/tmp")
 
 # Maximum number of builds to process from the relations table in a single day
 # We don't load them all to avoid overloading Redis, see CORGI-346
-# The default value of 15,000 is based on a throughput of 15 tasks a minute
-# and a Redis max_memory setting of 200mb
-MAX_BUILDS_TO_PROCESS = int(os.getenv("CORGI_MAX_BUILDS_TO_PROCESS", "15000"))
+# The default value of 120,000 is based on a throughput of 10 tasks a minute,
+# and therefore 144,000 tasks a day. Allowing 24,000 ah-doc tasks to be scheduled in addition
+# to the 120,000 maximum limit requested from the relations table
+MAX_BUILDS_TO_PROCESS = int(os.getenv("CORGI_MAX_BUILDS_TO_PROCESS", "120000"))

@@ -9,11 +9,7 @@ from config.celery import app
 from corgi.collectors.yum import Yum
 from corgi.core.constants import YUM_RELATIONS_RATIO
 from corgi.core.models import Channel, ProductComponentRelation, ProductStream
-from corgi.tasks.common import (
-    RETRY_KWARGS,
-    RETRYABLE_ERRORS,
-    _create_relations,
-)
+from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS, _create_relations
 from corgi.tasks.pulp import fetch_unprocessed_relations
 
 logger = logging.getLogger(__name__)

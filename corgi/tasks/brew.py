@@ -490,7 +490,7 @@ def fetch_unprocessed_relations(
         ProductComponentRelation.objects.filter(type=relation_type)
         .order_by("created_at")
         .values_list("build_id", flat=True)
-        .distinct()[:max_builds]
+        .distinct()
     )
     logger.info(f"Processing relations of type {relation_type}")
     processed_builds = 0
@@ -499,9 +499,11 @@ def fetch_unprocessed_relations(
             # build_id defaults to "" and int() will fail in this case
             continue
         if not SoftwareBuild.objects.filter(build_id=int(build_id)).exists():
-            logger.debug("Processing CDN relation build with id: %s", build_id)
+            logger.info("Processing CDN relation build with id: %s", build_id)
             slow_fetch_modular_build.delay(build_id, force_process=force_process)
             processed_builds += 1
+            if max_builds and processed_builds > max_builds:
+                break
     return processed_builds
 
 

@@ -343,3 +343,9 @@ MANIFEST_HINTS_URL = os.getenv("CORGI_MANIFEST_HINTS_URL")
 
 LOOKASIDE_CACHE_BASE_URL = f"https://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}/repo"
 SCA_SCRATCH_DIR = os.getenv("CORGI_SCA_SCATCH_DIR", "/tmp")
+
+# Maximum number of builds to process from the relations table in a single day
+# We don't load them all to avoid overloading Redis, see CORGI-346
+# The default value of 15,000 is based on a throughput of 15 tasks a minute
+# and a Redis max_memory setting of 200mb
+MAX_BUILDS_TO_PROCESS = int(os.getenv("CORGI_MAX_BUILDS_TO_PROCESS", "15000"))

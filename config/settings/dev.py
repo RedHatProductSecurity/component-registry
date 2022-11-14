@@ -1,5 +1,30 @@
 from .base import *  # noqa: F401, F403
 
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "default": {
+            "format": "[%(asctime)s] [%(name)s:%(lineno)d] %(levelname)s: %(message)s",
+            "datefmt": "%d/%b/%Y:%H:%M:%S %z",  # Matches the one used by gunicorn
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "default",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "WARNING",
+    },
+    "loggers": {
+        "django": {"handlers": ["console"], "level": "WARNING"},
+        "corgi": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
+    },
+}
+
 DEBUG = True
 
 SECRET_KEY = "helloworld"

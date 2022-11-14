@@ -4,7 +4,8 @@ import logging
 import django_filters.rest_framework
 from django.db import connection
 from django.utils import timezone
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from mptt.templatetags.mptt_tags import cache_tree_children
 from packageurl import PackageURL
 from rest_framework import filters, status
@@ -296,6 +297,9 @@ class ProductStreamViewSetSet(ProductDataViewSet):
     queryset = ProductStream.objects.filter(active=True).order_by(ProductDataViewSet.ordering_field)
     serializer_class = ProductStreamSerializer
 
+    @extend_schema(
+        parameters=[OpenApiParameter("active", OpenApiTypes.STR, OpenApiParameter.QUERY)]
+    )
     def list(self, request, *args, **kwargs):
         req = self.request
         active = request.query_params.get("active")
@@ -403,6 +407,13 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
             # No matching model instance found, or invalid ofuri
             return self.queryset
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("ofuri", OpenApiTypes.STR, OpenApiParameter.QUERY),
+            OpenApiParameter("view", OpenApiTypes.STR, OpenApiParameter.QUERY),
+            OpenApiParameter("purl", OpenApiTypes.STR, OpenApiParameter.QUERY),
+        ]
+    )
     def list(self, request, *args, **kwargs):
         # purl are stored with each segment url encoded as per the specification. The purl query
         # param here is url decoded, to ensure special characters such as '@' and '?'

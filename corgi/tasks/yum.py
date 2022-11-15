@@ -1,20 +1,15 @@
 import logging
-from datetime import timedelta
+import math
 from urllib.parse import urlparse
 
 from celery_singleton import Singleton
 from django.conf import settings
-from django.utils import timezone
 
 from config.celery import app
 from corgi.collectors.yum import Yum
+from corgi.core.constants import YUM_RELATIONS_RATIO
 from corgi.core.models import Channel, ProductComponentRelation, ProductStream
-from corgi.tasks.common import (
-    RETRY_KWARGS,
-    RETRYABLE_ERRORS,
-    _create_relations,
-    get_last_success_for_task,
-)
+from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS, _create_relations
 from corgi.tasks.pulp import fetch_unprocessed_relations
 
 logger = logging.getLogger(__name__)
@@ -26,15 +21,10 @@ logger = logging.getLogger(__name__)
     retry_kwargs=RETRY_KWARGS,
     soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
 )
-def fetch_unprocessed_yum_relations(force_process: bool = False, created_since: int = 0) -> int:
-    if created_since:
-        created_dt = timezone.now() - timedelta(days=created_since)
-    else:
-        created_dt = get_last_success_for_task("corgi.tasks.yum.fetch_unprocessed_yum_relations")
+def fetch_unprocessed_yum_relations(force_process: bool = False) -> int:
+    max_builds = math.ceil(settings.MAX_BUILDS_TO_PROCESS * YUM_RELATIONS_RATIO)
     return fetch_unprocessed_relations(
-        ProductComponentRelation.Type.YUM_REPO,
-        force_process=force_process,
-        created_since=created_dt,
+        ProductComponentRelation.Type.YUM_REPO, max_builds=max_builds, force_process=force_process
     )
 
 

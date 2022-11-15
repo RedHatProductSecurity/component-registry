@@ -4,8 +4,8 @@ from celery_singleton import Singleton
 
 from config.celery import app
 from corgi.collectors.rhel_compose import RhelCompose
-from corgi.core.models import ProductComponentRelation, ProductStream
-from corgi.tasks.brew import fetch_modular_builds
+from corgi.core.models import ProductComponentRelation, ProductStream, SoftwareBuild
+from corgi.tasks.brew import slow_fetch_modular_build
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS, _create_relations
 
 logger = logging.getLogger(__name__)
@@ -39,7 +39,9 @@ def save_compose(stream_name) -> None:
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def get_builds(compose_names: list[str] = None, stream_name: str = None) -> None:
+def get_builds(
+    compose_names: list[str] = None, stream_name: str = None, force_process: bool = False
+) -> int:
     """Get compose build IDs, optionally for only a particular stream or set of composes"""
     relations_query = ProductComponentRelation.objects.filter(
         type=ProductComponentRelation.Type.COMPOSE
@@ -49,5 +51,12 @@ def get_builds(compose_names: list[str] = None, stream_name: str = None) -> None
     elif stream_name:
         relations_query = relations_query.filter(product_ref=stream_name)
 
-    relations_build_ids = relations_query.values_list("build_id", flat=True).distinct()
-    fetch_modular_builds(relations_build_ids)
+    processed_builds = 0
+    for build_id in relations_query.values_list("build_id", flat=True).distinct().iterator():
+        if not build_id:
+            continue
+        if not SoftwareBuild.objects.filter(build_id=int(build_id)).exists():
+            logger.info("Processing Compose relation build with id: %s", build_id)
+            slow_fetch_modular_build.delay(build_id, force_process=force_process)
+            processed_builds += 1
+    return processed_builds

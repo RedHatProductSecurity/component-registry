@@ -1,6 +1,6 @@
 import logging
+import math
 import re
-from datetime import timedelta
 from typing import Optional
 
 from celery_singleton import Singleton
@@ -11,6 +11,7 @@ from django.utils.timezone import make_aware
 
 from config.celery import app
 from corgi.collectors.brew import Brew, BrewBuildTypeNotSupported
+from corgi.core.constants import BREW_RELATIONS_RATIO
 from corgi.core.models import (
     Component,
     ComponentNode,
@@ -483,31 +484,26 @@ def fetch_modular_builds(relations_query: QuerySet, force_process: bool = False)
 
 
 def fetch_unprocessed_relations(
-    relation_type: ProductComponentRelation.Type,
-    created_since: timezone.datetime,
-    force_process: bool = False,
+    relation_type: ProductComponentRelation.Type, max_builds: int, force_process: bool = False
 ) -> int:
-    relations_query = ProductComponentRelation.objects.filter(type=relation_type)
-    if created_since:
-        relations_query = relations_query.filter(created_at__gte=created_since)
-    # batch process to avoid exhausting the memory limit for the pod
-    distinct_ids = relations_query.values_list("build_id", flat=True).distinct()
-    relation_count = distinct_ids.count()
-    logger.info("Found %s %s relations", relation_count, relation_type)
-    offset = 0
-    limit = 10000
+    relations_query = (
+        ProductComponentRelation.objects.filter(type=relation_type)
+        .order_by("created_at")
+        .values_list("build_id", flat=True)
+        .distinct()
+    )
+    logger.info(f"Processing relations of type {relation_type}")
     processed_builds = 0
-    while offset < relation_count:
-        logger.info("Processing CDN relations with offset %s and limit %s", offset, limit)
-        for build_id in distinct_ids[offset : offset + limit]:
-            if not build_id:
-                # build_id defaults to "" and int() will fail in this case
-                continue
-            if not SoftwareBuild.objects.filter(build_id=int(build_id)).exists():
-                logger.info("Processing CDN relation build with id: %s", build_id)
-                slow_fetch_modular_build.delay(build_id, force_process=force_process)
-                processed_builds += 1
-        offset = offset + limit
+    for build_id in relations_query.iterator():
+        if not build_id:
+            # build_id defaults to "" and int() will fail in this case
+            continue
+        if not SoftwareBuild.objects.filter(build_id=int(build_id)).exists():
+            logger.info("Processing CDN relation build with id: %s", build_id)
+            slow_fetch_modular_build.delay(build_id, force_process=force_process)
+            processed_builds += 1
+            if max_builds and processed_builds > max_builds:
+                break
     return processed_builds
 
 
@@ -517,12 +513,8 @@ def fetch_unprocessed_relations(
     retry_kwargs=RETRY_KWARGS,
     soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
 )
-def fetch_unprocessed_brew_tag_relations(
-    force_process: bool = False, created_since: int = 2
-) -> int:
-    created_dt = timezone.now() - timedelta(days=created_since)
+def fetch_unprocessed_brew_tag_relations(force_process: bool = False) -> int:
+    max_builds = math.ceil(settings.MAX_BUILDS_TO_PROCESS * BREW_RELATIONS_RATIO)
     return fetch_unprocessed_relations(
-        ProductComponentRelation.Type.BREW_TAG,
-        force_process=force_process,
-        created_since=created_dt,
+        ProductComponentRelation.Type.BREW_TAG, max_builds=max_builds, force_process=force_process
     )

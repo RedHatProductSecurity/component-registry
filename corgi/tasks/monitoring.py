@@ -51,7 +51,6 @@ def setup_periodic_tasks(sender, **kwargs):
     # Once a week on a Saturday fetch relations from all active CDN repos
     # Revisit if this is still necessary after CORGI-257 is complete
     upsert_cron_task("pulp", "setup_pulp_relations", minute=0, hour=4, day_of_week=6)
-    upsert_cron_task("pulp", "fetch_unprocessed_cdn_relations", minute=0, hour=8, day_of_week=6)
 
     # Daily tasks, scheduled to a specific hour. For some reason, using hours=24 may not run the
     # task at all: https://github.com/celery/django-celery-beat/issues/221
@@ -64,7 +63,8 @@ def setup_periodic_tasks(sender, **kwargs):
     upsert_cron_task("brew", "fetch_unprocessed_brew_tag_relations", hour=6, minute=0)
     upsert_cron_task("yum", "load_yum_repositories", hour=7, minute=0)
     upsert_cron_task("yum", "fetch_unprocessed_yum_relations", hour=8, minute=0)
-    upsert_cron_task("monitoring", "email_failed_tasks", hour=10, minute=45)
+    upsert_cron_task("pulp", "fetch_unprocessed_cdn_relations", hour=9, minute=0)
+    upsert_cron_task("monitoring", "email_failed_tasks", hour=11, minute=45)
 
     # Automatic task result expiration is currently disabled
     # We are required to keep UMB task results

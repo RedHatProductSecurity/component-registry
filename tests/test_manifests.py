@@ -209,6 +209,5 @@ def setup_products_and_components():
     ProductComponentRelationFactory(
         build_id="1", product_ref="1", type=ProductComponentRelation.Type.ERRATA
     )
-    build.save_component_taxonomy()
     build.save_product_taxonomy()
     return component, stream, provided, dev_provided

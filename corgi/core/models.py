@@ -257,17 +257,6 @@ class SoftwareBuild(TimeStampedModel):
             component.save_datascore()
         return None
 
-    def save_component_taxonomy(self):
-        """Note: this function is no longer invoked and may be removed in the future.
-
-        it is only possible to update ('materialize') component taxonomy when all
-        components (from a build) have loaded"""
-        for component in Component.objects.filter(software_build__build_id=self.build_id):
-            for cnode in component.cnodes.get_queryset():
-                for d in cnode.get_descendants(include_self=True):
-                    d.obj.save_component_taxonomy()
-        return None
-
     def save_product_taxonomy(self):
         """update ('materialize') product taxonomy on all build components"""
         variant_ids = list(

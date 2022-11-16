@@ -171,19 +171,30 @@ LOGGING = {
             "datefmt": "%d/%b/%Y:%H:%M:%S %z",  # Matches the one used by gunicorn
         },
     },
+    "filters": {
+        "require_debug_false": {
+            "()": "django.utils.log.RequireDebugFalse",
+        },
+    },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
             "formatter": "default",
         },
+        # Email ERROR or higher to settings.ADMINS when DEBUG = False
+        "mail_admins": {
+            "class": "django.utils.log.AdminEmailHandler",
+            "filters": ["require_debug_false"],
+            "level": "ERROR",
+        },
     },
     "root": {
-        "handlers": ["console"],
+        "handlers": ["console", "mail_admins"],
         "level": "WARNING",
     },
     "loggers": {
-        "django": {"handlers": ["console"], "level": "WARNING"},
-        "corgi": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "django": {"handlers": ["console", "mail_admins"], "level": "WARNING"},
+        "corgi": {"handlers": ["console", "mail_admins"], "level": "INFO", "propagate": False},
     },
 }
 

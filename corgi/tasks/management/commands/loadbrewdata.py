@@ -5,7 +5,7 @@ from koji import GenericError
 
 from corgi.collectors.brew import Brew
 from corgi.core.models import ProductStream
-from corgi.tasks.brew import fetch_unprocessed_brew_tag_relations, slow_fetch_brew_build
+from corgi.tasks.brew import fetch_brew_build, fetch_unprocessed_brew_tag_relations
 
 
 class Command(BaseCommand):
@@ -83,6 +83,6 @@ class Command(BaseCommand):
 
         for build_id in build_ids:
             if options["inline"]:
-                slow_fetch_brew_build(build_id, force_process=options["force"])
+                fetch_brew_build(build_id, force_process=options["force"])
             else:
-                slow_fetch_brew_build.delay(build_id, force_process=options["force"])
+                fetch_brew_build.delay(build_id, force_process=options["force"])

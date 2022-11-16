@@ -239,7 +239,6 @@ CELERY_RESULT_BACKEND = "django-db"
 # https://django-celery-results.readthedocs.io/en/latest/reference/django_celery_results.managers.html
 CELERY_RESULT_BACKEND_ALWAYS_RETRY = True
 CELERY_RESULT_BACKEND_MAX_RETRIES = 2
-CELERY_DEFAULT_RATE_LIMIT = "8/m"
 
 # Set a global 15-minute task timeout. Override this on individual tasks by decorating them with:
 # @app.task(soft_time_limit=<TIME_IN_SECONDS>)
@@ -250,7 +249,7 @@ CELERY_LONGEST_SOFT_TIME_LIMIT = 2400
 # https://github.com/steinitzu/celery-singleton#app-configuration
 CELERY_SINGLETON_LOCK_EXPIRY = CELERY_LONGEST_SOFT_TIME_LIMIT
 
-CELERY_WORKER_CONCURRENCY = 1  # defaults to CPU core count, which breaks in OpenShift
+CELERY_WORKER_CONCURRENCY = 5  # defaults to CPU core count, which breaks in OpenShift
 
 # Disable task prefetching, which caused connection timeouts and other odd task failures in SDEngine
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1

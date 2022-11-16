@@ -31,12 +31,12 @@ def setup_pulp_relations() -> None:
     for channel in Channel.objects.filter(type=Channel.Type.CDN_REPO):
         for pv_ofuri in channel.product_variants:
             pv = ProductVariant.objects.get(ofuri=pv_ofuri)
-            slow_setup_pulp_rpm_relations.delay(channel.name, pv.name)
-            slow_setup_pulp_module_relations.delay(channel.name, pv.name)
+            setup_pulp_rpm_relations.delay(channel.name, pv.name)
+            setup_pulp_module_relations.delay(channel.name, pv.name)
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def slow_setup_pulp_rpm_relations(channel, variant):
+def setup_pulp_rpm_relations(channel, variant):
     srpm_build_ids = Pulp().get_rpm_data(channel)
     no_of_relations = _create_relations(
         srpm_build_ids, channel, variant, ProductComponentRelation.Type.CDN_REPO
@@ -46,7 +46,7 @@ def slow_setup_pulp_rpm_relations(channel, variant):
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def slow_setup_pulp_module_relations(channel, variant):
+def setup_pulp_module_relations(channel, variant):
     module_build_ids = Pulp().get_module_data(channel)
     no_of_relations = _create_relations(
         module_build_ids, channel, variant, ProductComponentRelation.Type.CDN_REPO

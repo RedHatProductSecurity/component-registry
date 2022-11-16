@@ -2,7 +2,7 @@ import sys
 
 from django.core.management.base import BaseCommand, CommandParser
 
-from corgi.tasks.errata_tool import slow_load_errata
+from corgi.tasks.errata_tool import load_errata
 from corgi.tasks.pulp import update_cdn_repo_channels
 
 
@@ -36,9 +36,9 @@ class Command(BaseCommand):
             for erratum_id in errata_ids:
                 self.stdout.write(self.style.SUCCESS(f"Loading Errata {erratum_id}"))
                 if options["inline"]:
-                    slow_load_errata(erratum_id)
+                    load_errata(erratum_id)
                 else:
-                    slow_load_errata.delay(erratum_id)
+                    load_errata.delay(erratum_id)
         elif options["repos"]:
             self.stdout.write(self.style.SUCCESS("Loading channels"))
             if options["inline"]:

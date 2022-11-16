@@ -9,7 +9,7 @@ from yaml import safe_load
 
 from corgi.collectors.brew import Brew, BrewBuildTypeNotSupported
 from corgi.core.models import Component, ComponentNode
-from corgi.tasks.brew import save_component, slow_fetch_brew_build
+from corgi.tasks.brew import fetch_brew_build, save_component
 from tests.data.image_archive_data import (
     NO_RPMS_IN_SUBCTL_CONTAINER,
     NOARCH_RPM_IDS,
@@ -653,7 +653,7 @@ def test_extract_image_components():
 @pytest.mark.vcr(match_on=["method", "scheme", "host", "port", "path", "body"])
 @patch("corgi.tasks.sca.slow_software_composition_analysis.delay")
 def test_fetch_rpm_build(mock_sca):
-    slow_fetch_brew_build(1705913)
+    fetch_brew_build(1705913)
     srpm = Component.objects.srpms().get(name="cockpit")
     assert srpm.description
     assert srpm.license_declared_raw
@@ -696,13 +696,13 @@ def test_fetch_rpm_build(mock_sca):
 
 @patch("corgi.tasks.brew.Brew")
 @patch("corgi.tasks.brew.slow_software_composition_analysis.delay")
-@patch("corgi.tasks.brew.slow_load_errata.delay")
-@patch("corgi.tasks.brew.slow_fetch_brew_build.delay")
+@patch("corgi.tasks.brew.load_errata.delay")
+@patch("corgi.tasks.brew.fetch_brew_build.delay")
 def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, mock_sca, mock_brew):
     with open("tests/data/brew/1781353/component_data.json", "r") as component_data_file:
         mock_brew.return_value.get_component_data.return_value = json.load(component_data_file)
 
-    slow_fetch_brew_build(1781353)
+    fetch_brew_build(1781353)
     image_index = Component.objects.get(
         name="subctl-container", type=Component.Type.CONTAINER_IMAGE, arch="noarch"
     )
@@ -727,7 +727,7 @@ def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, moc
                 assert len(arch_specific_rpms) == NO_RPMS_IN_SUBCTL_CONTAINER - len(NOARCH_RPM_IDS)
     assert len(child_containers) == 3
 
-    # Verify calls were made to slow_fetch_brew_build.delay for rpm builds
+    # Verify calls were made to fetch_brew_build.delay for rpm builds
     assert len(mock_fetch_brew_build.call_args_list) == len(RPM_BUILD_IDS)
     mock_fetch_brew_build.assert_has_calls(
         [call(build_id) for build_id in RPM_BUILD_IDS],
@@ -740,5 +740,5 @@ def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, moc
 @patch("corgi.core.models.SoftwareBuild.save_product_taxonomy")
 def test_new_software_build_relation(mock_save_prod_tax):
     sb = SoftwareBuildFactory()
-    slow_fetch_brew_build(sb.build_id)
+    fetch_brew_build(sb.build_id)
     assert mock_save_prod_tax.called

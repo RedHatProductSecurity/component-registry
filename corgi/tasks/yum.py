@@ -34,11 +34,11 @@ def load_yum_repositories() -> None:
     ):
         for repo in repos:  # type: ignore
             # mypy thinks yum_repositories can be None, even though it defaults to []
-            slow_load_yum_repositories_for_stream.delay(stream, repo)
+            load_yum_repositories_for_stream.delay(stream, repo)
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def slow_load_yum_repositories_for_stream(stream: str, repo: str) -> None:
+def load_yum_repositories_for_stream(stream: str, repo: str) -> None:
     """Use dnf repoquery commands to inspect and load all content in a particular Yum repo"""
     logger.info(f"Loading Yum repository {repo} for ProductStream {stream}")
 

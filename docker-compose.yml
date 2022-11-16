@@ -32,7 +32,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 256M  # Keep in sync with OpenShift mem limits to catch OOM problems
+          memory: 1.5G  # Keep in sync with OpenShift mem limits to catch OOM problems
     hostname: redis
     # Keep this in sync with openshift/playbooks/redis.yml
     image: "registry.redhat.io/rhel8/redis-6:1"
@@ -91,11 +91,12 @@ services:
       - .:/opt/app-root/src:z
 
   corgi-celery-fast:
-    container_name: corgi-celery-fast
     deploy:
+      replicas: 2
       resources:
         limits:
-          memory: 2G  # Keep in sync with OpenShift mem limits to catch OOM problems
+          memory: 256M  # Keep in sync with OpenShift mem limits to catch OOM problems
+    container_name: corgi-celery-fast
     image: corgi
     env_file:
       - .env
@@ -110,10 +111,10 @@ services:
 
   corgi-celery-slow:
     deploy:
-      replicas: 6
+      replicas: 8
       resources:
         limits:
-          memory: 2G  # Keep in sync with OpenShift mem limits to catch OOM problems
+          memory: 640M  # Keep in sync with OpenShift mem limits to catch OOM problems
     container_name: corgi-celery-slow
     image: corgi
     env_file:

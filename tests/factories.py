@@ -131,7 +131,7 @@ class ComponentFactory(factory.django.DjangoModelFactory):
     software_build = factory.SubFactory(SoftwareBuildFactory)
     tag = factory.RelatedFactory(ComponentTagFactory, factory_related_name="tagged_model")
 
-    meta_attr = {}
+    meta_attr: dict = {}
 
 
 class SrpmComponentFactory(ComponentFactory):
@@ -156,7 +156,7 @@ class LifeCycleFactory(factory.django.DjangoModelFactory):
     acg = 2
     end_date = datetime.strptime("20320311", "%Y%m%d")
     product = "RHEL"
-    initial_product_version: "9.0"
+    initial_product_version = "9.0"
     stream = "1.0.8"
     private = False
     source = "default"

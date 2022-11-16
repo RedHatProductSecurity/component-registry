@@ -1,7 +1,7 @@
 import sys
 
 from django.core.management.base import BaseCommand, CommandParser
-from koji import GenericError
+from koji import GenericError  # type: ignore[attr-defined]
 
 from corgi.collectors.brew import Brew
 from corgi.core.models import ProductStream

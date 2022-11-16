@@ -148,16 +148,7 @@ def get_product_relations(instance_name: str) -> list[dict[str, str]]:
         .values_list("type", "external_system_id")
         .distinct("external_system_id")
     )
-    relations: list[dict[str, str]] = [
-        # Django's values_list() returns a QuerySet of Optional[str]
-        # even though the fields aren't nullable - this is a known bug
-        # https://github.com/typeddjango/django-stubs/issues/444
-        # We can upgrade djangorestframework-stubs to 1.7.0 to fix
-        # But there are other bugs in our code we must also fix
-        {"type": pcr_type, "external_system_id": pcr_id}  # type: ignore
-        for (pcr_type, pcr_id) in related_pcrs
-    ]
-    return relations
+    return [{"type": pcr_type, "external_system_id": pcr_id} for (pcr_type, pcr_id) in related_pcrs]
 
 
 class TagSerializer(serializers.Serializer):
@@ -185,9 +176,7 @@ class SoftwareBuildSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_components(instance: SoftwareBuild) -> list[dict[str, str]]:
-        return get_component_data_list(
-            instance.components.values_list("purl", flat=True)  # type: ignore
-        )
+        return get_component_data_list(instance.components.values_list("purl", flat=True))
 
     class Meta:
         model = SoftwareBuild

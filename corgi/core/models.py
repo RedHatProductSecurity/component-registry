@@ -193,7 +193,7 @@ class ComponentNode(NodeModel):
         #    core_cn_tree_lft_purl_parent_idx
         #    core_cn_lft_tree_idx
         #    core_cn_lft_rght_tree_idx
-        indexes = (  # type: ignore
+        indexes = (  # type: ignore[assignment]
             models.Index(fields=("type", "parent", "purl")),
             models.Index(fields=("type",)),
             models.Index(fields=("parent",)),
@@ -435,7 +435,7 @@ class Product(ProductModel):
 
     # Inherit product_versions, product_streams, and product_variants from ProductModel
     # Override only products which doesn't make sense for this model
-    products = None  # type: ignore
+    products = None  # type: ignore[assignment]
     pnodes = GenericRelation(ProductNode, related_query_name="product")
 
     def get_ofuri(self) -> str:
@@ -452,7 +452,7 @@ class ProductTag(Tag):
 
 class ProductVersion(ProductModel):
 
-    product_versions = None  # type: ignore
+    product_versions = None  # type: ignore[assignment]
     pnodes = GenericRelation(ProductNode, related_query_name="product_version")
 
     def get_ofuri(self) -> str:
@@ -481,7 +481,7 @@ class ProductStream(ProductModel):
     et_product_versions = fields.ArrayField(models.CharField(max_length=200), default=list)
 
     # redefined from parent class
-    product_streams = None  # type: ignore
+    product_streams = None  # type: ignore[assignment]
     pnodes = GenericRelation(ProductNode, related_query_name="product_stream")
 
     def get_ofuri(self) -> str:
@@ -538,7 +538,7 @@ class ProductVariant(ProductModel):
     cpe = models.CharField(max_length=1000, default="")
 
     # redefined from parent class
-    product_variants = None  # type: ignore
+    product_variants = None  # type: ignore[assignment]
     pnodes = GenericRelation(ProductNode, related_query_name="product_variant")
 
     @property
@@ -1088,9 +1088,7 @@ class Component(TimeStampedModel):
 
     def get_source(self) -> list:
         """return all root nodes"""
-        purl_cn = ComponentNode.objects.filter(purl=self.purl).get_ancestors(  # type: ignore
-            include_self=False
-        )
+        purl_cn = ComponentNode.objects.filter(purl=self.purl).get_ancestors(include_self=False)
         return list(purl_cn.filter(parent=None).values_list("purl", flat=True).distinct())
 
     def get_upstreams(self):

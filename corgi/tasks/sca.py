@@ -83,12 +83,7 @@ def slow_software_composition_analysis(build_id: int):
     software_build = SoftwareBuild.objects.get(build_id=build_id)
 
     # Get root component for this build; fail the task if it does not exist.
-    # TODO: ditch type:ignore when https://github.com/typeddjango/django-stubs/pull/1025 is released
-    root_component = (
-        Component.objects.filter(software_build=software_build)
-        .root_components()  # type:ignore
-        .get()
-    )
+    root_component = Component.objects.filter(software_build=software_build).root_components().get()
 
     if root_component.name == "kernel":
         logger.info("skipping scan of the kernel, see CORGI-270")
@@ -230,7 +225,7 @@ def _download_lookaside_sources(
     return downloaded_sources
 
 
-def _download_source(download_url, target_filepath):
+def _download_source(download_url: str, target_filepath: Path) -> None:
     package_dir = Path(target_filepath.parents[0])
     # This can be called multiple times for each source in the lookaside cache. We allow existing
     # package_dir not to fail in case this is a subsequent file we are downloading

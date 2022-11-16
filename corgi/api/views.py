@@ -436,7 +436,7 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         return response
 
     @action(methods=["get"], detail=True)
-    def manifest(self, request: Request, uuid: str = None) -> Response:
+    def manifest(self, request: Request, uuid: str = "") -> Response:
         obj = self.queryset.filter(uuid=uuid).first()
         if not obj:
             return Response(status=404)

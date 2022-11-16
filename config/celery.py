@@ -1,6 +1,6 @@
 import logging
 
-from celery import Celery  # type: ignore
+from celery import Celery  # type: ignore[attr-defined]
 
 logger = logging.getLogger(__name__)
 

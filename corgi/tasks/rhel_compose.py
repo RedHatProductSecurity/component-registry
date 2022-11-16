@@ -1,4 +1,5 @@
 import logging
+from typing import Iterable
 
 from celery_singleton import Singleton
 
@@ -40,7 +41,7 @@ def save_compose(stream_name) -> None:
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def get_builds(
-    compose_names: list[str] = None, stream_name: str = None, force_process: bool = False
+    compose_names: Iterable[str] = (), stream_name: str = "", force_process: bool = False
 ) -> int:
     """Get compose build IDs, optionally for only a particular stream or set of composes"""
     relations_query = ProductComponentRelation.objects.filter(

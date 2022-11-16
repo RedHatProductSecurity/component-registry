@@ -35,7 +35,7 @@ class Command(BaseCommand):
                 self.get_builds_by_cdn_repo(stream_name=stream_name, force_process=options["force"])
         elif options["all"]:
             self.stdout.write(self.style.NOTICE("Fetching all unprocessed pulp relations"))
-            fetch_unprocessed_cdn_relations(force_process=options["force"], created_since=0)
+            fetch_unprocessed_cdn_relations(force_process=options["force"])
         else:
             self.stderr.write(self.style.ERROR("Pass either a stream name or the --all argument"))
             sys.exit(1)

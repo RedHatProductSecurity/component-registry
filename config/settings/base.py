@@ -193,7 +193,7 @@ LOGGING = {
         "level": "WARNING",
     },
     "loggers": {
-        "django": {"handlers": ["console", "mail_admins"], "level": "WARNING"},
+        "django": {"handlers": ["console"], "level": "WARNING"},
         "corgi": {"handlers": ["console", "mail_admins"], "level": "INFO", "propagate": False},
     },
 }

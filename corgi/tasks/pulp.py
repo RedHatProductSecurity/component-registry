@@ -1,12 +1,10 @@
 import logging
-import math
 
 from celery_singleton import Singleton
 from django.conf import settings
 
 from config.celery import app
 from corgi.collectors.pulp import Pulp
-from corgi.core.constants import CDN_RELATIONS_RATIO
 from corgi.core.models import Channel, ProductComponentRelation, ProductVariant
 from corgi.tasks.brew import fetch_unprocessed_relations
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS, _create_relations
@@ -22,9 +20,8 @@ logger = logging.getLogger(__name__)
     soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
 )
 def fetch_unprocessed_cdn_relations(force_process: bool = False) -> int:
-    max_builds = math.ceil(settings.MAX_BUILDS_TO_PROCESS * CDN_RELATIONS_RATIO)
     return fetch_unprocessed_relations(
-        ProductComponentRelation.Type.CDN_REPO, max_builds=max_builds, force_process=force_process
+        ProductComponentRelation.Type.CDN_REPO, force_process=force_process
     )
 
 
@@ -34,12 +31,12 @@ def setup_pulp_relations() -> None:
     for channel in Channel.objects.filter(type=Channel.Type.CDN_REPO):
         for pv_ofuri in channel.product_variants:
             pv = ProductVariant.objects.get(ofuri=pv_ofuri)
-            slow_setup_pulp_rpm_relations.delay(channel.name, pv.name)
-            slow_setup_pulp_module_relations.delay(channel.name, pv.name)
+            setup_pulp_rpm_relations.delay(channel.name, pv.name)
+            setup_pulp_module_relations.delay(channel.name, pv.name)
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def slow_setup_pulp_rpm_relations(channel, variant):
+def setup_pulp_rpm_relations(channel, variant):
     srpm_build_ids = Pulp().get_rpm_data(channel)
     no_of_relations = _create_relations(
         srpm_build_ids, channel, variant, ProductComponentRelation.Type.CDN_REPO
@@ -49,7 +46,7 @@ def slow_setup_pulp_rpm_relations(channel, variant):
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def slow_setup_pulp_module_relations(channel, variant):
+def setup_pulp_module_relations(channel, variant):
     module_build_ids = Pulp().get_module_data(channel)
     no_of_relations = _create_relations(
         module_build_ids, channel, variant, ProductComponentRelation.Type.CDN_REPO

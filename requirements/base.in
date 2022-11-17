@@ -5,6 +5,8 @@ django-celery-beat
 django-celery-results
 django-csp
 django-filter
+dnspython
+eventlet
 # The latest main-branch commit on our fork of django-mptt
 # This includes a fix for concurrent writes causing tree corruption
 https://github.com/RedHatProductSecurity/django-mptt/archive/25d49a400d349740c5295e4301f29a98ae025a07.zip#egg=django-mptt

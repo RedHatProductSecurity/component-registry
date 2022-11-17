@@ -28,8 +28,8 @@ def load_et_products() -> None:
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def slow_save_errata_product_taxonomy(erratum_id: int):
-    logger.info(f"slow_save_errata_product_taxonomy called for {erratum_id}")
+def save_errata_product_taxonomy(erratum_id: int):
+    logger.info(f"save_errata_product_taxonomy called for {erratum_id}")
     relation_build_ids = _get_relation_build_ids(erratum_id)
     for b in relation_build_ids:
         logger.info("Saving product taxonomy for build %s", b)
@@ -39,7 +39,7 @@ def slow_save_errata_product_taxonomy(erratum_id: int):
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def slow_load_errata(erratum_name):
+def load_errata(erratum_name):
     et = ErrataTool()
     if not erratum_name.isdigit():
         erratum_id = et.normalize_erratum_id(erratum_name)
@@ -76,8 +76,8 @@ def slow_load_errata(erratum_name):
     # If the number of relations was more than 0 check if we've processed all the builds
     # in the errata
     elif len(relation_build_ids) == no_of_processed_builds:
-        logger.info(f"Calling slow_save_errata_product_taxonomy for {erratum_id}")
-        slow_save_errata_product_taxonomy.delay(erratum_id)
+        logger.info(f"Calling save_errata_product_taxonomy for {erratum_id}")
+        save_errata_product_taxonomy.delay(erratum_id)
 
     # Check if we are only part way through loading the errata
     if no_of_processed_builds < len(relation_build_ids):
@@ -89,10 +89,10 @@ def slow_load_errata(erratum_name):
             # We set save_product argument to False because it reads from the
             # ProductComponentRelations table which this function writes to. We've seen contention
             # on this database table causes by recursive looping of this task, and the
-            # slow_fetch_brew_build task, eg CORGI-21. We call save_product_taxonomy from
+            # fetch_brew_build task, eg CORGI-21. We call save_product_taxonomy from
             # this task only after all the builds in the errata have been loaded instead.
-            logger.info("Calling slow_fetch_brew_build for %s", build_id)
-            app.send_task("corgi.tasks.brew.slow_fetch_brew_build", args=[build_id, False])
+            logger.info("Calling fetch_brew_build for %s", build_id)
+            app.send_task("corgi.tasks.brew.fetch_brew_build", args=[build_id, False])
     else:
         logger.info("Finished processing %s", erratum_id)
 

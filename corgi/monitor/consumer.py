@@ -7,7 +7,7 @@ from proton import Event, SSLDomain
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, Selector
 
-from corgi.tasks.brew import slow_fetch_brew_build
+from corgi.tasks.brew import fetch_brew_build
 
 logger = logging.getLogger(__name__)
 
@@ -62,10 +62,10 @@ class UMBReceiverHandler(MessagingHandler):
         build_id = message["info"]["build_id"]
 
         try:
-            slow_fetch_brew_build.apply_async(args=(build_id,))
+            fetch_brew_build.apply_async(args=(build_id,))
         except Exception as exc:
             logger.error(
-                "Failed to schedule slow_fetch_brew_build task for build ID %s: %s",
+                "Failed to schedule fetch_brew_build task for build ID %s: %s",
                 build_id,
                 str(exc),
             )

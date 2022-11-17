@@ -1,5 +1,4 @@
 import logging
-import math
 from urllib.parse import urlparse
 
 from celery_singleton import Singleton
@@ -7,7 +6,6 @@ from django.conf import settings
 
 from config.celery import app
 from corgi.collectors.yum import Yum
-from corgi.core.constants import YUM_RELATIONS_RATIO
 from corgi.core.models import Channel, ProductComponentRelation, ProductStream
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS, _create_relations
 from corgi.tasks.pulp import fetch_unprocessed_relations
@@ -22,9 +20,8 @@ logger = logging.getLogger(__name__)
     soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
 )
 def fetch_unprocessed_yum_relations(force_process: bool = False) -> int:
-    max_builds = math.ceil(settings.MAX_BUILDS_TO_PROCESS * YUM_RELATIONS_RATIO)
     return fetch_unprocessed_relations(
-        ProductComponentRelation.Type.YUM_REPO, max_builds=max_builds, force_process=force_process
+        ProductComponentRelation.Type.YUM_REPO, force_process=force_process
     )
 
 
@@ -37,11 +34,11 @@ def load_yum_repositories() -> None:
     ):
         for repo in repos:  # type: ignore
             # mypy thinks yum_repositories can be None, even though it defaults to []
-            slow_load_yum_repositories_for_stream.delay(stream, repo)
+            load_yum_repositories_for_stream.delay(stream, repo)
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def slow_load_yum_repositories_for_stream(stream: str, repo: str) -> None:
+def load_yum_repositories_for_stream(stream: str, repo: str) -> None:
     """Use dnf repoquery commands to inspect and load all content in a particular Yum repo"""
     logger.info(f"Loading Yum repository {repo} for ProductStream {stream}")
 

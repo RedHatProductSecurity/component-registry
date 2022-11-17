@@ -239,7 +239,6 @@ CELERY_RESULT_BACKEND = "django-db"
 # https://django-celery-results.readthedocs.io/en/latest/reference/django_celery_results.managers.html
 CELERY_RESULT_BACKEND_ALWAYS_RETRY = True
 CELERY_RESULT_BACKEND_MAX_RETRIES = 2
-CELERY_DEFAULT_RATE_LIMIT = "8/m"
 
 # Set a global 15-minute task timeout. Override this on individual tasks by decorating them with:
 # @app.task(soft_time_limit=<TIME_IN_SECONDS>)
@@ -250,7 +249,7 @@ CELERY_LONGEST_SOFT_TIME_LIMIT = 2400
 # https://github.com/steinitzu/celery-singleton#app-configuration
 CELERY_SINGLETON_LOCK_EXPIRY = CELERY_LONGEST_SOFT_TIME_LIMIT
 
-CELERY_WORKER_CONCURRENCY = 1  # defaults to CPU core count, which breaks in OpenShift
+CELERY_WORKER_CONCURRENCY = 5  # defaults to CPU core count, which breaks in OpenShift
 
 # Disable task prefetching, which caused connection timeouts and other odd task failures in SDEngine
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
@@ -355,10 +354,3 @@ MANIFEST_HINTS_URL = os.getenv("CORGI_MANIFEST_HINTS_URL")
 
 LOOKASIDE_CACHE_BASE_URL = f"https://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}/repo"
 SCA_SCRATCH_DIR = os.getenv("CORGI_SCA_SCATCH_DIR", "/tmp")
-
-# Maximum number of builds to process from the relations table in a single day
-# We don't load them all to avoid overloading Redis, see CORGI-346
-# The default value of 9,000 is based on a throughput of 8 tasks a minute,
-# and therefore 11,520 tasks a day. Allowing 1,520 ah-doc tasks to be scheduled in addition
-# to the 9,000 maximum limit requested from the relations table
-MAX_BUILDS_TO_PROCESS = int(os.getenv("CORGI_MAX_BUILDS_TO_PROCESS", "9000"))

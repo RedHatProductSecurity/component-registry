@@ -296,9 +296,22 @@ djangorestframework-stubs==1.4.0 \
     --hash=sha256:037f0582b1e6c79366b6a839da861474d59210c4bfa1d36291545cb6ede6a0da \
     --hash=sha256:f6ed5fb19c12aa752288ddc6ad28d4ca7c81681ca7f28a19aba9064b2a69489c
     # via -r requirements/test.txt
+dnspython==2.2.1 \
+    --hash=sha256:0f7569a4a6ff151958b64304071d370daa3243d15941a7beedf0c9fe5105603e \
+    --hash=sha256:a851e51367fb93e9e1361732c1d60dab63eff98712e503ea7d92e6eccb109b4f
+    # via
+    #   -r requirements/base.txt
+    #   -r requirements/test.txt
+    #   eventlet
 drf-spectacular==0.21.2 \
     --hash=sha256:4ad3a72609640c57a4ff297d498cb0b810a70aca5555c0760b2da9e2f74a45b2 \
     --hash=sha256:aa7a78c8595b63e1ba14906049c770210c8fa34d84b6d1c7dce5c9e334aa2775
+    # via
+    #   -r requirements/base.txt
+    #   -r requirements/test.txt
+eventlet==0.33.1 \
+    --hash=sha256:a085922698e5029f820cf311a648ac324d73cec0e4792877609d978a4b5bbf31 \
+    --hash=sha256:afbe17f06a58491e9aebd7a4a03e70b0b63fd4cf76d8307bae07f280479b1515
     # via
     #   -r requirements/base.txt
     #   -r requirements/test.txt
@@ -429,6 +442,7 @@ greenlet==1.1.2 \
     # via
     #   -r requirements/base.txt
     #   -r requirements/test.txt
+    #   eventlet
     #   gevent
 gssapi==1.7.2 \
     --hash=sha256:0b02bbdd850c079b1d453546579fc283f0646f56ff4b39cd3b0e27263a6af97e \
@@ -1039,6 +1053,7 @@ six==1.16.0 \
     #   -r requirements/test.txt
     #   click-repl
     #   django-coverage-plugin
+    #   eventlet
     #   koji
     #   python-dateutil
     #   requests-mock

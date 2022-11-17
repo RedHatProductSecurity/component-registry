@@ -195,7 +195,7 @@ LOGGING = {
     },
     "loggers": {
         "django": {"handlers": ["console"], "level": "WARNING"},
-        "corgi": {"handlers": ["console", "mail_admins"], "level": "INFO", "propagate": False},
+        "corgi": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }
 

@@ -1,0 +1,8 @@
+{% extends 'base.html' %}
+
+{# Only task-related view are Celery-dependent; modify below title if this is used anywhere else. #}
+{% block title %}Tasks{% endblock %}
+
+{% block body %}
+<h2 style="margin-left: 1em;">{{ msg }}</h2>
+{% endblock %}

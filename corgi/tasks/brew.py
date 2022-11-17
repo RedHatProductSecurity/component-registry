@@ -1,5 +1,4 @@
 import logging
-import math
 import re
 from typing import Optional
 
@@ -11,7 +10,6 @@ from django.utils.timezone import make_aware
 
 from config.celery import app
 from corgi.collectors.brew import Brew, BrewBuildTypeNotSupported
-from corgi.core.constants import BREW_RELATIONS_RATIO
 from corgi.core.models import (
     Component,
     ComponentNode,
@@ -484,7 +482,7 @@ def fetch_modular_builds(relations_query: QuerySet, force_process: bool = False)
 
 
 def fetch_unprocessed_relations(
-    relation_type: ProductComponentRelation.Type, max_builds: int, force_process: bool = False
+    relation_type: ProductComponentRelation.Type, force_process: bool = False
 ) -> int:
     relations_query = (
         ProductComponentRelation.objects.filter(type=relation_type)
@@ -502,8 +500,6 @@ def fetch_unprocessed_relations(
             logger.info("Processing CDN relation build with id: %s", build_id)
             slow_fetch_modular_build.delay(build_id, force_process=force_process)
             processed_builds += 1
-            if max_builds and processed_builds > max_builds:
-                break
     return processed_builds
 
 
@@ -514,7 +510,6 @@ def fetch_unprocessed_relations(
     soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
 )
 def fetch_unprocessed_brew_tag_relations(force_process: bool = False) -> int:
-    max_builds = math.ceil(settings.MAX_BUILDS_TO_PROCESS * BREW_RELATIONS_RATIO)
     return fetch_unprocessed_relations(
-        ProductComponentRelation.Type.BREW_TAG, max_builds=max_builds, force_process=force_process
+        ProductComponentRelation.Type.BREW_TAG, force_process=force_process
     )

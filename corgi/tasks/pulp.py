@@ -1,12 +1,10 @@
 import logging
-import math
 
 from celery_singleton import Singleton
 from django.conf import settings
 
 from config.celery import app
 from corgi.collectors.pulp import Pulp
-from corgi.core.constants import CDN_RELATIONS_RATIO
 from corgi.core.models import Channel, ProductComponentRelation, ProductVariant
 from corgi.tasks.brew import fetch_unprocessed_relations
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS, _create_relations
@@ -22,9 +20,8 @@ logger = logging.getLogger(__name__)
     soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
 )
 def fetch_unprocessed_cdn_relations(force_process: bool = False) -> int:
-    max_builds = math.ceil(settings.MAX_BUILDS_TO_PROCESS * CDN_RELATIONS_RATIO)
     return fetch_unprocessed_relations(
-        ProductComponentRelation.Type.CDN_REPO, max_builds=max_builds, force_process=force_process
+        ProductComponentRelation.Type.CDN_REPO, force_process=force_process
     )
 
 

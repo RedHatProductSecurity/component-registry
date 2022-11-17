@@ -6,4 +6,4 @@
 # ERROR: Pidfile (/tmp/slow.pid) already exists.
 rm -f /tmp/slow.pid
 
-exec celery -A config worker -E --loglevel info --pidfile /tmp/slow.pid -Q slow,fast -n celery-slow@%h
+exec celery -A config worker -E --loglevel info --pidfile /tmp/slow.pid -Q slow,fast -n celery@%h

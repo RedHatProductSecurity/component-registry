@@ -90,9 +90,28 @@ services:
     volumes:
       - .:/opt/app-root/src:z
 
+  corgi-celery-eventlet:
+    deploy:
+      replicas: 3
+      resources:
+        limits:
+          memory: 256M  # Keep in sync with OpenShift mem limits to catch OOM problems
+    container_name: corgi-celery-eventlet
+    image: corgi
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: "config.settings.dev"
+      CORGI_DB_HOST: corgi-db
+    depends_on: ["corgi-celery-beat"]
+    command: ./run_celery_eventlet.sh
+    # TODO: add healthcheck
+    volumes:
+      - .:/opt/app-root/src:z
+
   corgi-celery-fast:
     deploy:
-      replicas: 2
+      replicas: 3
       resources:
         limits:
           memory: 256M  # Keep in sync with OpenShift mem limits to catch OOM problems
@@ -111,7 +130,7 @@ services:
 
   corgi-celery-slow:
     deploy:
-      replicas: 8
+      replicas: 6
       resources:
         limits:
           memory: 640M  # Keep in sync with OpenShift mem limits to catch OOM problems

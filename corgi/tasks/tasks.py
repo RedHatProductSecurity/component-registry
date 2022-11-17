@@ -1,6 +1,6 @@
 """
 Helper code to move all Celery task names in all sibling modules into a common namespace
-Eg. corgi.tasks.brew.fetch_brew_build is also corgi.tasks.tasks.fetch_brew_build
+Eg. corgi.tasks.brew.eventlet_fetch_brew_build is also corgi.tasks.tasks.eventlet_fetch_brew_build
 Needed in order to discover new tasks without config changes whenever a new submodule is added
 Note that either name above will work to import and run it in a Python shell
 But Celery uses the name of the module where the app.task decorator was applied, i.e. 1st form

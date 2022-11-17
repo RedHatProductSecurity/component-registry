@@ -18,14 +18,16 @@ from corgi.core.models import (
     SoftwareBuild,
 )
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
-from corgi.tasks.errata_tool import load_errata
+from corgi.tasks.errata_tool import slow_load_errata
 from corgi.tasks.sca import slow_software_composition_analysis
 
 logger = logging.getLogger(__name__)
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def fetch_brew_build(build_id: int, save_product: bool = True, force_process: bool = False):
+def eventlet_fetch_brew_build(
+    build_id: int, save_product: bool = True, force_process: bool = False
+):
     logger.info("Fetch brew build called with build id: %s", build_id)
     try:
         softwarebuild = SoftwareBuild.objects.get(build_id=build_id)
@@ -95,7 +97,7 @@ def fetch_brew_build(build_id: int, save_product: bool = True, force_process: bo
     for c in component.get("components", []):
         save_component(c, root_node, softwarebuild)
 
-    # We don't call save_product_taxonomy by default to allow async call of load_errata task
+    # We don't call save_product_taxonomy by default to allow async call of slow_load_errata task
     # See CORGI-21
     if save_product:
         softwarebuild.save_product_taxonomy()
@@ -106,16 +108,16 @@ def fetch_brew_build(build_id: int, save_product: bool = True, force_process: bo
         logger.info("no errata tags")
     else:
         if isinstance(build_meta["errata_tags"], str):
-            load_errata.delay(build_meta["errata_tags"])
+            slow_load_errata.delay(build_meta["errata_tags"])
         else:
             for e in build_meta["errata_tags"]:
-                load_errata.delay(e)
+                slow_load_errata.delay(e)
 
     build_ids = component.get("nested_builds", ())
     logger.info("Fetching brew builds for %s", build_ids)
     for b_id in build_ids:
         logger.info("Requesting fetch of nested build: %s", b_id)
-        fetch_brew_build.delay(b_id)
+        eventlet_fetch_brew_build.delay(b_id)
 
     logger.info("Requesting software composition analysis for %s", build_id)
     slow_software_composition_analysis.delay(build_id)
@@ -124,13 +126,13 @@ def fetch_brew_build(build_id: int, save_product: bool = True, force_process: bo
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def fetch_modular_build(build_id: str, force_process: bool = False) -> None:
+def slow_fetch_modular_build(build_id: str, force_process: bool = False) -> None:
     logger.info("Fetch modular build called with build id: %s", build_id)
     rhel_module_data = Brew.fetch_rhel_module(build_id)
     # Some compose build_ids in the relations table will be for SRPMs, skip those here
     if not rhel_module_data:
         logger.info("No module data fetched for build %s from Brew, exiting...", build_id)
-        fetch_brew_build.delay(int(build_id), force_process=force_process)
+        eventlet_fetch_brew_build.delay(int(build_id), force_process=force_process)
         return
     # TODO: Should we use update_or_create here?
     #  We don't currently handle reprocessing a modular build
@@ -142,13 +144,13 @@ def fetch_modular_build(build_id: str, force_process: bool = False) -> None:
         version=rhel_module_data["meta"]["version"],
         release=rhel_module_data["meta"]["release"],
         defaults={
-            # This gives us an indication as to which task (this or fetch_brew_build)
+            # This gives us an indication as to which task (this or eventlet_fetch_brew_build)
             # last processed the module
             "meta_attr": rhel_module_data["analysis_meta"],
         },
     )
-    # This should result in a lookup if fetch_brew_build has already processed this module.
-    # Likewise if fetch_brew_build processes the module subsequently we should not create
+    # This should result in a lookup if eventlet_fetch_brew_build has already processed this module.
+    # Likewise if eventlet_fetch_brew_build processes the module subsequently we should not create
     # a new ComponentNode, instead the same one will be looked up and used as the root node
     node, _ = obj.cnodes.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE,
@@ -164,9 +166,9 @@ def fetch_modular_build(build_id: str, force_process: bool = False) -> None:
         # to the RPM components. We don't link the SRPM into the tree because some of it's RPMs
         # might not be included in the module
         if "brew_build_id" in c:
-            fetch_brew_build.delay(c["brew_build_id"])
+            eventlet_fetch_brew_build.delay(c["brew_build_id"])
         save_component(c, node)
-    fetch_brew_build.delay(int(build_id), force_process=force_process)
+    eventlet_fetch_brew_build.delay(int(build_id), force_process=force_process)
     logger.info("Finished fetching modular build: %s", build_id)
 
 
@@ -478,7 +480,7 @@ def load_brew_tags() -> None:
 
 def fetch_modular_builds(relations_query: QuerySet, force_process: bool = False) -> None:
     for build_id in relations_query:
-        fetch_modular_build.delay(build_id, force_process=force_process)
+        slow_fetch_modular_build.delay(build_id, force_process=force_process)
 
 
 def fetch_unprocessed_relations(
@@ -498,7 +500,7 @@ def fetch_unprocessed_relations(
             continue
         if not SoftwareBuild.objects.filter(build_id=int(build_id)).exists():
             logger.info("Processing CDN relation build with id: %s", build_id)
-            fetch_modular_build.delay(build_id, force_process=force_process)
+            slow_fetch_modular_build.delay(build_id, force_process=force_process)
             processed_builds += 1
     return processed_builds
 

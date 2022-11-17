@@ -274,6 +274,10 @@ CELERY_RESULT_EXPIRES = None
 CELERY_TASK_ROUTES = (
     [
         ("corgi.tasks.*.slow_*", {"queue": "slow"}),  # Any module's slow_* tasks go to 'slow' queue
+        (
+            "corgi.tasks.*.eventlet_*",
+            {"queue": "eventlet"},
+        ),  # Any module's eventlet_* tasks go to 'eventlet' queue
         ("*", {"queue": "fast"}),  # default other tasks go to 'fast'
     ],
 )

@@ -5,7 +5,7 @@ from celery_singleton import Singleton
 from config.celery import app
 from corgi.collectors.rhel_compose import RhelCompose
 from corgi.core.models import ProductComponentRelation, ProductStream, SoftwareBuild
-from corgi.tasks.brew import fetch_modular_build
+from corgi.tasks.brew import slow_fetch_modular_build
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS, _create_relations
 
 logger = logging.getLogger(__name__)
@@ -57,6 +57,6 @@ def get_builds(
             continue
         if not SoftwareBuild.objects.filter(build_id=int(build_id)).exists():
             logger.info("Processing Compose relation build with id: %s", build_id)
-            fetch_modular_build.delay(build_id, force_process=force_process)
+            slow_fetch_modular_build.delay(build_id, force_process=force_process)
             processed_builds += 1
     return processed_builds

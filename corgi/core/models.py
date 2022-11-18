@@ -372,23 +372,12 @@ class ProductModel(TimeStampedModel):
     def components(self) -> models.Manager["Component"]:
         pass
 
-    @staticmethod
-    def get_related_components(build_ids: QuerySet, sort_field: str) -> QuerySet["Component"]:
-        """Returns unique components with matching build_id, ordered by sort_field"""
-        if build_ids:
-            query = Q()
-            for build_id in build_ids:
-                query |= Q(software_build=build_id)
-            # TODO get component descendants as well
-            return Component.objects.filter(query).order_by(sort_field).distinct(sort_field)
-        # Else self.builds is an empty QuerySet
-        return Component.objects.none()
-
     @property
     def builds(self) -> QuerySet:
         """Returns unique productcomponentrelations with at least 1 matching variant or stream,
         ordered by build_id.
         """
+        # TODO: Can just return self.components.values_list("software_build", flat=True).distinct()
         product_refs = [self.name]
         if isinstance(self, ProductStream):
             # we also want to include child product variants of this product stream
@@ -408,12 +397,6 @@ class ProductModel(TimeStampedModel):
             )
         # Else no product variants or product streams - should never happen
         return ProductComponentRelation.objects.none()
-
-    @property
-    def components(self) -> QuerySet["Component"]:
-        """Return unique components with build_ids matching self.builds, ordered by purl"""
-        # Return list of objs, not IDs like other props, so template can use obj props
-        return self.get_related_components(self.builds, "purl")
 
     @property
     def coverage(self) -> int:

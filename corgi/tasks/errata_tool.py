@@ -39,7 +39,7 @@ def save_errata_product_taxonomy(erratum_id: int):
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def load_errata(erratum_name):
+def slow_load_errata(erratum_name):
     et = ErrataTool()
     if not erratum_name.isdigit():
         erratum_id = et.normalize_erratum_id(erratum_name)
@@ -89,10 +89,10 @@ def load_errata(erratum_name):
             # We set save_product argument to False because it reads from the
             # ProductComponentRelations table which this function writes to. We've seen contention
             # on this database table causes by recursive looping of this task, and the
-            # fetch_brew_build task, eg CORGI-21. We call save_product_taxonomy from
+            # slow_fetch_brew_build task, eg CORGI-21. We call save_product_taxonomy from
             # this task only after all the builds in the errata have been loaded instead.
-            logger.info("Calling fetch_brew_build for %s", build_id)
-            app.send_task("corgi.tasks.brew.fetch_brew_build", args=[build_id, False])
+            logger.info("Calling slow_fetch_brew_build for %s", build_id)
+            app.send_task("corgi.tasks.brew.slow_fetch_brew_build", args=[build_id, False])
     else:
         logger.info("Finished processing %s", erratum_id)
 

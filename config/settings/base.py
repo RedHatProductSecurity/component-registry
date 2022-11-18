@@ -249,7 +249,7 @@ CELERY_LONGEST_SOFT_TIME_LIMIT = 2400
 # https://github.com/steinitzu/celery-singleton#app-configuration
 CELERY_SINGLETON_LOCK_EXPIRY = CELERY_LONGEST_SOFT_TIME_LIMIT
 
-CELERY_WORKER_CONCURRENCY = 5  # defaults to CPU core count, which breaks in OpenShift
+CELERY_WORKER_CONCURRENCY = 15  # defaults to CPU core count, which breaks in OpenShift
 
 # Disable task prefetching, which caused connection timeouts and other odd task failures in SDEngine
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1

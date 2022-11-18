@@ -92,10 +92,10 @@ services:
 
   corgi-celery-fast:
     deploy:
-      replicas: 2
+      replicas: 1
       resources:
         limits:
-          memory: 256M  # Keep in sync with OpenShift mem limits to catch OOM problems
+          memory: 128M  # Keep in sync with OpenShift mem limits to catch OOM problems
     container_name: corgi-celery-fast
     image: corgi
     env_file:
@@ -111,7 +111,7 @@ services:
 
   corgi-celery-slow:
     deploy:
-      replicas: 8
+      replicas: 5
       resources:
         limits:
           memory: 640M  # Keep in sync with OpenShift mem limits to catch OOM problems

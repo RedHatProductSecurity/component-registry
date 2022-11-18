@@ -1043,28 +1043,40 @@ components:
         products:
           type: array
           items:
-            type: string
-            maxLength: 200
+            type: object
+            additionalProperties:
+              type: string
+          readOnly: true
         product_versions:
           type: array
           items:
-            type: string
-            maxLength: 200
+            type: object
+            additionalProperties:
+              type: string
+          readOnly: true
         product_streams:
           type: array
           items:
-            type: string
-            maxLength: 200
+            type: object
+            additionalProperties:
+              type: string
+          readOnly: true
         product_variants:
           type: array
           items:
-            type: string
-            maxLength: 200
+            type: object
+            additionalProperties:
+              type: string
+          readOnly: true
       required:
       - created_at
       - last_changed
       - link
       - name
+      - product_streams
+      - product_variants
+      - product_versions
+      - products
       - type
       - uuid
     ChannelTypeEnum:
@@ -1179,6 +1191,13 @@ components:
             additionalProperties:
               type: string
           readOnly: true
+        channels:
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
+          readOnly: true
         sources:
           type: array
           items:
@@ -1201,6 +1220,7 @@ components:
               type: string
           readOnly: true
       required:
+      - channels
       - description
       - download_url
       - epoch
@@ -1417,6 +1437,13 @@ components:
           items:
             $ref: '#/components/schemas/Tag'
           readOnly: true
+        channels:
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
+          readOnly: true
         product_versions:
           type: array
           items:
@@ -1441,6 +1468,7 @@ components:
       required:
       - build_count
       - builds
+      - channels
       - components
       - link
       - name
@@ -1483,6 +1511,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Tag'
+          readOnly: true
+        channels:
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
           readOnly: true
         cpe:
           type: string
@@ -1536,14 +1571,10 @@ components:
             additionalProperties:
               type: string
           readOnly: true
-        channels:
-          type: array
-          items:
-            type: string
-            maxLength: 200
       required:
       - build_count
       - builds
+      - channels
       - components
       - link
       - manifest
@@ -1589,6 +1620,13 @@ components:
           items:
             $ref: '#/components/schemas/Tag'
           readOnly: true
+        channels:
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
+          readOnly: true
         relations:
           type: array
           items:
@@ -1617,14 +1655,10 @@ components:
             additionalProperties:
               type: string
           readOnly: true
-        channels:
-          type: array
-          items:
-            type: string
-            maxLength: 200
       required:
       - build_count
       - builds
+      - channels
       - components
       - link
       - name
@@ -1669,6 +1703,13 @@ components:
           items:
             $ref: '#/components/schemas/Tag'
           readOnly: true
+        channels:
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
+          readOnly: true
         products:
           type: array
           items:
@@ -1693,6 +1734,7 @@ components:
       required:
       - build_count
       - builds
+      - channels
       - components
       - link
       - name

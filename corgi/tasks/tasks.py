@@ -5,6 +5,7 @@ Needed in order to discover new tasks without config changes whenever a new subm
 Note that either name above will work to import and run it in a Python shell
 But Celery uses the name of the module where the app.task decorator was applied, i.e. 1st form
 """
+import importlib as _importlib
 import pkgutil as _pkgutil
 
 # 1. Walk the tree of modules underneath the corgi.tasks package
@@ -16,10 +17,13 @@ for _loader, _module_name, _is_pkg in _pkgutil.walk_packages((__file__.replace("
         # Skip subpackages / management commands and self
         continue
     # Else it's a sibling module - import all its methods so we can introspect them
-    # mypy wants a positional path argument, but won't accept a positional or keyword path argument
-    _module = _loader.find_module(f"corgi.tasks.{_module_name}").load_module(  # type: ignore
-        f"corgi.tasks.{_module_name}"
-    )
+    # MetaPathFinder wants a path argument, but PathEntryFinder won't accept a path argument
+    if not isinstance(_loader, _importlib.abc.PathEntryFinder):
+        raise ValueError(f"Got wrong loader type for {_module_name}: {type(_loader)}")
+    _module_loader = _loader.find_module(f"corgi.tasks.{_module_name}")
+    if not _module_loader:
+        raise ValueError(f"Couldn't find module corgi.tasks.{_module_name}")
+    _module = _module_loader.load_module(f"corgi.tasks.{_module_name}")
 
     for _method_name in dir(_module):
         if _method_name.startswith("_"):

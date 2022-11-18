@@ -5,7 +5,7 @@ from django.conf import settings
 
 from config.celery import app
 from corgi.collectors.pulp import Pulp
-from corgi.core.models import Channel, ProductComponentRelation, ProductVariant
+from corgi.core.models import Channel, ProductComponentRelation
 from corgi.tasks.brew import fetch_unprocessed_relations
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS, _create_relations
 from corgi.tasks.errata_tool import update_variant_repos
@@ -28,11 +28,15 @@ def fetch_unprocessed_cdn_relations(force_process: bool = False) -> int:
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def setup_pulp_relations() -> None:
     logger.info("Setting up CDN repo relations for all Channels")
-    for channel in Channel.objects.filter(type=Channel.Type.CDN_REPO):
-        for pv_ofuri in channel.product_variants:
-            pv = ProductVariant.objects.get(ofuri=pv_ofuri)
-            slow_setup_pulp_rpm_relations.delay(channel.name, pv.name)
-            setup_pulp_module_relations.delay(channel.name, pv.name)
+    for channel_name, variant_name in (
+        Channel.objects.filter(type=Channel.Type.CDN_REPO)
+        .prefetch_related("productvariants")
+        # Channels created by Yum repo collector sometimes have no Variant
+        .exclude(productvariants__isnull=True)
+        .values_list("name", "productvariants__name")
+    ):
+        slow_setup_pulp_rpm_relations.delay(channel_name, variant_name)
+        slow_setup_pulp_module_relations.delay(channel_name, variant_name)
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
@@ -46,7 +50,7 @@ def slow_setup_pulp_rpm_relations(channel, variant):
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def setup_pulp_module_relations(channel, variant):
+def slow_setup_pulp_module_relations(channel, variant):
     module_build_ids = Pulp().get_module_data(channel)
     no_of_relations = _create_relations(
         module_build_ids, channel, variant, ProductComponentRelation.Type.CDN_REPO

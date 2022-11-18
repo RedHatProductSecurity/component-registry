@@ -12,13 +12,19 @@ CONTAINER_REPOSITORY = "registry.redhat.io"
 CORGI_PRODUCT_TAXONOMY_VERSION = "v1"
 CORGI_COMPONENT_TAXONOMY_VERSION = "v1"
 
+# Map MPTT node levels in our product taxonomy to model names as defined in models.py
+NODE_LEVEL_MODEL_MAPPING = {
+    0: "product",
+    1: "product_version",
+    2: "Product_stream",
+    3: "product_variant",
+    4: "channel",
+}
+
 # Map model names as defined in models.py to MPTT node levels in our product taxonomy
+# "product_version" -> "ProductVersion"
 MODEL_NODE_LEVEL_MAPPING = {
-    "Product": 0,
-    "ProductVersion": 1,
-    "ProductStream": 2,
-    "ProductVariant": 3,
-    "Channel": 4,
+    value.title().replace("_", ""): key for key, value in NODE_LEVEL_MODEL_MAPPING.items()
 }
 
 # Filter on "root components": SRPMs, modules, or index container images

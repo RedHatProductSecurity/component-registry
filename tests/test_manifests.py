@@ -45,8 +45,8 @@ def test_product_manifest_properties():
     assert num_components == 1
 
     num_provided = 0
-    for component in stream.get_latest_components():
-        num_provided += component.get_provides_nodes().count()
+    for latest_component in stream.get_latest_components():
+        num_provided += latest_component.get_provides_nodes().count()
 
     assert num_provided == 2
 
@@ -174,16 +174,23 @@ def test_component_manifest_properties():
 
 def setup_products_and_components():
     product = ProductFactory()
-    version = ProductVersionFactory()
-    stream = ProductStreamFactory()
-    variant = ProductVariantFactory(name="1")
-    pnode = ProductNode.objects.create(parent=None, obj=product, object_id=product.pk)
-    pvnode = ProductNode.objects.create(parent=pnode, obj=version, object_id=version.pk)
-    psnode = ProductNode.objects.create(parent=pvnode, obj=stream, object_id=stream.pk)
-    _ = ProductNode.objects.create(parent=psnode, obj=variant, object_id=variant.pk)
-    # This generates and saves the product_variants property of stream
+    version = ProductVersionFactory(products=product)
+    stream = ProductStreamFactory(products=product, productversions=version)
+    variant = ProductVariantFactory(
+        name="1", products=product, productversions=version, productstreams=stream
+    )
+
+    # TODO: Factory should probably create nodes for model
+    #  Move these somewhere for reuse - common.py helper method, or fixtures??
+    pnode = ProductNode.objects.create(parent=None, obj=product)
+    pvnode = ProductNode.objects.create(parent=pnode, obj=version)
+    psnode = ProductNode.objects.create(parent=pvnode, obj=stream)
+    ProductNode.objects.create(parent=psnode, obj=variant)
+
+    # This generates and saves the ProductModel properties of stream
+    # AKA we link the ProductModel instances to each other
     stream.save_product_taxonomy()
-    assert variant.name in stream.product_variants
+    assert variant in stream.productvariants.get_queryset()
     build = SoftwareBuildFactory(
         build_id=1,
         completion_time=datetime.strptime("2017-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z"),
@@ -192,23 +199,32 @@ def setup_products_and_components():
     dev_provided = ComponentFactory(type=Component.Type.NPM)
     component = SrpmComponentFactory(
         software_build=build,
-        product_variants=[variant.ofuri],
-        product_streams=[stream.ofuri],
     )
-    cnode, _ = component.cnodes.get_or_create(
-        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=component.purl
+    cnode = ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=component.purl, obj=component
     )
-    provided.cnodes.get_or_create(
-        type=ComponentNode.ComponentNodeType.PROVIDES, parent=cnode, purl=provided.purl
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.PROVIDES,
+        parent=cnode,
+        purl=provided.purl,
+        obj=provided,
     )
-    dev_provided.cnodes.get_or_create(
-        type=ComponentNode.ComponentNodeType.PROVIDES_DEV, parent=cnode, purl=provided.purl
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.PROVIDES_DEV,
+        parent=cnode,
+        purl=dev_provided.purl,
+        obj=dev_provided,
     )
+    # Link the components to each other
+    component.save_component_taxonomy()
+
     # The product_ref here is a variant name but below we use it's parent stream
     # to generate the manifest
     ProductComponentRelationFactory(
-        build_id="1", product_ref="1", type=ProductComponentRelation.Type.ERRATA
+        build_id=str(build.build_id),
+        product_ref=variant.name,
+        type=ProductComponentRelation.Type.ERRATA,
     )
-    build.save_component_taxonomy()
+    # Link the components to the ProductModel instances
     build.save_product_taxonomy()
     return component, stream, provided, dev_provided

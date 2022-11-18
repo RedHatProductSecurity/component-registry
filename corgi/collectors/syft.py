@@ -52,7 +52,7 @@ class Syft:
         return scan_results
 
     @classmethod
-    def parse_components(cls, syft_json):
+    def parse_components(cls, syft_json: str) -> list[dict[str, Any]]:
         raw_result = json.loads(syft_json)
         components: list[dict[str, Any]] = []
         syft_version = ""

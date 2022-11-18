@@ -669,9 +669,9 @@ def test_fetch_rpm_build(mock_sca):
         "pkg:rpm/redhat/cockpit-system@251-1.el8?arch=noarch",
     ]:
         assert package in provides
-    assert len(srpm.get_upstreams()) == 1
+    assert len(srpm.get_upstreams_purls()) == 1
     # SRPM has no sources of its own (nor is it embedded in any other component)
-    assert len(srpm.get_source()) == 0
+    assert srpm.get_sources_purls().count() == 0
     cockpit_system = Component.objects.get(
         type=Component.Type.RPM,
         namespace=Component.Namespace.REDHAT,
@@ -682,7 +682,9 @@ def test_fetch_rpm_build(mock_sca):
     )
     assert cockpit_system.software_build
     # Cockpit has its own SRPM
-    assert cockpit_system.get_source() == ["pkg:rpm/redhat/cockpit@251-1.el8?arch=src"]
+    assert sorted(cockpit_system.get_sources_purls()) == [
+        "pkg:rpm/redhat/cockpit@251-1.el8?arch=src"
+    ]
     jquery = Component.objects.get(
         type=Component.Type.NPM,
         namespace=Component.Namespace.UPSTREAM,
@@ -691,7 +693,7 @@ def test_fetch_rpm_build(mock_sca):
     )
     assert not jquery.software_build
     # jQuery is embedded in Cockpit
-    assert jquery.get_source() == ["pkg:rpm/redhat/cockpit@251-1.el8?arch=src"]
+    assert sorted(jquery.get_sources_purls()) == ["pkg:rpm/redhat/cockpit@251-1.el8?arch=src"]
 
 
 @patch("corgi.tasks.brew.Brew")

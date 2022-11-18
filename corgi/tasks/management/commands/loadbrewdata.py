@@ -1,7 +1,7 @@
 import sys
 
 from django.core.management.base import BaseCommand, CommandParser
-from koji import GenericError
+from koji import GenericError  # type: ignore[attr-defined]
 
 from corgi.collectors.brew import Brew
 from corgi.core.models import ProductStream
@@ -63,13 +63,9 @@ class Command(BaseCommand):
         elif options["all"]:
             self.stdout.write(self.style.NOTICE("Fetching all unprocessed brew_tag relations"))
             if options["inline"]:
-                fetch_unprocessed_brew_tag_relations(
-                    force_process=options["force"], created_since=0
-                )
+                fetch_unprocessed_brew_tag_relations(force_process=options["force"])
             else:
-                fetch_unprocessed_brew_tag_relations.delay(
-                    force_process=options["force"], created_since=0
-                )
+                fetch_unprocessed_brew_tag_relations.delay(force_process=options["force"])
             sys.exit(0)
         else:
             self.stderr.write(self.style.ERROR("No build IDs, stream or all flag specified..."))

@@ -1,9 +1,11 @@
 import logging
 from abc import abstractmethod
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Union
 from urllib.parse import quote
+from uuid import UUID
 
 from django.conf import settings
+from django.db.models.manager import Manager
 from rest_framework import serializers
 
 from config import utils
@@ -16,6 +18,7 @@ from corgi.core.models import (
     ProductComponentRelation,
     ProductModel,
     ProductStream,
+    ProductTaxonomyMixin,
     ProductVariant,
     ProductVersion,
     SoftwareBuild,
@@ -104,41 +107,44 @@ def get_upstream_link(
     return link
 
 
-def get_model_id_link(model_name: str, uuid_or_build_id, manifest=False) -> str:
+def get_model_id_link(
+    model_name: str, uuid_or_build_id: Union[int, str, UUID], manifest=False
+) -> str:
     """Generic method to get an ID-based link for an arbitrary Model subclass."""
     link = f"{CORGI_API_URL}/{model_name}/{uuid_or_build_id}"
     return link if not manifest else f"{link}/manifest"
 
 
+def get_channel_data_list(manager: Manager["Channel"]) -> list[dict[str, str]]:
+    """Generic method to get a list of {name, link, uuid} data for a ProductModel subclass."""
+    # A little different than get_product_data_list - we're always iterating over a manager
+    # And channels have no ofuri, so we return a model UUID link instead
+    return [
+        {"name": name, "link": get_model_id_link("channel", uuid), "uuid": str(uuid)}
+        for (name, uuid) in manager.values_list("name", "uuid")
+    ]
+
+
 def get_product_data_list(
-    model_class, model_name: str, name_list: Iterable[str]
+    model_name: str, obj_or_manager: Union[ProductModel, Manager]
 ) -> list[dict[str, str]]:
     """Generic method to get a list of {name, link, ofuri} data for a ProductModel subclass."""
-    data_list = []
-    for name in name_list:
-        data = {"name": name}
-        obj = model_class.objects.filter(name=name).first()
-        if obj:
-            data["link"] = get_model_ofuri_link(model_name, obj.ofuri)
-            data["ofuri"] = obj.ofuri
-        data_list.append(data)
-    return data_list
-
-
-def get_product_data_list_by_ofuri(
-    model_class, model_name: str, ofuri_list: Iterable[str]
-) -> list[dict[str, str]]:
-    """Special method to get a list of {ofuri, link, name} data for a ProductModel subclass.
-    Filters by ofuri instead of name."""
-    data_list = []
-    for ofuri in ofuri_list:
-        data = {"ofuri": ofuri}
-        obj = model_class.objects.filter(ofuri=ofuri).first()
-        if obj:
-            data["link"] = get_model_ofuri_link(model_name, ofuri)
-            data["name"] = obj.name
-        data_list.append(data)
-    return data_list
+    if isinstance(obj_or_manager, ProductModel):
+        # When this method receives e.g. a ProductVersion's products property,
+        # we're accessing the forward side of a relation with only one object
+        return [
+            {
+                "name": obj_or_manager.name,
+                "link": get_model_ofuri_link(model_name, obj_or_manager.ofuri),
+                "ofuri": obj_or_manager.ofuri,
+            },
+        ]
+    # When this method receives e.g. a ProductVersion's productstreams property,
+    # we're accessing the reverse side of a relation with many objects (via a manager)
+    return [
+        {"name": name, "link": get_model_ofuri_link(model_name, ofuri), "ofuri": ofuri}
+        for (name, ofuri) in obj_or_manager.values_list("name", "ofuri")
+    ]
 
 
 def get_product_relations(instance_name: str) -> list[dict[str, str]]:
@@ -148,16 +154,7 @@ def get_product_relations(instance_name: str) -> list[dict[str, str]]:
         .values_list("type", "external_system_id")
         .distinct("external_system_id")
     )
-    relations: list[dict[str, str]] = [
-        # Django's values_list() returns a QuerySet of Optional[str]
-        # even though the fields aren't nullable - this is a known bug
-        # https://github.com/typeddjango/django-stubs/issues/444
-        # We can upgrade djangorestframework-stubs to 1.7.0 to fix
-        # But there are other bugs in our code we must also fix
-        {"type": pcr_type, "external_system_id": pcr_id}  # type: ignore
-        for (pcr_type, pcr_id) in related_pcrs
-    ]
-    return relations
+    return [{"type": pcr_type, "external_system_id": pcr_id} for (pcr_type, pcr_id) in related_pcrs]
 
 
 class TagSerializer(serializers.Serializer):
@@ -185,9 +182,7 @@ class SoftwareBuildSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_components(instance: SoftwareBuild) -> list[dict[str, str]]:
-        return get_component_data_list(
-            instance.components.values_list("purl", flat=True)  # type: ignore
-        )
+        return get_component_data_list(instance.components.values_list("purl", flat=True))
 
     class Meta:
         model = SoftwareBuild
@@ -219,7 +214,38 @@ class SoftwareBuildSummarySerializer(serializers.ModelSerializer):
         fields = ["link", "build_id", "type", "name", "source"]
 
 
-class ComponentSerializer(serializers.ModelSerializer):
+class ProductTaxonomySerializer(serializers.ModelSerializer):
+    @staticmethod
+    def get_products(instance: Union[ProductModel, ProductTaxonomyMixin]) -> list[dict[str, str]]:
+        return get_product_data_list("products", instance.products)
+
+    @staticmethod
+    def get_product_versions(
+        instance: Union[ProductModel, ProductTaxonomyMixin]
+    ) -> list[dict[str, str]]:
+        return get_product_data_list("product_versions", instance.productversions)
+
+    @staticmethod
+    def get_product_streams(
+        instance: Union[ProductModel, ProductTaxonomyMixin]
+    ) -> list[dict[str, str]]:
+        return get_product_data_list("product_streams", instance.productstreams)
+
+    @staticmethod
+    def get_product_variants(
+        instance: Union[ProductModel, ProductTaxonomyMixin]
+    ) -> list[dict[str, str]]:
+        return get_product_data_list("product_variants", instance.productvariants)
+
+    @staticmethod
+    def get_channels(instance: Union[Component, ProductModel]) -> list[dict[str, str]]:
+        return get_channel_data_list(instance.channels)
+
+    class Meta:
+        abstract = True
+
+
+class ComponentSerializer(ProductTaxonomySerializer):
     software_build = SoftwareBuildSummarySerializer(many=False)
     tags = TagSerializer(many=True, read_only=True)
 
@@ -229,6 +255,7 @@ class ComponentSerializer(serializers.ModelSerializer):
     product_versions = serializers.SerializerMethodField()
     product_streams = serializers.SerializerMethodField()
     product_variants = serializers.SerializerMethodField()
+    channels = serializers.SerializerMethodField()
 
     provides = serializers.SerializerMethodField()
     sources = serializers.SerializerMethodField()
@@ -239,37 +266,16 @@ class ComponentSerializer(serializers.ModelSerializer):
         return get_component_purl_link(instance.purl)
 
     @staticmethod
-    def get_products(instance: Component) -> list[dict[str, str]]:
-        return get_product_data_list_by_ofuri(Product, "products", instance.products)
-
-    @staticmethod
-    def get_product_versions(instance: Component) -> list[dict[str, str]]:
-        return get_product_data_list_by_ofuri(
-            ProductVersion, "product_versions", instance.product_versions
-        )
-
-    @staticmethod
-    def get_product_streams(instance: Component) -> list[dict[str, str]]:
-        return get_product_data_list_by_ofuri(
-            ProductStream, "product_streams", instance.product_streams
-        )
-
-    # Above 3 are special - they filter on ofuri= instead of name=
-    @staticmethod
-    def get_product_variants(instance: Component) -> list[dict[str, str]]:
-        return get_product_data_list(ProductVariant, "product_variants", instance.product_variants)
-
-    @staticmethod
     def get_provides(instance: Component) -> list[dict[str, str]]:
         return get_component_data_list(instance.get_provides_purls())
 
     @staticmethod
     def get_sources(instance: Component) -> list[dict[str, str]]:
-        return get_component_data_list(instance.get_source())
+        return get_component_data_list(instance.get_sources_purls())
 
     @staticmethod
     def get_upstreams(instance: Component) -> list[dict[str, str]]:
-        return get_component_data_list(instance.get_upstreams())
+        return get_component_data_list(instance.get_upstreams_purls())
 
     class Meta:
         model = Component
@@ -303,11 +309,10 @@ class ComponentSerializer(serializers.ModelSerializer):
             "product_versions",
             "product_streams",
             "product_variants",
-            # "channels",
+            "channels",
             "sources",
             "provides",
             "upstreams",
-            # "meta_attr",
         ]
 
 
@@ -339,13 +344,14 @@ class ComponentListSerializer(serializers.ModelSerializer):
         ]
 
 
-class ProductModelSerializer(serializers.ModelSerializer):
+class ProductModelSerializer(ProductTaxonomySerializer):
     tags = TagSerializer(many=True, read_only=True)
     components = serializers.SerializerMethodField()
     upstreams = serializers.SerializerMethodField()
     builds = serializers.SerializerMethodField()
     link = serializers.SerializerMethodField()
     build_count = serializers.SerializerMethodField()
+    channels = serializers.SerializerMethodField()
 
     @staticmethod
     @abstractmethod
@@ -369,26 +375,6 @@ class ProductModelSerializer(serializers.ModelSerializer):
         return instance.builds.count()
 
     @staticmethod
-    def get_products(instance: ProductModel) -> list[dict[str, str]]:
-        return get_product_data_list(Product, "products", instance.products)
-
-    @staticmethod
-    def get_product_versions(instance: ProductModel) -> list[dict[str, str]]:
-        return get_product_data_list(ProductVersion, "product_versions", instance.product_versions)
-
-    @staticmethod
-    def get_product_streams(instance: ProductModel) -> list[dict[str, str]]:
-        return get_product_data_list(ProductStream, "product_streams", instance.product_streams)
-
-    @staticmethod
-    def get_product_variants(instance: ProductModel) -> list[dict[str, str]]:
-        return get_product_data_list(ProductVariant, "product_variants", instance.product_variants)
-
-    @staticmethod
-    def get_channels(instance: ProductModel) -> list[dict[str, str]]:
-        return get_product_data_list(Channel, "channels", instance.channels)
-
-    @staticmethod
     def get_manifest(instance: ProductStream) -> str:
         return get_model_id_link("product_streams", instance.uuid, manifest=True)
 
@@ -409,6 +395,7 @@ class ProductModelSerializer(serializers.ModelSerializer):
             "components",
             "upstreams",
             "tags",
+            "channels",
         ]
 
 
@@ -505,38 +492,34 @@ class ProductVariantSerializer(ProductModelSerializer):
         ]
 
 
-class ChannelSerializer(serializers.ModelSerializer):
+class ChannelSerializer(ProductTaxonomySerializer):
     link = serializers.SerializerMethodField()
+    products = serializers.SerializerMethodField()
+    product_versions = serializers.SerializerMethodField()
+    product_streams = serializers.SerializerMethodField()
+    product_variants = serializers.SerializerMethodField()
 
     class Meta:
         model = Channel
-        fields = "__all__"
+        fields = [
+            "uuid",
+            "link",
+            "last_changed",
+            "created_at",
+            "name",
+            "relative_url",
+            "type",
+            "description",
+            "meta_attr",
+            "products",
+            "product_versions",
+            "product_streams",
+            "product_variants",
+        ]
 
     @staticmethod
     def get_link(instance: ProductVariant) -> str:
         return get_model_id_link("channels", instance.uuid)
-
-    @staticmethod
-    def get_products(instance: Channel) -> list[dict[str, str]]:
-        return get_product_data_list_by_ofuri(Product, "products", instance.products)
-
-    @staticmethod
-    def get_product_versions(instance: Channel) -> list[dict[str, str]]:
-        return get_product_data_list_by_ofuri(
-            ProductVersion, "product_versions", instance.product_versions
-        )
-
-    @staticmethod
-    def get_product_streams(instance: Channel) -> list[dict[str, str]]:
-        return get_product_data_list_by_ofuri(
-            ProductStream, "product_streams", instance.product_streams
-        )
-
-    @staticmethod
-    def get_product_variants(instance: Channel) -> list[dict[str, str]]:
-        return get_product_data_list_by_ofuri(
-            ProductVariant, "product_variants", instance.product_variants
-        )
 
 
 class AppStreamLifeCycleSerializer(serializers.ModelSerializer):

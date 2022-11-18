@@ -2,13 +2,13 @@ import logging
 import re
 import uuid as uuid
 from abc import abstractmethod
-from collections import defaultdict
+from typing import Union
 
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
 from django.db import models
-from django.db.models import Q, QuerySet
+from django.db.models import QuerySet
 from mptt.managers import TreeManager
 from mptt.models import MPTTModel, TreeForeignKey
 from packageurl import PackageURL
@@ -109,14 +109,21 @@ class ProductNode(NodeModel):
     #   attribute's related query name.
 
     @staticmethod
-    def get_node_pks_for_type(qs: QuerySet["ProductNode"], target_model: str) -> QuerySet:
+    def get_node_pks_for_type(
+        qs: QuerySet["ProductNode"], mapping_model: type, lookup: str = "__pk"
+    ) -> QuerySet["ProductNode"]:
         """For a given ProductNode queryset, find all nodes with the given type
-        and return the primary keys of their related objects"""
-        # "product_version" -> "ProductVersion"
-        mapping_model = target_model.title().replace("_", "")
-        return qs.filter(level=MODEL_NODE_LEVEL_MAPPING[mapping_model]).values_list(
-            f"{target_model}__pk", flat=True
-        )
+        and return a lookup on their related objects (primary key by default)"""
+        # "ProductVersion" for mapping, "productversion__pk" for field lookup
+        mapping_key = mapping_model.__name__
+        qs = qs.filter(level=MODEL_NODE_LEVEL_MAPPING[mapping_key])
+        if lookup:
+            target_model = mapping_key.lower()
+            qs = qs.values_list(f"{target_model}{lookup}", flat=True)
+        # else client code needs whole Product instances, not their PKs
+        # No way to return "obj" / "productstream" field as a model instance here
+        # ManyToManyFields can use PKs, but ForeignKeys require model instances
+        return qs
 
     @staticmethod
     def get_node_names_for_type(product_model: "ProductModel", target_model: str) -> QuerySet:
@@ -133,24 +140,34 @@ class ProductNode(NodeModel):
         )
 
     @classmethod
-    def get_products(cls, product_model: "ProductModel") -> list[str]:
-        return list(cls.get_node_names_for_type(product_model, "product"))
+    def get_products(
+        cls, qs: QuerySet["ProductNode"], lookup: str = "__pk"
+    ) -> QuerySet["ProductNode"]:
+        return cls.get_node_pks_for_type(qs, Product, lookup=lookup)
 
     @classmethod
-    def get_product_versions(cls, product_model: "ProductModel") -> list[str]:
-        return list(cls.get_node_names_for_type(product_model, "product_version"))
+    def get_product_versions(
+        cls, qs: QuerySet["ProductNode"], lookup: str = "__pk"
+    ) -> QuerySet["ProductNode"]:
+        return cls.get_node_pks_for_type(qs, ProductVersion, lookup=lookup)
 
     @classmethod
-    def get_product_streams(cls, product_model: "ProductModel") -> list[str]:
-        return list(cls.get_node_names_for_type(product_model, "product_stream"))
+    def get_product_streams(
+        cls, qs: QuerySet["ProductNode"], lookup: str = "__pk"
+    ) -> QuerySet["ProductNode"]:
+        return cls.get_node_pks_for_type(qs, ProductStream, lookup=lookup)
 
     @classmethod
-    def get_product_variants(cls, product_model: "ProductModel") -> list[str]:
-        return list(cls.get_node_names_for_type(product_model, "product_variant"))
+    def get_product_variants(
+        cls, qs: QuerySet["ProductNode"], lookup: str = "__pk"
+    ) -> QuerySet["ProductNode"]:
+        return cls.get_node_pks_for_type(qs, ProductVariant, lookup=lookup)
 
     @classmethod
-    def get_channels(cls, product_model: "ProductModel") -> list[str]:
-        return list(cls.get_node_names_for_type(product_model, "channel"))
+    def get_channels(
+        cls, qs: QuerySet["ProductNode"], lookup: str = "__pk"
+    ) -> QuerySet["ProductNode"]:
+        return cls.get_node_pks_for_type(qs, Channel, lookup=lookup)
 
 
 class ComponentNode(NodeModel):
@@ -193,9 +210,8 @@ class ComponentNode(NodeModel):
         #    core_cn_tree_lft_purl_parent_idx
         #    core_cn_lft_tree_idx
         #    core_cn_lft_rght_tree_idx
-        indexes = (  # type: ignore
+        indexes = (  # type: ignore[assignment]
             models.Index(fields=("type", "parent", "purl")),
-            models.Index(fields=("type",)),
             models.Index(fields=("parent",)),
             models.Index(fields=("purl",)),
             *NodeModel.Meta.indexes,
@@ -248,29 +264,25 @@ class SoftwareBuild(TimeStampedModel):
     completion_time = models.DateTimeField(null=True)  # meta_attr["completion_time"]
     # Store meta attributes relevant to different build system types.
     meta_attr = models.JSONField(default=dict)
+    # implicit field "components" from Component model's ForeignKey
+    components: models.Manager["Component"]
 
     class Meta:
         indexes = (models.Index(fields=("completion_time",)),)
 
     def save_datascore(self):
-        for component in Component.objects.filter(software_build__build_id=self.build_id):
+        for component in self.components.get_queryset():
             component.save_datascore()
         return None
 
-    def save_component_taxonomy(self):
-        """Note: this function is no longer invoked and may be removed in the future.
-
-        it is only possible to update ('materialize') component taxonomy when all
-        components (from a build) have loaded"""
-        for component in Component.objects.filter(software_build__build_id=self.build_id):
-            for cnode in component.cnodes.get_queryset():
-                for d in cnode.get_descendants(include_self=True):
-                    d.obj.save_component_taxonomy()
-        return None
-
     def save_product_taxonomy(self):
-        """update ('materialize') product taxonomy on all build components"""
-        variant_ids = list(
+        """update ('materialize') product taxonomy on all build components
+
+        This method is defined on SoftwareBuild and not Component,
+        because the ProductComponentRelation table refers to build IDs,
+        which we use to look up which products a certain component should be linked to
+        """
+        variant_names = tuple(
             ProductComponentRelation.objects.filter(
                 build_id=self.build_id,
                 type__in=ProductComponentRelation.VARIANT_TYPES,
@@ -279,7 +291,7 @@ class SoftwareBuild(TimeStampedModel):
             .distinct()
         )
 
-        stream_ids = list(
+        stream_names = list(
             ProductComponentRelation.objects.filter(
                 build_id=self.build_id,
                 type__in=ProductComponentRelation.STREAM_TYPES,
@@ -288,10 +300,10 @@ class SoftwareBuild(TimeStampedModel):
             .distinct()
         )
 
-        product_details = get_product_details(variant_ids, stream_ids)
+        product_details = get_product_details(variant_names, stream_names)
 
         components = set()
-        for component in Component.objects.filter(software_build__build_id=self.build_id):
+        for component in self.components.get_queryset():
             # This is needed for container image builds which pull in components not
             # built at Red Hat, and therefore not assigned a build_id
             for d in component.cnodes.get_queryset().get_descendants(include_self=True):
@@ -299,15 +311,8 @@ class SoftwareBuild(TimeStampedModel):
                     continue
                 components.add(d.obj)
 
-        for component in list(components):
-            for attr in ("products", "product_versions", "product_streams"):
-                # Since we're only setting the product details for a specific build id we need
-                # to ensure we are only updating, not replacing the existing product details.
-                interim_set = set(getattr(component, attr))
-                interim_set.update(product_details[attr])
-                setattr(component, attr, list(interim_set))
-            component.channels = component.get_channels()
-            component.save()
+        for component in components:
+            component.save_product_taxonomy(product_details)
 
         return None
 
@@ -327,39 +332,59 @@ class ProductModel(TimeStampedModel):
     ofuri = models.CharField(max_length=1024, default="")
     lifecycle_url = models.CharField(max_length=1024, default="")
 
-    # Override each of the below on that model, e.g. products = None on the Product model
-    pnodes = GenericRelation(ProductNode)  # Needed to avoid a mypy warning
-    products = fields.ArrayField(models.CharField(max_length=200), default=list)
-    product_versions = fields.ArrayField(models.CharField(max_length=200), default=list)
-    product_streams = fields.ArrayField(models.CharField(max_length=200), default=list)
-    product_variants = fields.ArrayField(models.CharField(max_length=200), default=list)
-    channels = fields.ArrayField(models.CharField(max_length=200), default=list)
+    pnodes = GenericRelation(ProductNode, related_query_name="%(class)s")
 
-    @staticmethod
-    def get_related_components(build_ids: QuerySet, sort_field: str) -> QuerySet["Component"]:
-        """Returns unique components with matching build_id, ordered by sort_field"""
-        if build_ids:
-            query = Q()
-            for build_id in build_ids:
-                query |= Q(software_build=build_id)
-            # TODO get component descendants as well
-            return Component.objects.filter(query).order_by(sort_field).distinct(sort_field)
-        # Else self.builds is an empty QuerySet
-        return Component.objects.none()
+    # below fields are added implicitly to all ProductModel subclasses
+    # using Django reverse relations, but mypy needs an explicit type hint
+    @property
+    @abstractmethod
+    def products(self) -> Union["Product", models.ForeignKey]:
+        pass
+
+    @property
+    @abstractmethod
+    def productversions(
+        self,
+    ) -> Union["ProductVersion", models.ForeignKey, models.Manager["ProductVersion"]]:
+        pass
+
+    @property
+    @abstractmethod
+    def productstreams(
+        self,
+    ) -> Union["ProductStream", models.ForeignKey, models.Manager["ProductStream"]]:
+        pass
+
+    @property
+    @abstractmethod
+    def productvariants(self) -> Union["ProductVariant", models.Manager["ProductVariant"]]:
+        pass
+
+    @property
+    @abstractmethod
+    def channels(self) -> models.Manager["Channel"]:
+        pass
+
+    @property
+    @abstractmethod
+    def components(self) -> models.Manager["Component"]:
+        pass
 
     @property
     def builds(self) -> QuerySet:
         """Returns unique productcomponentrelations with at least 1 matching variant or stream,
         ordered by build_id.
         """
+        # TODO: Can just return self.components.values_list("software_build", flat=True).distinct()
         product_refs = [self.name]
         if isinstance(self, ProductStream):
-            # we also want to include child product_variants of this product stream
-            product_refs.extend(self.product_variants)
+            # we also want to include child product variants of this product stream
+            product_refs.extend(self.productvariants.values_list("name", flat=True))
         elif isinstance(self, ProductVersion) or isinstance(self, Product):
-            # we don't store product or product versions in the relations table therefore
-            # we only want to include child product_streams and product_variants in the query
-            product_refs = self.product_streams + self.product_variants
+            # we don't store products or product versions in the relations table therefore
+            # we only want to include child product streams and product variants in the query
+            product_refs.extend(self.productstreams.values_list("name", flat=True))
+            product_refs.extend(self.productvariants.values_list("name", flat=True))
         # else it was a product variant, only look up by self.name
 
         if product_refs:
@@ -368,14 +393,8 @@ class ProductModel(TimeStampedModel):
                 .values_list("build_id", flat=True)
                 .distinct()
             )
-        # Else no product_variants or product_streams
+        # Else no product variants or product streams - should never happen
         return ProductComponentRelation.objects.none()
-
-    @property
-    def components(self) -> QuerySet["Component"]:
-        """Return unique components with build_ids matching self.builds, ordered by purl"""
-        # Return list of objs, not IDs like other props, so template can use obj props
-        return self.get_related_components(self.builds, "purl")
 
     @property
     def coverage(self) -> int:
@@ -397,27 +416,71 @@ class ProductModel(TimeStampedModel):
         descendants = self.pnodes.get_queryset().get_descendants(include_self=True)
         stream_cpes = (
             descendants.filter(level=MODEL_NODE_LEVEL_MAPPING["ProductStream"])
-            .values_list("product_stream__cpe", flat=True)
+            .values_list("productstream__cpe", flat=True)
             .distinct()
         )
         variant_cpes = (
             descendants.filter(level=MODEL_NODE_LEVEL_MAPPING["ProductVariant"])
-            .values_list("product_variant__cpe", flat=True)
+            .values_list("productvariant__cpe", flat=True)
             .distinct()
         )
-        return *stream_cpes, *variant_cpes
+        # Omit CPEs like "", but GenericForeignKeys only support .filter(), not .exclude()??
+        return tuple(cpe for cpe in (*stream_cpes, *variant_cpes) if cpe)
 
     @abstractmethod
     def get_ofuri(self) -> str:
         pass
 
     def save_product_taxonomy(self):
-        self.product_variants = ProductNode.get_product_variants(self)
-        self.product_streams = ProductNode.get_product_streams(self)
-        self.product_versions = ProductNode.get_product_versions(self)
-        self.products = ProductNode.get_products(self)
-        self.channels = ProductNode.get_channels(self)
-        self.save()
+        """Save links between related ProductModel subclasses"""
+        family = self.pnodes.first().get_family()
+        # Get obj from raw nodes - no way to return related __product obj in values_list()
+        products = ProductNode.get_products(family, lookup="").first().obj
+        productversions = tuple(
+            node.obj for node in ProductNode.get_product_versions(family, lookup="")
+        )
+        productstreams = tuple(
+            node.obj for node in ProductNode.get_product_streams(family, lookup="")
+        )
+        productvariants = tuple(
+            node.obj for node in ProductNode.get_product_variants(family, lookup="")
+        )
+        channels = ProductNode.get_channels(family)
+
+        # Avoid setting fields on models which don't have them
+        # Also set fields correctly based on which side of the relationship we see
+        # forward relationship like "versions -> products" assigns a single object
+        # reverse relationship like "products -> versions" calls .set() with many objects
+        if isinstance(self, Product):
+            self.productversions.set(productversions)
+            self.productstreams.set(productstreams)
+            self.productvariants.set(productvariants)
+
+        elif isinstance(self, ProductVersion):
+            self.products = products  # Should be only one parent object
+            self.productstreams.set(productstreams)
+            self.productvariants.set(productvariants)
+            self.save()
+
+        elif isinstance(self, ProductStream):
+            self.products = products
+            self.productversions = productversions[0]
+            self.productvariants.set(productvariants)
+            self.save()
+
+        elif isinstance(self, ProductVariant):
+            self.products = products
+            self.productversions = productversions[0]
+            self.productstreams = productstreams[0]
+            self.save()
+
+        else:
+            raise NotImplementedError(
+                f"Add behavior for class {type(self)} in ProductModel.save_product_taxonomy()"
+            )
+
+        # All ProductModels have a set of descendant channels
+        self.channels.set(channels)
 
     def save(self, *args, **kwargs):
         self.ofuri = self.get_ofuri()
@@ -432,11 +495,29 @@ class ProductModel(TimeStampedModel):
 
 
 class Product(ProductModel):
+    @property
+    def products(self) -> "Product":
+        return self
 
-    # Inherit product_versions, product_streams, and product_variants from ProductModel
-    # Override only products which doesn't make sense for this model
-    products = None  # type: ignore
-    pnodes = GenericRelation(ProductNode, related_query_name="product")
+    # implicit "productversions" field on Product model
+    # is created by products field on ProductVersion model
+    productversions: models.Manager["ProductVersion"]
+
+    # implicit "productstreams" field on Product model
+    # is created by products field on ProductStream model
+    productstreams: models.Manager["ProductStream"]
+
+    # implicit "productvariants" field on Product model
+    # is created by products field on ProductVariant model
+    productvariants: models.Manager["ProductVariant"]
+
+    # implicit "channels" field on Product model
+    # is created by products field on Channel model
+    channels: models.Manager["Channel"]
+
+    # implicit "components" field on Product model
+    # is created by products field on Component model
+    components: models.Manager["Component"]
 
     def get_ofuri(self) -> str:
         """Return product URI
@@ -452,8 +533,29 @@ class ProductTag(Tag):
 
 class ProductVersion(ProductModel):
 
-    product_versions = None  # type: ignore
-    pnodes = GenericRelation(ProductNode, related_query_name="product_version")
+    products = models.ForeignKey(
+        "Product", on_delete=models.CASCADE, related_name="productversions"
+    )
+
+    @property
+    def productversions(self) -> "ProductVersion":
+        return self
+
+    # implicit "productstreams" field on ProductVersion model
+    # is created by productversions field on ProductStream model
+    productstreams: models.Manager["ProductStream"]
+
+    # implicit "productvariants" field on ProductVersion model
+    # is created by productversions field on ProductVariant model
+    productvariants: models.Manager["ProductVariant"]
+
+    # implicit "channels" field on ProductVersion model
+    # is created by productversions field on Channel model
+    channels: models.Manager["Channel"]
+
+    # implicit "components" field on ProductVersion model
+    # is created by productversions field on Component model
+    components: models.Manager["Component"]
 
     def get_ofuri(self) -> str:
         """Return product version URI.
@@ -480,9 +582,28 @@ class ProductStream(ProductModel):
     active = models.BooleanField(default=False)
     et_product_versions = fields.ArrayField(models.CharField(max_length=200), default=list)
 
-    # redefined from parent class
-    product_streams = None  # type: ignore
-    pnodes = GenericRelation(ProductNode, related_query_name="product_stream")
+    products = models.ForeignKey("Product", on_delete=models.CASCADE, related_name="productstreams")
+    productversions = models.ForeignKey(
+        "ProductVersion",
+        on_delete=models.CASCADE,
+        related_name="productstreams",
+    )
+
+    @property
+    def productstreams(self) -> "ProductStream":
+        return self
+
+    # implicit "productvariants" field on ProductStream model
+    # is created by productstreams field on ProductVariant model
+    productvariants: models.Manager["ProductVariant"]
+
+    # implicit "channels" field on ProductStream model
+    # is created by productstreams field on Channel model
+    channels: models.Manager["Channel"]
+
+    # implicit "components" field on ProductStream model
+    # is created by productstreams field on Component model
+    components: models.Manager["Component"]
 
     def get_ofuri(self) -> str:
         """Return product stream URI
@@ -504,14 +625,14 @@ class ProductStream(ProductModel):
         return (
             Component.objects.filter(
                 ROOT_COMPONENTS_CONDITION,
-                product_streams__overlap=(self.ofuri,),
+                productstreams__ofuri=self.ofuri,
             )
             .annotate(
                 latest=models.Subquery(
                     Component.objects.filter(
                         ROOT_COMPONENTS_CONDITION,
                         name=models.OuterRef("name"),
-                        product_streams__overlap=(self.ofuri,),
+                        productstreams__ofuri=self.ofuri,
                     )
                     .exclude(software_build__isnull=True)
                     .order_by("-software_build__completion_time")
@@ -537,9 +658,28 @@ class ProductVariant(ProductModel):
 
     cpe = models.CharField(max_length=1000, default="")
 
-    # redefined from parent class
-    product_variants = None  # type: ignore
-    pnodes = GenericRelation(ProductNode, related_query_name="product_variant")
+    products = models.ForeignKey(
+        "Product", on_delete=models.CASCADE, related_name="productvariants"
+    )
+    productversions = models.ForeignKey(
+        "ProductVersion", on_delete=models.CASCADE, related_name="productvariants"
+    )
+    # Below creates implicit "productvariants" field on ProductStream
+    productstreams = models.ForeignKey(
+        ProductStream, on_delete=models.CASCADE, related_name="productvariants"
+    )
+
+    @property
+    def productvariants(self) -> "ProductVariant":
+        return self
+
+    # implicit "channels" field on ProductVariant model
+    # is created by productvariants field on Channel model
+    channels: models.Manager["Channel"]
+
+    # implicit "components" field on ProductVariant model
+    # is created by productvariants field on Component model
+    components: models.Manager["Component"]
 
     @property
     def cpes(self) -> tuple[str]:
@@ -552,29 +692,31 @@ class ProductVariant(ProductModel):
 
         Ex.: o:redhat:rhel:8.6.0.z:baseos-8.6.0.z.main.eus
         """
-        product_stream = f"o:redhat::{self.name.lower()}"
-
-        first_pnode = self.pnodes.first()
-        if not first_pnode:
-            return product_stream
-
-        product_stream_node = (
-            first_pnode.get_ancestors()
-            .filter(content_type=ContentType.objects.get_for_model(ProductStream))
-            .first()
-        )
-        if not product_stream_node:
-            return product_stream
-        else:
-            product_stream = f"{product_stream_node.obj.ofuri}:{self.name.lower()}"
-        return product_stream
+        return f"{self.productstreams.ofuri}:{self.name.lower()}"
 
 
 class ProductVariantTag(Tag):
     tagged_model = models.ForeignKey(ProductVariant, on_delete=models.CASCADE, related_name="tags")
 
 
-class Channel(TimeStampedModel):
+class ProductTaxonomyMixin(models.Model):
+    """Add product taxonomy fields and a method to save them for Channels and Components."""
+
+    # related_name like "channels" or "components" - first "s" is a format specifier
+    products = models.ManyToManyField(Product, related_name="%(class)ss")
+    productversions = models.ManyToManyField(ProductVersion, related_name="%(class)ss")
+    productstreams = models.ManyToManyField(ProductStream, related_name="%(class)ss")
+    productvariants = models.ManyToManyField(ProductVariant, related_name="%(class)ss")
+
+    class Meta:
+        abstract = True
+
+    @abstractmethod
+    def save_product_taxonomy(self) -> None:
+        pass
+
+
+class Channel(TimeStampedModel, ProductTaxonomyMixin):
     """A model that represents a specific type of delivery channel.
 
     A Channel is essentially the "location" of where a specific artifact is available from to
@@ -592,45 +734,22 @@ class Channel(TimeStampedModel):
     description = models.TextField(default="")
     meta_attr = models.JSONField(default=dict)
     pnodes = GenericRelation(ProductNode, related_query_name="channel")
-    products = fields.ArrayField(models.CharField(max_length=200), default=list)
-    product_versions = fields.ArrayField(models.CharField(max_length=200), default=list)
-    product_streams = fields.ArrayField(models.CharField(max_length=200), default=list)
-    product_variants = fields.ArrayField(models.CharField(max_length=200), default=list)
 
     def __str__(self) -> str:
         return str(self.name)
 
-    def save_product_taxonomy(self):
-        # TODO: Below doesn't match ProductModel's save_product_taxonomy
-        # We use ofuri here to identify the taxonomy
-        # But ProductModel subclasses all use name to identify the taxonomy
-        # And in Component, we use ofuri to identify the taxonomy
-        # But the Component taxonomy properties don't seem to be set anywhere
-        # and all Components in stage have an empty [] list of product_variants
-        product_set = set()
-        version_set = set()
-        stream_set = set()
-        variant_set = set()
-        for n in self.pnodes.first().get_ancestors():
-            if isinstance(n.obj, Product):
-                product_set.add(n.obj.ofuri)
-            elif isinstance(n.obj, ProductVersion):
-                version_set.add(n.obj.ofuri)
-            elif isinstance(n.obj, ProductStream):
-                stream_set.add(n.obj.ofuri)
-            elif isinstance(n.obj, ProductVariant):
-                variant_set.add(n.obj.ofuri)
-            else:
-                raise ValueError(
-                    f"Unknown type {type(n.obj)} for {n.obj.ofuri}"
-                    f"when saving product taxonomy for channel {self.name}"
-                )
+    def save_product_taxonomy(self) -> None:
+        """Save taxonomy fields using ancestors of this Channel"""
+        ancestors = self.pnodes.get_queryset().get_ancestors()
+        products = ProductNode.get_products(ancestors)
+        versions = ProductNode.get_product_versions(ancestors)
+        streams = ProductNode.get_product_streams(ancestors)
+        variants = ProductNode.get_product_variants(ancestors)
 
-        self.products = list(product_set)
-        self.product_versions = list(version_set)
-        self.product_streams = list(stream_set)
-        self.product_variants = list(variant_set)
-        self.save()
+        self.products.set(products)
+        self.productversions.set(versions)
+        self.productstreams.set(streams)
+        self.productvariants.set(variants)
 
 
 class ProductComponentRelation(TimeStampedModel):
@@ -656,7 +775,7 @@ class ProductComponentRelation(TimeStampedModel):
 
     # Ex. if Errata Tool this would be errata_id
     external_system_id = models.CharField(max_length=200, default="")
-    # E.g. product_variant for ERRATA, or product_stream for COMPOSE
+    # E.g. product variant for ERRATA, or product stream for COMPOSE
     product_ref = models.CharField(max_length=200, default="")
     build_id = models.CharField(max_length=200, default="")
 
@@ -670,35 +789,53 @@ class ProductComponentRelation(TimeStampedModel):
         indexes = (
             models.Index(fields=("external_system_id", "product_ref", "build_id")),
             models.Index(fields=("type", "build_id")),
-            models.Index(fields=("external_system_id",)),
-            models.Index(fields=("product_ref",)),
             models.Index(fields=("build_id",)),
-            models.Index(fields=("type",)),
             models.Index(fields=("product_ref", "type")),
         )
 
 
-def get_product_streams_from_variants(variant_ids: list[str]):
-    product_variants = ProductVariant.objects.filter(name__in=variant_ids)
-    product_streams = []
-    for pv in product_variants:
-        product_streams.extend(ProductNode.get_product_streams(pv))
-    return list(set(product_streams))
+def get_product_details(variant_names: tuple[str], stream_names: list[str]) -> dict[str, set[str]]:
+    """
+    Given stream / variant names from the PCR table, look up all related ProductModel subclasses
 
+    In other words, builds relate to variants and streams through the PCR table
+    Components relate to builds, and products / versions relate to variants / streams
+    We want to link all build components to their related products, versions, streams, and variants
+    """
+    if variant_names:
+        variant_streams = ProductVariant.objects.filter(name__in=variant_names).values_list(
+            "productstreams__name", flat=True
+        )
+        stream_names.extend(variant_streams)
 
-def get_product_details(variant_ids: list[str], stream_ids: list[str]) -> dict[str, set[str]]:
-    if variant_ids:
-        stream_ids.extend(get_product_streams_from_variants(variant_ids))
-    product_streams = ProductStream.objects.filter(name__in=stream_ids)
-    product_details = defaultdict(set)
-    for product_stream in product_streams:
-        for ancestor in product_stream.pnodes.get_queryset().get_ancestors(include_self=True):
-            if type(ancestor.obj) is Product:
-                product_details["products"].add(ancestor.obj.ofuri)
-            if type(ancestor.obj) is ProductVersion:
-                product_details["product_versions"].add(ancestor.obj.ofuri)
-            if type(ancestor.obj) is ProductStream:
-                product_details["product_streams"].add(ancestor.obj.ofuri)
+    product_details: dict[str, set[str]] = {
+        "products": set(),
+        "productversions": set(),
+        "productstreams": set(),
+        "productvariants": set(),
+        "channels": set(),
+    }
+
+    for pnode in ProductNode.objects.filter(
+        level=MODEL_NODE_LEVEL_MAPPING["ProductStream"], productstream__name__in=stream_names
+    ):
+        family = pnode.get_family()
+
+        products = ProductNode.get_products(family)
+        product_details["products"].update(products)
+
+        product_versions = ProductNode.get_product_versions(family)
+        product_details["productversions"].update(product_versions)
+
+        product_streams = ProductNode.get_product_streams(family)
+        product_details["productstreams"].update(product_streams)
+
+        product_variants = ProductNode.get_product_variants(family)
+        product_details["productvariants"].update(product_variants)
+
+        channels = ProductNode.get_channels(family)
+        product_details["channels"].update(channels)
+    # For some build, return a mapping of ProductModel type to all related ProductModel UUIDs
     return product_details
 
 
@@ -710,7 +847,7 @@ class ComponentQuerySet(models.QuerySet):
         return self.filter(ROOT_COMPONENTS_CONDITION)
 
 
-class Component(TimeStampedModel):
+class Component(TimeStampedModel, ProductTaxonomyMixin):
     class Type(models.TextChoices):
         CARGO = "CARGO"  # Rust packages
         CONTAINER_IMAGE = "OCI"  # Container images and other OCI artifacts
@@ -743,16 +880,20 @@ class Component(TimeStampedModel):
     nvr = models.CharField(max_length=1024, default="")
     nevra = models.CharField(max_length=1024, default="")
 
-    products = fields.ArrayField(models.CharField(max_length=200), default=list)
-    product_versions = fields.ArrayField(models.CharField(max_length=200), default=list)
-    product_streams = fields.ArrayField(models.CharField(max_length=200), default=list)
-    product_variants = fields.ArrayField(models.CharField(max_length=200), default=list)
-    channels = fields.ArrayField(models.CharField(max_length=200), default=list)
-    provides = fields.ArrayField(models.CharField(max_length=1024), default=list)
-    sources = fields.ArrayField(models.CharField(max_length=1024), default=list)
-    upstreams = fields.ArrayField(models.CharField(max_length=1024), default=list)
+    # related_name defaults to fieldname_set if not specified
+    # e.g. channels_set, upstreams_set
+    channels = models.ManyToManyField(Channel)
+    upstreams = models.ManyToManyField("Component")
 
-    cnodes = GenericRelation(ComponentNode)
+    # sources is the inverse of provides. One container can provide many RPMs
+    # and one RPM can have many different containers as a source (as well as modules and SRPMs)
+    sources = models.ManyToManyField("Component", related_name="provides")
+    provides: models.ManyToManyField
+
+    # Specify related_query_name to add e.g. component field
+    # that can be used to filter from a cnode to its related component
+    # TODO: Or just switch from GenericForeignKey to regular ForeignKey?
+    cnodes = GenericRelation(ComponentNode, related_query_name="%(class)s")
     software_build = models.ForeignKey(
         SoftwareBuild, on_delete=models.CASCADE, null=True, related_name="components"
     )
@@ -791,13 +932,8 @@ class Component(TimeStampedModel):
         indexes = (
             models.Index(fields=("name", "type", "arch", "version", "release")),
             models.Index(fields=("type", "name")),
-            models.Index(fields=("name",)),
-            models.Index(fields=("type",)),
             models.Index(fields=("nvr",)),
             models.Index(fields=("purl",)),
-            models.Index(fields=("product_streams",)),
-            models.Index(fields=("product_variants",)),
-            models.Index(fields=("type", "product_streams")),
             models.Index(
                 fields=("type", "name", "arch"),
                 name="compon_latest_name_type_idx",
@@ -809,7 +945,7 @@ class Component(TimeStampedModel):
                 condition=ROOT_COMPONENTS_CONDITION,
             ),
             models.Index(
-                fields=("uuid", "software_build_id", "type", "name", "arch", "product_streams"),
+                fields=("uuid", "software_build_id", "type", "name", "arch"),
                 name="compon_latest_idx",
                 condition=ROOT_COMPONENTS_CONDITION,
             ),
@@ -908,10 +1044,12 @@ class Component(TimeStampedModel):
         )
 
     def save_component_taxonomy(self):
-        self.upstreams = self.get_upstreams()
-        self.provides = list(self.get_provides_purls())
-        self.sources = self.get_source()
-        self.save()
+        upstreams = self.get_upstreams_pks()
+        self.upstreams.set(upstreams)
+        provides = self.get_provides_nodes().values_list("component__pk", flat=True)
+        self.provides.set(provides)
+        sources = self.get_sources_nodes().values_list("component__pk", flat=True)
+        self.sources.set(sources)
 
     def is_srpm(self):
         return self.type == Component.Type.RPM and self.arch == "src"
@@ -934,6 +1072,33 @@ class Component(TimeStampedModel):
         self.purl = purl.to_string()
         super().save(*args, **kwargs)
 
+    def save_product_taxonomy(
+        self, product_pks_dict: Union[dict[str, QuerySet], None] = None
+    ) -> None:
+        """
+        Save links between ProductModel subclasses and this Component
+
+        product_pks_dict should contain a mapping of ProductModel type to IDs
+        These are all the products / versions / etc. that relate to some build
+        As determined by the PCR table and ProductModel taxonomy.
+        We call save_product_taxonomy() on the build, which calls this method
+        for each of the build's related components.
+        """
+        if not product_pks_dict:
+            raise ValueError(
+                "Call SoftwareBuild.save_product_taxonomy(),"
+                "instead of Component.save_product_taxonomy() directly"
+            )
+        # Since we're only setting the product details for a specific build id we need
+        # to ensure we are only updating, not replacing the existing product details.
+        self.products.add(*product_pks_dict["products"])
+        self.productversions.add(*product_pks_dict["productversions"])
+        self.productstreams.add(*product_pks_dict["productstreams"])
+        self.productvariants.add(*product_pks_dict["productvariants"])
+        self.channels.add(*product_pks_dict["channels"])
+
+        return None
+
     @property
     def get_roots(self) -> list[ComponentNode]:
         """Return component root entities."""
@@ -954,16 +1119,16 @@ class Component(TimeStampedModel):
                 # Partly because RPMs in containers can have unprocessed SRPMs
                 # And partly because we use roots to find upstream components,
                 # and it's not true to say that rpms share upstreams with containers
-                rpm_descendant = False
-                for ancestor in cnode.get_ancestors(include_self=True):
-                    if ancestor.obj.type == Component.Type.RPM:
-                        rpm_descendant = True
-                        break
+                rpm_descendant = (
+                    cnode.get_ancestors(include_self=True)
+                    .filter(component__type=Component.Type.RPM)
+                    .exists()
+                )
                 if not rpm_descendant:
                     roots.append(root)
             else:
                 roots.append(root)
-        return list(set(roots))
+        return roots
 
     @property
     def build_meta(self):
@@ -1054,24 +1219,9 @@ class Component(TimeStampedModel):
     def epoch(self) -> str:
         return self.meta_attr.get("epoch", "")
 
-    def get_channels(self):
-        variant_ids = self.product_variants
-        if not variant_ids:
-            return []
-        query = Q()
-        for variant_id in variant_ids:
-            query = query | Q(name__contains=variant_id)
-        product_variants = ProductVariant.objects.filter(query)
-        channels = []
-        for product_variant in product_variants:
-            for descendant in product_variant.pnodes.get_queryset().get_descendants():
-                if isinstance(descendant.obj, Channel):
-                    channels.append(descendant.obj.name)
-        return list(set(channels))
-
     def get_provides_nodes(self, include_dev: bool = True) -> QuerySet[ComponentNode]:
         """return a QuerySet of descendants with PROVIDES ComponentNode type"""
-        # Used in manifests. Returns whole objects to access their properties
+        # Used in manifests / taxonomies. Returns whole objects to access their properties
         type_list = [ComponentNode.ComponentNodeType.PROVIDES]
         if include_dev:
             type_list.append(ComponentNode.ComponentNodeType.PROVIDES_DEV)
@@ -1079,52 +1229,63 @@ class Component(TimeStampedModel):
 
     def get_provides_purls(self, include_dev: bool = True) -> QuerySet:
         """return a QuerySet of unique descendant PURLs with PROVIDES ComponentNode type"""
-        # Used in serializers / taxonomies. Returns identifiers (purls) to track relationships
+        # Used in serializers. Returns identifiers (purls) to track relationships
         return (
             self.get_provides_nodes(include_dev=include_dev)
             .values_list("purl", flat=True)
             .distinct()
         )
 
-    def get_source(self) -> list:
-        """return all root nodes"""
-        purl_cn = ComponentNode.objects.filter(purl=self.purl).get_ancestors(  # type: ignore
-            include_self=False
-        )
-        return list(purl_cn.filter(parent=None).values_list("purl", flat=True).distinct())
+    def get_sources_nodes(self) -> QuerySet[ComponentNode]:
+        """return all root node objects"""
+        return self.cnodes.get_queryset().get_ancestors(include_self=False).filter(parent=None)
 
-    def get_upstreams(self):
+    def get_sources_purls(self) -> QuerySet:
+        """return all root node purls"""
+        return self.get_sources_nodes().values_list("purl", flat=True).distinct()
+
+    def get_upstreams_nodes(self) -> list[ComponentNode]:
         """return upstreams component ancestors in family trees"""
+        # The get_roots logic is too complicated to use only Django filtering
+        # So it has to use Python logic and return a set, instead of a QuerySet
+        # which forces us to use Python in this + all other get_upstreams_* methods
+        upstreams = []
         roots = self.get_roots
-        if not roots:
-            return []
-        upstreams = set()
         for root in roots:
             # For SRPM/RPMS, and noarch containers, these are the cnodes we want.
-            source_descendant_purls = (
-                root.get_descendants()
-                .filter(type=ComponentNode.ComponentNodeType.SOURCE)
-                .values_list("purl", flat=True)
+            source_descendants = root.get_descendants().filter(
+                type=ComponentNode.ComponentNodeType.SOURCE
             )
             # Cachito builds nest components under the relevant source component for that
             # container build, eg. buildID=1911112. In that case we need to walk up the
             # tree from the current node to find its relevant source
+            root_obj = root.obj
             if (
-                root.obj.type == Component.Type.CONTAINER_IMAGE
-                and root.obj.arch == "noarch"
-                and source_descendant_purls.count() > 1
+                root_obj
+                and root_obj.type == Component.Type.CONTAINER_IMAGE
+                and root_obj.arch == "noarch"
+                and source_descendants.count() > 1
             ):
-                upstreams.update(
-                    ancestor.purl
-                    for ancestor in self.cnodes.get_queryset()
+                upstreams.extend(
+                    self.cnodes.get_queryset()
                     .get_ancestors(include_self=True)
-                    .filter(type=ComponentNode.ComponentNodeType.SOURCE)
-                    # Can't filter on obj fields when obj is linked using a GenericForeignKey
-                    if ancestor.obj.namespace == Component.Namespace.UPSTREAM
+                    .filter(
+                        type=ComponentNode.ComponentNodeType.SOURCE,
+                        component__namespace=Component.Namespace.UPSTREAM,
+                    )
                 )
             else:
-                upstreams.update(source_descendant_purls)
-        return list(upstreams)
+                upstreams.extend(source_descendants)
+        return upstreams
+
+    def get_upstreams_pks(self) -> tuple[str, ...]:
+        """Return only the primary keys from the set of all upstream nodes"""
+        linked_pks = set(node.component.pk for node in self.get_upstreams_nodes())
+        return tuple(linked_pks)
+
+    def get_upstreams_purls(self) -> set[str]:
+        """Return only the purls from the set of all upstream nodes"""
+        return set(node.purl for node in self.get_upstreams_nodes())
 
     def save_datascore(self):
         score = 0
@@ -1141,25 +1302,25 @@ class Component(TimeStampedModel):
         if not self.license_declared_raw:
             score += 10
             report.add("no license declared")
-        if not self.products:
+        if not self.products.exists():
             score += 10
             report.add("no products")
-        if not self.product_versions:
+        if not self.productversions.exists():
             score += 10
             report.add("no product versions")
-        if not self.product_streams:
+        if not self.productstreams.exists():
             score += 10
             report.add("no product streams")
-        if not self.product_variants:
+        if not self.productvariants.exists():
             score += 20
             report.add("no product variants")
-        if not self.sources:
+        if not self.sources.exists():
             score += 10
             report.add("no sources")
-        if not self.provides:
+        if not self.provides.exists():
             score += 10
             report.add("no provides")
-        if not self.upstreams:
+        if not self.upstreams.exists():
             score += 10
             report.add("no upstream")
         if not self.software_build:

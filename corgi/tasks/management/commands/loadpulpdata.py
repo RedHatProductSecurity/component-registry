@@ -35,7 +35,7 @@ class Command(BaseCommand):
                 self.get_builds_by_cdn_repo(stream_name=stream_name, force_process=options["force"])
         elif options["all"]:
             self.stdout.write(self.style.NOTICE("Fetching all unprocessed pulp relations"))
-            fetch_unprocessed_cdn_relations(force_process=options["force"], created_since=0)
+            fetch_unprocessed_cdn_relations(force_process=options["force"])
         else:
             self.stderr.write(self.style.ERROR("Pass either a stream name or the --all argument"))
             sys.exit(1)
@@ -43,7 +43,7 @@ class Command(BaseCommand):
     def get_builds_by_cdn_repo(self, stream_name: str, force_process: bool):
         self.stdout.write(self.style.NOTICE(f"Called save cdn repo with stream {stream_name}"))
         ps = ProductStream.objects.get(name=stream_name)
-        stream_or_variant_names = [stream_name] + ps.product_variants
+        stream_or_variant_names = (stream_name, *ps.productvariants.values_list("name", flat=True))
         relations_query = (
             ProductComponentRelation.objects.filter(
                 product_ref__in=stream_or_variant_names,

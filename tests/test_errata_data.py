@@ -39,7 +39,9 @@ def test_update_variant_repos():
         "rhel-8-for-aarch64-highavailability-rpms__8",
     ]
     ps = ProductStreamFactory.create(name="rhel", version="8.2.0")
-    ps_node = ProductNode.objects.create(parent=None, obj=ps, object_id=ps.pk)
+    product_node = ProductNode.objects.create(parent=None, obj=ps.products)
+    pv_node = ProductNode.objects.create(parent=product_node, obj=ps.productversions)
+    ps_node = ProductNode.objects.create(parent=pv_node, obj=ps)
 
     et_id = 0
     setup_models_for_variant_repos(sap_repos, ps_node, sap_variant, et_id)
@@ -53,7 +55,7 @@ def test_update_variant_repos():
     assert pv.pnodes.count() == 1
     pv_node = pv.pnodes.first()
     assert (
-        pv.channels
+        sorted(pv.channels.values_list("name", flat=True))
         == [channel_node.obj.name for channel_node in pv_node.get_descendants()]
         == sap_repos
     )

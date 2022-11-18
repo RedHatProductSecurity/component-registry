@@ -33,6 +33,7 @@ def save_component(component: dict[str, Any], parent: ComponentNode):
     meta = component.get("meta", {})
     if component["type"] not in Component.Type:
         logger.warning("Tried to save component with unknown type: %s", component["type"])
+        # TODO: Missing return here?
 
     meta_attr = component["analysis_meta"]
 
@@ -83,12 +84,7 @@ def slow_software_composition_analysis(build_id: int):
     software_build = SoftwareBuild.objects.get(build_id=build_id)
 
     # Get root component for this build; fail the task if it does not exist.
-    # TODO: ditch type:ignore when https://github.com/typeddjango/django-stubs/pull/1025 is released
-    root_component = (
-        Component.objects.filter(software_build=software_build)
-        .root_components()  # type:ignore
-        .get()
-    )
+    root_component = Component.objects.filter(software_build=software_build).root_components().get()
 
     if root_component.name == "kernel":
         logger.info("skipping scan of the kernel, see CORGI-270")
@@ -141,9 +137,9 @@ def _assign_go_stdlib_version(anchor_obj, go_packages):
             "version" not in go_package["meta"]
             and anchor_obj.type == Component.Type.CONTAINER_IMAGE
             and anchor_obj.arch == "noarch"
+            and "go_stdlib_version" in anchor_obj.meta_attr
         ):
-            if "go_stdlib_version" in anchor_obj.meta_attr:
-                go_package["meta"]["version"] = anchor_obj.meta_attr["go_stdlib_version"]
+            go_package["meta"]["version"] = anchor_obj.meta_attr["go_stdlib_version"]
 
 
 def _get_distgit_sources(source_url: str, build_id: int) -> list[Path]:
@@ -230,14 +226,15 @@ def _download_lookaside_sources(
     return downloaded_sources
 
 
-def _download_source(download_url, target_filepath):
+def _download_source(download_url: str, target_filepath: Path) -> None:
     package_dir = Path(target_filepath.parents[0])
     # This can be called multiple times for each source in the lookaside cache. We allow existing
     # package_dir not to fail in case this is a subsequent file we are downloading
     package_dir.mkdir(parents=True, exist_ok=True)
     logger.info("Downloading sources from: %s, to: %s", download_url, target_filepath)
     r: Response = requests.get(download_url)
-    target_filepath.open("wb").write(r.content)
+    with target_filepath.open("wb") as target_file:
+        target_file.write(r.content)
 
 
 def get_tarinfo(members, archived_filename) -> Optional[tarfile.TarInfo]:

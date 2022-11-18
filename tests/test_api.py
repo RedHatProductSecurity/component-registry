@@ -5,7 +5,7 @@ import pytest
 from django.conf import settings
 
 from corgi.collectors.appstream_lifecycle import AppStreamLifeCycleCollector
-from corgi.core.models import Component, ComponentNode, ProductNode
+from corgi.core.models import Component, ComponentNode
 
 from .factories import (
     ChannelFactory,
@@ -161,7 +161,7 @@ def test_component_detail_dev(client, api_path):
 
     upstream.save_component_taxonomy()
     upstream.save()
-    assert dev_comp.purl in upstream.provides
+    assert dev_comp.purl in upstream.provides.values_list("purl", flat=True)
 
     response = client.get(f"{api_path}/components?namespace=UPSTREAM")
     assert response.status_code == 200
@@ -499,27 +499,16 @@ def test_product_streams(client, api_path):
 
 def test_product_variants(client, api_path):
     pv_appstream = ProductVariantFactory(name="AppStream-8.5.0.Z.MAIN")
-    ProductVariantFactory(name="BaseOS-8.5.0.Z.MAIN")
+    pv_baseos = ProductVariantFactory(name="BaseOS-8.5.0.Z.MAIN")
 
     response = client.get(f"{api_path}/product_variants")
     assert response.status_code == 200
     assert response.json()["count"] == 2
 
-    response = client.get(f"{api_path}/product_variants?ofuri=o:redhat::appstream-8.5.0.z.main")
+    response = client.get(f"{api_path}/product_variants?ofuri={pv_appstream.ofuri}")
     assert response.status_code == 302
 
-    response = client.get(f"{api_path}/product_variants?ofuri=o:redhat::baseos-8.5.0.z.main")
-    assert response.status_code == 302
-
-    ps = ProductStreamFactory(name="rhel", version="8.5.0.z")
-
-    node1 = ProductNode.objects.create(parent=None, obj=ps, object_id=ps.pk)
-    ProductNode.objects.create(parent=node1, obj=pv_appstream, object_id=pv_appstream.pk)
-    pv_appstream.save()
-
-    response = client.get(
-        f"{api_path}/product_variants?ofuri=o:redhat:rhel:8.5.0.z:appstream-8.5.0.z.main"
-    )
+    response = client.get(f"{api_path}/product_variants?ofuri={pv_baseos.ofuri}")
     assert response.status_code == 302
 
 
@@ -552,42 +541,32 @@ def test_product_components_ofuri(client, api_path):
 
     ps1 = ProductStreamFactory(name="rhel-8.6.0", version="8.6.0")
     assert ps1.ofuri == "o:redhat:rhel:8.6.0"
-    ps1.save()
     ps2 = ProductStreamFactory(name="rhel-8.6.0.z", version="8.6.0.z")
     assert ps2.ofuri == "o:redhat:rhel:8.6.0.z"
-    ps2.save()
 
     old_sb1 = SoftwareBuildFactory(
         completion_time=datetime.strptime("2017-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z")
     )
-    old_sb1.save()
     old_openssl = SrpmComponentFactory(name="openssl", software_build=old_sb1, release="1")
-    old_openssl.product_streams = [ps1.ofuri]
-    old_openssl.save()
+    old_openssl.productstreams.add(ps1)
 
     sb1 = SoftwareBuildFactory(
         completion_time=datetime.strptime("2018-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z")
     )
-    sb1.save()
     openssl = SrpmComponentFactory(name="openssl", software_build=sb1, release="2")
-    openssl.product_streams = [ps1.ofuri]
-    openssl.save()
+    openssl.productstreams.add(ps1)
 
     old_sb2 = SoftwareBuildFactory(
         completion_time=datetime.strptime("2017-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z")
     )
-    old_sb2.save()
     old_curl = SrpmComponentFactory(name="curl", software_build=old_sb2, release="1")
-    old_curl.product_streams = [ps2.ofuri]
-    old_curl.save()
+    old_curl.productstreams.add(ps2)
 
     sb2 = SoftwareBuildFactory(
         completion_time=datetime.strptime("2018-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z")
     )
-    sb1.save()
     curl = SrpmComponentFactory(name="curl", software_build=sb2, release="2")
-    curl.product_streams = [ps2.ofuri]
-    curl.save()
+    curl.productstreams.add(ps2)
 
     response = client.get(f"{api_path}/components?ofuri=o:redhat:rhel:8.6.0.z")
     assert response.status_code == 200
@@ -601,34 +580,26 @@ def test_product_components_ofuri(client, api_path):
 def test_product_components_versions(client, api_path):
     ps1 = ProductStreamFactory(name="rhel-7", version="7")
     assert ps1.ofuri == "o:redhat:rhel:7"
-    ps1.save()
     ps2 = ProductStreamFactory(name="rhel-8", version="8")
     assert ps2.ofuri == "o:redhat:rhel:8"
-    ps2.save()
 
     sb1 = SoftwareBuildFactory(
         completion_time=datetime.strptime("2018-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z")
     )
-    sb1.save()
     openssl = ComponentFactory(
         type=Component.Type.RPM, arch="x86_64", name="openssl", software_build=sb1
     )
-    openssl.product_streams = [ps2.ofuri]
-    openssl.save()
+    openssl.productstreams.add(ps2)
     openssl_srpm = SrpmComponentFactory(name="openssl", software_build=sb1)
-    openssl_srpm.product_streams = [ps2.ofuri]
-    openssl_srpm.save()
+    openssl_srpm.productstreams.add(ps2)
 
     sb2 = SoftwareBuildFactory(
         completion_time=datetime.strptime("2018-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z")
     )
-    sb2.save()
     curl = ComponentFactory(type=Component.Type.RPM, arch="x86_64", name="curl", software_build=sb2)
-    curl.product_streams = [ps1.ofuri]
-    curl.save()
+    curl.productstreams.add(ps1)
     curl_srpm = SrpmComponentFactory(name="curl", software_build=sb2)
-    curl_srpm.product_streams = [ps1.ofuri]
-    curl_srpm.save()
+    curl_srpm.productstreams.add(ps1)
 
     response = client.get(f"{api_path}/components?product_streams=o:redhat:rhel:8")
     assert response.status_code == 200
@@ -644,11 +615,11 @@ def test_product_components_versions(client, api_path):
 def test_product_components(client, api_path):
     openssl = ComponentFactory(name="openssl")
     curl = ComponentFactory(name="curl")
+    rhel = ProductFactory(name="rhel")
+    rhel_br = ProductFactory(name="rhel-br")
 
-    openssl.products = ["o:redhat:rhel"]
-    openssl.save()
-    curl.products = ["o:redhat:rhel-br"]
-    curl.save()
+    openssl.products.add(rhel)
+    curl.products.add(rhel_br)
 
     response = client.get(f"{api_path}/components?products=o:redhat:rhel")
     assert response.status_code == 200

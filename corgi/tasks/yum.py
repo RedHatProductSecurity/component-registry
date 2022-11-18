@@ -32,8 +32,7 @@ def load_yum_repositories() -> None:
     for stream, repos in ProductStream.objects.exclude(yum_repositories=[]).values_list(
         "name", "yum_repositories"
     ):
-        for repo in repos:  # type: ignore
-            # mypy thinks yum_repositories can be None, even though it defaults to []
+        for repo in repos:
             slow_load_yum_repositories_for_stream.delay(stream, repo)
 
 

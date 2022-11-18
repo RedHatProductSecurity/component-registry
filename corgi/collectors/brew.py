@@ -117,7 +117,9 @@ class Brew:
         return f"{parsed_url.netloc}{path}"
 
     @classmethod
-    def _extract_bundled_provides(cls, provides: list) -> list:
+    def _extract_bundled_provides(
+        cls, provides: list[tuple[str, str]]
+    ) -> list[tuple[Component.Type, str, str]]:
         bundled_components = []
         for component, version in provides:
             # Process bundled deps only; account for typoed golang deps of type:
@@ -136,7 +138,11 @@ class Brew:
             if len(component_split) != 3:
                 component_type = Component.Type.GENERIC
             else:
-                component_type, separator, component = component_split
+                # TODO: re.split always returns a list of 2 items because maxsplit=1
+                #  it does not return the separator like str.partition does
+                #  str.partition has no option to specify "only split once"
+                #  this code is currently unreachable (CORGI-343)
+                component_type, separator, component = component_split  # type: ignore[assignment]
 
                 if component_type.startswith("python"):
                     component_type = Component.Type.PYPI
@@ -144,7 +150,7 @@ class Brew:
                     component_type = Component.Type.GEM
                 elif component_type == "golang":
                     # Need to skip arch names, See CORGI-48
-                    if component in ["aarch-64", "ppc-64", "s390-64", "x86-64"]:
+                    if component in ("aarch-64", "ppc-64", "s390-64", "x86-64"):
                         continue
                     component_type = Component.Type.GOLANG
                 elif component_type in cls.EXTERNAL_PKG_TYPE_MAPPING:
@@ -426,7 +432,9 @@ class Brew:
                 component["meta"][meta_attr] = meta_attr_value
                 break
 
-    def _extract_remote_sources(self, go_stdlib_version, remote_sources):
+    def _extract_remote_sources(
+        self, go_stdlib_version: str, remote_sources: dict[str, tuple]
+    ) -> list[dict[str, Any]]:
         source_components: list[dict[str, Any]] = []
         for build_loc, coords in remote_sources.items():
             remote_source = self._get_remote_source(coords[0])
@@ -716,7 +724,7 @@ class Brew:
         build_id = build["id"]
         # Determine build state
         state = build.get("state")
-        if state != koji.BUILD_STATES["COMPLETE"]:
+        if state != koji.BUILD_STATES["COMPLETE"]:  # type: ignore[attr-defined]
             raise BrewBuildInvalidState(f"Build {build_id} state is {state}; skipping!")
 
         if build["name"] in self.COMPONENT_EXCLUDES:
@@ -805,7 +813,7 @@ class Brew:
         try:
             builds = self.koji_session.listTagged(brew_tag, inherit=inherit, latest=latest)
             return tuple(b["build_id"] for b in builds)
-        except koji.GenericError as exc:
+        except koji.GenericError as exc:  # type: ignore[attr-defined]
             logger.warning("Couldn't find brew builds with tag %s: %s", brew_tag, exc)
             return tuple()
 

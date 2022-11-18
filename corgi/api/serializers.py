@@ -261,6 +261,8 @@ class ComponentSerializer(ProductTaxonomySerializer):
     sources = serializers.SerializerMethodField()
     upstreams = serializers.SerializerMethodField()
 
+    manifest = serializers.SerializerMethodField()
+
     @staticmethod
     def get_link(instance: Component) -> str:
         return get_component_purl_link(instance.purl)
@@ -276,6 +278,10 @@ class ComponentSerializer(ProductTaxonomySerializer):
     @staticmethod
     def get_upstreams(instance: Component) -> list[dict[str, str]]:
         return get_component_data_list(instance.get_upstreams_purls())
+
+    @staticmethod
+    def get_manifest(instance: Component) -> str:
+        return get_model_id_link("components", instance.uuid, manifest=True)
 
     class Meta:
         model = Component
@@ -313,6 +319,7 @@ class ComponentSerializer(ProductTaxonomySerializer):
             "sources",
             "provides",
             "upstreams",
+            "manifest",
         ]
 
 

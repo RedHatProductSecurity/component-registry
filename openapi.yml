@@ -1219,6 +1219,9 @@ components:
             additionalProperties:
               type: string
           readOnly: true
+        manifest:
+          type: string
+          readOnly: true
       required:
       - channels
       - description
@@ -1230,6 +1233,7 @@ components:
       - license_declared
       - license_declared_list
       - link
+      - manifest
       - name
       - namespace
       - product_streams

@@ -190,11 +190,13 @@ LOGGING = {
         },
     },
     "root": {
-        "handlers": ["console", "mail_admins"],
+        "handlers": ["console"],
         "level": "WARNING",
     },
     "loggers": {
         "django": {"handlers": ["console"], "level": "WARNING"},
+        # Mail errors only, but set level=WARNING here to pass warnings up to parent loggers
+        "django.request": {"handlers": ["mail_admins"], "level": "WARNING"},
         "corgi": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }

@@ -1,6 +1,6 @@
-import logging
 from urllib.parse import urlparse
 
+from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.conf import settings
 
@@ -10,7 +10,7 @@ from corgi.core.models import Channel, ProductComponentRelation, ProductStream
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS, _create_relations
 from corgi.tasks.pulp import fetch_unprocessed_relations
 
-logger = logging.getLogger(__name__)
+logger = get_task_logger(__name__)
 
 
 @app.task(

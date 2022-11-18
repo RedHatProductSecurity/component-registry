@@ -1,6 +1,7 @@
 import logging
 
 from celery import Celery  # type: ignore[attr-defined]
+from celery.app import trace
 
 logger = logging.getLogger(__name__)
 
@@ -12,3 +13,7 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 # So all tasks in any corgi.tasks submodule are automatically discovered
 # And no config changes are needed when a new submodule is added
 app.autodiscover_tasks()
+
+trace.LOG_SUCCESS = """\
+%(return_value)s\" task_name=%(name)s, task_id=%(id)s, task_runtime=%(runtime)ss\
+"""

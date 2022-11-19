@@ -3,6 +3,7 @@ from distutils.util import strtobool
 from pathlib import Path
 
 # noinspection PyPep8Naming
+from config.utils import get_env
 from corgi import __version__ as CORGI_VERSION
 
 # Build paths inside the project like this: BASE_DIR / "subdir".
@@ -163,13 +164,15 @@ TEMPLATES: list[dict] = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
+LOG_FORMAT_START = "%(asctime)s +0000: thread=%(thread)d"
+LOG_FORMAT_END = f'level=%(levelname)s, app=corgi, env={get_env()}, msg="%(message)s"'
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
         "default": {
-            "format": "[%(asctime)s] [%(name)s:%(lineno)d] %(levelname)s: %(message)s",
-            "datefmt": "%d/%b/%Y:%H:%M:%S %z",  # Matches the one used by gunicorn
+            "format": f"{LOG_FORMAT_START}, {LOG_FORMAT_END}",
         },
     },
     "filters": {
@@ -278,6 +281,11 @@ CELERY_TASK_ROUTES = (
         ("corgi.tasks.*.slow_*", {"queue": "slow"}),  # Any module's slow_* tasks go to 'slow' queue
         ("*", {"queue": "fast"}),  # default other tasks go to 'fast'
     ],
+)
+
+CELERY_WORKER_LOG_FORMAT = f"{LOG_FORMAT_START}, {LOG_FORMAT_END}"
+CELERY_WORKER_TASK_LOG_FORMAT = (
+    f"{LOG_FORMAT_START}, task_name=%(task_name)s, task_id=%(task_id)s, {LOG_FORMAT_END}"
 )
 
 

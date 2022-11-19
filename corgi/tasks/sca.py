@@ -1,4 +1,3 @@
-import logging
 import re
 import shutil
 import subprocess  # nosec B404
@@ -8,6 +7,7 @@ from typing import Any, Optional, Tuple
 from urllib.parse import urlparse
 
 import requests
+from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.conf import settings
 from requests import Response
@@ -26,7 +26,7 @@ LOOKASIDE_REGEX_SOURCE_PATTERNS = [
     r"^(?P<alg>[A-Z0-9]*) \((?P<file>[a-zA-Z0-9.-]*)\) = (?P<hash>[a-f0-9]*)",
 ]
 lookaside_source_regexes = tuple(re.compile(p) for p in LOOKASIDE_REGEX_SOURCE_PATTERNS)
-logger = logging.getLogger(__name__)
+logger = get_task_logger(__name__)
 
 
 def save_component(component: dict[str, Any], parent: ComponentNode):

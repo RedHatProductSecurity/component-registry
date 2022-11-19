@@ -1,5 +1,4 @@
-import logging
-
+from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.conf import settings
 
@@ -10,7 +9,7 @@ from corgi.tasks.brew import fetch_unprocessed_relations
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS, _create_relations
 from corgi.tasks.errata_tool import update_variant_repos
 
-logger = logging.getLogger(__name__)
+logger = get_task_logger(__name__)
 
 
 @app.task(

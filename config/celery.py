@@ -14,6 +14,9 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 # And no config changes are needed when a new submodule is added
 app.autodiscover_tasks()
 
-trace.LOG_SUCCESS = """\
-%(return_value)s\" task_name=%(name)s, task_id=%(id)s, task_runtime=%(runtime)ss\
+LOG_FORMAT = """\
+%(return_value)s\", task_name=%(name)s, task_id=%(id)s, task_runtime=%(runtime)ss\
 """
+
+trace.LOG_SUCCESS = LOG_FORMAT
+trace.LOG_FAILURE = LOG_FORMAT

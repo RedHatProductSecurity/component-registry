@@ -168,7 +168,7 @@ WSGI_APPLICATION = "config.wsgi.application"
 LOG_FORMAT_START = (
     "%(asctime)s.%(msecs)03d+00:00 thread=%(thread)d, name=%(name)s, lineno=%(lineno)d"
 )
-LOG_FORMAT_END = f'level=%(levelname)s, app=corgi, env={get_env()}, msg="%(message)s"'
+LOG_FORMAT_END = f'level=%(levelname)s, app=corgi, environ={get_env()}, msg="%(message)s"'
 # Splunk friendly timestamp
 LOG_DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
 

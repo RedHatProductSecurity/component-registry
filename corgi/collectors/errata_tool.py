@@ -5,7 +5,6 @@ from functools import reduce
 
 import requests
 from django.conf import settings
-from requests import HTTPError
 from requests_gssapi import HTTPSPNEGOAuth
 
 from corgi.collectors.models import (
@@ -200,15 +199,8 @@ class ErrataTool:
     def normalize_erratum_id(self, name: str) -> int:
         if name.isdigit():
             return int(name)
-        try:
-            erratum_details = self.get(f"api/v1/erratum/{name}")
-        except HTTPError as e:
-            logger.error(e)
-            return 0
-
+        erratum_details = self.get(f"api/v1/erratum/{name}")
         erratum_id = self.get_from_dict(erratum_details, ["content", "content", "errata_id"])
-        if not erratum_id:
-            return 0
         return int(erratum_id)
 
     # https://stackoverflow.com/questions/28225552/

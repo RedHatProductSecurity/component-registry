@@ -39,9 +39,6 @@ def slow_load_errata(erratum_name):
     et = ErrataTool()
     if not erratum_name.isdigit():
         erratum_id = et.normalize_erratum_id(erratum_name)
-        if not erratum_id:
-            logger.warning("Couldn't normalize erratum: %s", erratum_name)
-            return
     else:
         erratum_id = int(erratum_name)
     relation_build_ids = _get_relation_build_ids(erratum_id)

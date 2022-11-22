@@ -138,7 +138,7 @@ services:
     depends_on: ["redis", "corgi-db"]
     command: ./run_celery_flower.sh
     ports:
-      - "5555:5555"
+      - "5555:9455"
     volumes:
       - .:/opt/app-root/src:z
 

@@ -39,6 +39,19 @@ services:
     ports:
       - "6379:6379"
 
+  redis-exporter:
+    container_name: redis-exporter
+    image: quay.io/oliver006/redis_exporter:latest
+    environment:
+      REDIS_ADDR: "redis://redis:6379"
+      REDIS_EXPORTER_CHECK_KEYS: "slow,fast"
+    ports:
+      - "9121:9121"
+    deploy:
+      resources:
+        limits:
+          memory: 100M
+
   corgi-web:
     container_name: corgi-web
     build:

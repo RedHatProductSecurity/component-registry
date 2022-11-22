@@ -120,7 +120,7 @@ def get_channel_data_list(manager: Manager["Channel"]) -> list[dict[str, str]]:
     # A little different than get_product_data_list - we're always iterating over a manager
     # And channels have no ofuri, so we return a model UUID link instead
     return [
-        {"name": name, "link": get_model_id_link("channel", uuid), "uuid": str(uuid)}
+        {"name": name, "link": get_model_id_link("channels", uuid), "uuid": str(uuid)}
         for (name, uuid) in manager.values_list("name", "uuid")
     ]
 

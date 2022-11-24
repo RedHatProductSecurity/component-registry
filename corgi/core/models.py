@@ -635,8 +635,8 @@ class ProductStream(ProductModel):
                         productstreams__ofuri=self.ofuri,
                     )
                     .exclude(software_build__isnull=True)
-                    .order_by("release")
                     .order_by("-software_build__completion_time")
+                    .order_by("-release")
                     .values("uuid")[:1]
                 )
             )

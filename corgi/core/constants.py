@@ -27,8 +27,7 @@ MODEL_NODE_LEVEL_MAPPING = {
     value.title().replace("_", ""): key for key, value in NODE_LEVEL_MODEL_MAPPING.items()
 }
 
-# Filter on "root components": SRPMs, modules, or index container images
+# Filter on "root components": SRPMs or index container images
 SRPM_CONDITION = Q(type="RPM", arch="src")
-MODULE_CONDITION = Q(type="RPMMOD")
 INDEX_CONTAINER_CONDITION = Q(type="OCI", arch="noarch")
-ROOT_COMPONENTS_CONDITION = SRPM_CONDITION | MODULE_CONDITION | INDEX_CONTAINER_CONDITION
+ROOT_COMPONENTS_CONDITION = SRPM_CONDITION | INDEX_CONTAINER_CONDITION

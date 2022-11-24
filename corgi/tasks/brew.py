@@ -174,7 +174,7 @@ def find_package_file_name(sources: list[str]) -> str:
     """Find a packageFileName for a manifest using a list of source filenames from a build system"""
     for source in sources:
         # Use first matching source value that looks like a package
-        match = re.match(r"\.(?:rpm|tar|tgz|zip)", source)
+        match = re.search(r"\.(?:rpm|tar|tgz|zip)", source)
         if match:
             return source
     return ""  # If sources was an empty list, or none of the filenames matched

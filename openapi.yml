@@ -1222,6 +1222,8 @@ components:
         manifest:
           type: string
           readOnly: true
+        filename:
+          type: string
       required:
       - channels
       - description

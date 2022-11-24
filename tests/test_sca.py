@@ -15,7 +15,7 @@ from corgi.tasks.sca import (
     _download_lookaside_sources,
     _get_distgit_sources,
     _scan_files,
-    slow_software_composition_analysis,
+    cpu_software_composition_analysis,
 )
 from tests.factories import (
     ContainerImageComponentFactory,
@@ -364,7 +364,7 @@ def test_slow_software_composition_analysis(
 
     with open(syft_results, "r") as mock_scan_results:
         mock_syft.return_value = mock_scan_results.read()
-    slow_software_composition_analysis(build_id)
+    cpu_software_composition_analysis(build_id)
     expected_syft_call_arg_list = [
         call(
             [

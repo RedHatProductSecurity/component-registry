@@ -79,7 +79,7 @@ def save_component(component: dict[str, Any], parent: ComponentNode):
     retry_kwargs=RETRY_KWARGS,
     soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
 )
-def slow_software_composition_analysis(build_id: int):
+def cpu_software_composition_analysis(build_id: int):
     logger.info("Started software composition analysis for %s", build_id)
     software_build = SoftwareBuild.objects.get(build_id=build_id)
 

@@ -651,7 +651,7 @@ def test_extract_image_components():
 
 
 @pytest.mark.vcr(match_on=["method", "scheme", "host", "port", "path", "body"])
-@patch("corgi.tasks.sca.slow_software_composition_analysis.delay")
+@patch("corgi.tasks.sca.cpu_software_composition_analysis.delay")
 def test_fetch_rpm_build(mock_sca):
     slow_fetch_brew_build(1705913)
     srpm = Component.objects.srpms().get(name="cockpit")
@@ -697,7 +697,7 @@ def test_fetch_rpm_build(mock_sca):
 
 
 @patch("corgi.tasks.brew.Brew")
-@patch("corgi.tasks.brew.slow_software_composition_analysis.delay")
+@patch("corgi.tasks.brew.cpu_software_composition_analysis.delay")
 @patch("corgi.tasks.brew.slow_load_errata.delay")
 @patch("corgi.tasks.brew.slow_fetch_brew_build.delay")
 def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, mock_sca, mock_brew):

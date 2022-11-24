@@ -256,11 +256,8 @@ CELERY_RESULT_BACKEND_MAX_RETRIES = 2
 CELERY_TASK_SOFT_TIME_LIMIT = 900
 # CELERY_SINGLETON_LOCK_EXPIRY and redis visibility timeout must never be less than the below value
 CELERY_LONGEST_SOFT_TIME_LIMIT = 2400
-# Expire locks after 40 minutes, which is the longest task time limit.
-# https://github.com/steinitzu/celery-singleton#app-configuration
-CELERY_SINGLETON_LOCK_EXPIRY = CELERY_LONGEST_SOFT_TIME_LIMIT
 
-CELERY_WORKER_CONCURRENCY = 15  # defaults to CPU core count, which breaks in OpenShift
+CELERY_WORKER_CONCURRENCY = 5  # defaults to CPU core count, which breaks in OpenShift
 
 # Disable task prefetching, which caused connection timeouts and other odd task failures in SDEngine
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
@@ -285,6 +282,7 @@ CELERY_RESULT_EXPIRES = None
 CELERY_TASK_ROUTES = (
     [
         ("corgi.tasks.*.slow_*", {"queue": "slow"}),  # Any module's slow_* tasks go to 'slow' queue
+        ("corgi.tasks.*.cpu_*", {"queue": "cpu"}),  # Any module's cpu* tasks go to 'cpu' queue
         ("*", {"queue": "fast"}),  # default other tasks go to 'fast'
     ],
 )

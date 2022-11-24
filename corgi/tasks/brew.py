@@ -19,7 +19,7 @@ from corgi.core.models import (
 )
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 from corgi.tasks.errata_tool import slow_load_errata
-from corgi.tasks.sca import slow_software_composition_analysis
+from corgi.tasks.sca import cpu_software_composition_analysis
 
 logger = get_task_logger(__name__)
 
@@ -118,7 +118,7 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
         slow_fetch_brew_build.delay(b_id)
 
     logger.info("Requesting software composition analysis for %s", build_id)
-    slow_software_composition_analysis.delay(build_id)
+    cpu_software_composition_analysis.delay(build_id)
 
     logger.info("Finished fetching brew build: %s", build_id)
 

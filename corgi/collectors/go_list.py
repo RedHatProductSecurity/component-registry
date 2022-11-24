@@ -3,6 +3,7 @@ import logging
 import shlex
 import subprocess
 import tempfile
+from json import JSONDecodeError
 from os import walk
 from pathlib import Path
 from shutil import ReadError, unpack_archive
@@ -29,6 +30,7 @@ class GoList:
                     except ReadError:
                         logger.debug("Cannot unpack file: %s", target_path)
                         continue
+                    logger.debug("Running 'go list' scan on %s", target_path)
                     cls._check_and_scan(extract_dir, results, str(target_path))
             else:
                 cls._check_and_scan(str(target_path), results)
@@ -75,7 +77,14 @@ class GoList:
         # use of splitstream here as `go list` output is actually a stream of json objects,
         # not a fully formed valid json document
         for jsonstr in splitfile(go_list_pipe, format="json"):
-            artifact = json.loads(jsonstr)
+            try:
+                artifact = json.loads(jsonstr)
+            except JSONDecodeError:
+                logger.warning("Unable to parse %s as json", jsonstr)
+                continue
+            if "ImportPath" not in artifact:
+                logger.warning(f"Did not find ImportPath in artifact: {artifact}")
+                continue
             typed_component: dict[str, Any] = {
                 "type": Component.Type.GOLANG,
                 "namespace": Component.Namespace.UPSTREAM,

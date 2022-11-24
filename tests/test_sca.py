@@ -62,11 +62,18 @@ def test_parse_golist_components():
     assert "crypto/tls" in names
 
 
-def test_golist_scan_files():
+go_sources = [
+    ("tests/data/go/runc-1.1.3.tar.gz"),
+    ("tests/data/go/podman-4.3.1-814b7b0.tar.gz"),
+]
+
+
+@pytest.mark.parametrize("go_source", go_sources)
+def test_golist_scan_files(go_source):
     scan_file = Path("Dockerfile")
     assert not scan_file.is_dir()
     assert not GoList.scan_files([scan_file])
-    archive = Path("tests/data/go/runc-1.1.3.tar.gz")
+    archive = Path(go_source)
     assert GoList.scan_files([archive])
 
 

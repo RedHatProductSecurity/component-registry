@@ -39,7 +39,7 @@ def test_parse_components():
     # directives in nested go.mod files
     assert "../" not in names
     assert "github.com/Microsoft/go-winio" in names
-    assert results[0]["analysis_meta"] == {"source": "syft-0.60.1"}
+    assert results[0]["meta"]["source"] == ["syft-0.60.1"]
 
 
 def test_parse_maven_components():
@@ -73,7 +73,7 @@ def test_golist_scan_files():
 @patch("corgi.collectors.go_list.GoList.scan_files")
 def test_add_go_stdlib_version(go_list_scan_files):
     go_list_scan_files.return_value = [
-        {"type": Component.Type.GOLANG, "meta": {"name": "go-package"}, "analysis_meta": {}}
+        {"type": Component.Type.GOLANG, "meta": {"name": "go-package"}}
     ]
     root_component = ContainerImageComponentFactory(
         meta_attr={"go_stdlib_version": GO_STDLIB_VERSION}
@@ -107,7 +107,6 @@ def test_go_package_with_version(go_list_scan_files):
         {
             "type": Component.Type.GOLANG,
             "meta": {"name": "go-package", "version": GO_PACKAGE_VERSION},
-            "analysis_meta": {},
         }
     ]
     root_component = ContainerImageComponentFactory()
@@ -130,7 +129,6 @@ def test_go_package_type(go_list_scan_files):
                 "version": GO_PACKAGE_VERSION,
                 "go_component_type": "go-package",
             },
-            "analysis_meta": {},
         }
     ]
     root_component = ContainerImageComponentFactory()
@@ -400,5 +398,5 @@ def test_slow_software_composition_analysis(
         )
     else:
         root_component = Component.objects.srpms().get(software_build=sb)
-    assert expected_component.meta_attr["source"] == "syft-0.60.1"
+    assert expected_component.meta_attr["source"] == ["syft-0.60.1"]
     mock_save_prod_tax.assert_called_once()

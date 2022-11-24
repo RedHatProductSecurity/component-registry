@@ -5,7 +5,7 @@ import os
 import re
 from datetime import datetime
 from types import SimpleNamespace
-from typing import Any, Generator, Tuple
+from typing import Any, Dict, Generator, List, Tuple
 from urllib.parse import urlparse
 
 import koji
@@ -182,22 +182,20 @@ class Brew:
             # Create a dictionary by zipping together the values from the "provides" and
             # "provideversion" headers.
             rpm_provides = list(zip(headers.pop("provides"), headers.pop("provideversion")))
-
-            rpm_component = {
+            rpm_component: Dict[str, Any] = {
                 "type": Component.Type.RPM,
                 "namespace": Component.Namespace.REDHAT,
-                "id": rpm_id,
                 "meta": {
+                    **headers,
                     "nvr": rpm_info["nvr"],
                     "name": rpm_info["name"],
                     "version": rpm_info["version"],
                     "release": rpm_info["release"],
                     "epoch": rpm_info["epoch"] or 0,  # Default to epoch 0 if not specified (`None`)
                     "arch": rpm_info["arch"],
-                    **headers,
-                },
-                "analysis_meta": {
                     "source": ["koji.listRPMs", "koji.getRPMHeaders"],
+                    "rpm_id": rpm_id,
+                    "source_files": headers["source"],
                 },
             }
 
@@ -213,7 +211,7 @@ class Brew:
                 continue
 
             # Process bundled dependencies for each RPM
-            bundled_components = []
+            bundled_components: List[Dict[str, Any]] = []
             id_generator = itertools.count(1)
             bundled_provides = self._extract_bundled_provides(rpm_provides)
             if bundled_provides:
@@ -221,12 +219,10 @@ class Brew:
                     bundled_component = {
                         "type": component_type,
                         "namespace": Component.Namespace.UPSTREAM,
-                        "id": f"{rpm_info['id']}-bundles-{next(id_generator)}",
                         "meta": {
                             "name": bundled_component_name,
                             "version": version,
-                        },
-                        "analysis_meta": {
+                            "rpm_id": f"{rpm_info['id']}-bundles-{next(id_generator)}",
                             "source": ["specfile"],
                         },
                     }
@@ -317,6 +313,7 @@ class Brew:
                 "release": build_info["release"],
                 "epoch": build_info["epoch"] or 0,
                 "arch": None,
+                "source": ["koji.getBuild"],
             },
         }
 
@@ -446,8 +443,8 @@ class Brew:
                     "version": remote_source.ref,
                     "remote_source": coords[0],
                     "remote_source_archive": coords[1],
+                    "source": ["koji.listArchives"],
                 },
-                "analysis_meta": {"source": ["koji.listArchives"]},
             }
             if build_loc:
                 source_component["meta"]["cachito_build"] = build_loc
@@ -513,7 +510,7 @@ class Brew:
         child_component["meta"]["docker_config"] = docker_config
         child_component["meta"]["brew_archive_id"] = archive["id"]
         child_component["meta"]["digests"] = archive["extra"]["docker"]["digests"]
-        child_component["analysis_meta"] = {"source": ["koji.listArchives"]}
+        child_component["meta"]["source"] = ["koji.listArchives"]
         rpms = self.koji_session.listRPMs(imageID=archive["id"])
         arch_specific_rpms = []
         for rpm in rpms:
@@ -528,8 +525,8 @@ class Brew:
                     "release": rpm["release"],
                     "arch": rpm["arch"],
                     "rpm_id": rpm["id"],
+                    "source": ["koji.listRPMs"],
                 },
-                "analysis_meta": {"source": "koji.listRPMs"},
             }
             rpm_build_ids.add(rpm["build_id"])
             if rpm["arch"] == "noarch":
@@ -694,6 +691,7 @@ class Brew:
             "context": modulemd["data"]["context"],
             "components": modulemd["data"].get("components", []),
             "rpms": modulemd["data"]["xmd"]["mbs"]["rpms"],
+            "source": ["koji.getBuild"],
         }
         module = {
             "type": Component.Type.RPMMOD,
@@ -706,9 +704,6 @@ class Brew:
                 "release": build_info["release"],
                 "description": modulemd["data"]["description"],
                 "meta_attr": meta_attr,
-            },
-            "analysis_meta": {
-                "source": ["koji.getBuild"],
             },
         }
 
@@ -933,8 +928,6 @@ class Brew:
                 "name": name,
                 "version": version,
                 "release": release,
-            },
-            "analysis_meta": {
                 "source": ["collectors/rhel_module"],
             },
         }
@@ -957,8 +950,8 @@ class Brew:
                     "version": version,
                     "release": release_split[0],
                     "arch": arch,
+                    "source": ["collectors/rhel_module"],
                 },
-                "analysis_meta": {"source": "collectors/rhel_module"},
             }
             rpm_components.append(rpm_component)
         module["components"] = rpm_components

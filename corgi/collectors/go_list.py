@@ -82,8 +82,8 @@ class GoList:
                 "meta": {
                     "name": artifact["ImportPath"],
                     "go_component_type": "go-package",
+                    "source": ["go-list"],
                 },
-                "analysis_meta": {"source": "go-list"},
             }
             # `go list` returns packages which are part of modules, as well as those which are part
             # of the standard library. Packages which are part of the standard library don't have a

@@ -164,7 +164,8 @@ def test_get_component_data(
         return
     c = brew.get_component_data(build_id)
     if build_type == "module":
-        assert list(c.keys()) == ["type", "namespace", "meta", "analysis_meta", "build_meta"]
+        assert list(c.keys()) == ["type", "namespace", "meta", "build_meta"]
+        assert set(c["meta"].keys()) == {"source"}
     # TODO: uncomment when Maven build type is supported
     # elif build_type == "maven":
     #     assert list(c.keys()) == ["type", "namespace", "meta", "build_meta"]
@@ -178,16 +179,35 @@ def test_get_component_data(
             "components",
             "build_meta",
         ]
+        assert set(c["meta"].keys()) == {
+            "parent",
+            "build_parent_nvrs",
+            "release",
+            "version",
+            "arch",
+            "epoch",
+            "name",
+            "digests",
+            "source",
+        }
     else:
         assert list(c.keys()) == [
             "type",
             "namespace",
-            "id",
             "meta",
-            "analysis_meta",
             "components",
             "build_meta",
         ]
+        set(c["meta"].keys()) == {
+            "nvr",
+            "name",
+            "version",
+            "release",
+            "epoch",
+            "arch",
+            "source",
+            "rpm_id",
+        }
     assert c["build_meta"]["build_info"]["source"] == build_source
     assert c["build_meta"]["build_info"]["build_id"] == build_id
     assert c["build_meta"]["build_info"]["name"] == build_name

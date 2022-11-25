@@ -9,7 +9,11 @@ from yaml import safe_load
 
 from corgi.collectors.brew import Brew, BrewBuildTypeNotSupported
 from corgi.core.models import Component, ComponentNode
-from corgi.tasks.brew import save_component, slow_fetch_brew_build
+from corgi.tasks.brew import (
+    find_package_file_name,
+    save_component,
+    slow_fetch_brew_build,
+)
 from tests.data.image_archive_data import (
     NO_RPMS_IN_SUBCTL_CONTAINER,
     NOARCH_RPM_IDS,
@@ -164,7 +168,8 @@ def test_get_component_data(
         return
     c = brew.get_component_data(build_id)
     if build_type == "module":
-        assert list(c.keys()) == ["type", "namespace", "meta", "analysis_meta", "build_meta"]
+        assert list(c.keys()) == ["type", "namespace", "meta", "build_meta"]
+        assert set(c["meta"].keys()) == {"source"}
     # TODO: uncomment when Maven build type is supported
     # elif build_type == "maven":
     #     assert list(c.keys()) == ["type", "namespace", "meta", "build_meta"]
@@ -178,16 +183,35 @@ def test_get_component_data(
             "components",
             "build_meta",
         ]
+        assert set(c["meta"].keys()) == {
+            "parent",
+            "build_parent_nvrs",
+            "release",
+            "version",
+            "arch",
+            "epoch",
+            "name",
+            "digests",
+            "source",
+        }
     else:
         assert list(c.keys()) == [
             "type",
             "namespace",
-            "id",
             "meta",
-            "analysis_meta",
             "components",
             "build_meta",
         ]
+        set(c["meta"].keys()) == {
+            "nvr",
+            "name",
+            "version",
+            "release",
+            "epoch",
+            "arch",
+            "source",
+            "rpm_id",
+        }
     assert c["build_meta"]["build_info"]["source"] == build_source
     assert c["build_meta"]["build_info"]["build_id"] == build_id
     assert c["build_meta"]["build_info"]["name"] == build_name
@@ -343,6 +367,19 @@ def test_get_container_build_data_remote_sources_in_archives(
             f"{settings.BREW_DOWNLOAD_ROOT_URL}/{download_path}/remote-source-{path}.tar.gz"
             for path in remote_sources_names
         ]
+
+
+def test_find_package_file_name():
+    filename = find_package_file_name(
+        [
+            "gvisor-tap-vsock-fdc231ae7b8fe1aec4cf0b8777274fa21b70d789.tar.gz",
+            "podman-machine-cni-0749884.tar.gz",
+            "dnsname-18822f9.tar.gz",
+            "v0.1.7.tar.gz",
+            "podman-4.3.1-814b7b0.tar.gz",
+        ]
+    )
+    assert filename == "gvisor-tap-vsock-fdc231ae7b8fe1aec4cf0b8777274fa21b70d789.tar.gz"
 
 
 def test_extract_remote_sources(requests_mock):

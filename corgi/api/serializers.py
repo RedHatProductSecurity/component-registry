@@ -320,6 +320,7 @@ class ComponentSerializer(ProductTaxonomySerializer):
             "provides",
             "upstreams",
             "manifest",
+            "filename",
         ]
 
 

@@ -136,15 +136,15 @@ def slow_fetch_modular_build(build_id: str, force_process: bool = False) -> None
     #  We don't currently handle reprocessing a modular build
     # Note: module builds don't include arch information, only the individual RPMs that make up a
     # module are built for specific architectures.
+    meta = rhel_module_data["meta"]
     obj, created = Component.objects.get_or_create(
-        name=rhel_module_data["meta"]["name"],
+        name=meta.pop("name"),
         type=rhel_module_data["type"],
-        version=rhel_module_data["meta"]["version"],
-        release=rhel_module_data["meta"]["release"],
+        version=meta.pop("version"),
+        release=meta.pop("release"),
         defaults={
-            # This gives us an indication as to which task (this or slow_fetch_brew_build)
-            # last processed the module
-            "meta_attr": rhel_module_data["analysis_meta"],
+            # Any remaining meta keys are recorded in meta_attr
+            "meta_attr": meta,
         },
     )
     # This should result in a lookup if slow_fetch_brew_build has already processed this module.
@@ -174,7 +174,7 @@ def find_package_file_name(sources: list[str]) -> str:
     """Find a packageFileName for a manifest using a list of source filenames from a build system"""
     for source in sources:
         # Use first matching source value that looks like a package
-        match = re.match(r"\.(?:rpm|tar|tgz|zip)", source)
+        match = re.search(r"\.(?:rpm|tar|tgz|zip)", source)
         if match:
             return source
     return ""  # If sources was an empty list, or none of the filenames matched
@@ -221,7 +221,7 @@ def save_component(
         arch=meta.pop("arch", ""),
         defaults={
             "description": meta.pop("description", ""),
-            "filename": find_package_file_name(meta.pop("source", [])),
+            "filename": find_package_file_name(meta.pop("source_files", [])),
             "license_declared_raw": meta.pop("license", ""),
             "namespace": component.get("namespace", ""),
             "related_url": related_url,
@@ -283,7 +283,7 @@ def save_srpm(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
             # set only when initially created
             defaults={
                 "description": build_data["meta"].get("description", ""),
-                "filename": find_package_file_name(build_data["meta"].get("source", [])),
+                "filename": find_package_file_name(build_data["meta"].get("source_files", [])),
                 "license_declared_raw": build_data["meta"].get("license", ""),
                 "related_url": related_url,
             },
@@ -427,7 +427,6 @@ def save_module(softwarebuild, build_data) -> ComponentNode:
     the relationships. We create the relationships using data from RHEL_COMPOSE, or RPM repository
     See CORGI-200, and CORGI-163"""
     meta_attr = build_data["meta"]["meta_attr"]
-    meta_attr.update(build_data["analysis_meta"])
     obj, created = Component.objects.update_or_create(
         name=build_data["meta"]["name"],
         type=build_data["type"],

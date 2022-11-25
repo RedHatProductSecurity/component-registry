@@ -43,9 +43,10 @@ def test_viewset_ordering(api_path):
             "SoftwareBuildViewSet",
             "ComponentViewSet",
             "AppStreamLifeCycleViewSet",
+            "ChannelViewSet",
         ):
             # Skip imported names and special cases which have no queryset
-            # last three pass or fail depending on whether query planner
+            # last four pass or fail depending on whether query planner
             # uses an index scan or a sorted table scan
             continue
 

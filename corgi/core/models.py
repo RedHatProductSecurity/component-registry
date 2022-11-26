@@ -9,8 +9,6 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
 from django.db import models
 from django.db.models import QuerySet
-from django.db.models import Value as V
-from django.db.models.functions import Concat, Replace, StrIndex, Substr
 from mptt.managers import TreeManager
 from mptt.models import MPTTModel, TreeForeignKey
 from packageurl import PackageURL
@@ -637,17 +635,8 @@ class ProductStream(ProductModel):
                         productstreams__ofuri=self.ofuri,
                     )
                     .exclude(software_build__isnull=True)
-                    .annotate(
-                        el=Concat(
-                            "version",
-                            Replace(
-                                Substr("release", StrIndex("release", V(".")) + 1), V("-"), V(".")
-                            ),
-                        )
-                    )
                     .order_by("version")
                     .order_by("-software_build__completion_time")
-                    .order_by("-el")
                     .values("uuid")[:1]
                 )
             )

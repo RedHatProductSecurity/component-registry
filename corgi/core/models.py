@@ -645,6 +645,7 @@ class ProductStream(ProductModel):
                             ),
                         )
                     )
+                    .order_by("version")
                     .order_by("-software_build__completion_time")
                     .order_by("-el")
                     .values("uuid")[:1]

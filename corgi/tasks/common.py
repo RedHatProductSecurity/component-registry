@@ -54,8 +54,8 @@ def get_last_success_for_task(task_name: str) -> timezone.datetime:
     """
     last_success = (
         TaskResult.objects.filter(task_name=task_name, status="SUCCESS")
-        .order_by("-date_done")
-        .values_list("date_done", flat=True)
+        .order_by("-date_created")
+        .values_list("date_created", flat=True)
         .first()
     )
     return (

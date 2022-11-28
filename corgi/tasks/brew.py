@@ -487,7 +487,6 @@ def fetch_unprocessed_relations(
 ) -> int:
     relations_query = (
         ProductComponentRelation.objects.filter(type=relation_type, created_at__gte=created_since)
-        .order_by("created_at")
         .values_list("build_id", flat=True)
         .distinct()
     )

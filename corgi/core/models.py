@@ -626,6 +626,7 @@ class ProductStream(ProductModel):
             Component.objects.filter(
                 ROOT_COMPONENTS_CONDITION,
                 productstreams__ofuri=self.ofuri,
+                software_build__isnull=False,
             )
             .annotate(
                 latest=models.Subquery(
@@ -633,10 +634,9 @@ class ProductStream(ProductModel):
                         ROOT_COMPONENTS_CONDITION,
                         name=models.OuterRef("name"),
                         productstreams__ofuri=self.ofuri,
+                        software_build__isnull=False,
                     )
-                    .exclude(software_build__isnull=True)
-                    .order_by("version")
-                    .order_by("-software_build__completion_time")
+                    .order_by("-version", "-release", "-software_build__completion_time")
                     .values("uuid")[:1]
                 )
             )

@@ -3,11 +3,17 @@ from urllib.parse import urlparse
 from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.conf import settings
+from django.utils import timezone
 
 from config.celery import app
 from corgi.collectors.yum import Yum
 from corgi.core.models import Channel, ProductComponentRelation, ProductStream
-from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS, _create_relations
+from corgi.tasks.common import (
+    RETRY_KWARGS,
+    RETRYABLE_ERRORS,
+    _create_relations,
+    get_last_success_for_task,
+)
 from corgi.tasks.pulp import fetch_unprocessed_relations
 
 logger = get_task_logger(__name__)
@@ -19,9 +25,17 @@ logger = get_task_logger(__name__)
     retry_kwargs=RETRY_KWARGS,
     soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
 )
-def fetch_unprocessed_yum_relations(force_process: bool = False) -> int:
+def fetch_unprocessed_yum_relations(
+    force_process: bool = False, days_created_since: int = 0
+) -> int:
+    if days_created_since:
+        created_dt = timezone.now() - timezone.timedelta(days=days_created_since)
+    else:
+        created_dt = get_last_success_for_task("corgi.tasks.yum.fetch_unprocessed_yum_relations")
     return fetch_unprocessed_relations(
-        ProductComponentRelation.Type.YUM_REPO, force_process=force_process
+        ProductComponentRelation.Type.YUM_REPO,
+        force_process=force_process,
+        created_since=created_dt,
     )
 
 

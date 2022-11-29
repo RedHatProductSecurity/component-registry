@@ -3,8 +3,7 @@ import logging
 from celery import Celery  # type: ignore[attr-defined]
 from celery.app import trace
 from celery.app.log import TaskFormatter
-from celery.signals import after_setup_logger, after_setup_task_logger, worker_ready
-from celery_singleton import clear_locks
+from celery.signals import after_setup_logger, after_setup_task_logger
 
 from config.settings.base import LOG_DATE_FORMAT, LOG_FORMAT_END, LOG_FORMAT_START
 
@@ -24,11 +23,6 @@ CELERY_TASK_LOG_FORMAT = (
     f"{LOG_FORMAT_START}, process_name=%(processName)s, task_name=%(task_name)s, "
     f"task_id=%(task_id)s, {LOG_FORMAT_END}"
 )
-
-
-@worker_ready.connect
-def unlock_all(**kwargs):
-    clear_locks(app)
 
 
 @after_setup_logger.connect

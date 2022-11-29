@@ -17,7 +17,7 @@ from corgi.core.models import (
     ProductStream,
     SoftwareBuild,
 )
-from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
+from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS, get_last_success_for_task
 from corgi.tasks.errata_tool import slow_load_errata
 from corgi.tasks.sca import cpu_software_composition_analysis
 
@@ -481,11 +481,12 @@ def fetch_modular_builds(relations_query: QuerySet, force_process: bool = False)
 
 
 def fetch_unprocessed_relations(
-    relation_type: ProductComponentRelation.Type, force_process: bool = False
+    relation_type: ProductComponentRelation.Type,
+    created_since: timezone.datetime,
+    force_process: bool = False,
 ) -> int:
     relations_query = (
-        ProductComponentRelation.objects.filter(type=relation_type)
-        .order_by("created_at")
+        ProductComponentRelation.objects.filter(type=relation_type, created_at__gte=created_since)
         .values_list("build_id", flat=True)
         .distinct()
     )
@@ -508,7 +509,17 @@ def fetch_unprocessed_relations(
     retry_kwargs=RETRY_KWARGS,
     soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
 )
-def fetch_unprocessed_brew_tag_relations(force_process: bool = False) -> int:
+def fetch_unprocessed_brew_tag_relations(
+    force_process: bool = False, days_created_since: int = 0
+) -> int:
+    if days_created_since:
+        created_dt = timezone.now() - timezone.timedelta(days=days_created_since)
+    else:
+        created_dt = get_last_success_for_task(
+            "corgi.tasks.brew.fetch_unprocessed_brew_tag_relations"
+        )
     return fetch_unprocessed_relations(
-        ProductComponentRelation.Type.BREW_TAG, force_process=force_process
+        ProductComponentRelation.Type.BREW_TAG,
+        force_process=force_process,
+        created_since=created_dt,
     )

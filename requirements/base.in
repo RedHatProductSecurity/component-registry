@@ -9,7 +9,7 @@ eventlet
 # The latest main-branch commit on our fork of django-mptt
 # This includes a fix for concurrent writes causing tree corruption
 https://github.com/RedHatProductSecurity/django-mptt/archive/25d49a400d349740c5295e4301f29a98ae025a07.zip#egg=django-mptt
-djangorestframework
+https://github.com/encode/django-rest-framework/archive/cc3c89a11c7ee9cf7cfd732e0a329c318ace71b2.zip#egg=djangorestframework
 drf-spectacular[sidecar]
 flower
 gunicorn[gevent]

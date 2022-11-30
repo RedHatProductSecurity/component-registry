@@ -150,6 +150,7 @@ def running_tasks(request):
         request,
         "task_list.html",
         {
+            "cpu_queue_len": r.llen("cpu"),
             "fast_queue_len": r.llen("fast"),
             "slow_queue_len": r.llen("slow"),
             "tasks": tasks,

@@ -11,6 +11,7 @@
           <h1 class="card-pf-title">
             <span style="padding-right: 0.5em">Tasks</span>
             {% if running %}
+            <span class="label label-info">Queued (cpu): {{ cpu_queue_len }}</span>
             <span class="label label-info">Queued (fast): {{ fast_queue_len }}</span>
             <span class="label label-info">Queued (slow): {{ slow_queue_len }}</span>
             {% endif %}

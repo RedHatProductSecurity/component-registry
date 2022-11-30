@@ -632,11 +632,12 @@ def test_save_component():
     software_build = SoftwareBuildFactory()
 
     # Simulate saving an RPM in a Container
-    image_component = ContainerImageComponentFactory()
-    root_node, _ = image_component.cnodes.get_or_create(
+    image_component = ContainerImageComponentFactory(name="image_component")
+    root_node, _ = ComponentNode.objects.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
         purl=image_component.purl,
+        defaults={"obj": image_component},
     )
     rpm_dict = {
         "type": Component.Type.RPM,
@@ -648,11 +649,12 @@ def test_save_component():
     assert Component.objects.filter(type=Component.Type.RPM, software_build__isnull=True).exists()
 
     # Add an SRPM component for that same RPM.
-    srpm_component = SrpmComponentFactory()
-    root_node, _ = srpm_component.cnodes.get_or_create(
+    srpm_component = SrpmComponentFactory(name="srpm_component")
+    root_node, _ = ComponentNode.objects.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
         purl=srpm_component.purl,
+        defaults={"obj": srpm_component},
     )
     rpm_dict = {
         "type": Component.Type.RPM,

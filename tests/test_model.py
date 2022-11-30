@@ -177,13 +177,19 @@ def test_container_purl():
 
 
 def test_component_provides():
-    upstream = ComponentFactory(namespace=Component.Namespace.UPSTREAM)
-    upstream_node, _ = upstream.cnodes.get_or_create(
-        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=upstream.purl
+    upstream = ComponentFactory(name="upstream", namespace=Component.Namespace.UPSTREAM)
+    upstream_node, _ = ComponentNode.objects.get_or_create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        purl=upstream.purl,
+        defaults={"obj": upstream},
     )
     dev_comp = ComponentFactory(name="dev", type=Component.Type.NPM)
-    dev_comp.cnodes.get_or_create(
-        type=ComponentNode.ComponentNodeType.PROVIDES_DEV, parent=upstream_node, purl=dev_comp.purl
+    ComponentNode.objects.get_or_create(
+        type=ComponentNode.ComponentNodeType.PROVIDES_DEV,
+        parent=upstream_node,
+        purl=dev_comp.purl,
+        defaults={"obj": dev_comp},
     )
     assert dev_comp.purl in upstream.get_provides_purls()
 
@@ -199,50 +205,65 @@ def test_software_build_model():
 
 
 def test_get_roots():
-    srpm = SrpmComponentFactory()
-    srpm_cnode, _ = srpm.cnodes.get_or_create(
-        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=srpm.purl
+    srpm = SrpmComponentFactory(name="srpm")
+    srpm_cnode, _ = ComponentNode.objects.get_or_create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        purl=srpm.purl,
+        defaults={"obj": srpm},
     )
-    rpm = ComponentFactory(type=Component.Type.RPM)
-    rpm_cnode, _ = rpm.cnodes.get_or_create(
-        type=ComponentNode.ComponentNodeType.PROVIDES, parent=srpm_cnode, purl=rpm.purl
+    rpm = ComponentFactory(name="rpm", type=Component.Type.RPM)
+    rpm_cnode, _ = ComponentNode.objects.get_or_create(
+        type=ComponentNode.ComponentNodeType.PROVIDES,
+        parent=srpm_cnode,
+        purl=rpm.purl,
+        defaults={"obj": rpm},
     )
     assert rpm.get_roots == [srpm_cnode]
     assert srpm.get_roots == [srpm_cnode]
 
-    nested = ComponentFactory()
-    nested.cnodes.get_or_create(
-        type=ComponentNode.ComponentNodeType.PROVIDES, parent=rpm_cnode, purl=nested.purl
+    nested = ComponentFactory(name="nested")
+    ComponentNode.objects.get_or_create(
+        type=ComponentNode.ComponentNodeType.PROVIDES,
+        parent=rpm_cnode,
+        purl=nested.purl,
+        defaults={"obj": nested},
     )
     assert nested.get_roots == [srpm_cnode]
 
-    container = ContainerImageComponentFactory()
-    container_cnode, _ = container.cnodes.get_or_create(
-        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=container.purl
+    container = ContainerImageComponentFactory(name="container")
+    container_cnode, _ = ComponentNode.objects.get_or_create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        purl=container.purl,
+        defaults={"obj": container},
     )
-    container_rpm = ComponentFactory(type=Component.Type.RPM)
-    container_rpm.cnodes.get_or_create(
+    container_rpm = ComponentFactory(name="container_rpm", type=Component.Type.RPM)
+    ComponentNode.objects.get_or_create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=container_cnode,
         purl=container_rpm.purl,
+        defaults={"obj": container_rpm},
     )
     assert not container_rpm.get_roots
     assert container.get_roots == [container_cnode]
 
     container_source = ComponentFactory(
-        namespace=Component.Namespace.UPSTREAM, type=Component.Type.GITHUB
+        name="container_source", namespace=Component.Namespace.UPSTREAM, type=Component.Type.GITHUB
     )
-    container_source_cnode, _ = container_source.cnodes.get_or_create(
+    container_source_cnode, _ = ComponentNode.objects.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=container_cnode,
         purl=container_source.purl,
+        defaults={"obj": container_source},
     )
     assert container_source.get_roots == [container_cnode]
-    container_nested = ComponentFactory(type=Component.Type.NPM)
-    container_nested.cnodes.get_or_create(
+    container_nested = ComponentFactory(name="container_nested", type=Component.Type.NPM)
+    ComponentNode.objects.get_or_create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=container_source_cnode,
         purl=container_nested.purl,
+        defaults={"obj": container_nested},
     )
     assert container_nested.get_roots == [container_cnode]
 
@@ -330,46 +351,61 @@ def test_component_errata():
 
 
 def test_get_upstream():
-    srpm = SrpmComponentFactory()
-    srpm_cnode, _ = srpm.cnodes.get_or_create(
-        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=srpm.purl
+    srpm = SrpmComponentFactory(name="srpm")
+    srpm_cnode, _ = ComponentNode.objects.get_or_create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        purl=srpm.purl,
+        defaults={"obj": srpm},
     )
-    rpm = ComponentFactory(type=Component.Type.RPM)
-    rpm_cnode, _ = rpm.cnodes.get_or_create(
-        type=ComponentNode.ComponentNodeType.PROVIDES, parent=srpm_cnode, purl=rpm.purl
+    rpm = ComponentFactory(name="rpm", type=Component.Type.RPM)
+    rpm_cnode, _ = ComponentNode.objects.get_or_create(
+        type=ComponentNode.ComponentNodeType.PROVIDES,
+        parent=srpm_cnode,
+        purl=rpm.purl,
+        defaults={"obj": rpm},
     )
-    srpm_upstream = ComponentFactory(namespace=Component.Namespace.UPSTREAM)
-    srpm_upstream_cnode, _ = srpm_upstream.cnodes.get_or_create(
-        type=ComponentNode.ComponentNodeType.SOURCE, parent=srpm_cnode, purl=srpm_upstream.purl
+    srpm_upstream = ComponentFactory(name="srpm_upstream", namespace=Component.Namespace.UPSTREAM)
+    srpm_upstream_cnode, _ = ComponentNode.objects.get_or_create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=srpm_cnode,
+        purl=srpm_upstream.purl,
+        defaults={"obj": srpm_upstream},
     )
     assert sorted(rpm.get_upstreams_purls()) == [srpm_upstream.purl]
 
 
 def test_get_upstream_container():
-    container = ContainerImageComponentFactory()
-    container_cnode, _ = container.cnodes.get_or_create(
-        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=container.purl
+    container = ContainerImageComponentFactory(name="container")
+    container_cnode, _ = ComponentNode.objects.get_or_create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        purl=container.purl,
+        defaults={"obj": container},
     )
-    container_rpm = ComponentFactory(type=Component.Type.RPM)
-    container_rpm.cnodes.get_or_create(
+    container_rpm = ComponentFactory(name="container_rpm", type=Component.Type.RPM)
+    ComponentNode.objects.get_or_create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=container_cnode,
         purl=container_rpm.purl,
+        defaults={"obj": container_rpm},
     )
     assert container_rpm.get_upstreams_purls() == set()
 
-    container_source = ContainerImageComponentFactory()
-    container_source_cnode, _ = container_source.cnodes.get_or_create(
+    container_source = ContainerImageComponentFactory(name="container_source")
+    container_source_cnode, _ = ComponentNode.objects.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=container_cnode,
         purl=container_source.purl,
+        defaults={"obj": container_source},
     )
 
-    container_nested = ComponentFactory(type=Component.Type.NPM)
-    container_nested.cnodes.get_or_create(
+    container_nested = ComponentFactory(name="container_nested", type=Component.Type.NPM)
+    ComponentNode.objects.get_or_create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=container_source_cnode,
         purl=container_source.purl,
+        defaults={"obj": container_nested},
     )
     assert sorted(container_nested.get_upstreams_purls()) == [container_source.purl]
 
@@ -378,17 +414,21 @@ def test_get_upstream_container():
         type=Component.Type.PYPI,
         namespace=Component.Namespace.UPSTREAM,
     )
-    container_o_source_cnode, _ = container_o_source.cnodes.get_or_create(
+    container_o_source_cnode, _ = ComponentNode.objects.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=container_cnode,
         purl=container_o_source.purl,
+        defaults={"obj": container_o_source},
     )
 
-    container_other_nested = ComponentFactory(type=Component.Type.NPM)
-    container_other_nested.cnodes.get_or_create(
+    container_other_nested = ComponentFactory(
+        name="container_nested_other", type=Component.Type.NPM
+    )
+    ComponentNode.objects.get_or_create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=container_o_source_cnode,
         purl=container_other_nested.purl,
+        defaults={"obj": container_other_nested},
     )
     assert sorted(container_other_nested.get_upstreams_purls()) == [container_o_source.purl]
 

@@ -1,5 +1,6 @@
 from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
+from django.conf import settings
 from django.db import transaction
 
 from config.celery import app
@@ -18,9 +19,18 @@ logger = get_task_logger(__name__)
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def load_et_products() -> None:
-    et = ErrataTool()
-    et.load_et_products()
-    et.save_variant_cdn_repo_mapping()
+    ErrataTool().load_et_products()
+    save_variant_cdn_repo_mapping.delay()
+
+
+@app.task(
+    base=Singleton,
+    autoretry_for=RETRYABLE_ERRORS,
+    retry_kwargs=RETRY_KWARGS,
+    soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
+)
+def save_variant_cdn_repo_mapping() -> None:
+    ErrataTool().save_variant_cdn_repo_mapping()
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)

@@ -145,18 +145,25 @@ def test_component_detail_olcs_put(client, api_path):
 
 def test_component_detail_dev(client, api_path):
     upstream = ComponentFactory(
+        name="upstream",
         type=Component.Type.GENERIC,
         namespace=Component.Namespace.UPSTREAM,
         related_url="https://example.org/related",
     )
-    upstream_node, _ = upstream.cnodes.get_or_create(
-        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=upstream.purl
+    upstream_node, _ = ComponentNode.objects.get_or_create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        purl=upstream.purl,
+        defaults={"obj": upstream},
     )
     dev_comp = ComponentFactory(
         name="dev", type=Component.Type.NPM, namespace=Component.Namespace.REDHAT
     )
-    dev_comp.cnodes.get_or_create(
-        type=ComponentNode.ComponentNodeType.PROVIDES_DEV, parent=upstream_node, purl=dev_comp.purl
+    ComponentNode.objects.get_or_create(
+        type=ComponentNode.ComponentNodeType.PROVIDES_DEV,
+        parent=upstream_node,
+        purl=dev_comp.purl,
+        defaults={"obj": dev_comp},
     )
 
     upstream.save_component_taxonomy()

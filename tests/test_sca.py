@@ -354,12 +354,15 @@ def test_slow_software_composition_analysis(
 ):
     sb = SoftwareBuildFactory(build_id=build_id, source=package_name)
     root_component = (
-        ContainerImageComponentFactory(software_build=sb)
+        ContainerImageComponentFactory(name="root_component", software_build=sb)
         if is_container
-        else SrpmComponentFactory(software_build=sb)
+        else SrpmComponentFactory(name="root_component", software_build=sb)
     )
-    root_component.cnodes.get_or_create(
-        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=root_component.purl
+    ComponentNode.objects.get_or_create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        purl=root_component.purl,
+        defaults={"obj": root_component},
     )
     assert not Component.objects.filter(purl=expected_purl).exists()
 

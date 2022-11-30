@@ -150,7 +150,7 @@ def slow_fetch_modular_build(build_id: str, force_process: bool = False) -> None
     # This should result in a lookup if slow_fetch_brew_build has already processed this module.
     # Likewise if slow_fetch_brew_build processes the module subsequently we should not create
     # a new ComponentNode, instead the same one will be looked up and used as the root node
-    node, _ = obj.cnodes.get_or_create(
+    node, _ = ComponentNode.objects.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
         purl=obj.purl,
@@ -235,7 +235,7 @@ def save_component(
         obj.meta_attr = obj.meta_attr | meta
         obj.save()
 
-    node, _ = obj.cnodes.get_or_create(
+    node, _ = ComponentNode.objects.get_or_create(
         type=node_type,
         parent=parent,
         purl=obj.purl,
@@ -262,7 +262,7 @@ def save_srpm(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
             "namespace": build_data["namespace"],
         },
     )
-    node, _ = obj.cnodes.get_or_create(
+    node, _ = ComponentNode.objects.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
         purl=obj.purl,
@@ -288,7 +288,7 @@ def save_srpm(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
                 "related_url": related_url,
             },
         )
-        new_upstream.cnodes.get_or_create(
+        ComponentNode.objects.get_or_create(
             type=ComponentNode.ComponentNodeType.SOURCE,
             parent=node,
             purl=new_upstream.purl,
@@ -322,7 +322,7 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
             "namespace": build_data.get("namespace", ""),
         },
     )
-    root_node, _ = obj.cnodes.get_or_create(
+    root_node, _ = ComponentNode.objects.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
         purl=obj.purl,
@@ -342,7 +342,7 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
                 version="",
                 defaults={"namespace": Component.Namespace.UPSTREAM},
             )
-            new_upstream.cnodes.get_or_create(
+            ComponentNode.objects.get_or_create(
                 type=ComponentNode.ComponentNodeType.SOURCE,
                 parent=root_node,
                 purl=new_upstream.purl,
@@ -366,7 +366,7 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
                     "namespace": image.get("namespace", ""),
                 },
             )
-            image_arch_node, _ = obj.cnodes.get_or_create(
+            image_arch_node, _ = ComponentNode.objects.get_or_create(
                 type=ComponentNode.ComponentNodeType.PROVIDES,
                 parent=root_node,
                 purl=obj.purl,
@@ -397,7 +397,7 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
                     "namespace": Component.Namespace.UPSTREAM,
                 },
             )
-            upstream_node, _ = new_upstream.cnodes.get_or_create(
+            upstream_node, _ = ComponentNode.objects.get_or_create(
                 type=ComponentNode.ComponentNodeType.SOURCE,
                 parent=root_node,
                 purl=new_upstream.purl,
@@ -441,7 +441,7 @@ def save_module(softwarebuild, build_data) -> ComponentNode:
             "namespace": build_data["namespace"],
         },
     )
-    node, _ = obj.cnodes.get_or_create(
+    node, _ = ComponentNode.objects.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
         purl=obj.purl,

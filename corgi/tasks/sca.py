@@ -50,7 +50,7 @@ def save_component(component: dict[str, Any], parent: ComponentNode):
             "Saved component purl %s, does not match Syft purl: %s", obj.purl, meta["purl"]
         )
 
-    node, node_created = obj.cnodes.get_or_create(
+    node, node_created = ComponentNode.objects.get_or_create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=parent,
         purl=obj.purl,

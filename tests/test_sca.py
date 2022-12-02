@@ -148,54 +148,84 @@ def test_go_package_type(go_list_scan_files):
     assert go_package.meta_attr["go_component_type"] == "go-package"
 
 
-archive_source_test_data = [
+# Should succeed
+archive_source_test_data = (
+    f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
+    "/containers/openshift-enterprise-console",
+    "f95972ce68d2850ae20c10fbf87182a17fa24b19",
+    "openshift-enterprise-console",
+    2,
+    "/tmp/2",
+)
+
+
+@patch("subprocess.check_call")
+def test_clone_source(mock_subprocess):
+    # This prevents multiple runs of this test from having different results because
+    # we mkdir the directory prior to the clone
+    source_url, commit, package_name, build_id, expected_path = archive_source_test_data
+    shutil.rmtree(expected_path, ignore_errors=True)
+    _clone_source(f"{source_url}#{commit}", build_id)
+    mock_subprocess.assert_has_calls(
+        (
+            call(["/usr/bin/git", "clone", source_url, PosixPath(expected_path)]),
+            call(["/usr/bin/git", "checkout", commit], cwd=PosixPath(expected_path), stderr=-3),
+        )
+    )
+
+
+archive_source_test_data_for_failures = (
+    # Fails due to ValueError - only git:// protocol supported
     (
-        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
-        "/rpms/nodejs",
+        f"quit://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}/rpms/nodejs",
+        "3cbed2be4171502499d0d89bea1ead91690af7d2",
+        "nodejs",
+        1,
+        "/tmp/1",
+        False,
+    ),
+    # Fails due to ValueError - path too short
+    (
+        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}/tooshort",
+        "3cbed2be4171502499d0d89bea1ead91690af7d2",
+        "nodejs",
+        1,
+        "/tmp/1",
+        False,
+    ),
+    # Fails due to FileExistsError
+    (
+        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}/rpms/nodejs",
         "3cbed2be4171502499d0d89bea1ead91690af7d2",
         "nodejs",
         1,
         "/tmp/1",
         True,
     ),
-    (
-        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
-        "/containers/openshift-enterprise-console",
-        "f95972ce68d2850ae20c10fbf87182a17fa24b19",
-        "openshift-enterprise-console",
-        2,
-        "/tmp/2",
-        False,
-    ),
-]
+)
 
 
 @pytest.mark.parametrize(
     "source_url,commit,package_name,build_id,expected_path,path_exists",
-    archive_source_test_data,
+    archive_source_test_data_for_failures,
 )
 @patch("subprocess.check_call")
-def test_clone_source(
+def test_clone_source_for_failures(
     mock_subprocess, source_url, commit, package_name, build_id, expected_path, path_exists
 ):
     # This prevents multiple runs of this test from having different results because
     # we mkdir the directory prior to the clone
     if not path_exists:
         shutil.rmtree(expected_path, ignore_errors=True)
-        _clone_source(f"{source_url}#{commit}", build_id)
-        mock_subprocess.assert_has_calls(
-            [
-                call(["/usr/bin/git", "clone", source_url, PosixPath(expected_path)]),
-                call(["/usr/bin/git", "checkout", commit], cwd=PosixPath(expected_path), stderr=-3),
-            ]
-        )
+        with pytest.raises(ValueError):
+            _clone_source(f"{source_url}#{commit}", build_id)
     else:
         expected_path_obj = Path(expected_path)
         if not expected_path_obj.exists():
             os.mkdir(f"/tmp/{build_id}")
         with pytest.raises(FileExistsError):
             _clone_source(f"{source_url}#{commit}", build_id)
-        mock_subprocess.assert_not_called()
+    mock_subprocess.assert_not_called()
 
 
 @patch("subprocess.check_call")

@@ -8,7 +8,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelatio
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
 from django.db import models
-from django.db.models import QuerySet
+from django.db.models import F, Func, IntegerField, QuerySet, TextField, Value
 from mptt.managers import TreeManager
 from mptt.models import MPTTModel, TreeForeignKey
 from packageurl import PackageURL
@@ -636,7 +636,32 @@ class ProductStream(ProductModel):
                         productstreams__ofuri=self.ofuri,
                         software_build__isnull=False,
                     )
-                    .order_by("-version", "-release", "-software_build__completion_time")
+                    .annotate(
+                        version_arr=Func(
+                            F("version"),
+                            Value("[.,-]"),
+                            function="regexp_split_to_array",
+                            output=fields.ArrayField(TextField()),
+                        ),
+                        release_arr=Func(
+                            F("release"),
+                            Value("[.,-]"),
+                            function="regexp_split_to_array",
+                            output=fields.ArrayField(TextField()),
+                        ),
+                        el_match=Func(
+                            F("release"),
+                            Value("el([0-9]+)"),
+                            function="regexp_match",
+                            output=fields.ArrayField(IntegerField()),
+                        ),
+                    )
+                    .order_by(
+                        "-el_match",
+                        "-software_build__completion_time",
+                        "-version_arr",
+                        "-release_arr",
+                    )
                     .values("uuid")[:1]
                 )
             )

@@ -118,7 +118,8 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
         slow_fetch_brew_build.delay(b_id)
 
     logger.info("Requesting software composition analysis for %s", build_id)
-    cpu_software_composition_analysis.delay(build_id)
+    if settings.SCA_ENABLED:
+        cpu_software_composition_analysis.delay(build_id)
 
     logger.info("Finished fetching brew build: %s", build_id)
 

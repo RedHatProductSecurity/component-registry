@@ -64,6 +64,8 @@ services:
     depends_on: ["corgi-db"]
     ports:
       - "8008:8008"
+    env_file:
+      - .env
     environment:
       DJANGO_SETTINGS_MODULE: "config.settings.dev"
       CORGI_DB_HOST: corgi-db

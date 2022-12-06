@@ -1,11 +1,17 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% block body %}
 <div class="container-fluid">
   <hr/>
-  <p>Corgi: <a href='/api/v1/'>API</a> | <a href='api/healthy'>Health</a> | <a href='/api/v1/status'>Status</a></p>
-  <p>Utils: <a href='/data'>Data</a> | <a href='tasks'>Available Tasks</a> | <a href='/tasks/running'>Running Tasks</a></p>
+  <p>Corgi: <a href="/api/v1/">API</a> | <a href="api/healthy">Health</a> | <a href="/api/v1/status">Status</a></p>
+  <p>Utils: <a href="/data">Data</a> | <a href="tasks">Available Tasks</a> | <a href="/tasks/running">Running Tasks</a></p>
   <hr/>
-  <p>Docs:  <a href='/api/v1/schema/docs'>API</a></p>
-  <p>Schema: <a href='/api/v1/schema?format=json'>JSON</a>| <a href='api/v1/schema?format=yaml'>YAML</a></p>
+  <p>Docs:
+    <a href="/api/v1/schema/docs">API</a>
+    |
+    <a href="https:///github.com/RedHatProductSecurity/component-registry/tree/main/docs" rel="noopener noreferrer"
+       target="_blank">GitHub <em class="fa fa-external-link"></em>
+    </a>
+  </p>
+  <p>Schema: <a href="/api/v1/schema?format=json">JSON</a> | <a href="api/v1/schema?format=yaml">YAML</a></p>
 </div>
 {% endblock %}

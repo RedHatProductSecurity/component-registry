@@ -166,7 +166,7 @@ class TagSerializer(serializers.Serializer):
 class SoftwareBuildSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
 
-    link = serializers.SerializerMethodField()
+    link = serializers.SerializerMethodField(read_only=True)
     web_url = serializers.SerializerMethodField()
     components = serializers.SerializerMethodField()
 
@@ -203,7 +203,7 @@ class SoftwareBuildSerializer(serializers.ModelSerializer):
 
 class SoftwareBuildSummarySerializer(serializers.ModelSerializer):
 
-    link = serializers.SerializerMethodField()
+    link = serializers.SerializerMethodField(read_only=True)
 
     @staticmethod
     def get_link(instance: SoftwareBuild) -> str:
@@ -249,7 +249,7 @@ class ComponentSerializer(ProductTaxonomySerializer):
     software_build = SoftwareBuildSummarySerializer(many=False)
     tags = TagSerializer(many=True, read_only=True)
 
-    link = serializers.SerializerMethodField()
+    link = serializers.SerializerMethodField(read_only=True)
 
     products = serializers.SerializerMethodField()
     product_versions = serializers.SerializerMethodField()
@@ -261,7 +261,7 @@ class ComponentSerializer(ProductTaxonomySerializer):
     sources = serializers.SerializerMethodField()
     upstreams = serializers.SerializerMethodField()
 
-    manifest = serializers.SerializerMethodField()
+    manifest = serializers.SerializerMethodField(read_only=True)
 
     @staticmethod
     def get_link(instance: Component) -> str:
@@ -326,8 +326,8 @@ class ComponentSerializer(ProductTaxonomySerializer):
 
 class ComponentListSerializer(serializers.ModelSerializer):
 
-    link = serializers.SerializerMethodField()
-    build_completion_dt = serializers.SerializerMethodField()
+    link = serializers.SerializerMethodField(read_only=True)
+    build_completion_dt = serializers.SerializerMethodField(read_only=True)
 
     @staticmethod
     def get_link(instance: Component) -> str:
@@ -350,6 +350,7 @@ class ComponentListSerializer(serializers.ModelSerializer):
             "build_completion_dt",
             # "meta_attr",
         ]
+        read_only_fields = fields
 
 
 class ProductModelSerializer(ProductTaxonomySerializer):
@@ -357,7 +358,7 @@ class ProductModelSerializer(ProductTaxonomySerializer):
     components = serializers.SerializerMethodField()
     upstreams = serializers.SerializerMethodField()
     builds = serializers.SerializerMethodField()
-    link = serializers.SerializerMethodField()
+    link = serializers.SerializerMethodField(read_only=True)
     build_count = serializers.SerializerMethodField()
     channels = serializers.SerializerMethodField()
 
@@ -501,7 +502,7 @@ class ProductVariantSerializer(ProductModelSerializer):
 
 
 class ChannelSerializer(ProductTaxonomySerializer):
-    link = serializers.SerializerMethodField()
+    link = serializers.SerializerMethodField(read_only=True)
     products = serializers.SerializerMethodField()
     product_versions = serializers.SerializerMethodField()
     product_streams = serializers.SerializerMethodField()

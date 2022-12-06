@@ -626,16 +626,16 @@ class ProductStream(ProductModel):
             Component.objects.filter(
                 ROOT_COMPONENTS_CONDITION,
                 productstreams__ofuri=self.ofuri,
-                software_build__isnull=False,
             )
+            .exclude(software_build__isnull=True)
             .annotate(
                 latest=models.Subquery(
                     Component.objects.filter(
                         ROOT_COMPONENTS_CONDITION,
                         name=models.OuterRef("name"),
                         productstreams__ofuri=self.ofuri,
-                        software_build__isnull=False,
                     )
+                    .exclude(software_build__isnull=True)
                     .annotate(
                         version_arr=Func(
                             F("version"),

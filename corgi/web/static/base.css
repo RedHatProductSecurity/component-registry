@@ -6,6 +6,10 @@
   margin: 3px 0 5px 20px;
 }
 
+.marginleft {
+  margin-left: 1em;
+}
+
 .whitefont {
   font-size: 14px;
   text-decoration: none;
@@ -14,4 +18,8 @@
 
 .paddingbottom {
   padding-bottom: 5px;
+}
+
+.paddingright {
+  padding-right: 0.5em;
 }

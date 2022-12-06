@@ -362,4 +362,7 @@ APP_STREAMS_LIFE_CYCLE_URL = os.getenv("CORGI_APP_STREAMS_LIFE_CYCLE_URL", "")
 MANIFEST_HINTS_URL = os.getenv("CORGI_MANIFEST_HINTS_URL")
 
 LOOKASIDE_CACHE_BASE_URL = f"https://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}/repo"
+
+# Set to False to disable software composition analysis tasks.
+SCA_ENABLED = strtobool(os.getenv("CORGI_SCA_ENABLED", "true"))
 SCA_SCRATCH_DIR = os.getenv("CORGI_SCA_SCATCH_DIR", "/tmp")

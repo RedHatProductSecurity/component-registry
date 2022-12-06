@@ -61,9 +61,9 @@ def setup_periodic_tasks(sender, **kwargs):
     upsert_cron_task("rhel_compose", "get_builds", hour=4, minute=0)
     upsert_cron_task("brew", "load_brew_tags", hour=5, minute=0)
     upsert_cron_task("brew", "fetch_unprocessed_brew_tag_relations", hour=6, minute=0)
-    upsert_cron_task("yum", "load_yum_repositories", hour=7, minute=0)
-    upsert_cron_task("yum", "fetch_unprocessed_yum_relations", hour=8, minute=0)
-    upsert_cron_task("pulp", "fetch_unprocessed_cdn_relations", hour=9, minute=0)
+    upsert_cron_task("pulp", "fetch_unprocessed_cdn_relations", hour=7, minute=0)
+    upsert_cron_task("yum", "load_yum_repositories", hour=8, minute=0)
+    upsert_cron_task("yum", "fetch_unprocessed_yum_relations", hour=9, minute=0)
     upsert_cron_task("monitoring", "email_failed_tasks", hour=11, minute=45)
 
     # Automatic task result expiration is currently disabled

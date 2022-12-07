@@ -5,7 +5,7 @@ import os
 import re
 from datetime import datetime
 from types import SimpleNamespace
-from typing import Any, Dict, Generator, List, Tuple
+from typing import Any, Dict, Generator, List, Optional, Tuple
 from urllib.parse import urlparse
 
 import koji
@@ -713,7 +713,7 @@ class Brew:
 
         return module
 
-    def get_component_data(self, build_id: int) -> dict:
+    def get_component_data(self, build_id: int, start_time: Optional[datetime] = None) -> dict:
         logger.info("Retrieving Brew build: %s", build_id)
         build = self.koji_session.getBuild(build_id)
         if not build:

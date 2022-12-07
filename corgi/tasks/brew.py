@@ -26,102 +26,203 @@ logger = get_task_logger(__name__)
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_process: bool = False):
-    logger.info("Fetch brew build called with build id: %s", build_id)
-    try:
-        softwarebuild = SoftwareBuild.objects.get(build_id=build_id)
-    except SoftwareBuild.DoesNotExist:
-        pass
-    else:
-        if not force_process:
-            logger.info("Already processed build_id %s, only saving product taxonomy", build_id)
-            softwarebuild.save_product_taxonomy()
-            return
-        else:
-            logger.info("Fetching brew build with build_id: %s", build_id)
+    """Fetch a particular build_id from Brew, optionally overwriting any existing data"""
+    start_time = timezone.now()
+    logger.info(f"Fetch brew build called with build id: {build_id}, time={start_time}")
 
     try:
-        component = Brew().get_component_data(build_id)
+        logger.info(f"Looking up build id: {build_id}, time={timezone.now() - start_time}")
+        softwarebuild = SoftwareBuild.objects.get(build_id=build_id)
+        logger.info(f"Looking up build id finished: {build_id}, time={timezone.now() - start_time}")
+
+        if not force_process:
+            logger.info(
+                f"Already processed build_id: {build_id}, time={timezone.now() - start_time}"
+            )
+            if save_product:
+                logger.info(
+                    f"Saving product taxonomy: {build_id}, time={timezone.now() - start_time}"
+                )
+                softwarebuild.save_product_taxonomy(start_time=start_time)
+                logger.info(
+                    f"Saving product taxonomy finished: "
+                    f"{build_id}, time={timezone.now() - start_time}"
+                )
+            return
+        else:
+            logger.info(
+                f"Fetching brew build with build_id again: "
+                f"{build_id}, time={timezone.now() - start_time}"
+            )
+    except SoftwareBuild.DoesNotExist:
+        logger.info(
+            f"Fetching brew build with build_id for the first time: "
+            f"{build_id}, time={timezone.now() - start_time}"
+        )
+
+    try:
+        logger.info(f"Instantiating brew class: time={timezone.now() - start_time}")
+        brew = Brew()
+        logger.info(f"Instantiating brew class finished: time={timezone.now() - start_time}")
+
+        logger.info(
+            f"Getting component data for build id: {build_id}, time={timezone.now() - start_time}"
+        )
+        component = brew.get_component_data(build_id, start_time=start_time)
+        logger.info(
+            f"Getting component data for build id finished: "
+            f"{build_id}, time={timezone.now() - start_time}"
+        )
     except BrewBuildTypeNotSupported as exc:
-        logger.warning(str(exc))
+        logger.warning(
+            f"Getting component data for build id failed: "
+            f"{exc}, time={timezone.now() - start_time}"
+        )
         return
 
     if not component:
-        logger.info("No data fetched for build %s from Brew, exiting...", build_id)
+        logger.info(
+            f"No data fetched from Brew for build: {build_id}, time={timezone.now() - start_time}"
+        )
         return
 
     build_meta = component["build_meta"]["build_info"]
-    build_meta["corgi_ingest_start_dt"] = dateformat.format(timezone.now(), "Y-m-d H:i:s")
+    build_meta["corgi_ingest_start_dt"] = dateformat.format(start_time, "Y-m-d H:i:s")
     build_meta["corgi_ingest_status"] = "INPROGRESS"
 
     completion_time = build_meta.get("completion_time", "")
-    if completion_time:
-        dt = dateparse.parse_datetime(completion_time.split(".")[0])
-        if dt:
-            completion_dt = make_aware(dt)
-        else:
-            logger.info("Could not parse completion_time for build %s", build_id)
-            return
-    else:
-        logger.info("No completion_time for build %s", build_id)
+    if not completion_time:
+        logger.info(f"No completion_time for build: {build_id}, time={timezone.now() - start_time}")
         return
 
+    dt = dateparse.parse_datetime(completion_time.split(".")[0])
+    if not dt:
+        logger.info(
+            f"Could not parse completion_time for build: "
+            f"{build_id}, time={timezone.now() - start_time}"
+        )
+        return
+
+    completion_dt = make_aware(dt)
+
+    logger.info(
+        f"Looking up or saving data for build: {build_id}, time={timezone.now() - start_time}"
+    )
     softwarebuild, created = SoftwareBuild.objects.get_or_create(
-        build_id=component["build_meta"]["build_info"]["build_id"],
+        build_id=build_meta.pop("build_id"),
         defaults={
             "type": SoftwareBuild.Type.BREW,
             "name": component["meta"]["name"],
-            "source": component["build_meta"]["build_info"]["source"],
+            "source": build_meta.pop("source"),
             "meta_attr": build_meta,
         },
         completion_time=completion_dt,
+    )
+    logger.info(
+        f"Looking up or saving data for build finished: "
+        f"{build_id}, time={timezone.now() - start_time}"
     )
 
     if not force_process and not created:
         # If another task starts while this task is downloading data this can result in processing
         # the same build twice, let's just bail out here to save cpu
-        logger.warning("SoftwareBuild with build_id %s already existed, not reprocessing", build_id)
+        logger.warning(
+            f"SoftwareBuild already existed, not reprocessing: "
+            f"{build_id}, time={timezone.now() - start_time}"
+        )
         return
 
+    logger.info(
+        f"Saving ({component['type']}) component data for build id: "
+        f"{build_id}, time={timezone.now() - start_time}"
+    )
     if component["type"] == Component.Type.RPM:
-        root_node = save_srpm(softwarebuild, component)
+        root_node = save_srpm(softwarebuild, component, start_time=start_time)
     elif component["type"] == Component.Type.CONTAINER_IMAGE:
-        root_node = save_container(softwarebuild, component)
+        root_node = save_container(softwarebuild, component, start_time=start_time)
     elif component["type"] == Component.Type.RPMMOD:
-        root_node = save_module(softwarebuild, component)
+        root_node = save_module(softwarebuild, component, start_time=start_time)
     else:
-        logger.warning(f"Build {build_id} type is not supported: {component['type']}")
+        logger.warning(
+            f"Build {build_id} type is not supported: "
+            f"{component['type']}, time={timezone.now() - start_time}"
+        )
         return
+    logger.info(
+        f"Saving ({component['type']}) component data for build id finished: "
+        f"{build_id}, time={timezone.now() - start_time}"
+    )
 
-    for c in component.get("components", []):
-        save_component(c, root_node, softwarebuild)
+    for c in component.get("components", ()):
+        logger.info(
+            f"Saving ({c['type']}) child component data: "
+            f"{build_id}, time={timezone.now() - start_time}"
+        )
+        save_component(c, root_node, softwarebuild, start_time=start_time)
+        logger.info(
+            f"Saving ({c['type']}) child component data finished: "
+            f"{build_id}, time={timezone.now() - start_time}"
+        )
 
+    # TODO: This comment is outdated and seems wrong, could be the reason it's slow
     # We don't call save_product_taxonomy by default to allow async call of slow_load_errata task
     # See CORGI-21
     if save_product:
-        softwarebuild.save_product_taxonomy()
+        logger.info(f"Saving product taxonomy: {build_id}, time={timezone.now() - start_time}")
+        softwarebuild.save_product_taxonomy(start_time=start_time)
+        logger.info(
+            f"Saving product taxonomy finished: {build_id}, time={timezone.now() - start_time}"
+        )
 
     # for builds with errata tags set ProductComponentRelation
     # get_component_data always calls _extract_advisory_ids to set tags, but list may be empty
-    if not build_meta["errata_tags"]:
-        logger.info("no errata tags")
+    errata_tags = build_meta.get("errata_tags")
+    if not errata_tags:
+        logger.info(f"No errata tags for build: {build_id}, time={timezone.now() - start_time}")
+    elif isinstance(errata_tags, str):
+        logger.info(
+            f"Loading str errata tag for build: "
+            f"{build_id}, {errata_tags}, time={timezone.now() - start_time}"
+        )
+        slow_load_errata.delay(build_meta["errata_tags"])
     else:
-        if isinstance(build_meta["errata_tags"], str):
-            slow_load_errata.delay(build_meta["errata_tags"])
-        else:
-            for e in build_meta["errata_tags"]:
-                slow_load_errata.delay(e)
+        logger.info(
+            f"Loading list of errata tags for build: {build_id}, time={timezone.now() - start_time}"
+        )
+        for errata_tag in errata_tags:
+            logger.info(
+                f"Requesting load of nested errata tag: "
+                f"{errata_tag}, time={timezone.now() - start_time}"
+            )
+            slow_load_errata.delay(errata_tag)
+        logger.info(
+            f"Finished loading list of errata tags for build: "
+            f"{build_id}, time={timezone.now() - start_time}"
+        )
 
-    build_ids = component.get("nested_builds", ())
-    logger.info("Fetching brew builds for %s", build_ids)
-    for b_id in build_ids:
-        logger.info("Requesting fetch of nested build: %s", b_id)
-        slow_fetch_brew_build.delay(b_id)
+    nested_build_ids = component.get("nested_builds", ())
+    logger.info(
+        f"Fetching nested brew builds for build: {build_id}, time={timezone.now() - start_time}"
+    )
+    for nested_build_id in nested_build_ids:
+        logger.info(
+            f"Requesting fetch of nested build: "
+            f"{nested_build_id}, time={timezone.now() - start_time}"
+        )
+        slow_fetch_brew_build.delay(nested_build_id)
+    logger.info(
+        f"Finished fetching nested brew builds for build: "
+        f"{build_id}, time={timezone.now() - start_time}"
+    )
 
-    logger.info("Requesting software composition analysis for %s", build_id)
     if settings.SCA_ENABLED:
+        logger.info(
+            f"Requesting software composition analysis for build: "
+            f"{build_id}, time={timezone.now() - start_time}"
+        )
         cpu_software_composition_analysis.delay(build_id)
 
-    logger.info("Finished fetching brew build: %s", build_id)
+    logger.info(f"Finished fetching brew build: {build_id}, time={timezone.now() - start_time}")
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
@@ -182,7 +283,10 @@ def find_package_file_name(sources: list[str]) -> str:
 
 
 def save_component(
-    component: dict, parent: ComponentNode, softwarebuild: Optional[SoftwareBuild] = None
+    component: dict,
+    parent: ComponentNode,
+    softwarebuild: Optional[SoftwareBuild] = None,
+    start_time: Optional[timezone.datetime] = None,
 ):
     logger.debug("Called save component with component %s", component)
     component_type = component.pop("type").upper()
@@ -204,7 +308,7 @@ def save_component(
         return
 
     # Only save softwarebuild for RPM where they are direct children of SRPMs
-    # This avoids the situation where only the latest build fetched has the softarebuild associated
+    # This avoids the situation where only the latest build fetched has the softwarebuild associated
     # For example if we were processing a container image with embedded rpms this could be set to
     # the container build id, whereas we want it also to reflect the build id of the RPM build
     if not (softwarebuild and parent.obj is not None and parent.obj.is_srpm()):
@@ -248,7 +352,9 @@ def save_component(
     recurse_components(component, node)
 
 
-def save_srpm(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
+def save_srpm(
+    softwarebuild: SoftwareBuild, build_data: dict, start_time: Optional[timezone.datetime] = None
+) -> ComponentNode:
     obj, created = Component.objects.get_or_create(
         name=build_data["meta"].get("name"),
         type=build_data["type"],
@@ -310,7 +416,9 @@ def process_image_components(image):
     return builds_to_fetch
 
 
-def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
+def save_container(
+    softwarebuild: SoftwareBuild, build_data: dict, start_time: Optional[timezone.datetime] = None
+) -> ComponentNode:
     obj, created = Component.objects.get_or_create(
         name=build_data["meta"]["name"],
         type=build_data["type"],
@@ -421,7 +529,9 @@ def recurse_components(component: dict, parent: ComponentNode):
                 save_component(child, parent)
 
 
-def save_module(softwarebuild, build_data) -> ComponentNode:
+def save_module(
+    softwarebuild, build_data, start_time: Optional[timezone.datetime] = None
+) -> ComponentNode:
     """Upstreams are not created because modules have no related source code. They are a
     collection of RPMs from other SRPMS. The upstreams can be looked up from all the RPM children.
     No child components are created here because we don't have enough data in Brew to determine

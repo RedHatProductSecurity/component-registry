@@ -2,13 +2,14 @@ import logging
 import re
 import uuid as uuid
 from abc import abstractmethod
-from typing import Union
+from typing import Optional, Union
 
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
 from django.db import models
 from django.db.models import F, Func, IntegerField, QuerySet, TextField, Value
+from django.utils import timezone
 from mptt.managers import TreeManager
 from mptt.models import MPTTModel, TreeForeignKey
 from packageurl import PackageURL
@@ -275,7 +276,7 @@ class SoftwareBuild(TimeStampedModel):
             component.save_datascore()
         return None
 
-    def save_product_taxonomy(self):
+    def save_product_taxonomy(self, start_time: Optional[timezone.datetime] = None):
         """update ('materialize') product taxonomy on all build components
 
         This method is defined on SoftwareBuild and not Component,

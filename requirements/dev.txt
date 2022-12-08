@@ -303,9 +303,8 @@ dnspython==2.2.1 \
     #   -r requirements/base.txt
     #   -r requirements/test.txt
     #   eventlet
-drf-spectacular[sidecar]==0.24.2 \
-    --hash=sha256:b276e6f7bda6dfb911e742dab87c6e97bc67da2dafe82d6fd8df7cec6c8b03ec \
-    --hash=sha256:be32417594080a52f996afd83fd47ea9c2b83cbf13f6d3fbf3de809a0dfa7ead
+drf-spectacular @ https://github.com/tfranzel/drf-spectacular/archive/0f01020ff378135033855ad5bf100d99f9a14440.zip \
+    --hash=sha256:3f00c1df0635600cbcfebb06a1ab879a608ac16de5692cf7e7e3771edbbc9997
     # via
     #   -r requirements/base.txt
     #   -r requirements/test.txt
@@ -315,7 +314,6 @@ drf-spectacular-sidecar==2022.11.1 \
     # via
     #   -r requirements/base.txt
     #   -r requirements/test.txt
-    #   drf-spectacular
 eventlet==0.33.1 \
     --hash=sha256:a085922698e5029f820cf311a648ac324d73cec0e4792877609d978a4b5bbf31 \
     --hash=sha256:afbe17f06a58491e9aebd7a4a03e70b0b63fd4cf76d8307bae07f280479b1515

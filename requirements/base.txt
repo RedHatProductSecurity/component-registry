@@ -113,9 +113,8 @@ dnspython==2.2.1 \
     --hash=sha256:0f7569a4a6ff151958b64304071d370daa3243d15941a7beedf0c9fe5105603e \
     --hash=sha256:a851e51367fb93e9e1361732c1d60dab63eff98712e503ea7d92e6eccb109b4f
     # via eventlet
-drf-spectacular[sidecar]==0.24.2 \
-    --hash=sha256:b276e6f7bda6dfb911e742dab87c6e97bc67da2dafe82d6fd8df7cec6c8b03ec \
-    --hash=sha256:be32417594080a52f996afd83fd47ea9c2b83cbf13f6d3fbf3de809a0dfa7ead
+drf-spectacular @ https://github.com/tfranzel/drf-spectacular/archive/0f01020ff378135033855ad5bf100d99f9a14440.zip \
+    --hash=sha256:3f00c1df0635600cbcfebb06a1ab879a608ac16de5692cf7e7e3771edbbc9997
     # via -r requirements/base.in
 drf-spectacular-sidecar==2022.11.1 \
     --hash=sha256:46614fb4eff1bccbac176d74bd76e0240ab459dc62d9fd8b9d4d1479fb76ba0a \

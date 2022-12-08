@@ -41,7 +41,7 @@ services:
 
   redis-exporter:
     container_name: redis-exporter
-    image: quay.io/oliver006/redis_exporter:latest
+    image: quay.io/oliver006/redis_exporter@sha256:6ef9be804859638d84a588b387009e3695e1e29cd8f45a1197d6d923b49ae9b7
     environment:
       REDIS_ADDR: "redis://redis:6379"
       REDIS_EXPORTER_CHECK_KEYS: "slow,fast"

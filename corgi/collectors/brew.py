@@ -694,7 +694,7 @@ class Brew:
             "stream": modulemd["data"]["stream"],
             "context": modulemd["data"]["context"],
             "components": modulemd["data"].get("components", []),
-            "rpms": modulemd["data"]["xmd"]["mbs"]["rpms"],
+            "rpms": modulemd["data"]["xmd"]["mbs"].get("rpms", []),
             "source": ["koji.getBuild"],
         }
         module = {

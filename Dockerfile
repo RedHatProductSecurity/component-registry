@@ -13,7 +13,8 @@ LABEL maintainer="Red Hat Product Security Dev - Red Hat, Inc." \
 
 ARG ROOT_CA_URL
 RUN cd /etc/pki/ca-trust/source/anchors/ && \
-    curl -O "${ROOT_CA_URL}" && \
+    # The '| true' skips this step if the ROOT_CA_URL is unset or fails in another way
+    curl -O "${ROOT_CA_URL}" | true && \
     update-ca-trust && \
     cd -
 

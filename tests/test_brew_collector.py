@@ -689,9 +689,11 @@ def test_extract_image_components():
     assert set(noarch_rpms_by_id.keys()) == set(NOARCH_RPM_IDS)
 
 
-@pytest.mark.vcr(match_on=["method", "scheme", "host", "port", "path", "body"])
+@patch("corgi.tasks.brew.Brew")
 @patch("corgi.tasks.sca.cpu_software_composition_analysis.delay")
-def test_fetch_rpm_build(mock_sca):
+def test_fetch_rpm_build(mock_sca, mock_brew):
+    with open("tests/data/brew/1705913/component_data.json", "r") as component_data_file:
+        mock_brew.return_value.get_component_data.return_value = json.load(component_data_file)
     slow_fetch_brew_build(1705913)
     srpm = Component.objects.srpms().get(name="cockpit")
     assert srpm.description

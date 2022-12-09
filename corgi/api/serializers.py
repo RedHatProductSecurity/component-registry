@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 # Generic URL prefix
 # TODO remove running_community check once domain is established
-if not utils.running_dev() or utils.running_community():
+if not utils.running_dev():
     CORGI_API_URL = f"https://{settings.CORGI_DOMAIN}/api/{CORGI_API_VERSION}"
 else:
     CORGI_API_URL = f"http://localhost:8008/api/{CORGI_API_VERSION}"

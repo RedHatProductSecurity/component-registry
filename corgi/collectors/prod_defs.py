@@ -1,5 +1,4 @@
 import json
-from typing import Tuple
 
 import requests
 from django.conf import settings
@@ -12,7 +11,7 @@ class ProdDefs:
     GSSAPI_AUTH = HTTPSPNEGOAuth()
 
     @classmethod
-    def get_enterprise_product_definitions(cls) -> dict:
+    def get_product_definitions_service(cls) -> dict:
         response = requests.get(
             f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions",
             auth=cls.GSSAPI_AUTH,
@@ -26,29 +25,19 @@ class ProdDefs:
             return json.load(proddefs_data)
 
     @classmethod
-    def load_community_products(cls) -> Tuple[list[dict], dict]:
-        data = cls.get_community_product_definitions()
-
-        products = []
-
+    def load_products(cls, data: dict) -> list[dict]:
+        products: list[dict] = []
         for ps_product, product in data["ps_products"].items():
+            if settings.COMMUNITY_MODE_ENABLED:
+                if product["business_unit"] != "Community":
+                    continue
+            else:  # Enterprise mode
+                if product["business_unit"] == "Community":
+                    continue
             product["id"] = ps_product
             products.append(product)
 
-        return products, data
-
-    @classmethod
-    def load_enterprise_products(cls) -> Tuple[list[dict], dict]:
-        data = cls.get_enterprise_product_definitions()
-
-        products = []
-        for ps_product, product in data["ps_products"].items():
-            if product["business_unit"] == "Community":
-                continue
-            product["id"] = ps_product
-            products.append(product)
-
-        return products, data
+        return products
 
     @classmethod
     def load_product_definitions(cls) -> list:
@@ -63,6 +52,7 @@ class ProdDefs:
         products = cls.load_products(data)
 
         for product in products:
+            print(f"product {product}")
             product_versions = []
             for ps_module in product["ps_modules"]:
                 product_version = data["ps_modules"][ps_module]

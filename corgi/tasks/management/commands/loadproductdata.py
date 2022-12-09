@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from corgi.tasks.brew import load_brew_tags
@@ -16,7 +17,6 @@ class Command(BaseCommand):
         if settings.COMMUNITY_MODE_ENABLED:
             self.do_update_products()
             self.delay_load_yum_repositories()
-
         else:  # Enterprise mode
             self.do_load_et_products()
             self.do_update_products()

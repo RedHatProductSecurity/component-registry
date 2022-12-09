@@ -10,6 +10,10 @@ def running_dev():
     return get_env() == "dev"
 
 
+def running_community():
+    return get_env() == "community"
+
+
 def running_prod():
     return get_env() == "prod"
 

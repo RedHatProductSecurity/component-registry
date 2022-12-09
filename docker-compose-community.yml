@@ -1,0 +1,148 @@
+version: '3'
+
+services:
+
+  corgi-db:
+    container_name: corgi-db
+    deploy:
+      resources:
+        limits:
+          memory: 2G  # Keep in sync with OpenShift mem limits to catch OOM problems
+    image: registry.redhat.io/rhel8/postgresql-13:1
+    hostname: corgi-db
+    environment:
+      POSTGRESQL_DATABASE: corgi-db
+      POSTGRESQL_USER: corgi-db-user
+      POSTGRESQL_PASSWORD: "test"  # pragma: allowlist secret
+      POSTGRESQL_ADMIN_PASSWORD: "secret"  # pragma: allowlist secret
+    volumes:
+      - corgi-pg-community-data:/var/lib/pgsql/data/
+      # Config files in below directory are automatically loaded by postgres at startup
+      - ${PWD}/etc/pg:/opt/app-root/src/postgresql-cfg:z
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d corgi-db"]
+      interval: "60s"
+      timeout: "5s"
+      retries: 3
+
+  redis:
+    container_name: redis
+    deploy:
+      resources:
+        limits:
+          memory: 1.5G  # Keep in sync with OpenShift mem limits to catch OOM problems
+    hostname: redis
+    # Keep this in sync with openshift/playbooks/redis.yml
+    image: "registry.redhat.io/rhel8/redis-6:1"
+    ports:
+      - "6379:6379"
+
+  redis-exporter:
+    container_name: redis-exporter
+    image: quay.io/oliver006/redis_exporter:latest
+    environment:
+      REDIS_ADDR: "redis://redis:6379"
+      REDIS_EXPORTER_CHECK_KEYS: "slow,fast"
+    ports:
+      - "9121:9121"
+    deploy:
+      resources:
+        limits:
+          memory: 100M
+
+  corgi-web:
+    container_name: corgi-web
+    build:
+      dockerfile: Dockerfile-community
+      context: .
+      args:
+        - PIP_REQUIREMENT=./requirements/dev.txt
+    image: corgi-community
+    depends_on: ["corgi-db"]
+    ports:
+      - "8008:8008"
+    env_file:
+      - .env-community
+    environment:
+      DJANGO_SETTINGS_MODULE: "config.settings.community"
+      CORGI_DB_HOST: corgi-db
+    command: gunicorn config.wsgi --config gunicorn_config.py --reload
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8008/api/healthy || exit 1"]
+      interval: "60s"
+      timeout: "3s"
+      retries: 3
+    volumes:
+      - .:/opt/app-root/src:z
+
+
+  corgi-celery-beat:
+    container_name: corgi-celery-beat
+    image: corgi-community
+    env_file:
+      - .env-community
+    environment:
+      DJANGO_SETTINGS_MODULE: "config.settings.community"
+      CORGI_DB_HOST: corgi-db
+    depends_on: ["corgi-db", "redis"]
+    command: ./run_celery_beat.sh
+    # TODO: add healthcheck
+    volumes:
+      - .:/opt/app-root/src:z
+
+  corgi-celery-fast:
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 128M  # Keep in sync with OpenShift mem limits to catch OOM problems
+    container_name: corgi-celery-fast
+    image: corgi-community
+    env_file:
+      - .env-community
+    environment:
+      DJANGO_SETTINGS_MODULE: "config.settings.community"
+      CORGI_DB_HOST: corgi-db
+    depends_on: ["corgi-celery-beat"]
+    command: ./run_celery_fast.sh
+    # TODO: add healthcheck
+    volumes:
+      - .:/opt/app-root/src:z
+
+  corgi-celery-slow:
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 1G  # Keep in sync with OpenShift mem limits to catch OOM problems
+    container_name: corgi-celery-slow
+    image: corgi-community
+    env_file:
+      - .env-community
+    environment:
+      DJANGO_SETTINGS_MODULE: "config.settings.community"
+      CORGI_DB_HOST: corgi-db
+    depends_on: ["corgi-celery-beat"]
+    command: ./run_celery_slow.sh
+    # TODO: add healthcheck
+    volumes:
+      - .:/opt/app-root/src:z
+
+  flower:
+    container_name: corgi-flower
+    hostname: flower
+    image: corgi-community
+    environment:
+      DJANGO_SETTINGS_MODULE: "config.settings.community"
+      CORGI_DB_HOST: corgi-db
+    depends_on: ["redis", "corgi-db"]
+    command: ./run_celery_flower.sh
+    ports:
+      - "5555:9455"
+    volumes:
+      - .:/opt/app-root/src:z
+
+volumes:
+  corgi-pg-community-data:

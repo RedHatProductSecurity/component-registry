@@ -1,0 +1,32 @@
+FROM registry.redhat.io/ubi8/ubi:8.6
+
+ARG PIP_INDEX_URL="https://pypi.org/simple"
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=off \
+    REQUESTS_CA_BUNDLE="/etc/pki/tls/certs/ca-bundle.crt"
+
+LABEL maintainer="Red Hat Product Security Dev - Red Hat, Inc." \
+      vendor="Red Hat Product Security Dev - Red Hat, Inc." \
+      summary="Red Hat Component Registry (Corgi) application image" \
+      distribution-scope="private"
+
+WORKDIR /opt/app-root/src/
+COPY ./requirements/rpms.txt ./requirements/rpms.txt
+
+RUN dnf --nodocs -y install --setopt install_weak_deps=false $(grep '^[^#]' ./requirements/rpms.txt) \
+    && dnf clean all
+
+COPY ./requirements ./requirements
+
+# Install Python package dependencies from requirements file passed in PIP_REQUIREMENT (local
+# docker-compose may override this in the build step).
+ARG PIP_REQUIREMENT="./requirements/base.txt"
+RUN python3.9 -m pip install -r "${PIP_REQUIREMENT}"
+
+# Limit copied files to only the ones required to run the app
+COPY ./*.sh ./*.py ./
+COPY ./config ./config
+COPY ./corgi ./corgi
+
+RUN chgrp -R 0 /opt/app-root && \
+    chmod -R g=u /opt/app-root

@@ -101,6 +101,12 @@ To shut down and clean up:
 podman-compose down -v  # Also removes data volume
 ```
 
+### Running the Community mode
+
+```bash
+podman-compose -f docker-compose-community.yml -d
+```
+
 ### Running the Development Shell
 
 Ensure you have environment variables defined as noted in "Project Setup"; then run:

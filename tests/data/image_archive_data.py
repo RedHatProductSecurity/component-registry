@@ -12,10 +12,6 @@ TEST_IMAGE_ARCHIVES = [
             "image": {"arch": "s390x"},
             "docker": {
                 "id": "sha256:4ebc79ec30f2bc09b6bc736366d309d6548efd4f9ce60acd6c11a63968fe4865",
-                "repositories": [
-                    f"{os.getenv('CORGI_TEST_REGISTRY_URL')}:rhacm-2.4-rhel-8-containers-candidate-81486-20211103075611-s390x",
-                    f"{os.getenv('CORGI_TEST_REGISTRY_URL')}@sha256:53aff8177d1f81158a98ec2ae7d4b02987f5d00ee17b7b3eeb5ca2b9517f6501",
-                ],
                 "layer_sizes": [
                     {
                         "diff_id": "sha256:d7a0b24e1813dab4d6ecf18ef8759a68b84bbd4bd764d00fc3f54fa8317c9fb5",
@@ -59,7 +55,6 @@ TEST_IMAGE_ARCHIVES = [
                             "build-date": "2021-11-03T07:56:15.920797",
                             "com.github.commit": "d77102aaefce8b513f034a9937e7e8789ef984c7",
                             "com.github.url": "https://github.com/submariner-io/submariner-operator.git",
-                            "com.redhat.build-host": os.getenv("CORGI_TEST_OSBS_HOST1"),
                             "com.redhat.component": "subctl-container",
                             "com.redhat.license_terms": "https://www.redhat.com/agreements",
                             "description": "subctl",
@@ -128,10 +123,6 @@ TEST_IMAGE_ARCHIVES = [
             "image": {"arch": "x86_64"},
             "docker": {
                 "id": "sha256:9b0a454a2b9d00f8f7b4a8b1188f0b70ead186b906261b1c13e5e6d75837db7d",
-                "repositories": [
-                    f"{os.getenv('CORGI_TEST_REGISTRY_URL')}:rhacm-2.4-rhel-8-containers-candidate-16860-20211103075611-x86_64",
-                    f"{os.getenv('CORGI_TEST_REGISTRY_URL')}@sha256:e9690a156789266402d21ca4ce498c6392125b458fa537e172dfa2509229c4bb",
-                ],
                 "layer_sizes": [
                     {
                         "diff_id": "sha256:744c86b543903d171c69633d70aef72a25ce73da0a3be609e46db08e72978810",
@@ -175,7 +166,6 @@ TEST_IMAGE_ARCHIVES = [
                             "build-date": "2021-11-03T07:56:17.022725",
                             "com.github.commit": "d77102aaefce8b513f034a9937e7e8789ef984c7",
                             "com.github.url": "https://github.com/submariner-io/submariner-operator.git",
-                            "com.redhat.build-host": os.getenv("CORGI_TEST_OSBS_HOST2"),
                             "com.redhat.component": "subctl-container",
                             "com.redhat.license_terms": "https://www.redhat.com/agreements",
                             "description": "subctl",
@@ -244,10 +234,6 @@ TEST_IMAGE_ARCHIVES = [
             "image": {"arch": "ppc64le"},
             "docker": {
                 "id": "sha256:07525e1f5cc17fe38ad4c36042023baf305a898af2a0d91608a08499d8b270d4",
-                "repositories": [
-                    f"{os.getenv('CORGI_TEST_REGISTRY_URL')}:rhacm-2.4-rhel-8-containers-candidate-38516-20211103075611-ppc64le",
-                    f"{os.getenv('CORGI_TEST_REGISTRY_URL')}@sha256:34c5d6e9fa2517070801a4414edbf12223ce7b23b8666b3a11a0cb3dbc70161b",
-                ],
                 "layer_sizes": [
                     {
                         "diff_id": "sha256:6f0fa6043ddcf597c8cfd4fd79779dadc0566145f05978a87819349994c22f12",
@@ -291,7 +277,6 @@ TEST_IMAGE_ARCHIVES = [
                             "build-date": "2021-11-03T07:57:16.438219",
                             "com.github.commit": "d77102aaefce8b513f034a9937e7e8789ef984c7",
                             "com.github.url": "https://github.com/submariner-io/submariner-operator.git",
-                            "com.redhat.build-host": os.getenv("CORGI_TEST_OSBS_HOST3"),
                             "com.redhat.component": "subctl-container",
                             "com.redhat.license_terms": "https://www.redhat.com/agreements",
                             "description": "subctl",

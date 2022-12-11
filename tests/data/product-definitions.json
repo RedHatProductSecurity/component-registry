@@ -4,11 +4,11 @@
   "ps_update_streams": {
     "openshift-4.10.z": {
       "yum_repositories": [
-        "{CORGI_TEST_PULP_URL}/layered/rhel8/aarch64/rhocp/4.10/os/",
-        "{CORGI_TEST_PULP_URL}/layered/rhel8/ppc64le/rhocp/4.10/os/",
-        "{CORGI_TEST_PULP_URL}/layered/rhel8/s390x/rhocp/4.10/os/",
-        "{CORGI_TEST_PULP_URL}/layered/rhel8/x86_64/rhocp/4.10/os/",
-        "{CORGI_TEST_PULP_URL}/rhel/server/7/7Server/x86_64/ose/4.10/os/"
+        "{CORGI_PULP_URL}/layered/rhel8/aarch64/rhocp/4.10/os/",
+        "{CORGI_PULP_URL}/layered/rhel8/ppc64le/rhocp/4.10/os/",
+        "{CORGI_PULP_URL}/layered/rhel8/s390x/rhocp/4.10/os/",
+        "{CORGI_PULP_URL}/layered/rhel8/x86_64/rhocp/4.10/os/",
+        "{CORGI_PULP_URL}/rhel/server/7/7Server/x86_64/ose/4.10/os/"
       ],
       "target_release": "4.10.z",
       "version": "4.10",

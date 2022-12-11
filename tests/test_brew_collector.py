@@ -1,5 +1,4 @@
 import json
-import os
 from types import SimpleNamespace
 from unittest.mock import call, patch
 
@@ -582,7 +581,7 @@ def test_parse_remote_source_url():
     assert Brew._parse_remote_source_url(url) == expected
 
 
-# test_data_file, expected_component, replace_urls
+# test_data_file, expected_component
 extract_golang_test_data = [
     (
         "tests/data/remote-source-submariner-operator.json",
@@ -595,7 +594,6 @@ extract_golang_test_data = [
                 "version": "v0.0.0-20210307081110-f21760c49a8d",
             },
         },
-        False,
     ),
     (
         "tests/data/remote-source-poison-pill.json",
@@ -608,20 +606,15 @@ extract_golang_test_data = [
                 "version": "1.15.0",
             },
         },
-        True,
     ),
 ]
 
 
-@pytest.mark.parametrize("test_data_file,expected_component,replace_urls", extract_golang_test_data)
-def test_extract_golang(test_data_file, expected_component, replace_urls):
+@pytest.mark.parametrize("test_data_file,expected_component", extract_golang_test_data)
+def test_extract_golang(test_data_file, expected_component):
     brew = Brew()
     with open(test_data_file) as testdata:
         testdata = testdata.read()
-        if replace_urls:
-            testdata = testdata.replace(
-                "{CORGI_TEST_CACHITO_URL}", os.getenv("CORGI_TEST_CACHITO_URL")
-            )
         testdata = json.loads(testdata, object_hook=lambda d: SimpleNamespace(**d))
     components, remaining = brew._extract_golang(testdata.dependencies, "1.15.0")
     assert expected_component in components

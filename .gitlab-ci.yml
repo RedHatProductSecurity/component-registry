@@ -22,14 +22,7 @@ include:
   # Define below in CI settings, then export here so subprocesses can use also
   # Keep in sync with OpenShift
   # Internal hostnames or URLs that appear in build metadata; used in tests
-  - export CORGI_TEST_CACHITO_URL
-  - export CORGI_TEST_CODE_URL
   - export CORGI_TEST_DOWNLOAD_URL
-  - export CORGI_TEST_OSBS_HOST1
-  - export CORGI_TEST_OSBS_HOST2
-  - export CORGI_TEST_OSBS_HOST3
-  - export CORGI_TEST_PULP_URL
-  - export CORGI_TEST_REGISTRY_URL
   # Not used in tests directly, but needed for tests to pass
   - export CORGI_APP_STREAMS_LIFE_CYCLE_URL
   - export CORGI_BREW_URL

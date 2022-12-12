@@ -1,6 +1,6 @@
 import logging
 import re
-import uuid as uuid
+import uuid as uuid_class
 from abc import abstractmethod
 from typing import Optional, Union
 
@@ -325,7 +325,7 @@ class SoftwareBuildTag(Tag):
 class ProductModel(TimeStampedModel):
     """Abstract model that defines common fields for all product-related models."""
 
-    uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    uuid = models.UUIDField(primary_key=True, default=uuid_class.uuid4, editable=False)
     name = models.TextField(unique=True)
     description = models.TextField(default="")
     version = models.CharField(max_length=1024, default="")
@@ -754,7 +754,7 @@ class Channel(TimeStampedModel, ProductTaxonomyMixin):
         CDN_REPO = "CDN_REPO"  # Main delivery channel for RPMs
         CONTAINER_REGISTRY = "CONTAINER_REGISTRY"  # Registries, e.g.: registry.redhat.io, quay.io
 
-    uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    uuid = models.UUIDField(primary_key=True, default=uuid_class.uuid4, editable=False)
     name = models.TextField(unique=True)
     relative_url = models.CharField(max_length=200, default="")
     type = models.CharField(choices=Type.choices, max_length=50)
@@ -796,7 +796,7 @@ class ProductComponentRelation(TimeStampedModel):
     # ProductComponentRelation types which refer to ProductVariants
     VARIANT_TYPES = (Type.CDN_REPO, Type.ERRATA)
 
-    uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    uuid = models.UUIDField(primary_key=True, default=uuid_class.uuid4, editable=False)
     type = models.CharField(choices=Type.choices, max_length=50)
     meta_attr = models.JSONField(default=dict)
 
@@ -821,7 +821,9 @@ class ProductComponentRelation(TimeStampedModel):
         )
 
 
-def get_product_details(variant_names: tuple[str], stream_names: list[str]) -> dict[str, set[str]]:
+def get_product_details(
+    variant_names: tuple[str, ...], stream_names: list[str]
+) -> dict[str, set[uuid_class.UUID]]:
     """
     Given stream / variant names from the PCR table, look up all related ProductModel subclasses
 
@@ -835,7 +837,7 @@ def get_product_details(variant_names: tuple[str], stream_names: list[str]) -> d
         )
         stream_names.extend(variant_streams)
 
-    product_details: dict[str, set[str]] = {
+    product_details: dict[str, set[uuid_class.UUID]] = {
         "products": set(),
         "productversions": set(),
         "productstreams": set(),
@@ -892,7 +894,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         UPSTREAM = "UPSTREAM"
         REDHAT = "REDHAT"
 
-    uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    uuid = models.UUIDField(primary_key=True, default=uuid_class.uuid4, editable=False)
     name = models.TextField()
     description = models.TextField()
     meta_attr = models.JSONField(default=dict)
@@ -1100,7 +1102,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         super().save(*args, **kwargs)
 
     def save_product_taxonomy(
-        self, product_pks_dict: Union[dict[str, QuerySet], None] = None
+        self, product_pks_dict: Union[dict[str, set[uuid_class.UUID]], None] = None
     ) -> None:
         """
         Save links between ProductModel subclasses and this Component
@@ -1118,11 +1120,12 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             )
         # Since we're only setting the product details for a specific build id we need
         # to ensure we are only updating, not replacing the existing product details.
-        self.products.add(*product_pks_dict["products"])
-        self.productversions.add(*product_pks_dict["productversions"])
-        self.productstreams.add(*product_pks_dict["productstreams"])
-        self.productvariants.add(*product_pks_dict["productvariants"])
-        self.channels.add(*product_pks_dict["channels"])
+        # https://github.com/typeddjango/django-stubs/issues/1266 will fix a mypy bug
+        self.products.add(*product_pks_dict["products"])  # type: ignore[arg-type]
+        self.productversions.add(*product_pks_dict["productversions"])  # type: ignore[arg-type]
+        self.productstreams.add(*product_pks_dict["productstreams"])  # type: ignore[arg-type]
+        self.productvariants.add(*product_pks_dict["productvariants"])  # type: ignore[arg-type]
+        self.channels.add(*product_pks_dict["channels"])  # type: ignore[arg-type]
 
         return None
 

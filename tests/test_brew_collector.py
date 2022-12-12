@@ -14,10 +14,11 @@ from corgi.tasks.brew import (
     slow_fetch_brew_build,
 )
 from tests.data.image_archive_data import (
+    KOJI_LIST_RPMS,
     NO_RPMS_IN_SUBCTL_CONTAINER,
     NOARCH_RPM_IDS,
     RPM_BUILD_IDS,
-    TEST_IMAGE_ARCHIVES,
+    TEST_IMAGE_ARCHIVE,
 )
 from tests.factories import (
     ContainerImageComponentFactory,
@@ -659,24 +660,22 @@ def test_save_component():
     assert Component.objects.filter(type=Component.Type.RPM, software_build=software_build).exists()
 
 
-@pytest.mark.vcr(match_on=["method", "scheme", "host", "port", "path", "body"])
-def test_extract_image_components():
+@patch("koji.ClientSession")
+def test_extract_image_components(mock_koji_session, monkeypatch):
+    mock_koji_session.listRPMs.return_value = KOJI_LIST_RPMS
     brew = Brew()
-    results = []
+    monkeypatch.setattr(brew, "koji_session", mock_koji_session)
     noarch_rpms_by_id = {}
     rpm_build_ids = set()
-    for archive in TEST_IMAGE_ARCHIVES:
-        noarch_rpms_by_id, result = brew._extract_image_components(
-            archive, 1781353, "subctl-container-v0.11.0-51", noarch_rpms_by_id, rpm_build_ids
-        )
-        results.append(result)
-    assert len(results) == len(TEST_IMAGE_ARCHIVES)
+    archive = TEST_IMAGE_ARCHIVE
+    noarch_rpms_by_id, result = brew._extract_image_components(
+        archive, 1781353, "subctl-container-v0.11.0-51", noarch_rpms_by_id, rpm_build_ids
+    )
     assert list(rpm_build_ids) == RPM_BUILD_IDS
-    for image in results:
-        assert image["meta"]["arch"] in ["s390x", "x86_64", "ppc64le"]
-        assert len(image["rpm_components"]) == NO_RPMS_IN_SUBCTL_CONTAINER - len(NOARCH_RPM_IDS)
-        for rpm in image["rpm_components"]:
-            assert rpm["meta"]["arch"] != "noarch"
+    assert result["meta"]["arch"] == "x86_64"
+    assert len(result["rpm_components"]) == NO_RPMS_IN_SUBCTL_CONTAINER - len(NOARCH_RPM_IDS)
+    for rpm in result["rpm_components"]:
+        assert rpm["meta"]["arch"] != "noarch"
     noarch_rpms = noarch_rpms_by_id.values()
     assert len(noarch_rpms) == len(NOARCH_RPM_IDS)
     assert set(noarch_rpms_by_id.keys()) == set(NOARCH_RPM_IDS)

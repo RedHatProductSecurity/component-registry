@@ -8,7 +8,6 @@ lxml
 pytest
 pytest-cov
 pytest-django
-pytest-recording
 pytest-sugar
 requests-mock
 types-Markdown

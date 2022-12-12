@@ -1,0 +1,729 @@
+{
+  "type": "RPM",
+  "namespace": "REDHAT",
+  "meta": {
+    "summary": "Web Console for Linux servers",
+    "description": "The Cockpit Web Console enables users to administer GNU/Linux servers using a\nweb browser.\n\nIt offers network configuration, log inspection, diagnostic reports, SELinux\ntroubleshooting, interactive command-line sessions, and more.",
+    "license": "LGPLv2+",
+    "url": "https://cockpit-project.org/",
+    "source": [
+      "koji.listRPMs",
+      "koji.getRPMHeaders"
+    ],
+    "nvr": "cockpit-251-1.el8",
+    "name": "cockpit",
+    "version": "251",
+    "release": "1.el8",
+    "epoch": 0,
+    "arch": "src",
+    "rpm_id": 10160800,
+    "source_files": [
+      "cockpit-251.tar.xz"
+    ]
+  },
+  "components": [
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "meta": {
+        "summary": "Web Console for Linux servers",
+        "description": "The Cockpit Web Console enables users to administer GNU/Linux servers using a\nweb browser.\n\nIt offers network configuration, log inspection, diagnostic reports, SELinux\ntroubleshooting, interactive command-line sessions, and more.",
+        "license": "LGPLv2+",
+        "url": "https://cockpit-project.org/",
+        "source": [
+          "koji.listRPMs",
+          "koji.getRPMHeaders"
+        ],
+        "nvr": "cockpit-251-1.el8",
+        "name": "cockpit",
+        "version": "251",
+        "release": "1.el8",
+        "epoch": 0,
+        "arch": "aarch64",
+        "rpm_id": 10160801,
+        "source_files": []
+      },
+      "components": []
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "meta": {
+        "summary": "Debug information for package cockpit",
+        "description": "This package provides debug information for package cockpit.\nDebug information is useful when developing applications that use this\npackage or when debugging this package.",
+        "license": "LGPLv2+",
+        "url": "https://cockpit-project.org/",
+        "source": [
+          "koji.listRPMs",
+          "koji.getRPMHeaders"
+        ],
+        "nvr": "cockpit-debuginfo-251-1.el8",
+        "name": "cockpit-debuginfo",
+        "version": "251",
+        "release": "1.el8",
+        "epoch": 0,
+        "arch": "aarch64",
+        "rpm_id": 10160802,
+        "source_files": []
+      },
+      "components": []
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "meta": {
+        "summary": "Debug sources for package cockpit",
+        "description": "This package provides debug sources for package cockpit.\nDebug sources are useful when developing applications that use this\npackage or when debugging this package.",
+        "license": "LGPLv2+",
+        "url": "https://cockpit-project.org/",
+        "source": [
+          "koji.listRPMs",
+          "koji.getRPMHeaders"
+        ],
+        "nvr": "cockpit-debugsource-251-1.el8",
+        "name": "cockpit-debugsource",
+        "version": "251",
+        "release": "1.el8",
+        "epoch": 0,
+        "arch": "aarch64",
+        "rpm_id": 10160803,
+        "source_files": []
+      },
+      "components": []
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "meta": {
+        "summary": "Cockpit bridge server-side component",
+        "description": "The Cockpit bridge component installed server side and runs commands on the\nsystem on behalf of the web based user interface.",
+        "license": "LGPLv2+",
+        "url": "https://cockpit-project.org/",
+        "source": [
+          "koji.listRPMs",
+          "koji.getRPMHeaders"
+        ],
+        "nvr": "cockpit-bridge-251-1.el8",
+        "name": "cockpit-bridge",
+        "version": "251",
+        "release": "1.el8",
+        "epoch": 0,
+        "arch": "aarch64",
+        "rpm_id": 10160804,
+        "source_files": []
+      },
+      "components": []
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "meta": {
+        "summary": "Cockpit deployment and developer guide",
+        "description": "The Cockpit Deployment and Developer Guide shows sysadmins how to\ndeploy Cockpit on their machines as well as helps developers who want to\nembed or extend Cockpit.",
+        "license": "LGPLv2+",
+        "url": "https://cockpit-project.org/",
+        "source": [
+          "koji.listRPMs",
+          "koji.getRPMHeaders"
+        ],
+        "nvr": "cockpit-doc-251-1.el8",
+        "name": "cockpit-doc",
+        "version": "251",
+        "release": "1.el8",
+        "epoch": 0,
+        "arch": "noarch",
+        "rpm_id": 10160805,
+        "source_files": []
+      },
+      "components": []
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "meta": {
+        "summary": "Cockpit admin interface package for configuring and troubleshooting a system",
+        "description": "This package contains the Cockpit shell and system configuration interfaces.",
+        "license": "LGPLv2+",
+        "url": "https://cockpit-project.org/",
+        "source": [
+          "koji.listRPMs",
+          "koji.getRPMHeaders"
+        ],
+        "nvr": "cockpit-system-251-1.el8",
+        "name": "cockpit-system",
+        "version": "251",
+        "release": "1.el8",
+        "epoch": 0,
+        "arch": "noarch",
+        "rpm_id": 10160806,
+        "source_files": []
+      },
+      "components": [
+        {
+          "type": "NPM",
+          "namespace": "UPSTREAM",
+          "meta": {
+            "name": "jquery",
+            "version": "3.5.1",
+            "rpm_id": "10160806-bundles-1",
+            "source": [
+              "specfile"
+            ]
+          }
+        },
+        {
+          "type": "GENERIC",
+          "namespace": "UPSTREAM",
+          "meta": {
+            "name": "xstatic-bootstrap-datepicker-common",
+            "version": "1.9.0",
+            "rpm_id": "10160806-bundles-2",
+            "source": [
+              "specfile"
+            ]
+          }
+        },
+        {
+          "type": "GENERIC",
+          "namespace": "UPSTREAM",
+          "meta": {
+            "name": "xstatic-patternfly-common",
+            "version": "3.59.5",
+            "rpm_id": "10160806-bundles-3",
+            "source": [
+              "specfile"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "meta": {
+        "summary": "Cockpit Web Service",
+        "description": "The Cockpit Web Service listens on the network, and authenticates users.\n\nIf sssd-dbus is installed, you can enable client certificate/smart card\nauthentication via sssd/FreeIPA.",
+        "license": "LGPLv2+",
+        "url": "https://cockpit-project.org/",
+        "source": [
+          "koji.listRPMs",
+          "koji.getRPMHeaders"
+        ],
+        "nvr": "cockpit-ws-251-1.el8",
+        "name": "cockpit-ws",
+        "version": "251",
+        "release": "1.el8",
+        "epoch": 0,
+        "arch": "aarch64",
+        "rpm_id": 10160807,
+        "source_files": []
+      },
+      "components": []
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "meta": {
+        "summary": "Web Console for Linux servers",
+        "description": "The Cockpit Web Console enables users to administer GNU/Linux servers using a\nweb browser.\n\nIt offers network configuration, log inspection, diagnostic reports, SELinux\ntroubleshooting, interactive command-line sessions, and more.",
+        "license": "LGPLv2+",
+        "url": "https://cockpit-project.org/",
+        "source": [
+          "koji.listRPMs",
+          "koji.getRPMHeaders"
+        ],
+        "nvr": "cockpit-251-1.el8",
+        "name": "cockpit",
+        "version": "251",
+        "release": "1.el8",
+        "epoch": 0,
+        "arch": "ppc64le",
+        "rpm_id": 10160808,
+        "source_files": []
+      },
+      "components": []
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "meta": {
+        "summary": "Debug information for package cockpit",
+        "description": "This package provides debug information for package cockpit.\nDebug information is useful when developing applications that use this\npackage or when debugging this package.",
+        "license": "LGPLv2+",
+        "url": "https://cockpit-project.org/",
+        "source": [
+          "koji.listRPMs",
+          "koji.getRPMHeaders"
+        ],
+        "nvr": "cockpit-debuginfo-251-1.el8",
+        "name": "cockpit-debuginfo",
+        "version": "251",
+        "release": "1.el8",
+        "epoch": 0,
+        "arch": "ppc64le",
+        "rpm_id": 10160809,
+        "source_files": []
+      },
+      "components": []
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "meta": {
+        "summary": "Debug sources for package cockpit",
+        "description": "This package provides debug sources for package cockpit.\nDebug sources are useful when developing applications that use this\npackage or when debugging this package.",
+        "license": "LGPLv2+",
+        "url": "https://cockpit-project.org/",
+        "source": [
+          "koji.listRPMs",
+          "koji.getRPMHeaders"
+        ],
+        "nvr": "cockpit-debugsource-251-1.el8",
+        "name": "cockpit-debugsource",
+        "version": "251",
+        "release": "1.el8",
+        "epoch": 0,
+        "arch": "ppc64le",
+        "rpm_id": 10160810,
+        "source_files": []
+      },
+      "components": []
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "meta": {
+        "summary": "Cockpit bridge server-side component",
+        "description": "The Cockpit bridge component installed server side and runs commands on the\nsystem on behalf of the web based user interface.",
+        "license": "LGPLv2+",
+        "url": "https://cockpit-project.org/",
+        "source": [
+          "koji.listRPMs",
+          "koji.getRPMHeaders"
+        ],
+        "nvr": "cockpit-bridge-251-1.el8",
+        "name": "cockpit-bridge",
+        "version": "251",
+        "release": "1.el8",
+        "epoch": 0,
+        "arch": "ppc64le",
+        "rpm_id": 10160811,
+        "source_files": []
+      },
+      "components": []
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "meta": {
+        "summary": "Cockpit Web Service",
+        "description": "The Cockpit Web Service listens on the network, and authenticates users.\n\nIf sssd-dbus is installed, you can enable client certificate/smart card\nauthentication via sssd/FreeIPA.",
+        "license": "LGPLv2+",
+        "url": "https://cockpit-project.org/",
+        "source": [
+          "koji.listRPMs",
+          "koji.getRPMHeaders"
+        ],
+        "nvr": "cockpit-ws-251-1.el8",
+        "name": "cockpit-ws",
+        "version": "251",
+        "release": "1.el8",
+        "epoch": 0,
+        "arch": "ppc64le",
+        "rpm_id": 10160812,
+        "source_files": []
+      },
+      "components": []
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "meta": {
+        "summary": "Web Console for Linux servers",
+        "description": "The Cockpit Web Console enables users to administer GNU/Linux servers using a\nweb browser.\n\nIt offers network configuration, log inspection, diagnostic reports, SELinux\ntroubleshooting, interactive command-line sessions, and more.",
+        "license": "LGPLv2+",
+        "url": "https://cockpit-project.org/",
+        "source": [
+          "koji.listRPMs",
+          "koji.getRPMHeaders"
+        ],
+        "nvr": "cockpit-251-1.el8",
+        "name": "cockpit",
+        "version": "251",
+        "release": "1.el8",
+        "epoch": 0,
+        "arch": "i686",
+        "rpm_id": 10160813,
+        "source_files": []
+      },
+      "components": []
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "meta": {
+        "summary": "Debug information for package cockpit",
+        "description": "This package provides debug information for package cockpit.\nDebug information is useful when developing applications that use this\npackage or when debugging this package.",
+        "license": "LGPLv2+",
+        "url": "https://cockpit-project.org/",
+        "source": [
+          "koji.listRPMs",
+          "koji.getRPMHeaders"
+        ],
+        "nvr": "cockpit-debuginfo-251-1.el8",
+        "name": "cockpit-debuginfo",
+        "version": "251",
+        "release": "1.el8",
+        "epoch": 0,
+        "arch": "i686",
+        "rpm_id": 10160814,
+        "source_files": []
+      },
+      "components": []
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "meta": {
+        "summary": "Debug sources for package cockpit",
+        "description": "This package provides debug sources for package cockpit.\nDebug sources are useful when developing applications that use this\npackage or when debugging this package.",
+        "license": "LGPLv2+",
+        "url": "https://cockpit-project.org/",
+        "source": [
+          "koji.listRPMs",
+          "koji.getRPMHeaders"
+        ],
+        "nvr": "cockpit-debugsource-251-1.el8",
+        "name": "cockpit-debugsource",
+        "version": "251",
+        "release": "1.el8",
+        "epoch": 0,
+        "arch": "i686",
+        "rpm_id": 10160815,
+        "source_files": []
+      },
+      "components": []
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "meta": {
+        "summary": "Cockpit bridge server-side component",
+        "description": "The Cockpit bridge component installed server side and runs commands on the\nsystem on behalf of the web based user interface.",
+        "license": "LGPLv2+",
+        "url": "https://cockpit-project.org/",
+        "source": [
+          "koji.listRPMs",
+          "koji.getRPMHeaders"
+        ],
+        "nvr": "cockpit-bridge-251-1.el8",
+        "name": "cockpit-bridge",
+        "version": "251",
+        "release": "1.el8",
+        "epoch": 0,
+        "arch": "i686",
+        "rpm_id": 10160816,
+        "source_files": []
+      },
+      "components": []
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "meta": {
+        "summary": "Cockpit Web Service",
+        "description": "The Cockpit Web Service listens on the network, and authenticates users.\n\nIf sssd-dbus is installed, you can enable client certificate/smart card\nauthentication via sssd/FreeIPA.",
+        "license": "LGPLv2+",
+        "url": "https://cockpit-project.org/",
+        "source": [
+          "koji.listRPMs",
+          "koji.getRPMHeaders"
+        ],
+        "nvr": "cockpit-ws-251-1.el8",
+        "name": "cockpit-ws",
+        "version": "251",
+        "release": "1.el8",
+        "epoch": 0,
+        "arch": "i686",
+        "rpm_id": 10160817,
+        "source_files": []
+      },
+      "components": []
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "meta": {
+        "summary": "Web Console for Linux servers",
+        "description": "The Cockpit Web Console enables users to administer GNU/Linux servers using a\nweb browser.\n\nIt offers network configuration, log inspection, diagnostic reports, SELinux\ntroubleshooting, interactive command-line sessions, and more.",
+        "license": "LGPLv2+",
+        "url": "https://cockpit-project.org/",
+        "source": [
+          "koji.listRPMs",
+          "koji.getRPMHeaders"
+        ],
+        "nvr": "cockpit-251-1.el8",
+        "name": "cockpit",
+        "version": "251",
+        "release": "1.el8",
+        "epoch": 0,
+        "arch": "x86_64",
+        "rpm_id": 10160818,
+        "source_files": []
+      },
+      "components": []
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "meta": {
+        "summary": "Debug information for package cockpit",
+        "description": "This package provides debug information for package cockpit.\nDebug information is useful when developing applications that use this\npackage or when debugging this package.",
+        "license": "LGPLv2+",
+        "url": "https://cockpit-project.org/",
+        "source": [
+          "koji.listRPMs",
+          "koji.getRPMHeaders"
+        ],
+        "nvr": "cockpit-debuginfo-251-1.el8",
+        "name": "cockpit-debuginfo",
+        "version": "251",
+        "release": "1.el8",
+        "epoch": 0,
+        "arch": "x86_64",
+        "rpm_id": 10160819,
+        "source_files": []
+      },
+      "components": []
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "meta": {
+        "summary": "Debug sources for package cockpit",
+        "description": "This package provides debug sources for package cockpit.\nDebug sources are useful when developing applications that use this\npackage or when debugging this package.",
+        "license": "LGPLv2+",
+        "url": "https://cockpit-project.org/",
+        "source": [
+          "koji.listRPMs",
+          "koji.getRPMHeaders"
+        ],
+        "nvr": "cockpit-debugsource-251-1.el8",
+        "name": "cockpit-debugsource",
+        "version": "251",
+        "release": "1.el8",
+        "epoch": 0,
+        "arch": "x86_64",
+        "rpm_id": 10160820,
+        "source_files": []
+      },
+      "components": []
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "meta": {
+        "summary": "Cockpit bridge server-side component",
+        "description": "The Cockpit bridge component installed server side and runs commands on the\nsystem on behalf of the web based user interface.",
+        "license": "LGPLv2+",
+        "url": "https://cockpit-project.org/",
+        "source": [
+          "koji.listRPMs",
+          "koji.getRPMHeaders"
+        ],
+        "nvr": "cockpit-bridge-251-1.el8",
+        "name": "cockpit-bridge",
+        "version": "251",
+        "release": "1.el8",
+        "epoch": 0,
+        "arch": "x86_64",
+        "rpm_id": 10160821,
+        "source_files": []
+      },
+      "components": []
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "meta": {
+        "summary": "Cockpit Web Service",
+        "description": "The Cockpit Web Service listens on the network, and authenticates users.\n\nIf sssd-dbus is installed, you can enable client certificate/smart card\nauthentication via sssd/FreeIPA.",
+        "license": "LGPLv2+",
+        "url": "https://cockpit-project.org/",
+        "source": [
+          "koji.listRPMs",
+          "koji.getRPMHeaders"
+        ],
+        "nvr": "cockpit-ws-251-1.el8",
+        "name": "cockpit-ws",
+        "version": "251",
+        "release": "1.el8",
+        "epoch": 0,
+        "arch": "x86_64",
+        "rpm_id": 10160822,
+        "source_files": []
+      },
+      "components": []
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "meta": {
+        "summary": "Web Console for Linux servers",
+        "description": "The Cockpit Web Console enables users to administer GNU/Linux servers using a\nweb browser.\n\nIt offers network configuration, log inspection, diagnostic reports, SELinux\ntroubleshooting, interactive command-line sessions, and more.",
+        "license": "LGPLv2+",
+        "url": "https://cockpit-project.org/",
+        "source": [
+          "koji.listRPMs",
+          "koji.getRPMHeaders"
+        ],
+        "nvr": "cockpit-251-1.el8",
+        "name": "cockpit",
+        "version": "251",
+        "release": "1.el8",
+        "epoch": 0,
+        "arch": "s390x",
+        "rpm_id": 10160823,
+        "source_files": []
+      },
+      "components": []
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "meta": {
+        "summary": "Debug information for package cockpit",
+        "description": "This package provides debug information for package cockpit.\nDebug information is useful when developing applications that use this\npackage or when debugging this package.",
+        "license": "LGPLv2+",
+        "url": "https://cockpit-project.org/",
+        "source": [
+          "koji.listRPMs",
+          "koji.getRPMHeaders"
+        ],
+        "nvr": "cockpit-debuginfo-251-1.el8",
+        "name": "cockpit-debuginfo",
+        "version": "251",
+        "release": "1.el8",
+        "epoch": 0,
+        "arch": "s390x",
+        "rpm_id": 10160824,
+        "source_files": []
+      },
+      "components": []
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "meta": {
+        "summary": "Debug sources for package cockpit",
+        "description": "This package provides debug sources for package cockpit.\nDebug sources are useful when developing applications that use this\npackage or when debugging this package.",
+        "license": "LGPLv2+",
+        "url": "https://cockpit-project.org/",
+        "source": [
+          "koji.listRPMs",
+          "koji.getRPMHeaders"
+        ],
+        "nvr": "cockpit-debugsource-251-1.el8",
+        "name": "cockpit-debugsource",
+        "version": "251",
+        "release": "1.el8",
+        "epoch": 0,
+        "arch": "s390x",
+        "rpm_id": 10160825,
+        "source_files": []
+      },
+      "components": []
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "meta": {
+        "summary": "Cockpit bridge server-side component",
+        "description": "The Cockpit bridge component installed server side and runs commands on the\nsystem on behalf of the web based user interface.",
+        "license": "LGPLv2+",
+        "url": "https://cockpit-project.org/",
+        "source": [
+          "koji.listRPMs",
+          "koji.getRPMHeaders"
+        ],
+        "nvr": "cockpit-bridge-251-1.el8",
+        "name": "cockpit-bridge",
+        "version": "251",
+        "release": "1.el8",
+        "epoch": 0,
+        "arch": "s390x",
+        "rpm_id": 10160826,
+        "source_files": []
+      },
+      "components": []
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "meta": {
+        "summary": "Cockpit Web Service",
+        "description": "The Cockpit Web Service listens on the network, and authenticates users.\n\nIf sssd-dbus is installed, you can enable client certificate/smart card\nauthentication via sssd/FreeIPA.",
+        "license": "LGPLv2+",
+        "url": "https://cockpit-project.org/",
+        "source": [
+          "koji.listRPMs",
+          "koji.getRPMHeaders"
+        ],
+        "nvr": "cockpit-ws-251-1.el8",
+        "name": "cockpit-ws",
+        "version": "251",
+        "release": "1.el8",
+        "epoch": 0,
+        "arch": "s390x",
+        "rpm_id": 10160827,
+        "source_files": []
+      },
+      "components": []
+    }
+  ],
+  "build_meta": {
+    "build_info": {
+      "build_id": 1705913,
+      "cg_id": null,
+      "completion_time": "2021-08-23 12:40:19.510385",
+      "completion_ts": 1629722419.51039,
+      "creation_event_id": 40663933,
+      "creation_time": "2021-08-23 12:34:56.454263",
+      "creation_ts": 1629722096.45426,
+      "epoch": null,
+      "extra": {
+        "source": {
+          "original_url": "git://pkgs.example.com/rpms/cockpit#c51d312d2e999c6c40939fb51711665c18ffe848"
+        }
+      },
+      "id": 1705913,
+      "name": "cockpit",
+      "nvr": "cockpit-251-1.el8",
+      "owner_id": 4437,
+      "owner_name": "mmarusak",
+      "package_id": 46519,
+      "package_name": "cockpit",
+      "release": "1.el8",
+      "source": "git://pkgs.example.com/rpms/cockpit#c51d312d2e999c6c40939fb51711665c18ffe848",
+      "start_time": "2021-08-23 12:34:56.420422",
+      "start_ts": 1629722096.42042,
+      "state": 1,
+      "task_id": 39185442,
+      "version": "251",
+      "volume_id": 9,
+      "volume_name": "rhel-8",
+      "cg_name": null,
+      "type": "rpm",
+      "tags": [
+        "rhel-8.5.0-candidate",
+        "rhel-8.5.0-Beta-1.0-set",
+        "rhel-8.5.0-candidate-Beta-1.0-set",
+        "kpatch-kernel-4.18.0-339.el8-build"
+      ],
+      "errata_tags": []
+    },
+    "type_info": {
+      "rpm": null
+    }
+  }
+}

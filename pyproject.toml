@@ -5,7 +5,6 @@ testpaths = "tests"
 # - Run tests marked with the "unit" marker (run "integration" tests with `-m integration`)
 # - Generate coverage report for the "corgi/" directory in the terminal
 # - Show extra test summary info ("a" == (a)ll)
-# - Record VCR cassettes if they are not available
 # - Report on the ten slowest tests
 # - Skip applying migrations to save on DB-setup time
 # - Ensure pytest config here is valid, and all defined markers are specified below in `markers`
@@ -13,7 +12,6 @@ addopts = """
 -m unit
 --cov corgi --cov-report html --cov-report xml:coverage.xml
 -ra
---record-mode=once
 --durations=10
 --nomigrations
 --strict-config --strict-markers

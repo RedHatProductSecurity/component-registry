@@ -6,8 +6,6 @@ from requests_gssapi import HTTPSPNEGOAuth
 
 
 class ProdDefs:
-    # Do not use opportunistic_auth=True because it breaks the usage of VCR cassettes in tests,
-    # and requires manual mock-patching of the below attribute.
     GSSAPI_AUTH = HTTPSPNEGOAuth()
 
     @classmethod

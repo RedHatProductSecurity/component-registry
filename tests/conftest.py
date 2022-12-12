@@ -34,17 +34,3 @@ def filter_response(response):
     response["headers"].pop("Set-Cookie", None)
     response["headers"].pop("x-ausername", None)
     return response
-
-
-@pytest.fixture(scope="session")
-def vcr_config():
-    return {
-        "filter_headers": [
-            "Authorization",
-            "Cookie",
-        ],
-        "before_record_response": filter_response,
-        # Add sensitive query params here if you don't want them appear in the cassette files.
-        "filter_query_parameters": [],
-        "decode_compressed_response": True,
-    }

@@ -142,10 +142,4 @@ Alternatively, you can always run individual tests:
 tox -e corgi -- tests/test_model.py::test_product_model
 ```
 
-By default, `VCR.py` is run with '[record-mode=once](https://vcrpy.readthedocs.io/en/latest/usage.html#once)'
-under `testenv:corgi`. To overwrite/renew existing cassette files, run:
-```bash
-tox -e corgi-vcr-record-rewrite
-```
-
 Remember to commit and push if there is a newly generated cassette file.

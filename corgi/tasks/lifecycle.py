@@ -1,4 +1,5 @@
-from celery.utils.log import get_task_logger
+import logging
+
 from celery_singleton import Singleton
 from django.db import transaction
 from django.utils.timezone import datetime
@@ -8,7 +9,7 @@ from corgi.collectors.appstream_lifecycle import AppStreamLifeCycleCollector
 from corgi.core.models import AppStreamLifeCycle
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 
-logger = get_task_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)

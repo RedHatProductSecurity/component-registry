@@ -1,5 +1,6 @@
+import logging
+
 from celery.signals import beat_init
-from celery.utils.log import get_task_logger
 from celery_singleton import Singleton, clear_locks
 from django.conf import settings
 from django.core.mail import EmailMessage
@@ -12,7 +13,7 @@ from config.utils import running_dev
 
 from .common import get_last_success_for_task
 
-logger = get_task_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 @beat_init.connect

@@ -1,4 +1,5 @@
-from celery.utils.log import get_task_logger
+import logging
+
 from celery_singleton import Singleton
 from django.conf import settings
 from django.db import transaction
@@ -14,7 +15,7 @@ from corgi.core.models import (
 )
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 
-logger = get_task_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)

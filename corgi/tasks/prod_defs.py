@@ -1,6 +1,6 @@
+import logging
 import re
 
-from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.db import transaction
 
@@ -16,7 +16,7 @@ from corgi.core.models import (
 )
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 
-logger = get_task_logger(__name__)
+logger = logging.getLogger(__name__)
 # Find a substring that looks like a version (e.g. "3", "3.5", "3-5", "1.2.z") at the end of a
 # searched string.
 RE_VERSION_LIKE_STRING = re.compile(r"\d[\dz.-]*$|$")

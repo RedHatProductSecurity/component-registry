@@ -1,7 +1,7 @@
+import logging
 import re
 from typing import Optional
 
-from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.conf import settings
 from django.db.models import QuerySet
@@ -20,7 +20,7 @@ from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS, get_last_success_
 from corgi.tasks.errata_tool import slow_load_errata
 from corgi.tasks.sca import cpu_software_composition_analysis
 
-logger = get_task_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)

@@ -1,4 +1,5 @@
-from celery.utils.log import get_task_logger
+import logging
+
 from celery_singleton import Singleton
 from django.conf import settings
 from django.utils import timezone
@@ -15,7 +16,7 @@ from corgi.tasks.common import (
 )
 from corgi.tasks.errata_tool import update_variant_repos
 
-logger = get_task_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 @app.task(

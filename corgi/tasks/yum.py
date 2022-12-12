@@ -1,6 +1,6 @@
+import logging
 from urllib.parse import urlparse
 
-from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.conf import settings
 from django.utils import timezone
@@ -16,7 +16,7 @@ from corgi.tasks.common import (
 )
 from corgi.tasks.pulp import fetch_unprocessed_relations
 
-logger = get_task_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 @app.task(

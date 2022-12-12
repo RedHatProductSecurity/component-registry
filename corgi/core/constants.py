@@ -1,8 +1,7 @@
-from django.db.models import Q
-
 """
     model constants
 """
+from django.db.models import Q
 
 CONTAINER_DIGEST_FORMATS = (
     "application/vnd.docker.distribution.manifest.v2+json",
@@ -16,7 +15,7 @@ CORGI_COMPONENT_TAXONOMY_VERSION = "v1"
 NODE_LEVEL_MODEL_MAPPING = {
     0: "product",
     1: "product_version",
-    2: "Product_stream",
+    2: "product_stream",
     3: "product_variant",
     4: "channel",
 }

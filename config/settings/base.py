@@ -17,9 +17,10 @@ DEBUG = False
 # Mail these people on uncaught exceptions that result in 500 errors
 # Also mail these people once a day if any Celery task failed in the past 24 hours
 # Technically, "twice a day" - you'll get an email from stage and prod
-ADMINS = [
-    tuple(name_and_email.split(";")) for name_and_email in os.getenv("CORGI_ADMINS", "").split(",")
-]
+ADMINS = tuple(
+    tuple(name_and_email.split(";"))
+    for name_and_email in os.getenv("CORGI_ADMINS", ";root@localhost").split(",")
+)
 
 DOCS_URL = os.getenv("CORGI_DOCS_URL")
 OPENSHIFT_BUILD_COMMIT = os.getenv("OPENSHIFT_BUILD_COMMIT")

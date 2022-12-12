@@ -1,3 +1,1 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:ab6c636d8b9185fea1f91bd8f69cb83f54783a7d77e69d585b83cbcb3c016c4d
-size 254
+{'summary': 'Documentation for rubygem-bcrypt', 'description': 'Documentation for rubygem-bcrypt', 'license': 'MIT', 'provides': ['rubygem-bcrypt-doc'], 'provideversion': ['3.1.13-1.el8cf'], 'url': 'https://github.com/codahale/bcrypt-ruby', 'source': []}

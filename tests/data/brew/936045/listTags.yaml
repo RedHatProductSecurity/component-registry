@@ -1,3 +1,24 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:6b4ac807fee1d7b5007a0fcf184cab7cf0ad2e89320831ffc13e4396c66afc99
-size 548
+[{'arches': 'x86_64',
+  'id': 21361,
+  'locked': False,
+  'maven_include_all': False,
+  'maven_support': False,
+  'name': 'cfme-5.11-rhel-8',
+  'perm': 'trusted',
+  'perm_id': 6},
+ {'arches': 'x86_64',
+  'id': 21367,
+  'locked': False,
+  'maven_include_all': False,
+  'maven_support': False,
+  'name': 'cfme-5.11-rhel-8-candidate',
+  'perm': None,
+  'perm_id': None},
+ {'arches': '',
+  'id': 29197,
+  'locked': False,
+  'maven_include_all': False,
+  'maven_support': False,
+  'name': 'RHBA-2019:4199-released',
+  'perm': 'trusted',
+  'perm_id': 6}]

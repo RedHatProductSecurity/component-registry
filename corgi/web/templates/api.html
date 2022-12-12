@@ -1,0 +1,6 @@
+{# Customize DRF's browsable API to fix a missing favicon error #}{% extends "rest_framework/base.html" %}
+
+{% block style %}
+{{ block.super }}
+<link rel="icon" href="data:,">
+{% endblock %}

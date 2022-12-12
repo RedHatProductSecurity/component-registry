@@ -3,7 +3,6 @@ import json
 import logging
 import os
 import re
-from datetime import datetime
 from types import SimpleNamespace
 from typing import Any, Dict, Generator, List, Optional, Tuple
 from urllib.parse import urlparse
@@ -12,6 +11,7 @@ import koji
 import requests
 import yaml
 from django.conf import settings
+from django.utils.timezone import datetime
 
 from corgi.collectors.models import CollectorRhelModule, CollectorRPM, CollectorSRPM
 from corgi.core.constants import CONTAINER_REPOSITORY

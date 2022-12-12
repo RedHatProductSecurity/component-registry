@@ -6,7 +6,6 @@ from celery_singleton import Singleton
 from django.conf import settings
 from django.db.models import QuerySet
 from django.utils import dateformat, dateparse, timezone
-from django.utils.timezone import make_aware
 
 from config.celery import app
 from corgi.collectors.brew import Brew, BrewBuildTypeNotSupported
@@ -112,7 +111,7 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
         )
         return
 
-    completion_dt = make_aware(dt)
+    completion_dt = timezone.make_aware(dt)
 
     logger.info(
         f"Looking up or saving data for build: {build_id}, time={timezone.now() - start_time}"

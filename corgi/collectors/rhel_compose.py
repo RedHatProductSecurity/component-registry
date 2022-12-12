@@ -1,10 +1,10 @@
 import logging
 import os
 from collections import defaultdict
-from datetime import datetime
 from typing import Generator, Tuple
 
 import requests
+from django.utils.timezone import datetime
 
 from corgi.collectors.brew import Brew
 

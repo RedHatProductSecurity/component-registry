@@ -1,6 +1,5 @@
 import logging
 import subprocess
-from datetime import timedelta
 from ssl import SSLError
 
 from django.db.utils import InterfaceError
@@ -59,7 +58,9 @@ def get_last_success_for_task(task_name: str) -> timezone.datetime:
         .first()
     )
     return (
-        last_success - timedelta(minutes=30) if last_success else timezone.now() - timedelta(days=3)
+        last_success - timezone.timedelta(minutes=30)
+        if last_success
+        else timezone.now() - timezone.timedelta(days=3)
     )
 
 

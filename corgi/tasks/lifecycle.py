@@ -1,8 +1,7 @@
-from datetime import datetime
-
 from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.db import transaction
+from django.utils.timezone import datetime
 
 from config.celery import app
 from corgi.collectors.appstream_lifecycle import AppStreamLifeCycleCollector

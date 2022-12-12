@@ -1,5 +1,3 @@
-from datetime import timedelta
-
 from celery.signals import beat_init
 from celery.utils.log import get_task_logger
 from celery_singleton import Singleton, clear_locks
@@ -120,7 +118,7 @@ def expire_task_results():
     30 days or older. This job mimics the built-in celery.backend_cleanup job but works with
     our schedules and is a bit more transparent in what it actually does.
     """
-    expired_on = timezone.now() - timedelta(days=30)
+    expired_on = timezone.now() - timezone.timedelta(days=30)
     removed_count, _ = TaskResult.objects.filter(date_done__lt=expired_on).delete()
     logger.info("Removed %s expired task results", removed_count)
 

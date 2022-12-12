@@ -38,6 +38,8 @@ services:
     image: "registry.redhat.io/rhel8/redis-6:1"
     ports:
       - "6379:6379"
+    volumes:
+      - corgi-redis-data:/var/lib/redis/data/
 
   redis-exporter:
     container_name: redis-exporter
@@ -178,3 +180,4 @@ services:
 
 volumes:
   corgi-pg-data:
+  corgi-redis-data:

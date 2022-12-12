@@ -298,7 +298,7 @@ def save_component(
     start_time: Optional[timezone.datetime] = None,
 ):
     logger.debug("Called save component with component %s", component)
-    component_type = component.pop("type").upper()
+    component_type = component["type"].upper()
     meta = component.get("meta", {})
 
     node_type = ComponentNode.ComponentNodeType.PROVIDES

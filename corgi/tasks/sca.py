@@ -151,7 +151,10 @@ def _clone_source(source_url: str, build_id: int) -> Tuple[Path, str, str]:
     if not url.scheme.startswith("git"):
         raise ValueError("Cannot download raw source for anything but git protocol")
 
-    git_remote = f"{url.scheme}://{url.netloc}{url.path}"
+    protocol = url.scheme
+    if protocol.startswith("git+"):
+        protocol = protocol.removeprefix("git+")
+    git_remote = f"{protocol}://{url.netloc}{url.path}"
     path_parts = url.path.rsplit("/", 2)
     if len(path_parts) != 3:
         raise ValueError(f"Build {build_id} had a source_url with a too-short path: {source_url}")

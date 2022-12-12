@@ -23,19 +23,13 @@ export CORGI_DB_USER=postgres  # This is the RHSCL PostgreSQL image default admi
 export CORGI_DB_PASSWORD=secret  # This is the admin password used in docker-compose.yml
 export CORGI_DB_PORT=5433  # This is the port used in docker-compose.yml
 export DJANGO_SETTINGS_MODULE=config.settings.dev
-<<<<<<< HEAD
 export CORGI_COMMUNITY_MODE_ENABLED=true
-=======
->>>>>>> b8bed09 (remove unnecessary envvars from tests)
 ```
 
 If you're working on the enterprise version, you'll also need to set request to use the enterprise CA certificate
 
 ```bash
-<<<<<<< HEAD
 export CORGI_COMMUNITY_MODE_ENABLED=false
-=======
->>>>>>> b8bed09 (remove unnecessary envvars from tests)
 export REQUESTS_CA_BUNDLE=/etc/pki/tls/certs/ca-bundle.crt  # or w/e bundle contains at least the internal root CA cert
 ```
 
@@ -43,6 +37,10 @@ Internal URLs are set via environment variables, to avoid leaking sensitive data
 The following values are populated as examples, but also allow to run in community mode. If running in enterprise mode, 
 copy the URLs needed to run tests from the internal Gitlab server's CI variables:
 ```bash
+# Internal hostnames or URLs that appear in build metadata; used in tests
+export CORGI_TEST_DOWNLOAD_URL=https://download.example.com
+export CORGI_PULP_URL=https://rhsm-pulp.example.com/pulp
+# Not used in tests directly, but needed for tests to pass
 export CORGI_BREW_URL=https://koji.fedoraproject.org/kojihub
 export CORGI_BREW_DOWNLOAD_ROOT_URL=https://koji.fedoraproject.org
 export CORGI_LOOKASIDE_CACHE_URL=https://src.fedoraproject.org/repo/pkgs

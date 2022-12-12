@@ -177,7 +177,7 @@ def test_clone_source(mock_subprocess):
 archive_source_test_data_for_failures = (
     # Fails due to ValueError - only git:// protocol supported
     (
-        f"quit://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}/rpms/nodejs",
+        "https://src.fedoraproject.org/rpms/nodejs",
         "3cbed2be4171502499d0d89bea1ead91690af7d2",
         "nodejs",
         1,
@@ -186,7 +186,7 @@ archive_source_test_data_for_failures = (
     ),
     # Fails due to ValueError - path too short
     (
-        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}/tooshort",
+        "git://src.fedoraproject.org/tooshort",
         "3cbed2be4171502499d0d89bea1ead91690af7d2",
         "nodejs",
         1,
@@ -195,7 +195,7 @@ archive_source_test_data_for_failures = (
     ),
     # Fails due to FileExistsError
     (
-        f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}/rpms/nodejs",
+        "git+https://src.fedoraproject.org/rpms/nodejs",
         "3cbed2be4171502499d0d89bea1ead91690af7d2",
         "nodejs",
         1,

@@ -2,7 +2,7 @@ import json
 import logging
 
 import django_filters.rest_framework
-from django.db import connection
+from django.db import connections
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
@@ -117,7 +117,7 @@ class StatusViewSet(GenericViewSet):
         #        (https://wiki.postgresql.org/wiki/Slow_Counting)
         # the following approach provides an estimate for raw table counts which performs
         # much better.
-        with connection.cursor() as cursor:
+        with connections["read_only"].cursor() as cursor:
             cursor.execute("SELECT pg_size_pretty(pg_database_size(current_database()));")
             db_size = cursor.fetchone()
             cursor.execute(

@@ -63,6 +63,15 @@ def save_component(component: dict[str, Any], parent: ComponentNode):
     return created or node_created
 
 
+@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
+def save_build_product_taxonomy(build_id: int) -> None:
+    """Helper method to avoid timeouts in Brew / SCA tasks due to slow taxonomy-saving"""
+    logger.info(f"save_build_product_taxonomy called for build: {build_id}")
+    software_build = SoftwareBuild.objects.get(build_id=build_id)
+    logger.info(f"Saving product taxonomy for build: {build_id}")
+    software_build.save_product_taxonomy()
+
+
 @app.task(
     base=Singleton,
     autoretry_for=RETRYABLE_ERRORS,
@@ -88,7 +97,7 @@ def cpu_software_composition_analysis(build_id: int):
 
     no_of_new_components = _scan_files(root_node, distgit_sources)
     if no_of_new_components > 0:
-        software_build.save_product_taxonomy()
+        save_build_product_taxonomy.delay(build_id)
 
     # clean up source code so that we don't have to deal with reuse and an ever growing disk
     for source in distgit_sources:

@@ -25,6 +25,15 @@ logger = get_task_logger(__name__)
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
+def save_build_product_taxonomy(build_id: int) -> None:
+    """Helper method to avoid timeouts in Brew / SCA tasks due to slow taxonomy-saving"""
+    logger.info(f"save_build_product_taxonomy called for build: {build_id}")
+    software_build = SoftwareBuild.objects.get(build_id=build_id)
+    logger.info(f"Saving product taxonomy for build: {build_id}")
+    software_build.save_product_taxonomy()
+
+
+@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_process: bool = False):
     """Fetch a particular build_id from Brew, optionally overwriting any existing data"""
     start_time = timezone.now()
@@ -43,7 +52,7 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
                 logger.info(
                     f"Saving product taxonomy: {build_id}, time={timezone.now() - start_time}"
                 )
-                softwarebuild.save_product_taxonomy(start_time=start_time)
+                save_build_product_taxonomy.delay(build_id)
                 logger.info(
                     f"Saving product taxonomy finished: "
                     f"{build_id}, time={timezone.now() - start_time}"
@@ -169,7 +178,7 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
     # See CORGI-21
     if save_product:
         logger.info(f"Saving product taxonomy: {build_id}, time={timezone.now() - start_time}")
-        softwarebuild.save_product_taxonomy(start_time=start_time)
+        save_build_product_taxonomy.delay(build_id)
         logger.info(
             f"Saving product taxonomy finished: {build_id}, time={timezone.now() - start_time}"
         )

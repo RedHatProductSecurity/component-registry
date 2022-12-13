@@ -81,16 +81,19 @@ def get_model_ofuri_type(ofuri: str) -> tuple[Optional[ProductModel], str]:
     ofuri_len = len(ofuri.split(":"))
 
     if ofuri_len == 3:
-        return Product.objects.filter(ofuri=ofuri).first(), "Product"
+        return Product.objects.filter(ofuri=ofuri).using("read_only").first(), "Product"
     elif ofuri_len == 5:
-        return ProductVariant.objects.filter(ofuri=ofuri).first(), "ProductVariant"
+        return (
+            ProductVariant.objects.filter(ofuri=ofuri).using("read_only").first(),
+            "ProductVariant",
+        )
     elif ofuri_len != 4:
         return missing_or_invalid
 
     # ProductVersions and ProductStreams both have 4 parts in their ofuri
-    if version := ProductVersion.objects.filter(ofuri=ofuri).first():
+    if version := ProductVersion.objects.filter(ofuri=ofuri).using("read_only").first():
         return version, "ProductVersion"
-    elif stream := ProductStream.objects.filter(ofuri=ofuri).first():
+    elif stream := ProductStream.objects.filter(ofuri=ofuri).using("read_only").first():
         return stream, "ProductStream"
     # TODO: Channels don't define an ofuri - should they?
     # else we know it's a version / stream but couldn't find a match
@@ -122,7 +125,7 @@ def get_channel_data_list(manager: Manager["Channel"]) -> list[dict[str, str]]:
     # And channels have no ofuri, so we return a model UUID link instead
     return [
         {"name": name, "link": get_model_id_link("channels", uuid), "uuid": str(uuid)}
-        for (name, uuid) in manager.values_list("name", "uuid")
+        for (name, uuid) in manager.values_list("name", "uuid").using("read_only")
     ]
 
 
@@ -144,7 +147,7 @@ def get_product_data_list(
     # we're accessing the reverse side of a relation with many objects (via a manager)
     return [
         {"name": name, "link": get_model_ofuri_link(model_name, ofuri), "ofuri": ofuri}
-        for (name, ofuri) in obj_or_manager.values_list("name", "ofuri")
+        for (name, ofuri) in obj_or_manager.values_list("name", "ofuri").using("read_only")
     ]
 
 
@@ -154,6 +157,7 @@ def get_product_relations(instance_name: str) -> list[dict[str, str]]:
         ProductComponentRelation.objects.filter(product_ref=instance_name)
         .values_list("type", "external_system_id")
         .distinct("external_system_id")
+        .using("read_only")
     )
     return [{"type": pcr_type, "external_system_id": pcr_id} for (pcr_type, pcr_id) in related_pcrs]
 

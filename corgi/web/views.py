@@ -79,7 +79,8 @@ def data_list(request: HttpRequest) -> HttpResponse:
         "data.html",
         {
             "counts": [
-                (model._meta.verbose_name_plural, model.objects.count()) for model in models
+                (model._meta.verbose_name_plural, model.objects.db_manager("read_only").count())
+                for model in models
             ],
             "nbar": "data",  # Navbar identifier
         },

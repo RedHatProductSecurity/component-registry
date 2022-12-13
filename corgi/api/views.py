@@ -149,19 +149,19 @@ class StatusViewSet(GenericViewSet):
                 },
                 "relations": {"count": pcr_count},
                 "products": {
-                    "count": Product.objects.count(),
+                    "count": Product.objects.db_manager("read_only").count(),
                 },
                 "product_versions": {
-                    "count": ProductVersion.objects.count(),
+                    "count": ProductVersion.objects.db_manager("read_only").count(),
                 },
                 "product_streams": {
-                    "count": ProductStream.objects.count(),
+                    "count": ProductStream.objects.db_manager("read_only").count(),
                 },
                 "product_variants": {
-                    "count": ProductVariant.objects.count(),
+                    "count": ProductVariant.objects.db_manager("read_only").count(),
                 },
                 "channels": {
-                    "count": Channel.objects.count(),
+                    "count": Channel.objects.db_manager("read_only").count(),
                 },
             }
         )
@@ -210,7 +210,7 @@ def recursive_product_node_to_dict(node):
 class SoftwareBuildViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled until auth is added
     """View for api/v1/builds"""
 
-    queryset = SoftwareBuild.objects.order_by("-build_id")
+    queryset = SoftwareBuild.objects.order_by("-build_id").using("read_only")
     serializer_class = SoftwareBuildSerializer
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend, filters.SearchFilter]
     filterset_class = SoftwareBuildFilter
@@ -229,7 +229,7 @@ class ProductViewSet(ProductDataViewSet):
     """View for api/v1/products"""
 
     # Can't use self / super() yet
-    queryset = Product.objects.order_by(ProductDataViewSet.ordering_field)
+    queryset = Product.objects.order_by(ProductDataViewSet.ordering_field).using("read_only")
     serializer_class = ProductSerializer
 
     def list(self, request, *args, **kwargs):
@@ -237,7 +237,7 @@ class ProductViewSet(ProductDataViewSet):
         ofuri = req.query_params.get("ofuri")
         if not ofuri:
             return super().list(request)
-        p = Product.objects.filter(ofuri=ofuri).first()
+        p = Product.objects.filter(ofuri=ofuri).using("read_only").first()
         if not p:
             return Response(status=404)
         response = Response(status=302)
@@ -249,7 +249,9 @@ class ProductViewSet(ProductDataViewSet):
         obj = self.queryset.filter(uuid=uuid).first()
         if not obj:
             return Response(status=404)
-        root_nodes = cache_tree_children(obj.pnodes.get_descendants(include_self=True))
+        root_nodes = cache_tree_children(
+            obj.pnodes.get_descendants(include_self=True).using("read_only")
+        )
         dicts = []
         for n in root_nodes:
             dicts.append(recursive_product_node_to_dict(n))
@@ -259,7 +261,7 @@ class ProductViewSet(ProductDataViewSet):
 class ProductVersionViewSet(ProductDataViewSet):
     """View for api/v1/product_versions"""
 
-    queryset = ProductVersion.objects.order_by(ProductDataViewSet.ordering_field)
+    queryset = ProductVersion.objects.order_by(ProductDataViewSet.ordering_field).using("read_only")
     serializer_class = ProductVersionSerializer
 
     def list(self, request, *args, **kwargs):
@@ -267,7 +269,7 @@ class ProductVersionViewSet(ProductDataViewSet):
         ofuri = req.query_params.get("ofuri")
         if not ofuri:
             return super().list(request)
-        pv = ProductVersion.objects.filter(ofuri=ofuri).first()
+        pv = ProductVersion.objects.filter(ofuri=ofuri).using("read_only").first()
         if not pv:
             return Response(status=404)
         response = Response(status=302)
@@ -279,7 +281,9 @@ class ProductVersionViewSet(ProductDataViewSet):
         obj = self.queryset.filter(uuid=uuid).first()
         if not obj:
             return Response(status=404)
-        root_nodes = cache_tree_children(obj.pnodes.get_descendants(include_self=True))
+        root_nodes = cache_tree_children(
+            obj.pnodes.get_descendants(include_self=True).using("read_only")
+        )
         dicts = []
         for n in root_nodes:
             dicts.append(recursive_product_node_to_dict(n))
@@ -289,7 +293,11 @@ class ProductVersionViewSet(ProductDataViewSet):
 class ProductStreamViewSetSet(ProductDataViewSet):
     """View for api/v1/product_streams"""
 
-    queryset = ProductStream.objects.filter(active=True).order_by(ProductDataViewSet.ordering_field)
+    queryset = (
+        ProductStream.objects.filter(active=True)
+        .order_by(ProductDataViewSet.ordering_field)
+        .using("read_only")
+    )
     serializer_class = ProductStreamSerializer
 
     @extend_schema(
@@ -299,11 +307,13 @@ class ProductStreamViewSetSet(ProductDataViewSet):
         req = self.request
         active = request.query_params.get("active")
         if active == "all":
-            self.queryset = ProductStream.objects.order_by(super().ordering_field)
+            self.queryset = ProductStream.objects.order_by(super().ordering_field).using(
+                "read_only"
+            )
         ofuri = req.query_params.get("ofuri")
         if not ofuri:
             return super().list(request)
-        ps = ProductStream.objects.filter(ofuri=ofuri).first()
+        ps = ProductStream.objects.filter(ofuri=ofuri).using("read_only").first()
         if not ps:
             return Response(status=404)
         response = Response(status=302)
@@ -323,7 +333,9 @@ class ProductStreamViewSetSet(ProductDataViewSet):
         obj = self.queryset.filter(uuid=uuid).first()
         if not obj:
             return Response(status=404)
-        root_nodes = cache_tree_children(obj.pnodes.get_descendants(include_self=True))
+        root_nodes = cache_tree_children(
+            obj.pnodes.get_descendants(include_self=True).using("read_only")
+        )
         dicts = []
         for n in root_nodes:
             dicts.append(recursive_product_node_to_dict(n))
@@ -333,7 +345,7 @@ class ProductStreamViewSetSet(ProductDataViewSet):
 class ProductVariantViewSetSet(ProductDataViewSet):
     """View for api/v1/product_variants"""
 
-    queryset = ProductVariant.objects.order_by(ProductDataViewSet.ordering_field)
+    queryset = ProductVariant.objects.order_by(ProductDataViewSet.ordering_field).using("read_only")
     serializer_class = ProductVariantSerializer
 
     def list(self, request, *args, **kwargs):
@@ -341,7 +353,7 @@ class ProductVariantViewSetSet(ProductDataViewSet):
         ofuri = req.query_params.get("ofuri")
         if not ofuri:
             return super().list(request)
-        pv = ProductVariant.objects.filter(ofuri=ofuri).first()
+        pv = ProductVariant.objects.filter(ofuri=ofuri).using("read_only").first()
         if not pv:
             return Response(status=404)
         response = Response(status=302)
@@ -353,7 +365,9 @@ class ProductVariantViewSetSet(ProductDataViewSet):
         obj = self.queryset.filter(uuid=uuid).first()
         if not obj:
             return Response(status=404)
-        root_nodes = cache_tree_children(obj.pnodes.get_descendants(include_self=True))
+        root_nodes = cache_tree_children(
+            obj.pnodes.get_descendants(include_self=True).using("read_only")
+        )
         dicts = []
         for n in root_nodes:
             dicts.append(recursive_product_node_to_dict(n))
@@ -363,7 +377,7 @@ class ProductVariantViewSetSet(ProductDataViewSet):
 class ChannelViewSet(ReadOnlyModelViewSet):
     """View for api/v1/channels"""
 
-    queryset = Channel.objects.order_by("name")
+    queryset = Channel.objects.order_by("name").using("read_only")
     serializer_class = ChannelSerializer
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend, filters.SearchFilter]
     filterset_class = ChannelFilter
@@ -373,7 +387,9 @@ class ChannelViewSet(ReadOnlyModelViewSet):
 class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled until auth is added
     """View for api/v1/components"""
 
-    queryset = Component.objects.order_by("name", "type", "arch", "version", "release")
+    queryset = Component.objects.order_by("name", "type", "arch", "version", "release").using(
+        "read_only"
+    )
     serializer_class = ComponentSerializer
     search_fields = ["name", "description", "release", "version", "meta_attr"]
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend, filters.SearchFilter]
@@ -423,7 +439,7 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         # We re-encode the purl here to ensure each segment of the purl is url encoded,
         # as it's stored in the DB.
         purl = f"{PackageURL.from_string(purl)}"
-        component = Component.objects.filter(purl=purl).first()
+        component = Component.objects.filter(purl=purl).using("read_only").first()
         if not component:
             return Response(status=404)
         response = Response(status=302)
@@ -447,7 +463,7 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
             # This is only temporary for OpenLCS testing
             # Do not enable in production until we add OIDC authentication
             return Response(status=403)
-        component = self.queryset.filter(uuid=uuid).first()
+        component = self.queryset.filter(uuid=uuid).using("default").first()
         if not component:
             return Response(status=404)
 
@@ -484,7 +500,9 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         obj = self.queryset.filter(uuid=uuid).first()
         if not obj:
             return Response(status=404)
-        root_nodes = cache_tree_children(obj.cnodes.get_descendants(include_self=True))
+        root_nodes = cache_tree_children(
+            obj.cnodes.get_descendants(include_self=True).using("read_only")
+        )
         dicts = []
         for n in root_nodes:
             dicts.append(
@@ -503,7 +521,9 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         obj = self.queryset.filter(uuid=uuid).first()
         if not obj:
             return Response(status=404)
-        root_nodes = cache_tree_children(obj.cnodes.get_descendants(include_self=True))
+        root_nodes = cache_tree_children(
+            obj.cnodes.get_descendants(include_self=True).using("read_only")
+        )
         dicts = []
         for n in root_nodes:
             dicts.append(
@@ -525,5 +545,5 @@ class AppStreamLifeCycleViewSet(ReadOnlyModelViewSet):
 
     queryset = AppStreamLifeCycle.objects.order_by(
         "name", "type", "product", "initial_product_version", "stream"
-    )
+    ).using("read_only")
     serializer_class = AppStreamLifeCycleSerializer

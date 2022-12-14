@@ -651,7 +651,7 @@ class ProductStream(ProductModel):
                         ),
                         el_match=Func(
                             F("release"),
-                            Value("el([0-9]+)"),
+                            Value(".([a-z]*el[6-9]+)"),
                             function="regexp_match",
                             output=fields.ArrayField(IntegerField()),
                         ),

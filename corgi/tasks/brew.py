@@ -490,6 +490,7 @@ def fetch_unprocessed_relations(
         ProductComponentRelation.objects.filter(type=relation_type, created_at__gte=created_since)
         .values_list("build_id", flat=True)
         .distinct()
+        .using("read_only")
     )
     logger.info(f"Processing relations of type {relation_type}")
     processed_builds = 0
@@ -497,7 +498,7 @@ def fetch_unprocessed_relations(
         if not build_id:
             # build_id defaults to "" and int() will fail in this case
             continue
-        if not SoftwareBuild.objects.filter(build_id=int(build_id)).exists():
+        if not SoftwareBuild.objects.filter(build_id=int(build_id)).using("read_only").exists():
             logger.info("Processing CDN relation build with id: %s", build_id)
             slow_fetch_modular_build.delay(build_id, force_process=force_process)
             processed_builds += 1

@@ -88,6 +88,7 @@ def email_failed_tasks():
         )
         .order_by("task_name", "date_done")
         .values_list("task_name", "task_args", "task_kwargs", "result", "traceback")
+        .using("read_only")
     )
 
     subject = (

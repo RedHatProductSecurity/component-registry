@@ -1,4 +1,4 @@
-from config.utils import running_dev
+from config.utils import running_prod
 
 workers = 4
 worker_class = "gevent"
@@ -18,6 +18,6 @@ forwarded_allow_ips = "*"
 
 timeout = 600
 
-if not running_dev():
+if running_prod():
     # Saves memory in the worker process, but breaks --reload
     preload_app = True

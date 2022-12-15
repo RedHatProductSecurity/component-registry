@@ -17,6 +17,7 @@ addopts = """
 --strict-config --strict-markers
 """
 markers = [
+    "django_db",
     "unit",
     "integration",
 ]

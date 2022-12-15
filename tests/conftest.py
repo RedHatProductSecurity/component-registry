@@ -4,12 +4,6 @@ from rest_framework.test import APIClient
 from corgi.api.constants import CORGI_API_VERSION
 
 
-@pytest.fixture(autouse=True)
-def enable_db_access_for_all_tests(db):
-    """Allow using database automatically, without needing to mark each test"""
-    pass
-
-
 @pytest.fixture
 def client():
     return APIClient()

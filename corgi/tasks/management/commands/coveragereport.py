@@ -10,7 +10,11 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write("ofuri, #builds, #components")
         self.stdout.write("---------------------------------------")
-        for ps in ProductStream.objects.all():
-            component_count = Component.objects.filter(product_streams__icontains=ps.ofuri).count()
+        for ps in ProductStream.objects.get_queryset().using("read_only"):
+            component_count = (
+                Component.objects.filter(product_streams__icontains=ps.ofuri)
+                .using("read_only")
+                .count()
+            )
             if ps.builds.count() > 0 or component_count > 0:
                 self.stdout.write(f"{ps.ofuri}, {ps.builds.count()}, {component_count}")

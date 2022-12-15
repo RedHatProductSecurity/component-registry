@@ -47,7 +47,7 @@ class Command(BaseCommand):
         if options["build_ids"]:
             build_ids = options["build_ids"]
         elif options["stream"]:
-            ps = ProductStream.objects.get(name=options["stream"])
+            ps = ProductStream.objects.db_manager("read_only").get(name=options["stream"])
             brew = Brew()
             build_ids = set()
             for brew_tag, inherit in ps.brew_tags.items():

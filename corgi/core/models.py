@@ -651,9 +651,9 @@ class ProductStream(ProductModel):
                         ),
                         el_match=Func(
                             F("release"),
-                            Value(".([a-z]*el[6-9]+)"),
+                            Value(".([a-z]*el(\d+\.)?(\d+\.)?(\*|\d+))"),
                             function="regexp_match",
-                            output=fields.ArrayField(IntegerField()),
+                            output=fields.ArrayField(TextField()),
                         ),
                     )
                     .order_by(

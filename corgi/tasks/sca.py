@@ -73,8 +73,25 @@ def cpu_software_composition_analysis(build_id: int):
     logger.info("Started software composition analysis for %s", build_id)
     software_build = SoftwareBuild.objects.get(build_id=build_id)
 
-    # Get root component for this build; fail the task if it does not exist.
-    root_component = Component.objects.filter(software_build=software_build).root_components().get()
+    component_qs = Component.objects.filter(software_build=software_build)
+    try:
+        # Get root component for this build.
+        root_component = component_qs.root_components().get()
+    except Component.DoesNotExist as exc:
+        # None of the components were root components
+        module_qs = component_qs.filter(type=Component.Type.RPMMOD)
+        if len(module_qs) != 1:
+            logger.error(f"Build {build_id} had wrong number of modules: {len(module_qs)}")
+            # We have more than one module, or don't have any modules at all
+            # so we don't know which component / don't have any component to do SCA on
+            # we only do SCA on root components, so just fail the task
+            raise exc
+
+        # Else we have exactly one module component
+        # which is no longer considered a "root" component
+        # so now we skip doing SCA on the module instead of failing
+        logger.info(f"Build {build_id} had only one module, no other root components. Skipping SCA")
+        return
 
     if root_component.name == "kernel":
         logger.info("skipping scan of the kernel, see CORGI-270")

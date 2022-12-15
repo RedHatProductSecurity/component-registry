@@ -1,0 +1,183 @@
+{
+  "ps_products": {
+    "community": {
+      "name": "Community Projects",
+      "team": "",
+      "ps_modules": [
+        "fedora-34",
+        "fedora-35",
+        "fedora-36",
+        "fedora-37",
+        "epel-7",
+        "epel-8",
+        "openstack-rdo"
+      ],
+      "business_unit": "Community"
+    }
+  },
+  "ps_modules": {
+    "fedora-34": {
+      "public_description": "Fedora 34",
+      "cpe": [],
+      "ps_update_streams": [
+        "fedora-34"
+      ],
+      "active_ps_update_streams": []
+    },
+    "fedora-35": {
+      "public_description": "Fedora 35",
+      "cpe": [],
+      "ps_update_streams": [
+        "fedora-35"
+      ],
+      "active_ps_update_streams": [
+        "fedora-35"
+      ]
+    },
+    "fedora-36": {
+      "public_description": "Fedora 36",
+      "cpe": [],
+      "ps_update_streams": [
+        "fedora-36"
+      ],
+      "active_ps_update_streams": [
+        "fedora-36"
+      ]
+    },
+    "fedora-37": {
+      "public_description": "Fedora 37",
+      "cpe": [],
+      "ps_update_streams": [
+        "fedora-37"
+      ],
+      "active_ps_update_streams": [
+        "fedora-37"
+      ]
+    },
+    "epel-7": {
+      "public_description": "Extra Packages for Enterprise Linux 7",
+      "cpe": [],
+      "ps_update_streams": [
+        "epel-7"
+      ],
+      "active_ps_update_streams": [
+        "epel-7"
+      ]
+    },
+    "epel-8": {
+      "public_description": "Extra Packages for Enterprise Linux 8",
+      "cpe": [],
+      "ps_update_streams": [
+        "epel-8"
+      ],
+      "active_ps_update_streams": [
+        "epel-8"
+      ]
+    },
+    "openstack-rdo": {
+      "public_description": "OpenStack RDO",
+      "cpe": [],
+      "ps_update_streams": [
+        "openstack-rdo"
+      ],
+      "active_ps_update_streams": [
+        "openstack-rdo"
+      ]
+    }
+  },
+  "ps_update_streams": {
+    "epel-7": {
+      "version": "epel7",
+      "yum_repositories": [
+        "https://dl.fedoraproject.org/pub/epel/7/x86_64/",
+        "https://dl.fedoraproject.org/pub/epel/7/ppc64le/"
+      ]
+    },
+    "epel-8": {
+      "version": "epel8",
+      "yum_repositories": [
+        "https://dl.fedoraproject.org/pub/epel/8/Everything/x86_64/",
+        "https://dl.fedoraproject.org/pub/epel/8/Everything/aarch64/",
+        "https://dl.fedoraproject.org/pub/epel/8/Everything/ppc64le/",
+        "https://dl.fedoraproject.org/pub/epel/8/Everything/s390x/",
+        "https://dl.fedoraproject.org/pub/epel/8/Modular/x86_64/",
+        "https://dl.fedoraproject.org/pub/epel/8/Modular/aarch64/",
+        "https://dl.fedoraproject.org/pub/epel/8/Modular/ppc64le/",
+        "https://dl.fedoraproject.org/pub/epel/8/Modular/s390x/"
+      ]
+    },
+    "fedora-34": {
+      "version": "34",
+      "yum_repositories": [
+        "https://dl.fedoraproject.org/pub/fedora/linux/releases/34/Everything/x86_64/os/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/releases/34/Everything/aarch64/os/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/releases/34/Everything/armhfp/os/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/releases/34/Modular/x86_64/os/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/releases/34/Modular/aarch64/os/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/releases/34/Modular/armhfp/os/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/updates/34/Everything/x86_64/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/updates/34/Everything/aarch64/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/updates/34/Everything/armhfp/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/updates/34/Modular/x86_64/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/updates/34/Modular/aarch64/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/updates/34/Modular/armhfp/"
+      ]
+    },
+    "fedora-35": {
+      "version": "35",
+      "yum_repositories": [
+        "https://dl.fedoraproject.org/pub/fedora/linux/releases/35/Everything/x86_64/os/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/releases/35/Everything/aarch64/os/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/releases/35/Everything/armhfp/os/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/releases/35/Modular/x86_64/os/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/releases/35/Modular/aarch64/os/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/releases/35/Modular/armhfp/os/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/updates/35/Everything/x86_64/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/updates/35/Everything/aarch64/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/updates/35/Everything/armhfp/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/updates/35/Modular/x86_64/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/updates/35/Modular/aarch64/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/updates/35/Modular/armhfp/"
+      ]
+    },
+    "fedora-36": {
+      "version": "36",
+      "yum_repositories": [
+        "https://dl.fedoraproject.org/pub/fedora/linux/releases/36/Everything/x86_64/os/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/releases/36/Everything/aarch64/os/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/releases/36/Everything/armhfp/os/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/releases/36/Modular/x86_64/os/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/releases/36/Modular/aarch64/os/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/releases/36/Modular/armhfp/os/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/updates/36/Everything/x86_64/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/updates/36/Everything/aarch64/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/updates/36/Everything/armhfp/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/updates/36/Modular/x86_64/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/updates/36/Modular/aarch64/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/updates/36/Modular/armhfp/"
+      ]
+    },
+    "fedora-37": {
+      "version": "37",
+      "yum_repositories": [
+        "https://dl.fedoraproject.org/pub/fedora/linux/releases/37/Everything/x86_64/os/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/releases/37/Everything/aarch64/os/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/releases/37/Modular/x86_64/os/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/releases/37/Modular/aarch64/os/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/updates/37/Everything/x86_64/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/updates/37/Everything/aarch64/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/updates/37/Modular/x86_64/",
+        "https://dl.fedoraproject.org/pub/fedora/linux/updates/37/Modular/aarch64/"
+      ]
+    },
+    "openstack-rdo": {
+      "version": "unspecified",
+      "brew_tags": [
+        {
+          "tag": "cloud8s-openstack-xena-release",
+          "inherit": false
+        }
+      ]
+    }
+  }
+}

@@ -1,6 +1,4 @@
 {
-    "configuration_files": "{CORGI_TEST_CACHITO_URL}/configuration-files",
-    "content_manifest": "{CORGI_TEST_CACHITO_URL}/content-manifest",
     "dependencies": [
         {
             "name": "bufio",

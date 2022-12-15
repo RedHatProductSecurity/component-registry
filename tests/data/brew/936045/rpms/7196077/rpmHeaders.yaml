@@ -1,3 +1,1 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:99379e4b0de474763d447df67c62e9c26d256c9a95ba049e3e2ed802fc6e7a7f
-size 467
+{'summary': 'Debug sources for package rubygem-bcrypt', 'description': 'This package provides debug sources for package rubygem-bcrypt.\nDebug sources are useful when developing applications that use this\npackage or when debugging this package.', 'license': 'MIT', 'provides': ['rubygem-bcrypt-debugsource', 'rubygem-bcrypt-debugsource(x86-64)'], 'provideversion': ['3.1.13-1.el8cf', '3.1.13-1.el8cf'], 'url': 'https://github.com/codahale/bcrypt-ruby', 'source': []}

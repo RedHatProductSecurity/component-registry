@@ -1,3 +1,25 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:f5037b219e56ec1a80c4c581d98043052a212d6ec1cad345ac674be2aa049807
-size 779
+{ 'build_id': 936045,
+  'cg_id': null,
+  'completion_time': '2019-07-23 11:59:42.799759',
+  'completion_ts': 1563883182.79976,
+  'creation_event_id': 25672602,
+  'creation_time': '2019-07-23 11:58:09.721209',
+  'creation_ts': 1563883089.72121,
+  'epoch': null,
+  'id': 936045,
+  'name': 'rubygem-bcrypt',
+  'nvr': 'rubygem-bcrypt-3.1.13-1.el8cf',
+  'owner_id': 3047,
+  'owner_name': 'simaishi',
+  'package_id': 61148,
+  'package_name': 'rubygem-bcrypt',
+  'release': '1.el8cf',
+  'source': 'git://pkgs.example.com/rpms/rubygem-bcrypt#4deddf4d5f521886a5680853ebccd02e3cabac41',
+  'start_time': '2019-07-23 11:58:09.721209',
+  'start_ts': 1563883089.72121,
+  'state': 1,
+  'task_id': 22746481,
+  'version': '3.1.13',
+  'volume_id': 9,
+  'volume_name': 'rhel-8',
+  'cg_name': null }

@@ -1,3 +1,1 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:db78e6f8c592460be8abd3e9486533e5d2981e74c7a585de3e7ab12e0a5cc939
-size 407
+{'summary': "OpenBSD's bcrypt() password hashing algorithm", 'description': 'bcrypt() is a sophisticated and secure hash algorithm designed by The\nOpenBSD project\nfor hashing passwords. The bcrypt Ruby gem provides a simple wrapper for\nsafely handling\npasswords.', 'license': 'MIT', 'provides': [], 'provideversion': [], 'url': 'https://github.com/codahale/bcrypt-ruby', 'source': ['bcrypt-3.1.13.gem']}

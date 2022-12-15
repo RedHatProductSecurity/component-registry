@@ -23,31 +23,37 @@ export CORGI_DB_USER=postgres  # This is the RHSCL PostgreSQL image default admi
 export CORGI_DB_PASSWORD=secret  # This is the admin password used in docker-compose.yml
 export CORGI_DB_PORT=5433  # This is the port used in docker-compose.yml
 export DJANGO_SETTINGS_MODULE=config.settings.dev
+export CORGI_COMMUNITY_MODE_ENABLED=true
+```
+
+If you're working on the enterprise version, you'll also need to set request to use the enterprise CA certificate
+
+```bash
+export CORGI_COMMUNITY_MODE_ENABLED=false
 export REQUESTS_CA_BUNDLE=/etc/pki/tls/certs/ca-bundle.crt  # or w/e bundle contains at least the internal root CA cert
 ```
 
 Internal URLs are set via environment variables, to avoid leaking sensitive data in our public GitHub repo's history.
-Copy the URLs needed to run tests from the internal Gitlab server's CI variables:
+The following values are populated as examples, but also allow to run in community mode. If running in enterprise mode, 
+copy the URLs needed to run tests from the internal Gitlab server's CI variables:
 ```bash
 # Internal hostnames or URLs that appear in build metadata; used in tests
-export CORGI_TEST_CACHITO_URL
-export CORGI_TEST_CODE_URL
-export CORGI_TEST_DOWNLOAD_URL
-export CORGI_TEST_OSBS_HOST1
-export CORGI_TEST_OSBS_HOST2
-export CORGI_TEST_OSBS_HOST3
-export CORGI_TEST_PULP_URL
-export CORGI_TEST_REGISTRY_URL
+export CORGI_TEST_DOWNLOAD_URL=https://download.example.com
+export CORGI_PULP_URL=https://rhsm-pulp.example.com/pulp
 # Not used in tests directly, but needed for tests to pass
-export CORGI_APP_STREAMS_LIFE_CYCLE_URL
-export CORGI_BREW_URL
-export CORGI_BREW_DOWNLOAD_ROOT_URL
-export CORGI_ERRATA_TOOL_URL
-export CORGI_LOOKASIDE_CACHE_URL
-export CORGI_MANIFEST_HINTS_URL
-export CORGI_PRODSEC_DASHBOARD_URL
-# The internal Nexus PyPI mirror is used to avoid overloading the public PyPI service
-export PIP_INDEX_URL
+export CORGI_BREW_URL=https://koji.fedoraproject.org/kojihub
+export CORGI_BREW_DOWNLOAD_ROOT_URL=https://koji.fedoraproject.org
+export CORGI_LOOKASIDE_CACHE_URL=https://src.fedoraproject.org/repo/pkgs
+export CORGI_APP_STREAMS_LIFE_CYCLE_URL=https://appstream.example.com/lifecycle-defs/application_streams.yaml
+export CORGI_ERRATA_TOOL_URL=https://errata.example.com
+export CORGI_MANIFEST_HINTS_URL=https://manifesthints.example.com/manifest-hints.txt
+export CORGI_PRODSEC_DASHBOARD_URL=https://dashboard.example.com/rest/api/latest
+export PIP_INDEX_URL=https://pypi.org/simple
+```
+
+If you're working on the enterprise version, you'll also need the following options set:
+
+```bash
 # The internal root CA certificate is needed to use the Nexus PyPI mirror and other internal Red Hat services
 export ROOT_CA_URL
 ```
@@ -61,7 +67,6 @@ export CORGI_DOMAIN
 export CORGI_EMAIL_HOST
 export CORGI_SERVER_EMAIL
 export CORGI_UMB_BROKER_URL
-export CORGI_PULP_URL
 export CORGI_PULP_USERNAME
 export CORGI_PULP_PASSWORD
 ```
@@ -72,17 +77,24 @@ environment's `venv/bin/activate` script.
 In order for the environment variables to be passed into the celery pods started by podman-compose you'll also have to
 add them to a .env file e.g.:
 ```bash
-CORGI_APP_STREAMS_LIFE_CYCLE_URL=<value>
-CORGI_BREW_DOWNLOAD_ROOT_URL=<value>
-CORGI_BREW_URL=<value>
-CORGI_ERRATA_TOOL_URL=<value>
-CORGI_LOOKASIDE_CACHE_URL=<value>
-CORGI_MANIFEST_HINTS_URL=<value>
-CORGI_PRODSEC_DASHBOARD_URL=<value>
-CORGI_PULP_URL=<value>
-CORGI_PULP_USERNAME=<value>
-CORGI_PULP_PASSWORD=<value>
+DJANGO_SETTINGS_MODULE=config.settings.dev
+CORGI_BREW_DOWNLOAD_ROOT_URL=https://kojipkgs.fedoraproject.org
+CORGI_BREW_URL=https://koji.fedoraproject.org/kojihub
+CORGI_LOOKASIDE_CACHE_URL=https://src.fedoraproject.org/repo/pkgs
+CORGI_COMMUNITY_MODE_ENABLED=true
+CORGI_COMMUNITY_MODE_ENABLED=false
 ```
+
+
+If doing enterprise development, be sure to set this to relevant value from CI environment.
+If it's not set the local product-definitions.json file in the config directory will be used.
+```bash
+CORGI_COMMUNITY_MODE_ENABLED=false
+CORGI_COMMUNITY_MODE_ENABLED=true
+CORGI_PRODSEC_DASHBOARD_URL=<value>
+```
+
+It is recommended to add all the aforementioned environment variables to a `.env` file in the project root directory.
 
 Build container images:
 ```bash
@@ -126,12 +138,6 @@ tox -e corgi -- -m "unit"
 Alternatively, you can always run individual tests:
 ```bash
 tox -e corgi -- tests/test_model.py::test_product_model
-```
-
-By default, `VCR.py` is run with '[record-mode=once](https://vcrpy.readthedocs.io/en/latest/usage.html#once)'
-under `testenv:corgi`. To overwrite/renew existing cassette files, run:
-```bash
-tox -e corgi-vcr-record-rewrite
 ```
 
 Remember to commit and push if there is a newly generated cassette file.

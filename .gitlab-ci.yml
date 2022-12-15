@@ -22,14 +22,7 @@ include:
   # Define below in CI settings, then export here so subprocesses can use also
   # Keep in sync with OpenShift
   # Internal hostnames or URLs that appear in build metadata; used in tests
-  - export CORGI_TEST_CACHITO_URL
-  - export CORGI_TEST_CODE_URL
   - export CORGI_TEST_DOWNLOAD_URL
-  - export CORGI_TEST_OSBS_HOST1
-  - export CORGI_TEST_OSBS_HOST2
-  - export CORGI_TEST_OSBS_HOST3
-  - export CORGI_TEST_PULP_URL
-  - export CORGI_TEST_REGISTRY_URL
   # Not used in tests directly, but needed for tests to pass
   - export CORGI_APP_STREAMS_LIFE_CYCLE_URL
   - export CORGI_BREW_URL
@@ -70,7 +63,6 @@ deploy-prod:
       - schedules
 
 sonarqube:
-  # https://source.redhat.com/groups/public/sonarqubecorp/user_documentation/sonarqube_gitlab_ci_job_include
   stage: test
 
 test:
@@ -94,7 +86,7 @@ test:
   script:
     - $DNF_WITH_OPTIONS install $RPM_REQUIREMENTS
     - python3.9 -m pip install tox
-    - tox -e corgi -- --record-mode=none --cov-report term --junitxml=junit.xml  # Do not create any VCR cassettes in CI
+    - tox -e corgi -- --cov-report term --junitxml=junit.xml
   except:
     refs:
       - schedules

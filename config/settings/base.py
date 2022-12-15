@@ -24,7 +24,7 @@ ADMINS = tuple(
 
 DOCS_URL = os.getenv("CORGI_DOCS_URL")
 OPENSHIFT_BUILD_COMMIT = os.getenv("OPENSHIFT_BUILD_COMMIT")
-PRODSEC_EMAIL = os.getenv("PRODSEC_EMAIL")
+PRODSEC_EMAIL = os.getenv("PRODSEC_EMAIL", "dev@example.com")
 
 CORGI_DOMAIN = os.getenv("CORGI_DOMAIN")
 if CORGI_DOMAIN:
@@ -360,15 +360,12 @@ UMB_BROKER_URL = os.getenv("CORGI_UMB_BROKER_URL")
 UMB_BREW_MONITOR_ENABLED = strtobool(os.getenv("CORGI_UMB_BREW_MONITOR_ENABLED", "true"))
 
 # Set to True to turn on loading of community products from product-definitions.
-COMMUNITY_PRODUCTS_ENABLED = strtobool(os.getenv("CORGI_COMMUNITY_PRODUCTS_ENABLED", "false"))
+COMMUNITY_MODE_ENABLED = strtobool(os.getenv("CORGI_COMMUNITY_MODE_ENABLED", "false"))
 
 # Brew
 BREW_URL = os.getenv("CORGI_BREW_URL")
 BREW_WEB_URL = os.getenv("CORGI_BREW_WEB_URL")
 BREW_DOWNLOAD_ROOT_URL = os.getenv("CORGI_BREW_DOWNLOAD_ROOT_URL")
-
-# RHEL Compose
-RHEL_COMPOSE_BASE_URL = os.getenv("CORGI_TEST_DOWNLOAD_URL")
 
 # ProdSec Dashboard
 PRODSEC_DASHBOARD_URL = os.getenv("CORGI_PRODSEC_DASHBOARD_URL")
@@ -398,7 +395,7 @@ APP_STREAMS_LIFE_CYCLE_URL = os.getenv("CORGI_APP_STREAMS_LIFE_CYCLE_URL", "")
 # Manifest hints url
 MANIFEST_HINTS_URL = os.getenv("CORGI_MANIFEST_HINTS_URL")
 
-LOOKASIDE_CACHE_BASE_URL = f"https://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}/repo"
+LOOKASIDE_CACHE_BASE_URL = os.getenv("CORGI_LOOKASIDE_CACHE_URL")
 
 # Set to False to disable software composition analysis tasks.
 SCA_ENABLED = strtobool(os.getenv("CORGI_SCA_ENABLED", "true"))

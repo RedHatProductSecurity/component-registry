@@ -1,5 +1,4 @@
 import json
-import os
 from types import SimpleNamespace
 from unittest.mock import call, patch
 
@@ -15,10 +14,11 @@ from corgi.tasks.brew import (
     slow_fetch_brew_build,
 )
 from tests.data.image_archive_data import (
+    KOJI_LIST_RPMS,
     NO_RPMS_IN_SUBCTL_CONTAINER,
     NOARCH_RPM_IDS,
     RPM_BUILD_IDS,
-    TEST_IMAGE_ARCHIVES,
+    TEST_IMAGE_ARCHIVE,
 )
 from tests.factories import (
     ContainerImageComponentFactory,
@@ -582,7 +582,7 @@ def test_parse_remote_source_url():
     assert Brew._parse_remote_source_url(url) == expected
 
 
-# test_data_file, expected_component, replace_urls
+# test_data_file, expected_component
 extract_golang_test_data = [
     (
         "tests/data/remote-source-submariner-operator.json",
@@ -595,7 +595,6 @@ extract_golang_test_data = [
                 "version": "v0.0.0-20210307081110-f21760c49a8d",
             },
         },
-        False,
     ),
     (
         "tests/data/remote-source-poison-pill.json",
@@ -608,20 +607,15 @@ extract_golang_test_data = [
                 "version": "1.15.0",
             },
         },
-        True,
     ),
 ]
 
 
-@pytest.mark.parametrize("test_data_file,expected_component,replace_urls", extract_golang_test_data)
-def test_extract_golang(test_data_file, expected_component, replace_urls):
+@pytest.mark.parametrize("test_data_file,expected_component", extract_golang_test_data)
+def test_extract_golang(test_data_file, expected_component):
     brew = Brew()
     with open(test_data_file) as testdata:
         testdata = testdata.read()
-        if replace_urls:
-            testdata = testdata.replace(
-                "{CORGI_TEST_CACHITO_URL}", os.getenv("CORGI_TEST_CACHITO_URL")
-            )
         testdata = json.loads(testdata, object_hook=lambda d: SimpleNamespace(**d))
     components, remaining = brew._extract_golang(testdata.dependencies, "1.15.0")
     assert expected_component in components
@@ -666,32 +660,32 @@ def test_save_component():
     assert Component.objects.filter(type=Component.Type.RPM, software_build=software_build).exists()
 
 
-@pytest.mark.vcr(match_on=["method", "scheme", "host", "port", "path", "body"])
-def test_extract_image_components():
+@patch("koji.ClientSession")
+def test_extract_image_components(mock_koji_session, monkeypatch):
+    mock_koji_session.listRPMs.return_value = KOJI_LIST_RPMS
     brew = Brew()
-    results = []
+    monkeypatch.setattr(brew, "koji_session", mock_koji_session)
     noarch_rpms_by_id = {}
     rpm_build_ids = set()
-    for archive in TEST_IMAGE_ARCHIVES:
-        noarch_rpms_by_id, result = brew._extract_image_components(
-            archive, 1781353, "subctl-container-v0.11.0-51", noarch_rpms_by_id, rpm_build_ids
-        )
-        results.append(result)
-    assert len(results) == len(TEST_IMAGE_ARCHIVES)
+    archive = TEST_IMAGE_ARCHIVE
+    noarch_rpms_by_id, result = brew._extract_image_components(
+        archive, 1781353, "subctl-container-v0.11.0-51", noarch_rpms_by_id, rpm_build_ids
+    )
     assert list(rpm_build_ids) == RPM_BUILD_IDS
-    for image in results:
-        assert image["meta"]["arch"] in ["s390x", "x86_64", "ppc64le"]
-        assert len(image["rpm_components"]) == NO_RPMS_IN_SUBCTL_CONTAINER - len(NOARCH_RPM_IDS)
-        for rpm in image["rpm_components"]:
-            assert rpm["meta"]["arch"] != "noarch"
+    assert result["meta"]["arch"] == "x86_64"
+    assert len(result["rpm_components"]) == NO_RPMS_IN_SUBCTL_CONTAINER - len(NOARCH_RPM_IDS)
+    for rpm in result["rpm_components"]:
+        assert rpm["meta"]["arch"] != "noarch"
     noarch_rpms = noarch_rpms_by_id.values()
     assert len(noarch_rpms) == len(NOARCH_RPM_IDS)
     assert set(noarch_rpms_by_id.keys()) == set(NOARCH_RPM_IDS)
 
 
-@pytest.mark.vcr(match_on=["method", "scheme", "host", "port", "path", "body"])
+@patch("corgi.tasks.brew.Brew")
 @patch("corgi.tasks.sca.cpu_software_composition_analysis.delay")
-def test_fetch_rpm_build(mock_sca):
+def test_fetch_rpm_build(mock_sca, mock_brew):
+    with open("tests/data/brew/1705913/component_data.json", "r") as component_data_file:
+        mock_brew.return_value.get_component_data.return_value = json.load(component_data_file)
     slow_fetch_brew_build(1705913)
     srpm = Component.objects.srpms().get(name="cockpit")
     assert srpm.description

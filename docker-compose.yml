@@ -67,7 +67,6 @@ services:
     env_file:
       - .env
     environment:
-      DJANGO_SETTINGS_MODULE: "config.settings.dev"
       CORGI_DB_HOST: corgi-db
     command: gunicorn config.wsgi --config gunicorn_config.py --reload
     healthcheck:
@@ -83,7 +82,6 @@ services:
     image: corgi
     depends_on: ["corgi-db", "redis"]
     environment:
-      DJANGO_SETTINGS_MODULE: "config.settings.dev"
       CORGI_DB_HOST: corgi-db
     env_file: .env
     command: ./run_umb_monitor.sh
@@ -97,7 +95,6 @@ services:
     env_file:
       - .env
     environment:
-      DJANGO_SETTINGS_MODULE: "config.settings.dev"
       CORGI_DB_HOST: corgi-db
     depends_on: ["corgi-db", "redis"]
     command: ./run_celery_beat.sh
@@ -116,7 +113,6 @@ services:
     env_file:
       - .env
     environment:
-      DJANGO_SETTINGS_MODULE: "config.settings.dev"
       CORGI_DB_HOST: corgi-db
     depends_on: ["corgi-celery-beat"]
     command: ./run_celery_fast.sh
@@ -135,7 +131,6 @@ services:
     env_file:
       - .env
     environment:
-      DJANGO_SETTINGS_MODULE: "config.settings.dev"
       CORGI_DB_HOST: corgi-db
     depends_on: ["corgi-celery-beat"]
     command: ./run_celery_slow.sh
@@ -154,7 +149,6 @@ services:
     env_file:
       - .env
     environment:
-      DJANGO_SETTINGS_MODULE: "config.settings.dev"
       CORGI_DB_HOST: corgi-db
     depends_on: ["corgi-celery-beat"]
     command: ./run_celery_cpu.sh
@@ -167,7 +161,6 @@ services:
     hostname: flower
     image: corgi
     environment:
-      DJANGO_SETTINGS_MODULE: "config.settings.dev"
       CORGI_DB_HOST: corgi-db
     depends_on: ["redis", "corgi-db"]
     command: ./run_celery_flower.sh

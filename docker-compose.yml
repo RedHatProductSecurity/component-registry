@@ -14,7 +14,7 @@ services:
       POSTGRESQL_DATABASE: corgi-db
       POSTGRESQL_USER: corgi-db-user
       POSTGRESQL_PASSWORD: "test"
-      POSTGRESQL_ADMIN_PASSWORD: "secret"
+      POSTGRESQL_ADMIN_PASSWORD: "test"
     volumes:
       - corgi-pg-data:/var/lib/pgsql/data/
       # Config files in below directory are automatically loaded by postgres at startup

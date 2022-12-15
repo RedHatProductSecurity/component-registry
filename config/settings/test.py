@@ -9,16 +9,10 @@ DEBUG = True
 
 SECRET_KEY = get_random_secret_key()
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("CORGI_DB_NAME", "corgi-db"),
-        "USER": os.getenv("CORGI_DB_USER", "postgres"),
-        "PASSWORD": os.getenv("CORGI_DB_PASSWORD", "secret"),
-        "HOST": os.getenv("CORGI_DB_HOST", "localhost"),
-        "PORT": os.getenv("CORGI_DB_PORT", "5432"),
-    }
-}
+# Use PG's default admin user to allow creating the test database
+_user = os.getenv("CORGI_DB_USER", "postgres")
+DATABASES["default"]["USER"] = _user  # noqa: F405
+DATABASES["read_only"]["USER"] = _user  # noqa: F405
 
 SESSION_COOKIE_SECURE = False
 

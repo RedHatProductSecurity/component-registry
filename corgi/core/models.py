@@ -8,7 +8,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelatio
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
 from django.db import models
-from django.db.models import F, Func, IntegerField, QuerySet, TextField, Value
+from django.db.models import F, Func, QuerySet, TextField, Value
 from mptt.managers import TreeManager
 from mptt.models import MPTTModel, TreeForeignKey
 from packageurl import PackageURL
@@ -651,7 +651,7 @@ class ProductStream(ProductModel):
                         ),
                         el_match=Func(
                             F("release"),
-                            Value(".([a-z]*el(\d+\.)?(\d+\.)?(\*|\d+))"),
+                            Value(".([a-z]*el(\\d+\\.)?(\\d+\\.)?(\\*|\\d+))"),
                             function="regexp_match",
                             output=fields.ArrayField(TextField()),
                         ),

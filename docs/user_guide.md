@@ -294,64 +294,53 @@ This query returns a list of results include the component count. The component 
 The sources field lists all versions of all components which embed this component, it's useful to process the results on the client side to get a clearer picture of the packages included:
 
 ```bash
-$ curl -L -s https://${CORGI_HOST}/api/v1/components?purl=pkg:npm/is-svg@2.1.0 | jq '.sources[] | .purl' | awk -F@ '{print $1}' | cut -c2- | sort | uniq
-pkg:container/redhat/console-ui-container
-pkg:container/redhat/devspaces-machineexec-rhel8-container
-pkg:container/redhat/devspaces-theia-rhel8-container
-pkg:container/redhat/grafana-container
-pkg:container/redhat/grafana-container-source
-pkg:container/redhat/openshift-enterprise-console-container
-pkg:container/redhat/openshift-enterprise-console-container-source
-pkg:container/redhat/quay-registry-container
+$ curl -L -s https://${CORGI_HOST}/api/v1/components?purl=pkg:npm/is-svg@2.1.0 | jq '.sources[] | .purl' | grep -v "\-container\-source" | awk -F@ '{print $1}' | cut -c2- | sort | uniq
+pkg:oci/console-ui-rhel8
+pkg:oci/grafana
+pkg:oci/machineexec-rhel8
+pkg:oci/ose-console
+pkg:oci/quay-rhel8
+pkg:oci/theia-rhel8
 pkg:rpm/redhat/cfme-gemset
 pkg:rpm/redhat/cockpit-ceph-installer
 pkg:rpm/redhat/cockpit-ovirt
 pkg:rpm/redhat/dotnet3.1
-pkg:rpm/redhat/dotnet5.0
 pkg:rpm/redhat/firefox
 pkg:rpm/redhat/foreman
 pkg:rpm/redhat/grafana
 pkg:rpm/redhat/kibana
-pkg:rpm/redhat/mozjs60
-pkg:rpm/redhat/ovirt-engine-api-explorer
-pkg:rpm/redhat/ovirt-engine-ui-extensions
 pkg:rpm/redhat/ovirt-web-ui
-pkg:rpm/redhat/polkit
-pkg:rpm/redhat/rh-dotnet31-dotnet
-pkg:rpm/redhat/rh-dotnet50-dotnet
 pkg:rpm/redhat/subscription-manager
 pkg:rpm/redhat/tfm-rubygem-katello
 pkg:rpm/redhat/thunderbird
-pkg:srpm/redhat/dotnet3.1
-pkg:srpm/redhat/mozjs60
 ```
 
-Let's say you wanted to know which product streams the openshift-enterprise-console-container was shipped to. We could do component search using that name. Just using the name alone however returns nearly 500 results currently:
+Let's say you wanted to know which product streams the grafana rpm was shipped to. We could do component search using that name. Just using the name alone however returns 162 results currently:
 
 ```bash
-$ curl -s https://${CORGI_HOST}/api/v1/components?name=openshift-enterprise-console-container | jq '.count'
-467
+$ curl -s "https://${CORGI_HOST}/api/v1/components?name=grafana&type=RPM" | jq '.count'
+153
 ```
 
-Let's narrow down by specifying the arch to be 'noarch'. No arch containers represent an image index. It's sha256 digest can be used to pull the image on a container image registry client of any arch. In our data model noarch containers are parents of arch specific containers, or to use the taxonomy from the schema noarch containers provide arch specific containers.
+If we wanted to know which product streams this RPM was shipped to, we could filter and sort the results by product_streams field eg:
 
 ```bash
-curl -s "https://${CORGI_HOST}/api/v1/components?name=openshift-enterprise-console-container&arch=noarch&limit=500" | jq '.results[] | .purl'
-```
-
-If we wanted to know which product streams this container was shipped to, we could filter and sort the results by product_streams field eg:
-
-```bash
-curl -s "https://${CORGI_HOST}/api/v1/components?name=openshift-enterprise-console-container&arch=noarch&limit=500" | jq '.results[] | .product_streams[] | .ofuri' | sort | uniq
-"o:redhat:openshift:4.10.z"
-"o:redhat:openshift:4.11.z"
-"o:redhat:openshift:4.4.z"
-"o:redhat:openshift:4.5.z"
-"o:redhat:openshift:4.8"
-"o:redhat:openshift:4.8.z"
-"o:redhat:openshift:4.9"
-"o:redhat:openshift:4.9.z"
-"o:redhat:openshift-enterprise:3.11.z"
+$ curl -s "https://${CORGI_HOST}/api/v1/components?name=grafana&type=RPM" | jq '.results[] | .product_streams[] | .ofuri' | sort | uniq
+"o:redhat:ceph-2-default:"
+"o:redhat:ceph:3"
+"o:redhat:rhel:8.1.0.z"
+"o:redhat:rhel:8.2.0.z"
+"o:redhat:rhel:8.4.0.z"
+"o:redhat:rhel:8.6.0"
+"o:redhat:rhel:8.6.0.z"
+"o:redhat:rhel:8.7.0"
+"o:redhat:rhel:8.7.0.z"
+"o:redhat:rhel:8.8.0"
+"o:redhat:rhel:9.0"
+"o:redhat:rhel:9.0.0.z"
+"o:redhat:rhel:9.1.0"
+"o:redhat:rhel:9.1.0.z"
+"o:redhat:rhes:3.5"
 ```
 
 Using the current version of the API, we have to repeat the above query for each component in the sources list of the first component query. Also we want to be able to limit the results to only those product streams which are currently receiving security updates. This is probably best automated by a client tool.
@@ -361,41 +350,40 @@ Using the current version of the API, we have to repeat the above query for each
 Suppose we were interested in which container products shipped the polkit RPM package. Since we don't know the version in this case, we search by name and type. Normally when we search for an RPM package we are interested in SRPMs, but they are not installed in containers, only arch specific RPMs are installed. We could choose any arch to search for, but let's use x86_64 as an example in this case. I made sure all results where included in a single query by increasing the limit to 50. Also let's process the results so that we only see a single container results, not all versions.
 
 ```bash
-$ curl -s "https://${CORGI_HOST}/api/v1/components?type=RPM&name=polkit&&arch=x86_64&limit=50" | jq '.results[] | .sources[] | .purl' | grep 'pkg:container' | awk -F@ '{print $1}' | cut -c2- | sort | uniq
-pkg:container/redhat/assisted-installer-agent-container
-pkg:container/redhat/cephcsi-container
-pkg:container/redhat/cluster-node-tuning-operator-container
-pkg:container/redhat/flatpak-build-base-container
-pkg:container/redhat/ironic-rhcos-downloader-container
-pkg:container/redhat/kubevirt-tekton-tasks-disk-virt-customize-container
-pkg:container/redhat/kubevirt-tekton-tasks-disk-virt-customize-rhel9-container
-pkg:container/redhat/kubevirt-tekton-tasks-disk-virt-sysprep-container
-pkg:container/redhat/kubevirt-tekton-tasks-disk-virt-sysprep-rhel9-container
-pkg:container/redhat/kubevirt-v2v-conversion-container
-pkg:container/redhat/libguestfs-tools-container
-pkg:container/redhat/libguestfs-tools-rhel9-container
-pkg:container/redhat/mtv-virt-v2v-container
-pkg:container/redhat/multicluster-engine-assisted-installer-agent-container
-pkg:container/redhat/openstack-nova-compute-container
-pkg:container/redhat/openstack-nova-compute-ironic-container
-pkg:container/redhat/openstack-nova-libvirt-container
-pkg:container/redhat/ose-agent-installer-node-agent-container
-pkg:container/redhat/rhacm-assisted-installer-agent-container
-pkg:container/redhat/rook-ceph-operator-container
-pkg:container/redhat/sssd-container
-pkg:container/redhat/tuned-container
-pkg:container/redhat/ubi8-init-container
-pkg:container/redhat/virt-launcher-container
-pkg:container/redhat/virt-launcher-rhel9-container
-pkg:container/redhat/vm-import-virtv2v-container
+$ curl -s "https://${CORGI_HOST}/api/v1/components?type=RPM&name=polkit&arch=x86_64&limit=50" | jq '.results[] | .sources[] | .purl' | grep 'pkg:oci' | awk -F@ '{print $1}' | cut -c2- | sort | uniq
+pkg:oci/assisted-installer-agent-rhel8
+pkg:oci/cephcsi-container
+pkg:oci/kubevirt-tekton-tasks-disk-virt-customize
+pkg:oci/kubevirt-tekton-tasks-disk-virt-customize-rhel9
+pkg:oci/kubevirt-tekton-tasks-disk-virt-sysprep
+pkg:oci/kubevirt-tekton-tasks-disk-virt-sysprep-rhel9
+pkg:oci/kubevirt-v2v-conversion
+pkg:oci/libguestfs-tools
+pkg:oci/libguestfs-tools-rhel9
+pkg:oci/metrics-hawkular-metrics
+pkg:oci/mtv-virt-v2v-rhel8
+pkg:oci/openstack-nova-compute
+pkg:oci/openstack-nova-compute-ironic
+pkg:oci/openstack-nova-libvirt
+pkg:oci/ose-agent-installer-node-agent
+pkg:oci/ose-cluster-node-tuned
+pkg:oci/ose-cluster-node-tuning-operator
+pkg:oci/ose-ironic-machine-os-downloader
+pkg:oci/rook-ceph-operator-container
+pkg:oci/sssd
+pkg:oci/virt-launcher
+pkg:oci/virt-launcher-rhel9
+pkg:oci/vm-import-virtv2v-rhel8
 ```
 
 If we wanted to know which product streams these containers ship to, we can look at the product_streams field for each of these containers one by one, for example:
 
 ```bash
-curl -s "https://${CORGI_HOST}/api/v1/components?name=rhacm-assisted-installer-agent-container&arch=noarch" | jq '.results[] | .product_streams[] | .ofuri' | sort | uniq
+$ curl -s "https://${CORGI_HOST}/api/v1/components?re_purl=pkg:oci/assisted-installer-agent-rhel8&arch=noarch&limit=60" | jq '.results[] | .product_streams[] | .ofuri' | sort | uniq
+"o:redhat:openshift:4.6.z"
 "o:redhat:rhacm:2.3.z"
 "o:redhat:rhacm:2.4.z"
+"o:redhat:rhai:1"
 ```
 
 The last request would have to be repeated for each container image, which is something best handled by a CLI client.
@@ -407,7 +395,7 @@ Upstream path could mean a few things, for example it could include golang modul
 Regardless everything in Component Registry is a component, so we can utilize regular expressions to search for components with a substring in the name, eg:
 
 ```bash
-curl -s "https://${CORGI_HOST}/api/v1/components?re_name=github.com/ulikunitz/xz" | jq '.results[] | .purl'
+$ curl -s "https://${CORGI_HOST}/api/v1/components?re_name=github.com/ulikunitz/xz" | jq '.results[] | .purl'
 "pkg:golang/github.com/ulikunitz/xz@v0.5.9"
 "pkg:golang/github.com/ulikunitz/xz@0.5.10"
 "pkg:golang/github.com/ulikunitz/xz@v0.5.8"
@@ -423,7 +411,7 @@ curl -s "https://${CORGI_HOST}/api/v1/components?re_name=github.com/ulikunitz/xz
 If you want to exclude wildcard matches use a `name` query instead:
 
 ```bash
-curl -s "https://${CORGI_HOST}/api/v1/components?name=github.com/ulikunitz/xz" | jq '.results[] | .purl'
+$ curl -s "https://${CORGI_HOST}/api/v1/components?name=github.com/ulikunitz/xz" | jq '.results[] | .purl'
 "pkg:golang/github.com/ulikunitz/xz@0.5.10"
 "pkg:golang/github.com/ulikunitz/xz@v0.5.10"
 "pkg:golang/github.com/ulikunitz/xz@v0.5.4"
@@ -437,7 +425,7 @@ curl -s "https://${CORGI_HOST}/api/v1/components?name=github.com/ulikunitz/xz" |
 Another example query, which returns both `golang` and `generic` results:
 
 ```bash
-curl -L -s "https://${CORGI_HOST}/api/v1/components?re_name=github.com/3scale/apicast&limit=50" | jq '.results[] | .purl' | awk -F@ '{print $1}' | cut -c2- | sort | uniq
+$ curl -s "https://${CORGI_HOST}/api/v1/components?re_name=github.com/3scale/apicast&limit=50" | jq '.results[] | .purl' | awk -F@ '{print $1}' | cut -c2- | sort | uniq
 pkg:generic/github.com/3scale/apicast
 pkg:generic/github.com/3scale/apicast-operator
 pkg:golang/github.com/3scale/apicast-operator
@@ -448,9 +436,6 @@ pkg:golang/github.com/3scale/apicast-operator/pkg/apicast
 pkg:golang/github.com/3scale/apicast-operator/pkg/apis/apps
 pkg:golang/github.com/3scale/apicast-operator/pkg/apis/apps/v1alpha1
 pkg:golang/github.com/3scale/apicast-operator/pkg/helper
-pkg:golang/github.com/3scale/apicast-operator/pkg/k8sutils
-pkg:golang/github.com/3scale/apicast-operator/pkg/reconcilers
-pkg:golang/github.com/3scale/apicast-operator/version
 ```
 
 Notice the `generic` namespace is used to denote an upstream source in Component Registry. 
@@ -460,7 +445,7 @@ Notice the `generic` namespace is used to denote an upstream source in Component
 You can use the `type` url parameters on the `components` endpoint to limit results to a single type. For example if we want to only include upstream types in the previous query, we use a query such as:
 
 ```bash
-curl -L -s "https://${CORGI_HOST}/api/v1/components?type=UPSTREAM&re_name=github.com/3scale/apicast&limit=50" | jq '.results[] | .purl' | awk -F@ '{print $1}' | cut -c2- | sort | uniq
+$ curl -s "https://${CORGI_HOST}/api/v1/components?type=GENERIC&re_name=github.com/3scale/apicast&limit=50" | jq '.results[] | .purl' | awk -F@ '{print $1}' | cut -c2- | sort | uniq
 pkg:generic/github.com/3scale/apicast
 pkg:generic/github.com/3scale/apicast-operator
 ```
@@ -468,23 +453,24 @@ pkg:generic/github.com/3scale/apicast-operator
 The types available to filter results on can be found in the openapi schema. These types are subject to change in future versions.
 
 ```bash
-curl -s https://${CORGI_HOST}/api/v1/schema?format=json | jq '.paths[] | .get | select(.operationId == "v1_components_list") | .parameters[] | select(.name == "type")'
+$ curl -s https://${CORGI_HOST}/api/v1/schema?format=json | jq '.paths[] | .get | select(.operationId == "v1_components_list") | .parameters[] | select(.name == "type")'
 {
   "in": "query",
   "name": "type",
   "schema": {
     "type": "string",
     "enum": [
-      "CONTAINER_IMAGE",
+      "CARGO",
+      "GEM",
+      "GENERIC",
+      "GITHUB",
       "GOLANG",
       "MAVEN",
       "NPM",
+      "OCI",
       "PYPI",
-      "RHEL_MODULE",
       "RPM",
-      "SRPM",
-      "UNKNOWN",
-      "UPSTREAM"
+      "RPMMOD"
     ]
   }
 }
@@ -495,8 +481,8 @@ curl -s https://${CORGI_HOST}/api/v1/schema?format=json | jq '.paths[] | .get | 
 The dependencies (dependent components) of a component are listed in the `provides` field of that component. For example:
 
 ```bash
-curl -s "https://${CORGI_HOST}/api/v1/components?nvr=bare-metal-event-relay-operator-container-v4.11.1-56&arch=noarch" | jq '.results[] | .provides[] | .purl' | sort
-"pkg:container/redhat/bare-metal-event-relay-operator-container@v4.11.1-56?arch=x86_64&digest=sha256:5350a1cc503912f67ef02f13bfbd0dac159d96d52fea96590f2e2fef0cb5c01d"
+$ curl -s "https://${CORGI_HOST}/api/v1/components?nvr=bare-metal-event-relay-operator-container-v4.11.1-56&arch=noarch" | jq '.results[] | .provides[] | .purl' | sort
+"pkg:oci/bare-metal-event-relay@sha256:5350a1cc503912f67ef02f13bfbd0dac159d96d52fea96590f2e2fef0cb5c01d?arch=x86_64&repository_url=registry.redhat.io/openshift4/bare-metal-event-relay&tag=v4.11.1-56"
 "pkg:rpm/redhat/audit-libs@3.0.7-2.el8.2?arch=x86_64"
 "pkg:rpm/redhat/basesystem@11-5.el8?arch=noarch"
 "pkg:rpm/redhat/bash@4.4.20-4.el8_6?arch=x86_64"
@@ -509,26 +495,26 @@ Let's start listing all the active product streams in Component Registry. By def
 
 ```bash
 $ curl -s https://${CORGI_HOST}/api/v1/product_streams | jq '.count'
-311
+286
 ```
 
 If we wanted to include inactive streams as well, we'd do it like this:
 
 ```bash
 $ curl -s https://${CORGI_HOST}/api/v1/product_streams?active=all | jq '.count'
-1162
+1154
 ```
 
 Another useful property of product_streams we can filter on (client side) is the build_count. We can use a query such as this to limit the results to only the active product streams for which we have builds recorded.
 
 ```bash
-curl -s https://${CORGI_HOST}/api/v1/product_streams?limit=311 | jq '.results[] | select(.build_count > 0) | .ofuri, .build_count'
+$ curl -s https://${CORGI_HOST}/api/v1/product_streams?limit=311 | jq '.results[] | select(.build_count > 0) | .ofuri'
 "o:redhat:3amp:2"
 "o:redhat:amq:7"
 "o:redhat:amq-cl:2"
 "o:redhat:amq-ic:1"
 "o:redhat:amq-on:1"
-"o:redhat:amq-st:1"
+"o:redhat:amq-st:2"
 "o:redhat:ansible_automation_platform:1.2"
 ...
 ```
@@ -537,54 +523,111 @@ This time including the build_count and sorting by it:
 
 ```bash
 $ curl -s https://${CORGI_HOST}/api/v1/product_streams?limit=311 | jq -r '.results[] | select(.build_count > 0) | [.ofuri, .build_count] | @tsv' | sort -t$'\t' -k2 -nr
-o:redhat:rhel:7.9.z	12984
-o:redhat:rhel:7.7.z	11151
-o:redhat:rhel:7.6.z	10594
-o:redhat:rhel:8.6.0.z	9693
-o:redhat:openstack-13-els:	9623
-o:redhat:rhel-6-els:	7699
-o:redhat:rhel:8.4.0.z	7536
-o:redhat:openstack:16.1	7486
-o:redhat:openshift:4.6.z	7387
+o:redhat:openshift:4.12	13941
+o:redhat:rhel:7.9.z	13043
+o:redhat:rhel:7.7.z	11155
+o:redhat:rhel:8.7.0.z	10397
+o:redhat:openstack-13-els:	10075
+o:redhat:rhel:8.6.0.z	9155
+o:redhat:openstack:16.1	8006
+o:redhat:rhel:7.6.z	7765
+o:redhat:rhel-6-els:	7707
+o:redhat:rhel:8.4.0.z	7616
+o:redhat:openshift-enterprise:3.11.z	7597
 ...
 ```
 
-Let's focus in on the `o:redhat:rhel-br:8.6.0.z` product stream, as it doesn't have too many components, and includes some rhel modules. We can inspect the `components` field of the product stream to get a link to the components filter for the root-level components in that stream:
+Let's focus in on the `o:redhat:openshift:4.11.z` product stream, as it doesn't have too many components, and includes rpms and containers. We can inspect the `components` field of the product stream to get a link to the components filter for the root-level components in that stream:
 
 ```bash
-curl -s -L https://${CORGI_HOST}/api/v1/product_streams?ofuri=o:redhat:rhel-br:8.6.0.z | jq '.components'
-"https://${CORGI_HOST}/api/v1/components?ofuri=o:redhat:rhel-br:8.6.0.z&view=summary"
+$ curl -s -L https://${CORGI_HOST}/api/v1/product_streams?ofuri=o:redhat:openshift:4.11.z | jq '.components'
+"https://${CORGI_HOST}/api/v1/components?ofuri=o:redhat:openshift:4.11.z&view=summary"
 ```
 
 Let's first make sure we're including all results:
 
 ```bash
-curl -s "https://${CORGI_HOST}/api/v1/components?ofuri=o:redhat:rhel-br:8.6.0.z&view=summary" | jq '.count'
-1612
+$ curl -s "https://${CORGI_HOST}/api/v1/components?ofuri=o:redhat:openshift:4.11.z&view=summary" | jq '.count'
+604
 ```
 
-The reason this figure is less than the builds count (3085) is because the `ofuri` filter only includes the latest builds, whereas the `build_count` property above includes all builds in the stream.
+The reason this figure is less than the builds count (3662) is because the `ofuri` filter only includes the latest builds, whereas the `build_count` property above includes all builds in the stream.
 
-Since there are so many root-level components in the `o:redhat:rhel-br:8.6.0.z` product stream let's limit the results to only rhel modules:
-
-```bash
-curl -s "https://${CORGI_HOST}/api/v1/components?ofuri=o:redhat:rhel-br:8.6.0.z&type=RHEL_MODULE" | jq ".results[] | .purl'
-"pkg:rpmmod/redhat/mariadb-devel@10.3-8010020190902091509.cdc1202b?context=cdc1202b&stream=10.3&version=8010020190902091509"
-"pkg:rpmmod/redhat/python38-devel@3.8-8020020200309184510.bbc63041?context=bbc63041&stream=3.8&version=8020020200309184510"
-"pkg:rpmmod/redhat/virt-devel@rhel-820190226174025.9edba152?context=9edba152&stream=rhel&version=820190226174025"
-```
-
-To inspect the RPMs in those modules, simply inspect the `provides` property of each of them. In order to translate the purl into a url, it's best to use the `link` property instead of `purl` as used above, eg:
+The following query demonstrates only including a certain type in the product stream's latest results:
 
 ```bash
-curl -s "https://${CORGI_HOST}/api/v1/components?ofuri=o:redhat:rhel-br:8.6.0.z&type=RHEL_MODULE?limit=1" | jq '.results[] | .link'
-"https://${CORGI_HOST}/api/v1/components?purl=pkg%3Arpmmod/redhat/mariadb-devel%4010.3-8010020190902091509.cdc1202b%3Fcontext%3Dcdc1202b%26stream%3D10.3%26version%3D8010020190902091509"
-
-curl -s -L https://${CORGI_HOST}/api/v1/components?purl=pkg%3Arpmmod/redhat/mariadb-devel%4010.3-8010020190902091509.cdc1202b%3Fcontext%3Dcdc1202b%26stream%3D10.3%26version%3D8010020190902091509 | jq '.provides[] | .purl'
-"pkg:rpm/redhat/Judy-devel@1.0.5-18.module%2Bel8%2B2765%2Bcfa4f87b?arch=s390x"
-"pkg:rpm/redhat/Judy-devel@1.0.5-18.module%2Bel8%2B2765%2Bcfa4f87b?arch=aarch64"
-"pkg:rpm/redhat/mariadb-embedded-debuginfo@10.3.17-1.module%2Bel8.1.0%2B3974%2B90eded84?arch=i686"
+$ curl -s "https://${CORGI_HOST}/api/v1/components?ofuri=o:redhat:openshift:4.11.z&view=summary&type=RPM&limit=155" | jq '.results[] | .purl'
+"pkg:rpm/redhat/ovn22.06@22.06.0-27.el8fdp?arch=src"
+"pkg:rpm/redhat/containernetworking-plugins@1.0.1-5.rhaos4.11.el8?arch=src"
+"pkg:rpm/redhat/toolbox@0.1.0-1.rhaos4.11.el8?arch=src"
+"pkg:rpm/redhat/openvswitch2.17@2.17.0-62.el8fdp?arch=src"
+"pkg:rpm/redhat/criu@3.15-4.rhaos4.11.el8?arch=src"
+"pkg:rpm/redhat/runc@1.1.2-1.rhaos4.11.el8?arch=src&epoch=3"
+"pkg:rpm/redhat/libslirp@4.4.0-2.rhaos4.11.el8?arch=src"
+"pkg:rpm/redhat/fuse-overlayfs@1.9-1.rhaos4.11.el8?arch=src"
+"pkg:rpm/redhat/NetworkManager@1.36.0-8.el8_6?arch=src&epoch=1"
+"pkg:rpm/redhat/haproxy@2.2.24-1.el8?arch=src"
+"pkg:rpm/redhat/podman@4.0.2-6.rhaos4.11.el8?arch=src&epoch=2"
+"pkg:rpm/redhat/conmon@2.1.2-2.rhaos4.11.el8?arch=src&epoch=2"
+"pkg:rpm/redhat/python-funcsigs@1.0.2-17.el8?arch=src"
+"pkg:rpm/redhat/python-fasteners@0.14.1-21.el8?arch=src"
 ...
+```
+
+#### Exploring RHEL Modules
+
+To list the RHEL Modules in a product stream we need to use the `product_stream` property instead of ofuri because ofuri does not include RHEL Modules results.
+
+```bash
+$ curl -s "https://${CORGI_HOST}/api/v1/components?product_stream=rhel-br-8.6.0.z&type=RPMMOD&limit=1" | jq '.results[] | .link'
+"https://${CORGI_HOST}/api/v1/components?purl=pkg%3Arpmmod/redhat/389-ds%401.4%3A8000020190424152135%3Aab753183"
+```
+
+To inspect the RPMs in a module, look at the `provides` property. In order to translate the purl into a url, it's best to use the `link` property instead of `purl` as used above, eg:
+
+```bash
+$ curl -s -L https://${CORGI_HOST}/api/v1/components?purl=pkg%3Arpmmod/redhat/389-ds%401.4%3A8000020190424152135%3Aab753183 | jq '.provides[] | .purl'
+"pkg:rpm/redhat/389-ds-base@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=aarch64"
+"pkg:rpm/redhat/389-ds-base@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=ppc64le"
+"pkg:rpm/redhat/389-ds-base@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=s390x"
+"pkg:rpm/redhat/389-ds-base@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=x86_64"
+"pkg:rpm/redhat/389-ds-base-debuginfo@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=aarch64"
+"pkg:rpm/redhat/389-ds-base-debuginfo@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=ppc64le"
+"pkg:rpm/redhat/389-ds-base-debuginfo@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=s390x"
+"pkg:rpm/redhat/389-ds-base-debuginfo@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=x86_64"
+"pkg:rpm/redhat/389-ds-base-debugsource@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=aarch64"
+"pkg:rpm/redhat/389-ds-base-debugsource@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=ppc64le"
+"pkg:rpm/redhat/389-ds-base-debugsource@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=s390x"
+"pkg:rpm/redhat/389-ds-base-debugsource@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=x86_64"
+"pkg:rpm/redhat/389-ds-base-devel@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=aarch64"
+"pkg:rpm/redhat/389-ds-base-devel@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=ppc64le"
+"pkg:rpm/redhat/389-ds-base-devel@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=s390x"
+"pkg:rpm/redhat/389-ds-base-devel@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=x86_64"
+"pkg:rpm/redhat/389-ds-base-legacy-tools@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=aarch64"
+"pkg:rpm/redhat/389-ds-base-legacy-tools@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=ppc64le"
+"pkg:rpm/redhat/389-ds-base-legacy-tools@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=s390x"
+"pkg:rpm/redhat/389-ds-base-legacy-tools@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=x86_64"
+"pkg:rpm/redhat/389-ds-base-legacy-tools-debuginfo@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=aarch64"
+"pkg:rpm/redhat/389-ds-base-legacy-tools-debuginfo@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=ppc64le"
+"pkg:rpm/redhat/389-ds-base-legacy-tools-debuginfo@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=s390x"
+"pkg:rpm/redhat/389-ds-base-legacy-tools-debuginfo@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=x86_64"
+"pkg:rpm/redhat/389-ds-base-libs@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=aarch64"
+"pkg:rpm/redhat/389-ds-base-libs@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=ppc64le"
+"pkg:rpm/redhat/389-ds-base-libs@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=s390x"
+"pkg:rpm/redhat/389-ds-base-libs@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=x86_64"
+"pkg:rpm/redhat/389-ds-base-libs-debuginfo@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=aarch64"
+"pkg:rpm/redhat/389-ds-base-libs-debuginfo@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=ppc64le"
+"pkg:rpm/redhat/389-ds-base-libs-debuginfo@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=s390x"
+"pkg:rpm/redhat/389-ds-base-libs-debuginfo@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=x86_64"
+"pkg:rpm/redhat/389-ds-base-snmp@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=aarch64"
+"pkg:rpm/redhat/389-ds-base-snmp@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=ppc64le"
+"pkg:rpm/redhat/389-ds-base-snmp@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=s390x"
+"pkg:rpm/redhat/389-ds-base-snmp@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=x86_64"
+"pkg:rpm/redhat/389-ds-base-snmp-debuginfo@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=aarch64"
+"pkg:rpm/redhat/389-ds-base-snmp-debuginfo@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=ppc64le"
+"pkg:rpm/redhat/389-ds-base-snmp-debuginfo@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=s390x"
+"pkg:rpm/redhat/389-ds-base-snmp-debuginfo@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=x86_64"
+"pkg:rpm/redhat/python3-lib389@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=noarch"
 ```
 
 

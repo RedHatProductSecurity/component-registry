@@ -628,6 +628,7 @@ class ProductStream(ProductModel):
                 productstreams__ofuri=self.ofuri,
             )
             .exclude(software_build__isnull=True)
+            .prefetch_related("software_build")
             .annotate(
                 latest=models.Subquery(
                     Component.objects.filter(

@@ -328,17 +328,13 @@ class ComponentSerializer(ProductTaxonomySerializer):
 class ComponentListSerializer(serializers.ModelSerializer):
 
     link = serializers.SerializerMethodField(read_only=True)
-    build_completion_dt = serializers.SerializerMethodField(read_only=True)
+    build_completion_dt = serializers.DateTimeField(
+        source="software_build.completion_time", read_only=True
+    )
 
     @staticmethod
     def get_link(instance: Component) -> str:
         return get_component_purl_link(instance.purl)
-
-    @staticmethod
-    def get_build_completion_dt(instance: Component) -> str:
-        if instance.software_build:
-            return str(instance.software_build.completion_time)
-        return ""
 
     class Meta:
         model = Component

@@ -8,7 +8,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelatio
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
 from django.db import models
-from django.db.models import F, Func, QuerySet, TextField, Value
+from django.db.models import F, Func, Prefetch, QuerySet, TextField, Value
 from mptt.managers import TreeManager
 from mptt.models import MPTTModel, TreeForeignKey
 from packageurl import PackageURL
@@ -628,7 +628,11 @@ class ProductStream(ProductModel):
                 productstreams__ofuri=self.ofuri,
             )
             .exclude(software_build__isnull=True)
-            .prefetch_related("software_build")
+            .prefetch_related(
+                Prefetch(
+                    "software_build", queryset=SoftwareBuild.objects.all().only("completion_time")
+                )
+            )
             .annotate(
                 latest=models.Subquery(
                     Component.objects.filter(
@@ -637,6 +641,12 @@ class ProductStream(ProductModel):
                         productstreams__ofuri=self.ofuri,
                     )
                     .exclude(software_build__isnull=True)
+                    .prefetch_related(
+                        Prefetch(
+                            "software_build",
+                            queryset=SoftwareBuild.objects.all().only("completion_time"),
+                        )
+                    )
                     .annotate(
                         version_arr=Func(
                             F("version"),

@@ -220,8 +220,8 @@ def test_get_roots():
         purl=rpm.purl,
         defaults={"obj": rpm},
     )
-    assert rpm.get_roots == [srpm_cnode]
-    assert srpm.get_roots == [srpm_cnode]
+    assert rpm.get_roots(using="default") == [srpm_cnode]
+    assert srpm.get_roots(using="default") == [srpm_cnode]
 
     nested = ComponentFactory(name="nested")
     ComponentNode.objects.get_or_create(
@@ -230,7 +230,7 @@ def test_get_roots():
         purl=nested.purl,
         defaults={"obj": nested},
     )
-    assert nested.get_roots == [srpm_cnode]
+    assert nested.get_roots(using="default") == [srpm_cnode]
 
     container = ContainerImageComponentFactory(name="container")
     container_cnode, _ = ComponentNode.objects.get_or_create(
@@ -246,8 +246,8 @@ def test_get_roots():
         purl=container_rpm.purl,
         defaults={"obj": container_rpm},
     )
-    assert not container_rpm.get_roots
-    assert container.get_roots == [container_cnode]
+    assert not container_rpm.get_roots(using="default")
+    assert container.get_roots(using="default") == [container_cnode]
 
     container_source = ComponentFactory(
         name="container_source", namespace=Component.Namespace.UPSTREAM, type=Component.Type.GITHUB
@@ -258,7 +258,7 @@ def test_get_roots():
         purl=container_source.purl,
         defaults={"obj": container_source},
     )
-    assert container_source.get_roots == [container_cnode]
+    assert container_source.get_roots(using="default") == [container_cnode]
     container_nested = ComponentFactory(name="container_nested", type=Component.Type.NPM)
     ComponentNode.objects.get_or_create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
@@ -266,7 +266,7 @@ def test_get_roots():
         purl=container_nested.purl,
         defaults={"obj": container_nested},
     )
-    assert container_nested.get_roots == [container_cnode]
+    assert container_nested.get_roots(using="default") == [container_cnode]
 
 
 def test_product_component_relations():
@@ -301,6 +301,7 @@ def test_product_component_relations_errata():
     assert rhel_8_2 in c.productstreams.get_queryset()
 
 
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_product_stream_builds():
     rhel_8_2_build = SoftwareBuildFactory()
     rhel_8_2_base_build = SoftwareBuildFactory()
@@ -373,7 +374,7 @@ def test_get_upstream():
         purl=srpm_upstream.purl,
         defaults={"obj": srpm_upstream},
     )
-    assert sorted(rpm.get_upstreams_purls()) == [srpm_upstream.purl]
+    assert sorted(rpm.get_upstreams_purls(using="default")) == [srpm_upstream.purl]
 
 
 def test_get_upstream_container():
@@ -391,7 +392,7 @@ def test_get_upstream_container():
         purl=container_rpm.purl,
         defaults={"obj": container_rpm},
     )
-    assert container_rpm.get_upstreams_purls() == set()
+    assert container_rpm.get_upstreams_purls(using="default") == set()
 
     container_source = ContainerImageComponentFactory(name="container_source")
     container_source_cnode, _ = ComponentNode.objects.get_or_create(
@@ -408,7 +409,7 @@ def test_get_upstream_container():
         purl=container_source.purl,
         defaults={"obj": container_nested},
     )
-    assert sorted(container_nested.get_upstreams_purls()) == [container_source.purl]
+    assert sorted(container_nested.get_upstreams_purls(using="default")) == [container_source.purl]
 
     container_o_source = ComponentFactory(
         name="contain_upstream_other",
@@ -431,7 +432,9 @@ def test_get_upstream_container():
         purl=container_other_nested.purl,
         defaults={"obj": container_other_nested},
     )
-    assert sorted(container_other_nested.get_upstreams_purls()) == [container_o_source.purl]
+    assert sorted(container_other_nested.get_upstreams_purls(using="default")) == [
+        container_o_source.purl
+    ]
 
 
 def test_duplicate_insert_fails():

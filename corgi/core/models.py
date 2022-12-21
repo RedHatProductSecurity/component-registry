@@ -379,12 +379,18 @@ class ProductModel(TimeStampedModel):
         product_refs = [self.name]
         if isinstance(self, ProductStream):
             # we also want to include child product variants of this product stream
-            product_refs.extend(self.productvariants.values_list("name", flat=True))
+            product_refs.extend(
+                self.productvariants.values_list("name", flat=True).using("read_only")
+            )
         elif isinstance(self, ProductVersion) or isinstance(self, Product):
             # we don't store products or product versions in the relations table therefore
             # we only want to include child product streams and product variants in the query
-            product_refs.extend(self.productstreams.values_list("name", flat=True))
-            product_refs.extend(self.productvariants.values_list("name", flat=True))
+            product_refs.extend(
+                self.productstreams.values_list("name", flat=True).using("read_only")
+            )
+            product_refs.extend(
+                self.productvariants.values_list("name", flat=True).using("read_only")
+            )
         # else it was a product variant, only look up by self.name
 
         if product_refs:
@@ -392,15 +398,16 @@ class ProductModel(TimeStampedModel):
                 ProductComponentRelation.objects.filter(product_ref__in=product_refs)
                 .values_list("build_id", flat=True)
                 .distinct()
+                .using("read_only")
             )
         # Else no product variants or product streams - should never happen
         return ProductComponentRelation.objects.none()
 
     @property
     def coverage(self) -> int:
-        if not self.pnodes.exists():
+        if not self.pnodes.db_manager("read_only").exists():
             return 0
-        pnode_children = self.pnodes.get_queryset().get_descendants()
+        pnode_children = self.pnodes.get_queryset().get_descendants().using("read_only")
         if not pnode_children.exists():
             return 0
         has_build = 0
@@ -1088,11 +1095,11 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         )
 
     def save_component_taxonomy(self):
-        upstreams = self.get_upstreams_pks()
+        upstreams = self.get_upstreams_pks(using="default")
         self.upstreams.set(upstreams)
         provides = self.get_provides_nodes(using="default").values_list("component__pk", flat=True)
         self.provides.set(provides)
-        sources = self.get_sources_nodes().values_list("component__pk", flat=True)
+        sources = self.get_sources_nodes(using="default").values_list("component__pk", flat=True)
         self.sources.set(sources)
 
     @property
@@ -1148,8 +1155,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
         return None
 
-    @property
-    def get_roots(self) -> list[ComponentNode]:
+    def get_roots(self, using: str = "read_only") -> list[ComponentNode]:
         """Return component root entities."""
         roots: list[ComponentNode] = []
         # If a component does not have a softwarebuild that means it's not built at Red Hat
@@ -1157,7 +1163,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         # for functions other than get_upstreams we might need to revisit this check
         if not self.software_build:
             return roots
-        for cnode in self.cnodes.get_queryset():
+        for cnode in self.cnodes.get_queryset().using(using):
             root = cnode.get_root()
             if root.obj.type == Component.Type.CONTAINER_IMAGE:
                 # TODO if we change the CONTAINER->RPM ComponentNode.type to something besides
@@ -1171,6 +1177,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
                 rpm_descendant = (
                     cnode.get_ancestors(include_self=True)
                     .filter(component__type=Component.Type.RPM)
+                    .using(using)
                     .exists()
                 )
                 if not rpm_descendant:
@@ -1287,25 +1294,32 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             .distinct()
         )
 
-    def get_sources_nodes(self) -> QuerySet[ComponentNode]:
+    def get_sources_nodes(self, using: str = "read_only") -> QuerySet[ComponentNode]:
         """return all root node objects"""
-        return self.cnodes.get_queryset().get_ancestors(include_self=False).filter(parent=None)
+        return (
+            self.cnodes.get_queryset()
+            .get_ancestors(include_self=False)
+            .filter(parent=None)
+            .using(using)
+        )
 
-    def get_sources_purls(self) -> QuerySet:
+    def get_sources_purls(self, using: str = "read_only") -> QuerySet:
         """return all root node purls"""
-        return self.get_sources_nodes().values_list("purl", flat=True).distinct()
+        return self.get_sources_nodes(using=using).values_list("purl", flat=True).distinct()
 
-    def get_upstreams_nodes(self) -> list[ComponentNode]:
+    def get_upstreams_nodes(self, using: str = "read_only") -> list[ComponentNode]:
         """return upstreams component ancestors in family trees"""
         # The get_roots logic is too complicated to use only Django filtering
         # So it has to use Python logic and return a set, instead of a QuerySet
         # which forces us to use Python in this + all other get_upstreams_* methods
         upstreams = []
-        roots = self.get_roots
+        roots = self.get_roots(using=using)
         for root in roots:
             # For SRPM/RPMS, and noarch containers, these are the cnodes we want.
-            source_descendants = root.get_descendants().filter(
-                type=ComponentNode.ComponentNodeType.SOURCE
+            source_descendants = (
+                root.get_descendants()
+                .filter(type=ComponentNode.ComponentNodeType.SOURCE)
+                .using(using)
             )
             # Cachito builds nest components under the relevant source component for that
             # container build, eg. buildID=1911112. In that case we need to walk up the
@@ -1324,19 +1338,20 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
                         type=ComponentNode.ComponentNodeType.SOURCE,
                         component__namespace=Component.Namespace.UPSTREAM,
                     )
+                    .using(using)
                 )
             else:
                 upstreams.extend(source_descendants)
         return upstreams
 
-    def get_upstreams_pks(self) -> tuple[str, ...]:
+    def get_upstreams_pks(self, using: str = "read_only") -> tuple[str, ...]:
         """Return only the primary keys from the set of all upstream nodes"""
-        linked_pks = set(node.component.pk for node in self.get_upstreams_nodes())
+        linked_pks = set(node.component.pk for node in self.get_upstreams_nodes(using=using))
         return tuple(linked_pks)
 
-    def get_upstreams_purls(self) -> set[str]:
+    def get_upstreams_purls(self, using: str = "read_only") -> set[str]:
         """Return only the purls from the set of all upstream nodes"""
-        return set(node.purl for node in self.get_upstreams_nodes())
+        return set(node.purl for node in self.get_upstreams_nodes(using=using))
 
     def save_datascore(self):
         score = 0

@@ -256,7 +256,21 @@ DATABASES = {
         # Prefer password authentication even if a valid Kerberos ticket exists on the system.
         # See: https://www.postgresql.org/docs/devel/libpq-connect.html#LIBPQ-CONNECT-GSSENCMODE
         "OPTIONS": {"gssencmode": "disable"},
-    }
+    },
+    "read_only": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("CORGI_DB_NAME", "corgi-db"),
+        "USER": os.getenv("CORGI_DB_USER", "corgi-db-user"),
+        "PASSWORD": os.getenv("CORGI_DB_PASSWORD", "test"),
+        # Set up a "read-only" DB that defaults to above locally
+        "HOST": os.getenv("CORGI_DB_HOST_RO", os.getenv("CORGI_DB_HOST", "localhost")),
+        "PORT": os.getenv("CORGI_DB_PORT", "5432"),
+        # Prefer password authentication even if a valid Kerberos ticket exists on the system.
+        # See: https://www.postgresql.org/docs/devel/libpq-connect.html#LIBPQ-CONNECT-GSSENCMODE
+        "OPTIONS": {"gssencmode": "disable"},
+        # When running tests, mirror all data from the default DB instead of using migrations
+        "TEST": {"MIGRATE": False, "MIRROR": "default"},
+    },
 }
 
 # Default primary key field type

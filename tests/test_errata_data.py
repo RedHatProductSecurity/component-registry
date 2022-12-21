@@ -20,7 +20,7 @@ from corgi.tasks.errata_tool import slow_load_errata, update_variant_repos
 
 from .factories import ProductStreamFactory, ProductVariantFactory
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit, pytest.mark.django_db]
 
 
 def test_update_variant_repos():

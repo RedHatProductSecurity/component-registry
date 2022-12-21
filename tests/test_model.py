@@ -27,7 +27,7 @@ from .factories import (
     SrpmComponentFactory,
 )
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit, pytest.mark.django_db]
 
 
 def test_product_model():

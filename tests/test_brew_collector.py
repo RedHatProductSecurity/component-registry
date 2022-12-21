@@ -622,6 +622,7 @@ def test_extract_golang(test_data_file, expected_component):
     assert len(remaining) == 0
 
 
+@pytest.mark.django_db
 def test_save_component():
     software_build = SoftwareBuildFactory()
 
@@ -681,6 +682,7 @@ def test_extract_image_components(mock_koji_session, monkeypatch):
     assert set(noarch_rpms_by_id.keys()) == set(NOARCH_RPM_IDS)
 
 
+@pytest.mark.django_db
 @patch("corgi.tasks.brew.Brew")
 @patch("corgi.tasks.sca.cpu_software_composition_analysis.delay")
 def test_fetch_rpm_build(mock_sca, mock_brew):
@@ -729,6 +731,7 @@ def test_fetch_rpm_build(mock_sca, mock_brew):
     assert sorted(jquery.get_sources_purls()) == ["pkg:rpm/redhat/cockpit@251-1.el8?arch=src"]
 
 
+@pytest.mark.django_db
 @patch("corgi.tasks.brew.Brew")
 @patch("corgi.tasks.brew.cpu_software_composition_analysis.delay")
 @patch("corgi.tasks.brew.slow_load_errata.delay")
@@ -772,6 +775,7 @@ def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, moc
     mock_sca.assert_called_with(1781353)
 
 
+@pytest.mark.django_db
 @patch("corgi.core.models.SoftwareBuild.save_product_taxonomy")
 def test_new_software_build_relation(mock_save_prod_tax):
     sb = SoftwareBuildFactory()

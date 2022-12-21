@@ -14,6 +14,7 @@ from corgi.tasks.prod_defs import update_products
 pytestmark = pytest.mark.unit
 
 
+@pytest.mark.django_db
 def test_products(requests_mock):
     with open("tests/data/product-definitions.json") as prod_defs:
         text = prod_defs.read()

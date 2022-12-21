@@ -21,6 +21,7 @@ srpm_build_id = 1
 rpm_nvr = "389-ds-base-1.4.3.28-6.module+el8.6.0+14129+983ceada.x86_64"
 
 
+@pytest.mark.django_db
 @patch("corgi.collectors.brew.Brew.brew_srpm_lookup")
 @patch("corgi.collectors.brew.Brew.brew_rpm_lookup")
 def test_fetch_module_data(mock_brew_rpm_lookup, mock_brew_srpm_lookup, requests_mock):
@@ -57,6 +58,7 @@ def test_fetch_module_data(mock_brew_rpm_lookup, mock_brew_srpm_lookup, requests
     assert rpm.srpm == srpm
 
 
+@pytest.mark.django_db
 @patch("corgi.collectors.brew.Brew.fetch_rhel_module", return_value={})
 @patch("corgi.tasks.brew.slow_fetch_brew_build.delay")
 def test_get_builds(mock_fetch_rhel_module, mock_slow_fetch_brew_build):
@@ -76,6 +78,7 @@ def test_get_builds(mock_fetch_rhel_module, mock_slow_fetch_brew_build):
     assert mock_slow_fetch_brew_build.call_count == 1
 
 
+@pytest.mark.django_db
 @patch("corgi.tasks.brew.slow_fetch_brew_build.delay")
 def test_fetch_compose_build(mock_fetch_brew):
     modular_rpm = _set_up_rhel_compose()
@@ -91,6 +94,7 @@ def test_fetch_compose_build(mock_fetch_brew):
     assert mock_fetch_brew.called_with(srpm_build_id)
 
 
+@pytest.mark.django_db
 def test_fetch_rhel_module():
     _set_up_rhel_compose()
     assert not Brew.fetch_rhel_module(2)
@@ -135,6 +139,7 @@ def mock_fetch_rpm_data(compose_url, variants):
     yield "1533085"
 
 
+@pytest.mark.django_db
 @patch("corgi.collectors.rhel_compose.RhelCompose._fetch_rpm_data", new=mock_fetch_rpm_data)
 def test_save_compose(requests_mock):
     composes = {f"{base_url}/rhel-8/rel-eng/RHEL-8/RHEL-8.4.0-RC-1.2/compose": ["AppStream"]}

@@ -695,14 +695,14 @@ def test_fetch_rpm_build(mock_sca, mock_brew):
     assert srpm.software_build
     assert srpm.software_build.build_id
     assert srpm.epoch == 0
-    provides = srpm.get_provides_purls()
+    provides = srpm.get_provides_purls(using="default")
     assert len(provides) == 30
-    for package in [
+    for package in (
         "pkg:npm/jquery@3.5.1",
         "pkg:generic/xstatic-patternfly-common@3.59.5",
         "pkg:generic/xstatic-bootstrap-datepicker-common@1.9.0",
         "pkg:rpm/redhat/cockpit-system@251-1.el8?arch=noarch",
-    ]:
+    ):
         assert package in provides
     assert len(srpm.get_upstreams_purls()) == 1
     # SRPM has no sources of its own (nor is it embedded in any other component)

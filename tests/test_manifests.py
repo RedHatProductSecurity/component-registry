@@ -24,7 +24,10 @@ from .factories import (
 )
 
 logger = logging.getLogger()
-pytestmark = [pytest.mark.unit, pytest.mark.django_db]
+pytestmark = [
+    pytest.mark.unit,
+    pytest.mark.django_db(databases=("default", "read_only"), transaction=True),
+]
 
 
 def test_product_manifest_properties():

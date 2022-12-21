@@ -1,7 +1,7 @@
 {# Component manifest, obj is a Component here #}
 {% extends "base_manifest.json" %}
 {% block packages %}
-{% for component in obj.provides.get_queryset %}
+{% for component in obj.provides_queryset %}
         {% include "package_manifest.json" %}
     {% endfor %}
     {

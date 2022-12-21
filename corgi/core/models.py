@@ -413,7 +413,9 @@ class ProductModel(TimeStampedModel):
     def cpes(self) -> tuple[str, ...]:
         """Return CPEs for child streams / variants."""
         # include_self=True so we don't have to override this property for streams
-        descendants = self.pnodes.get_queryset().get_descendants(include_self=True)
+        descendants = (
+            self.pnodes.get_queryset().get_descendants(include_self=True).using("read_only")
+        )
         stream_cpes = (
             descendants.filter(level=MODEL_NODE_LEVEL_MAPPING["ProductStream"])
             .values_list("productstream__cpe", flat=True)
@@ -620,8 +622,8 @@ class ProductStream(ProductModel):
         """Return an SPDX-style manifest in JSON format."""
         return ProductManifestFile(self).render_content()
 
-    def get_latest_components(self):
-        """Return root components from latest builds."""
+    def get_latest_components(self, using: str = "read_only") -> QuerySet["Component"]:
+        """Return root components from latest builds, using specified DB (read-only by default."""
         return (
             Component.objects.filter(
                 ROOT_COMPONENTS_CONDITION,
@@ -630,7 +632,8 @@ class ProductStream(ProductModel):
             .exclude(software_build__isnull=True)
             .prefetch_related(
                 Prefetch(
-                    "software_build", queryset=SoftwareBuild.objects.all().only("completion_time")
+                    "software_build",
+                    queryset=SoftwareBuild.objects.all().only("completion_time").using(using),
                 )
             )
             .annotate(
@@ -644,7 +647,9 @@ class ProductStream(ProductModel):
                     .prefetch_related(
                         Prefetch(
                             "software_build",
-                            queryset=SoftwareBuild.objects.all().only("completion_time"),
+                            queryset=SoftwareBuild.objects.all()
+                            .only("completion_time")
+                            .using(using),
                         )
                     )
                     .annotate(
@@ -673,12 +678,14 @@ class ProductStream(ProductModel):
                         "-version_arr",
                         "-release_arr",
                     )
+                    .using(using)
                     .values("uuid")[:1]
                 )
             )
             .filter(
                 uuid=models.F("latest"),
             )
+            .using(using)
         )
 
 
@@ -1083,10 +1090,15 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     def save_component_taxonomy(self):
         upstreams = self.get_upstreams_pks()
         self.upstreams.set(upstreams)
-        provides = self.get_provides_nodes().values_list("component__pk", flat=True)
+        provides = self.get_provides_nodes(using="default").values_list("component__pk", flat=True)
         self.provides.set(provides)
         sources = self.get_sources_nodes().values_list("component__pk", flat=True)
         self.sources.set(sources)
+
+    @property
+    def provides_queryset(self, using: str = "read_only") -> QuerySet["Component"]:
+        """Return the "provides" queryset using the read-only DB, for use in templates"""
+        return self.provides.get_queryset().using(using)
 
     def is_srpm(self):
         return self.type == Component.Type.RPM and self.arch == "src"
@@ -1256,19 +1268,21 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     def epoch(self) -> str:
         return self.meta_attr.get("epoch", "")
 
-    def get_provides_nodes(self, include_dev: bool = True) -> QuerySet[ComponentNode]:
+    def get_provides_nodes(
+        self, include_dev: bool = True, using: str = "read_only"
+    ) -> QuerySet[ComponentNode]:
         """return a QuerySet of descendants with PROVIDES ComponentNode type"""
         # Used in manifests / taxonomies. Returns whole objects to access their properties
         type_list = [ComponentNode.ComponentNodeType.PROVIDES]
         if include_dev:
             type_list.append(ComponentNode.ComponentNodeType.PROVIDES_DEV)
-        return self.cnodes.get_queryset().get_descendants().filter(type__in=type_list)
+        return self.cnodes.get_queryset().get_descendants().filter(type__in=type_list).using(using)
 
-    def get_provides_purls(self, include_dev: bool = True) -> QuerySet:
+    def get_provides_purls(self, include_dev: bool = True, using: str = "read_only") -> QuerySet:
         """return a QuerySet of unique descendant PURLs with PROVIDES ComponentNode type"""
         # Used in serializers. Returns identifiers (purls) to track relationships
         return (
-            self.get_provides_nodes(include_dev=include_dev)
+            self.get_provides_nodes(include_dev=include_dev, using=using)
             .values_list("purl", flat=True)
             .distinct()
         )

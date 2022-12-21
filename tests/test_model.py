@@ -49,6 +49,7 @@ def test_productstream_model():
     assert p1.cpe == "cpe:/o:redhat:enterprise_linux:8"
 
 
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_cpes():
     p1 = ProductFactory(name="RHEL")
     pv1 = ProductVersionFactory(name="RHEL-7", version="7", products=p1)
@@ -191,7 +192,7 @@ def test_component_provides():
         purl=dev_comp.purl,
         defaults={"obj": dev_comp},
     )
-    assert dev_comp.purl in upstream.get_provides_purls()
+    assert dev_comp.purl in upstream.get_provides_purls(using="default")
 
 
 def test_software_build_model():

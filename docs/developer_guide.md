@@ -82,7 +82,7 @@ CORGI_BREW_DOWNLOAD_ROOT_URL=https://kojipkgs.fedoraproject.org
 CORGI_BREW_URL=https://koji.fedoraproject.org/kojihub
 CORGI_LOOKASIDE_CACHE_URL=https://src.fedoraproject.org/repo/pkgs
 CORGI_COMMUNITY_MODE_ENABLED=true
-CORGI_COMMUNITY_MODE_ENABLED=false
+CORGI_UMB_BREW_MONITOR_ENABLED=false
 ```
 
 
@@ -90,8 +90,9 @@ If doing enterprise development, be sure to set this to relevant value from CI e
 If it's not set the local product-definitions.json file in the config directory will be used.
 ```bash
 CORGI_COMMUNITY_MODE_ENABLED=false
-CORGI_COMMUNITY_MODE_ENABLED=true
+CORGI_UMB_BREW_MONITOR_ENABLED=true
 CORGI_PRODSEC_DASHBOARD_URL=<value>
+CORGI_BREW_WEB_URL=<value>
 ```
 
 It is recommended to add all the aforementioned environment variables to a `.env` file in the project root directory.

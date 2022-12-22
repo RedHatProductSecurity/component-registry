@@ -4,8 +4,9 @@ from django.core.management.base import BaseCommand, CommandParser
 from koji import GenericError  # type: ignore[attr-defined]
 
 from corgi.collectors.brew import Brew
-from corgi.core.models import ProductStream
+from corgi.core.models import ProductStream, SoftwareBuild
 from corgi.tasks.brew import fetch_unprocessed_brew_tag_relations, slow_fetch_brew_build
+from corgi.tasks.common import BUILD_TYPE
 
 
 class Command(BaseCommand):
@@ -37,6 +38,12 @@ class Command(BaseCommand):
             help="Schedule build for ingestion inline (not in celery)",
         )
         parser.add_argument(
+            "-c",
+            "--centos",
+            action="store_true",
+            help="Fetch builds from CENTOS koji instance",
+        )
+        parser.add_argument(
             "-f",
             "--force",
             action="store_true",
@@ -48,7 +55,11 @@ class Command(BaseCommand):
             build_ids = options["build_ids"]
         elif options["stream"]:
             ps = ProductStream.objects.db_manager("read_only").get(name=options["stream"])
-            brew = Brew()
+
+            brew = (
+                Brew(SoftwareBuild.Type.CENTOS) if ps.name == "openstack-rdo" else Brew(BUILD_TYPE)
+            )
+
             build_ids = set()
             for brew_tag, inherit in ps.brew_tags.items():
                 try:
@@ -78,7 +89,10 @@ class Command(BaseCommand):
         )
 
         for build_id in build_ids:
+            build_type = BUILD_TYPE
+            if options["centos"]:
+                build_type = SoftwareBuild.Type.CENTOS
             if options["inline"]:
-                slow_fetch_brew_build(build_id, force_process=options["force"])
+                slow_fetch_brew_build(build_id, build_type, force_process=options["force"])
             else:
-                slow_fetch_brew_build.delay(build_id, force_process=options["force"])
+                slow_fetch_brew_build.delay(build_id, build_type, force_process=options["force"])

@@ -25,6 +25,7 @@ paths:
           type: string
           enum:
           - BREW
+          - CENTOS
           - KOJI
       - in: query
         name: exclude_fields
@@ -77,19 +78,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedSoftwareBuildList'
           description: ''
-  /api/v1/builds/{build_id}:
+  /api/v1/builds/{uuid}:
     get:
       operationId: v1_builds_retrieve
       description: View for api/v1/builds
       parameters:
-      - in: path
-        name: build_id
-        schema:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-        description: A unique value identifying this software build.
-        required: true
       - in: query
         name: exclude_fields
         schema:
@@ -106,6 +99,13 @@ paths:
             type: string
         description: 'Include only specified fields in the response. Multiple values
           may be separated by commas. Example: `include_fields=software_build.build_id,name`'
+      - in: path
+        name: uuid
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this software build.
+        required: true
       tags:
       - v1
       responses:
@@ -1180,6 +1180,7 @@ components:
       enum:
       - BREW
       - KOJI
+      - CENTOS
       type: string
     Channel:
       type: object
@@ -2004,6 +2005,10 @@ components:
         Show detailed information for SoftwareBuild(s).
         Add or remove fields using ?include_fields=&exclude_fields=
       properties:
+        uuid:
+          type: string
+          format: uuid
+          readOnly: true
         link:
           type: string
           readOnly: true
@@ -2053,6 +2058,7 @@ components:
       - name
       - source
       - tags
+      - uuid
       - web_url
     SoftwareBuildSummary:
       type: object

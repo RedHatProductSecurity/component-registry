@@ -257,11 +257,10 @@ def get_component_taxonomy(
 class SoftwareBuildViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled until auth is added
     """View for api/v1/builds"""
 
-    queryset = SoftwareBuild.objects.order_by("-build_id").using("read_only")
+    queryset = SoftwareBuild.objects.order_by("build_type", "build_id").using("read_only")
     serializer_class = SoftwareBuildSerializer
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend, filters.SearchFilter]
     filterset_class = SoftwareBuildFilter
-    lookup_url_kwarg = "build_id"
 
 
 class ProductDataViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled until auth is added

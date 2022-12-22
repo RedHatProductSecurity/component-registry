@@ -5,12 +5,12 @@ from django.utils import timezone
 
 from config.celery import app
 from corgi.collectors.pulp import Pulp
-from corgi.core.models import Channel, ProductComponentRelation
+from corgi.core.models import Channel, ProductComponentRelation, SoftwareBuild
 from corgi.tasks.brew import fetch_unprocessed_relations
 from corgi.tasks.common import (
     RETRY_KWARGS,
     RETRYABLE_ERRORS,
-    _create_relations,
+    create_relations,
     get_last_success_for_task,
 )
 from corgi.tasks.errata_tool import update_variant_repos
@@ -55,8 +55,12 @@ def setup_pulp_relations() -> None:
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def slow_setup_pulp_rpm_relations(channel, variant):
     srpm_build_ids = Pulp().get_rpm_data(channel)
-    no_of_relations = _create_relations(
-        srpm_build_ids, channel, variant, ProductComponentRelation.Type.CDN_REPO
+    no_of_relations = create_relations(
+        srpm_build_ids,
+        SoftwareBuild.Type.BREW,
+        channel,
+        variant,
+        ProductComponentRelation.Type.CDN_REPO,
     )
     if no_of_relations > 0:
         logger.info("Created %s new relations for SRPMs in %s", no_of_relations, channel)
@@ -65,8 +69,12 @@ def slow_setup_pulp_rpm_relations(channel, variant):
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def slow_setup_pulp_module_relations(channel, variant):
     module_build_ids = Pulp().get_module_data(channel)
-    no_of_relations = _create_relations(
-        module_build_ids, channel, variant, ProductComponentRelation.Type.CDN_REPO
+    no_of_relations = create_relations(
+        module_build_ids,
+        SoftwareBuild.Type.BREW,
+        channel,
+        variant,
+        ProductComponentRelation.Type.CDN_REPO,
     )
     if no_of_relations > 0:
         logger.info("Created %s new relations for rhel_modules in %s", no_of_relations, channel)

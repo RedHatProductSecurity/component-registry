@@ -356,12 +356,12 @@ slow_software_composition_analysis_test_data = [
 ]
 
 
-def mock_clone(package_name: str, build_id: int) -> Tuple[Path, str, str]:
-    target_path = Path(f"/tmp/{build_id}")
+def mock_clone(package_name: str, build_uuid: str) -> Tuple[Path, str, str]:
+    target_path = Path(f"/tmp/{build_uuid}")
     if not target_path.exists():
-        os.mkdir(f"/tmp/{build_id}")
+        os.mkdir(f"/tmp/{build_uuid}")
     # Copy test files into scratch location
-    test_sources = Path(f"tests/data/{build_id}/sources")
+    test_sources = Path(f"tests/data/sca/{package_name}/sources")
     if test_sources.exists():
         shutil.copyfile(test_sources, target_path / "sources")
     # TODO split package_type out to testdata
@@ -411,7 +411,7 @@ def test_slow_software_composition_analysis(
 
     with open(syft_results, "r") as mock_scan_results:
         mock_syft.return_value = mock_scan_results.read()
-    cpu_software_composition_analysis(build_id)
+    cpu_software_composition_analysis(str(sb.pk))
     expected_syft_call_arg_list = [
         call(
             [
@@ -422,7 +422,7 @@ def test_slow_software_composition_analysis(
                 "--exclude=**/vendor/**",
                 "--exclude=**/test/fixtures/**",
                 "--exclude=**/src/test/resources/**",
-                f"dir:/tmp/{build_id}",
+                f"dir:/tmp/{sb.pk}",
             ],
             text=True,
         ),
@@ -438,7 +438,7 @@ def test_slow_software_composition_analysis(
                     "--exclude=**/vendor/**",
                     "--exclude=**/test/fixtures/**",
                     "--exclude=**/src/test/resources/**",
-                    f"file:/tmp/lookaside/{build_id}/{lookaside_file}",
+                    f"file:/tmp/lookaside/{sb.pk}/{lookaside_file}",
                 ],
                 text=True,
             )

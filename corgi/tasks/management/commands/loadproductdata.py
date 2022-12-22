@@ -16,6 +16,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         if settings.COMMUNITY_MODE_ENABLED:
             self.do_update_products()
+            self.do_load_brew_tags()
             self.delay_load_yum_repositories()
         else:  # Enterprise mode
             self.do_load_et_products()

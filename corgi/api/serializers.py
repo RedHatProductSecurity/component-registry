@@ -297,12 +297,16 @@ class SoftwareBuildSerializer(IncludeExcludeFieldsSerializer):
 
     @staticmethod
     def get_link(instance: SoftwareBuild) -> str:
-        return get_model_id_link("builds", instance.build_id)
+        return get_model_id_link("builds", instance.pk)
 
     @staticmethod
     def get_web_url(build: SoftwareBuild) -> str:
         if build.build_type == SoftwareBuild.Type.BREW:
             return f"{settings.BREW_WEB_URL}/brew/buildinfo?buildID={build.build_id}"
+        elif build.build_type == SoftwareBuild.Type.KOJI:
+            return f"{settings.BREW_DOWNLOAD_ROOT_URL}/koji/buildinfo?buildID={build.build_id}"
+        elif build.build_type == SoftwareBuild.Type.CENTOS:
+            return f"{settings.CENTOS_DOWNLOAD_ROOT_URL}/koji/buildinfo?buildID={build.build_id}"
         return ""
 
     @staticmethod
@@ -312,6 +316,7 @@ class SoftwareBuildSerializer(IncludeExcludeFieldsSerializer):
     class Meta:
         model = SoftwareBuild
         fields = (
+            "uuid",
             "link",
             "web_url",
             "build_id",
@@ -334,7 +339,7 @@ class SoftwareBuildSummarySerializer(IncludeExcludeFieldsSerializer):
 
     @staticmethod
     def get_link(instance: SoftwareBuild) -> str:
-        return get_model_id_link("builds", instance.build_id)
+        return get_model_id_link("builds", instance.pk)
 
     class Meta:
         model = SoftwareBuild

@@ -26,6 +26,7 @@ class SoftwareBuildFactory(factory.django.DjangoModelFactory):
         model = models.SoftwareBuild
 
     build_id = factory.sequence(lambda n: n + 100)
+    build_type = random.choice(models.SoftwareBuild.Type.values)
     name = factory.Faker("word")
     tag = factory.RelatedFactory(SoftwareBuildTagFactory, factory_related_name="tagged_model")
     completion_time = timezone.now()
@@ -148,6 +149,7 @@ class ProductComponentRelationFactory(factory.django.DjangoModelFactory):
         model = models.ProductComponentRelation
 
     external_system_id = factory.sequence(random_erratum_name)
+    build_type = random.choice(models.SoftwareBuild.Type.values)
 
 
 class ChannelFactory(factory.django.DjangoModelFactory):

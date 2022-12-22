@@ -7,7 +7,12 @@ from config.celery import app
 from corgi.collectors.rhel_compose import RhelCompose
 from corgi.core.models import ProductComponentRelation, ProductStream, SoftwareBuild
 from corgi.tasks.brew import slow_fetch_modular_build
-from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS, _create_relations
+from corgi.tasks.common import (
+    BUILD_TYPE,
+    RETRY_KWARGS,
+    RETRYABLE_ERRORS,
+    create_relations,
+)
 
 logger = get_task_logger(__name__)
 
@@ -33,8 +38,12 @@ def save_compose(stream_name) -> None:
                 # Most composes don't have rhel_modules, in that case the rhel_modules
                 # key won't exist so we can safely skip creating relations
                 continue
-            no_of_relations += _create_relations(
-                compose_data[key], compose_id, stream_name, ProductComponentRelation.Type.COMPOSE
+            no_of_relations += create_relations(
+                compose_data[key],
+                BUILD_TYPE,
+                compose_id,
+                stream_name,
+                ProductComponentRelation.Type.COMPOSE,
             )
     logger.info("Created %s new relations for stream %s", no_of_relations, stream_name)
 
@@ -53,11 +62,16 @@ def get_builds(
         relations_query = relations_query.filter(product_ref=stream_name)
 
     processed_builds = 0
-    for build_id in relations_query.values_list("build_id", flat=True).distinct().iterator():
+    for build_id, build_type in (
+        relations_query.values_list("build_id", "build_type").distinct().iterator()
+    ):
         if not build_id:
             continue
-        if not SoftwareBuild.objects.filter(build_id=int(build_id)).exists():
+        if not SoftwareBuild.objects.filter(build_id=int(build_id), build_type=build_type).exists():
             logger.info("Processing Compose relation build with id: %s", build_id)
+            if build_type == SoftwareBuild.Type.CENTOS:
+                # We would have to update collector modules to avoid using build_id as primary key
+                raise ValueError("We don't support modular builds in composes for CENTOS")
             slow_fetch_modular_build.delay(build_id, force_process=force_process)
             processed_builds += 1
     return processed_builds

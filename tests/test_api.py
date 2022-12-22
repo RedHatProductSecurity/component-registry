@@ -33,12 +33,17 @@ def extract_tag_tuples(tags: list[dict]) -> set[tuple]:
 def test_software_build_details(client, api_path):
     build = SoftwareBuildFactory(tag__name="t0", tag__value="v0")
 
-    response = client.get(f"{api_path}/builds/{build.build_id}")
+    response = client.get(f"{api_path}/builds/{build.uuid}")
     assert response.status_code == 200
     data = response.json()
     assert data["build_id"] == build.build_id
     assert data["name"] == build.name
     assert extract_tag_tuples(data["tags"]) == {("t0", "v0")}
+
+    response = client.get(f"{api_path}/builds?build_id={build.build_id}")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["results"][0]["uuid"] == str(build.uuid)
 
     response = client.get(f"{api_path}/builds?tags=t0:v0")
     assert response.status_code == 200

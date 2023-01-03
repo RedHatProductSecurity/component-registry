@@ -179,7 +179,9 @@ def recursive_component_node_to_dict(node, component_type):
             # "uuid": node.obj.uuid,
             "description": node.obj.description,
         }
-    children = [recursive_component_node_to_dict(c, component_type) for c in node.get_children()]
+    children = tuple(
+        recursive_component_node_to_dict(c, component_type) for c in node.get_children()
+    )
     if children:
         result["deps"] = children
     return result
@@ -201,26 +203,25 @@ def recursive_product_node_to_dict(node):
         "ofuri": node.obj.ofuri,
         "name": node.obj.name,
     }
-    children = [recursive_product_node_to_dict(c) for c in node.get_children()]
+    children = tuple(recursive_product_node_to_dict(c) for c in node.get_children())
 
     if children:
         result[child_product_type] = children
     return result
 
 
-def get_component_taxonomy(obj: Component, component_types: list[str]):
+def get_component_taxonomy(obj: Component, component_types: tuple[str, ...]):
     """Look up and return the taxonomy for a particular Component."""
     root_nodes = cache_tree_children(
         obj.cnodes.get_queryset().get_descendants(include_self=True).using("read_only")
     )
-    dicts = []
-    for n in root_nodes:
-        dicts.append(
-            recursive_component_node_to_dict(
-                n,
-                component_types,
-            )
+    dicts = tuple(
+        recursive_component_node_to_dict(
+            node,
+            component_types,
         )
+        for node in root_nodes
+    )
     return dicts
 
 
@@ -229,9 +230,7 @@ def get_product_taxonomy(obj: ProductModel):
     root_nodes = cache_tree_children(
         obj.pnodes.get_queryset().get_descendants(include_self=True).using("read_only")
     )
-    dicts = []
-    for n in root_nodes:
-        dicts.append(recursive_product_node_to_dict(n))
+    dicts = tuple(recursive_product_node_to_dict(node) for node in root_nodes)
     return dicts
 
 
@@ -510,10 +509,10 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
             return Response(status=404)
         dicts = get_component_taxonomy(
             obj,
-            [
+            (
                 ComponentNode.ComponentNodeType.PROVIDES,
                 ComponentNode.ComponentNodeType.PROVIDES_DEV,
-            ],
+            ),
         )
         return Response(dicts)
 
@@ -524,12 +523,12 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
             return Response(status=404)
         dicts = get_component_taxonomy(
             obj,
-            [
+            (
                 ComponentNode.ComponentNodeType.SOURCE,
                 ComponentNode.ComponentNodeType.PROVIDES_DEV,
                 ComponentNode.ComponentNodeType.REQUIRES,
                 ComponentNode.ComponentNodeType.PROVIDES,
-            ],
+            ),
         )
         return Response(dicts)
 

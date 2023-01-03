@@ -1231,6 +1231,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             )
             .values_list("external_system_id", flat=True)
             .distinct()
+            .using("read_only")
         )
         return list(erratum for erratum in errata_qs if erratum)
 

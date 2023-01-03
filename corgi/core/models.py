@@ -1222,12 +1222,12 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     @property
     def errata(self) -> list[str]:
         """Return errata that contain component."""
-        if not self.software_build:
+        if not self.software_build_id:
             return []
         errata_qs = (
             ProductComponentRelation.objects.filter(
                 type=ProductComponentRelation.Type.ERRATA,
-                build_id=self.software_build.build_id,
+                build_id=self.software_build_id,
             )
             .values_list("external_system_id", flat=True)
             .distinct()

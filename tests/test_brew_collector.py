@@ -695,18 +695,18 @@ def test_fetch_rpm_build(mock_sca, mock_brew):
     assert srpm.software_build
     assert srpm.software_build.build_id
     assert srpm.epoch == 0
-    provides = srpm.get_provides_purls()
+    provides = srpm.get_provides_purls(using="default")
     assert len(provides) == 30
-    for package in [
+    for package in (
         "pkg:npm/jquery@3.5.1",
         "pkg:generic/xstatic-patternfly-common@3.59.5",
         "pkg:generic/xstatic-bootstrap-datepicker-common@1.9.0",
         "pkg:rpm/redhat/cockpit-system@251-1.el8?arch=noarch",
-    ]:
+    ):
         assert package in provides
-    assert len(srpm.get_upstreams_purls()) == 1
+    assert len(srpm.get_upstreams_purls(using="default")) == 1
     # SRPM has no sources of its own (nor is it embedded in any other component)
-    assert srpm.get_sources_purls().count() == 0
+    assert srpm.get_sources_purls(using="default").count() == 0
     cockpit_system = Component.objects.get(
         type=Component.Type.RPM,
         namespace=Component.Namespace.REDHAT,
@@ -717,7 +717,7 @@ def test_fetch_rpm_build(mock_sca, mock_brew):
     )
     assert cockpit_system.software_build
     # Cockpit has its own SRPM
-    assert sorted(cockpit_system.get_sources_purls()) == [
+    assert sorted(cockpit_system.get_sources_purls(using="default")) == [
         "pkg:rpm/redhat/cockpit@251-1.el8?arch=src"
     ]
     jquery = Component.objects.get(
@@ -728,7 +728,9 @@ def test_fetch_rpm_build(mock_sca, mock_brew):
     )
     assert not jquery.software_build
     # jQuery is embedded in Cockpit
-    assert sorted(jquery.get_sources_purls()) == ["pkg:rpm/redhat/cockpit@251-1.el8?arch=src"]
+    assert sorted(jquery.get_sources_purls(using="default")) == [
+        "pkg:rpm/redhat/cockpit@251-1.el8?arch=src"
+    ]
 
 
 @pytest.mark.django_db

@@ -3,7 +3,7 @@
 {% block packages %}
 {% for component in obj.get_latest_components %}{# Below will eventually become component.manifest #}
         {% include "package_manifest.json" %}
-        {% for provided in component.provides.get_queryset %}
+        {% for provided in component.provides_queryset %}
             {% include "package_manifest.json" with component=provided %}
         {% endfor %}
     {% endfor %}

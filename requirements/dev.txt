@@ -1168,9 +1168,9 @@ wcwidth==0.2.5 \
     #   -r requirements/base.txt
     #   -r requirements/test.txt
     #   prompt-toolkit
-wheel==0.37.0 \
-    --hash=sha256:21014b2bd93c6d0034b6ba5d35e4eb284340e09d63c59aef6fc14b0f346146fd \
-    --hash=sha256:e2ef7239991699e3355d54f8e968a21bb940a1dbf34a4d226741e64462516fad
+wheel==0.38.4 \
+    --hash=sha256:965f5259b566725405b05e7cf774052044b1ed30119b5d586b2703aafe8719ac \
+    --hash=sha256:b60533f3f5d530e971d6737ca6d58681ee434818fab630c83a734bb10c083ce8
     # via pip-tools
 whitenoise==5.3.0 \
     --hash=sha256:d234b871b52271ae7ed6d9da47ffe857c76568f11dd30e28e18c5869dbd11e12 \

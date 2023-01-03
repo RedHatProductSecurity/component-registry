@@ -211,7 +211,7 @@ def recursive_product_node_to_dict(node):
 def get_component_taxonomy(obj: Component, component_types: list[str]):
     """Look up and return the taxonomy for a particular Component."""
     root_nodes = cache_tree_children(
-        obj.cnodes.get_descendants(include_self=True).using("read_only")
+        obj.cnodes.get_queryset().get_descendants(include_self=True).using("read_only")
     )
     dicts = []
     for n in root_nodes:
@@ -227,7 +227,7 @@ def get_component_taxonomy(obj: Component, component_types: list[str]):
 def get_product_taxonomy(obj: ProductModel):
     """Look up and return the taxonomy for a particular ProductModel instance."""
     root_nodes = cache_tree_children(
-        obj.pnodes.get_descendants(include_self=True).using("read_only")
+        obj.pnodes.get_queryset().get_descendants(include_self=True).using("read_only")
     )
     dicts = []
     for n in root_nodes:

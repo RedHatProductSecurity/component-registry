@@ -23,6 +23,7 @@ from corgi.core.models import (
     Component,
     ComponentNode,
     Product,
+    ProductModel,
     ProductStream,
     ProductVariant,
     ProductVersion,
@@ -207,6 +208,33 @@ def recursive_product_node_to_dict(node):
     return result
 
 
+def get_component_taxonomy(obj: Component, component_types: list[str]):
+    """Look up and return the taxonomy for a particular Component."""
+    root_nodes = cache_tree_children(
+        obj.cnodes.get_descendants(include_self=True).using("read_only")
+    )
+    dicts = []
+    for n in root_nodes:
+        dicts.append(
+            recursive_component_node_to_dict(
+                n,
+                component_types,
+            )
+        )
+    return dicts
+
+
+def get_product_taxonomy(obj: ProductModel):
+    """Look up and return the taxonomy for a particular ProductModel instance."""
+    root_nodes = cache_tree_children(
+        obj.pnodes.get_descendants(include_self=True).using("read_only")
+    )
+    dicts = []
+    for n in root_nodes:
+        dicts.append(recursive_product_node_to_dict(n))
+    return dicts
+
+
 class SoftwareBuildViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled until auth is added
     """View for api/v1/builds"""
 
@@ -249,13 +277,8 @@ class ProductViewSet(ProductDataViewSet):
         obj = self.queryset.filter(uuid=uuid).first()
         if not obj:
             return Response(status=404)
-        root_nodes = cache_tree_children(
-            obj.pnodes.get_descendants(include_self=True).using("read_only")
-        )
-        dicts = []
-        for n in root_nodes:
-            dicts.append(recursive_product_node_to_dict(n))
-        return Response(dicts[0])
+        dicts = get_product_taxonomy(obj)
+        return Response(dicts)
 
 
 class ProductVersionViewSet(ProductDataViewSet):
@@ -281,12 +304,7 @@ class ProductVersionViewSet(ProductDataViewSet):
         obj = self.queryset.filter(uuid=uuid).first()
         if not obj:
             return Response(status=404)
-        root_nodes = cache_tree_children(
-            obj.pnodes.get_descendants(include_self=True).using("read_only")
-        )
-        dicts = []
-        for n in root_nodes:
-            dicts.append(recursive_product_node_to_dict(n))
+        dicts = get_product_taxonomy(obj)
         return Response(dicts)
 
 
@@ -333,12 +351,7 @@ class ProductStreamViewSetSet(ProductDataViewSet):
         obj = self.queryset.filter(uuid=uuid).first()
         if not obj:
             return Response(status=404)
-        root_nodes = cache_tree_children(
-            obj.pnodes.get_descendants(include_self=True).using("read_only")
-        )
-        dicts = []
-        for n in root_nodes:
-            dicts.append(recursive_product_node_to_dict(n))
+        dicts = get_product_taxonomy(obj)
         return Response(dicts)
 
 
@@ -365,12 +378,7 @@ class ProductVariantViewSetSet(ProductDataViewSet):
         obj = self.queryset.filter(uuid=uuid).first()
         if not obj:
             return Response(status=404)
-        root_nodes = cache_tree_children(
-            obj.pnodes.get_descendants(include_self=True).using("read_only")
-        )
-        dicts = []
-        for n in root_nodes:
-            dicts.append(recursive_product_node_to_dict(n))
+        dicts = get_product_taxonomy(obj)
         return Response(dicts)
 
 
@@ -500,20 +508,13 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         obj = self.queryset.filter(uuid=uuid).first()
         if not obj:
             return Response(status=404)
-        root_nodes = cache_tree_children(
-            obj.cnodes.get_descendants(include_self=True).using("read_only")
+        dicts = get_component_taxonomy(
+            obj,
+            [
+                ComponentNode.ComponentNodeType.PROVIDES,
+                ComponentNode.ComponentNodeType.PROVIDES_DEV,
+            ],
         )
-        dicts = []
-        for n in root_nodes:
-            dicts.append(
-                recursive_component_node_to_dict(
-                    n,
-                    [
-                        ComponentNode.ComponentNodeType.PROVIDES,
-                        ComponentNode.ComponentNodeType.PROVIDES_DEV,
-                    ],
-                )
-            )
         return Response(dicts)
 
     @action(methods=["get"], detail=True)
@@ -521,22 +522,15 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         obj = self.queryset.filter(uuid=uuid).first()
         if not obj:
             return Response(status=404)
-        root_nodes = cache_tree_children(
-            obj.cnodes.get_descendants(include_self=True).using("read_only")
+        dicts = get_component_taxonomy(
+            obj,
+            [
+                ComponentNode.ComponentNodeType.SOURCE,
+                ComponentNode.ComponentNodeType.PROVIDES_DEV,
+                ComponentNode.ComponentNodeType.REQUIRES,
+                ComponentNode.ComponentNodeType.PROVIDES,
+            ],
         )
-        dicts = []
-        for n in root_nodes:
-            dicts.append(
-                recursive_component_node_to_dict(
-                    n,
-                    [
-                        ComponentNode.ComponentNodeType.SOURCE,
-                        ComponentNode.ComponentNodeType.PROVIDES_DEV,
-                        ComponentNode.ComponentNodeType.REQUIRES,
-                        ComponentNode.ComponentNodeType.PROVIDES,
-                    ],
-                )
-            )
         return Response(dicts)
 
 

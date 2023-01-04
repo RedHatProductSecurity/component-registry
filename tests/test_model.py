@@ -343,6 +343,7 @@ def test_product_stream_builds():
     assert rhel_8_2_build.build_id not in [int(b) for b in rhel_8_1.builds]
 
 
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_component_errata():
     sb = SoftwareBuildFactory()
     c = ComponentFactory(software_build=sb)

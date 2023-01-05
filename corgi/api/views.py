@@ -5,6 +5,7 @@ from typing import Type, Union
 import django_filters.rest_framework
 from django.db import connections
 from django.db.models import QuerySet
+from django.http import Http404
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
@@ -284,12 +285,23 @@ class ProductViewSet(ProductDataViewSet):
         ofuri = req.query_params.get("ofuri")
         if not ofuri:
             return super().list(request)
-        p = Product.objects.filter(ofuri=ofuri).using("read_only").first()
-        if not p:
-            return Response(status=404)
-        response = Response(status=302)
-        response["Location"] = f"/api/{CORGI_API_VERSION}/products/{p.uuid}"
-        return response
+        return super().retrieve(request)
+
+    def get_object(self):
+        req = self.request
+        p_ofuri = req.query_params.get("ofuri")
+        p_name = req.query_params.get("name")
+        try:
+            if p_name:
+                p = Product.objects.db_manager("read_only").get(name=p_name)
+            elif p_ofuri:
+                p = Product.objects.db_manager("read_only").get(ofuri=p_ofuri)
+            else:
+                pk = req.path.split("/")[-1]  # there must be better ways ...
+                p = Product.objects.db_manager("read_only").get(uuid=pk)
+            return p
+        except Product.DoesNotExist:
+            raise Http404
 
     @action(methods=["get"], detail=True)
     def taxonomy(self, request: Request, uuid: Union[str, None] = None) -> Response:
@@ -311,12 +323,23 @@ class ProductVersionViewSet(ProductDataViewSet):
         ofuri = req.query_params.get("ofuri")
         if not ofuri:
             return super().list(request)
-        pv = ProductVersion.objects.filter(ofuri=ofuri).using("read_only").first()
-        if not pv:
-            return Response(status=404)
-        response = Response(status=302)
-        response["Location"] = f"/api/{CORGI_API_VERSION}/product_versions/{pv.uuid}"
-        return response
+        return super().retrieve(request)
+
+    def get_object(self):
+        req = self.request
+        pv_ofuri = req.query_params.get("ofuri")
+        pv_name = req.query_params.get("name")
+        try:
+            if pv_name:
+                pv = ProductVersion.objects.db_manager("read_only").get(name=pv_name)
+            elif pv_ofuri:
+                pv = ProductVersion.objects.db_manager("read_only").get(ofuri=pv_ofuri)
+            else:
+                pk = req.path.split("/")[-1]  # there must be better ways ...
+                pv = ProductVersion.objects.db_manager("read_only").get(uuid=pk)
+            return pv
+        except ProductVersion.DoesNotExist:
+            raise Http404
 
     @action(methods=["get"], detail=True)
     def taxonomy(self, request: Request, uuid: Union[str, None] = None) -> Response:
@@ -341,21 +364,32 @@ class ProductStreamViewSetSet(ProductDataViewSet):
         parameters=[OpenApiParameter("active", OpenApiTypes.STR, OpenApiParameter.QUERY)]
     )
     def list(self, request: Request, *args: tuple, **kwargs: dict) -> Response:
-        req = self.request
+        ps_ofuri = request.query_params.get("ofuri")
+        ps_name = request.query_params.get("name")
         active = request.query_params.get("active")
         if active == "all":
             self.queryset = ProductStream.objects.order_by(super().ordering_field).using(
                 "read_only"
             )
-        ofuri = req.query_params.get("ofuri")
-        if not ofuri:
+        if not ps_ofuri and not ps_name:
             return super().list(request)
-        ps = ProductStream.objects.filter(ofuri=ofuri).using("read_only").first()
-        if not ps:
-            return Response(status=404)
-        response = Response(status=302)
-        response["Location"] = f"/api/{CORGI_API_VERSION}/product_streams/{ps.uuid}"
-        return response
+        return super().retrieve(request)
+
+    def get_object(self):
+        req = self.request
+        ps_ofuri = req.query_params.get("ofuri")
+        ps_name = req.query_params.get("name")
+        try:
+            if ps_name:
+                ps = ProductStream.objects.db_manager("read_only").get(name=ps_name)
+            elif ps_ofuri:
+                ps = ProductStream.objects.db_manager("read_only").get(ofuri=ps_ofuri)
+            else:
+                pk = req.path.split("/")[-1]  # there must be better ways ...
+                ps = ProductStream.objects.db_manager("read_only").get(uuid=pk)
+            return ps
+        except ProductStream.DoesNotExist:
+            raise Http404
 
     @action(methods=["get"], detail=True)
     def manifest(self, request: Request, uuid: Union[str, None] = None) -> Response:
@@ -385,12 +419,23 @@ class ProductVariantViewSetSet(ProductDataViewSet):
         ofuri = req.query_params.get("ofuri")
         if not ofuri:
             return super().list(request)
-        pv = ProductVariant.objects.filter(ofuri=ofuri).using("read_only").first()
-        if not pv:
-            return Response(status=404)
-        response = Response(status=302)
-        response["Location"] = f"/api/{CORGI_API_VERSION}/product_variants/{pv.uuid}"
-        return response
+        return super().retrieve(request)
+
+    def get_object(self):
+        req = self.request
+        pv_ofuri = req.query_params.get("ofuri")
+        pv_name = req.query_params.get("name")
+        try:
+            if pv_name:
+                pv = ProductVariant.objects.db_manager("read_only").get(name=pv_name)
+            elif pv_ofuri:
+                pv = ProductVariant.objects.db_manager("read_only").get(ofuri=pv_ofuri)
+            else:
+                pk = req.path.split("/")[-1]  # there must be better ways ...
+                pv = ProductVariant.objects.db_manager("read_only").get(uuid=pk)
+            return pv
+        except ProductVariant.DoesNotExist:
+            raise Http404
 
     @action(methods=["get"], detail=True)
     def taxonomy(self, request: Request, uuid: Union[str, None] = None) -> Response:
@@ -465,15 +510,23 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         purl = request.query_params.get("purl")
         if not purl:
             return super().list(request)
-        # We re-encode the purl here to ensure each segment of the purl is url encoded,
-        # as it's stored in the DB.
-        purl = f"{PackageURL.from_string(purl)}"
-        component = Component.objects.filter(purl=purl).using("read_only").first()
-        if not component:
-            return Response(status=404)
-        response = Response(status=302)
-        response["Location"] = f"/api/{CORGI_API_VERSION}/components/{component.uuid}"
-        return response
+        return super().retrieve(request)
+
+    def get_object(self):
+        req = self.request
+        purl = req.query_params.get("purl")
+        try:
+            if purl:
+                # We re-encode the purl here to ensure each segment of the purl is url encoded,
+                # as it's stored in the DB.
+                purl = f"{PackageURL.from_string(purl)}"
+                component = Component.objects.db_manager("read_only").get(purl=purl)
+            else:
+                pk = req.path.split("/")[-1]  # there must be better ways ...
+                component = Component.objects.db_manager("read_only").get(uuid=pk)
+            return component
+        except Component.DoesNotExist:
+            raise Http404
 
     @action(methods=["get"], detail=True)
     def manifest(self, request: Request, uuid: str = "") -> Response:

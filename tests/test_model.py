@@ -192,7 +192,11 @@ def test_component_provides():
         purl=dev_comp.purl,
         defaults={"obj": dev_comp},
     )
-    assert dev_comp.purl in upstream.get_provides_purls(using="default")
+    # provides is inverse of sources
+    # so calling save_component_taxonomy on either dev_comp or upstream
+    # works the same way - the two components will be linked together
+    dev_comp.save_component_taxonomy()
+    assert upstream.provides.filter(purl=dev_comp.purl).exists()
 
 
 def test_software_build_model():

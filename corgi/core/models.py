@@ -1095,6 +1095,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         )
 
     def save_component_taxonomy(self):
+        """Link related components together using foreign keys. Avoids repeated MPTT tree lookups"""
         upstreams = self.get_upstreams_pks(using="default")
         self.upstreams.set(upstreams)
         provides = self.get_provides_nodes(using="default").values_list("component__pk", flat=True)
@@ -1286,15 +1287,6 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             type_list.append(ComponentNode.ComponentNodeType.PROVIDES_DEV)
         return self.cnodes.get_queryset().get_descendants().filter(type__in=type_list).using(using)
 
-    def get_provides_purls(self, include_dev: bool = True, using: str = "read_only") -> QuerySet:
-        """return a QuerySet of unique descendant PURLs with PROVIDES ComponentNode type"""
-        # Used in serializers. Returns identifiers (purls) to track relationships
-        return (
-            self.get_provides_nodes(include_dev=include_dev, using=using)
-            .values_list("purl", flat=True)
-            .distinct()
-        )
-
     def get_sources_nodes(self, using: str = "read_only") -> QuerySet[ComponentNode]:
         """return all root node objects"""
         return (
@@ -1303,10 +1295,6 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             .filter(parent=None)
             .using(using)
         )
-
-    def get_sources_purls(self, using: str = "read_only") -> QuerySet:
-        """return all root node purls"""
-        return self.get_sources_nodes(using=using).values_list("purl", flat=True).distinct()
 
     def get_upstreams_nodes(self, using: str = "read_only") -> list[ComponentNode]:
         """return upstreams component ancestors in family trees"""
@@ -1347,7 +1335,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
     def get_upstreams_pks(self, using: str = "read_only") -> tuple[str, ...]:
         """Return only the primary keys from the set of all upstream nodes"""
-        linked_pks = set(node.component.pk for node in self.get_upstreams_nodes(using=using))
+        linked_pks = set(node.obj.pk for node in self.get_upstreams_nodes(using=using) if node.obj)
         return tuple(linked_pks)
 
     def get_upstreams_purls(self, using: str = "read_only") -> set[str]:

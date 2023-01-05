@@ -274,11 +274,15 @@ class ComponentSerializer(ProductTaxonomySerializer):
 
     @staticmethod
     def get_provides(instance: Component) -> list[dict[str, str]]:
-        return get_component_data_list(instance.get_provides_purls())
+        return get_component_data_list(
+            instance.provides.values_list("purl", flat=True).using("read_only")
+        )
 
     @staticmethod
     def get_sources(instance: Component) -> list[dict[str, str]]:
-        return get_component_data_list(instance.get_sources_purls())
+        return get_component_data_list(
+            instance.sources.values_list("purl", flat=True).using("read_only")
+        )
 
     @staticmethod
     def get_upstreams(instance: Component) -> list[dict[str, str]]:

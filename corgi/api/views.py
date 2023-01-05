@@ -18,15 +18,12 @@ from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet
 
 from config import utils
 from corgi import __version__
-from corgi.core.constants import NODE_LEVEL_MODEL_MAPPING
 from corgi.core.models import (
     AppStreamLifeCycle,
     Channel,
     Component,
     ComponentNode,
     Product,
-    ProductModel,
-    ProductNode,
     ProductStream,
     ProductVariant,
     ProductVersion,
@@ -51,7 +48,6 @@ from .serializers import (
     ProductVersionSerializer,
     SoftwareBuildSerializer,
     get_component_purl_link,
-    get_model_ofuri_link,
     get_model_ofuri_type,
 )
 
@@ -201,33 +197,6 @@ def recursive_component_node_to_dict(
     return result
 
 
-def recursive_product_node_to_dict(node: ProductNode) -> taxonomy_dict_type:
-    """Recursively build a dict of ofuris, links, and children for some ProductNode"""
-    product_type = NODE_LEVEL_MODEL_MAPPING.get(node.level, "")
-    if not product_type:
-        raise ValueError(f"Node {node} had level {node.level} which is invalid")
-
-    if not node.obj:
-        raise ValueError(f"Node {node} had no linked obj")
-
-    # Usually e.g. "products" and "product_versions"
-    # or "channels" and "" since channels is the lowest level in our taxonomy
-    product_type = f"{product_type}s"
-    child_product_type = NODE_LEVEL_MODEL_MAPPING.get(node.level + 1, "")
-    child_product_type = f"{child_product_type}s" if child_product_type else ""
-
-    result = {
-        "link": get_model_ofuri_link(product_type, node.obj.ofuri),
-        "ofuri": node.obj.ofuri,
-        "name": node.obj.name,
-    }
-    children = tuple(recursive_product_node_to_dict(c) for c in node.get_children())
-
-    if children:
-        result[child_product_type] = children
-    return result
-
-
 def get_component_taxonomy(
     obj: Component, component_types: tuple[str, ...]
 ) -> tuple[taxonomy_dict_type, ...]:
@@ -242,15 +211,6 @@ def get_component_taxonomy(
         )
         for node in root_nodes
     )
-    return dicts
-
-
-def get_product_taxonomy(obj: ProductModel) -> tuple[taxonomy_dict_type, ...]:
-    """Look up and return the taxonomy for a particular ProductModel instance."""
-    root_nodes = cache_tree_children(
-        obj.pnodes.get_queryset().get_descendants(include_self=True).using("read_only")
-    )
-    dicts = tuple(recursive_product_node_to_dict(node) for node in root_nodes)
     return dicts
 
 
@@ -291,14 +251,6 @@ class ProductViewSet(ProductDataViewSet):
         response["Location"] = f"/api/{CORGI_API_VERSION}/products/{p.uuid}"
         return response
 
-    @action(methods=["get"], detail=True)
-    def taxonomy(self, request: Request, uuid: Union[str, None] = None) -> Response:
-        obj = self.queryset.filter(uuid=uuid).first()
-        if not obj:
-            return Response(status=404)
-        dicts = get_product_taxonomy(obj)
-        return Response(dicts)
-
 
 class ProductVersionViewSet(ProductDataViewSet):
     """View for api/v1/product_versions"""
@@ -317,14 +269,6 @@ class ProductVersionViewSet(ProductDataViewSet):
         response = Response(status=302)
         response["Location"] = f"/api/{CORGI_API_VERSION}/product_versions/{pv.uuid}"
         return response
-
-    @action(methods=["get"], detail=True)
-    def taxonomy(self, request: Request, uuid: Union[str, None] = None) -> Response:
-        obj = self.queryset.filter(uuid=uuid).first()
-        if not obj:
-            return Response(status=404)
-        dicts = get_product_taxonomy(obj)
-        return Response(dicts)
 
 
 class ProductStreamViewSetSet(ProductDataViewSet):
@@ -365,14 +309,6 @@ class ProductStreamViewSetSet(ProductDataViewSet):
         manifest = json.loads(obj.manifest)
         return Response(manifest)
 
-    @action(methods=["get"], detail=True)
-    def taxonomy(self, request: Request, uuid: Union[str, None] = None) -> Response:
-        obj = self.queryset.filter(uuid=uuid).first()
-        if not obj:
-            return Response(status=404)
-        dicts = get_product_taxonomy(obj)
-        return Response(dicts)
-
 
 class ProductVariantViewSetSet(ProductDataViewSet):
     """View for api/v1/product_variants"""
@@ -391,14 +327,6 @@ class ProductVariantViewSetSet(ProductDataViewSet):
         response = Response(status=302)
         response["Location"] = f"/api/{CORGI_API_VERSION}/product_variants/{pv.uuid}"
         return response
-
-    @action(methods=["get"], detail=True)
-    def taxonomy(self, request: Request, uuid: Union[str, None] = None) -> Response:
-        obj = self.queryset.filter(uuid=uuid).first()
-        if not obj:
-            return Response(status=404)
-        dicts = get_product_taxonomy(obj)
-        return Response(dicts)
 
 
 class ChannelViewSet(ReadOnlyModelViewSet):

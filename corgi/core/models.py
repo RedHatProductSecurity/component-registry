@@ -103,7 +103,7 @@ class ProductNode(NodeModel):
     # - Each method spits out all unique "name" attributes of all found node objects.
     #
     # - Each method assumes that an object model will always link to a single ProductNode (thus
-    #   the use of `pnodes.first()`).
+    #   the use of `pnodes.get()`).
     #
     # - The `values_list()` query relies on the GenericRelation of each model's pnodes
     #   attribute's related query name.
@@ -133,7 +133,7 @@ class ProductNode(NodeModel):
         mapping_model = target_model.title().replace("_", "")
         # No .distinct() since __name on all ProductModel subclasses + Channel is always unique
         return (
-            product_model.pnodes.first()
+            product_model.pnodes.get()
             .get_family()
             .filter(level=MODEL_NODE_LEVEL_MAPPING[mapping_model])
             .values_list(f"{target_model}__name", flat=True)
@@ -442,7 +442,7 @@ class ProductModel(TimeStampedModel):
 
     def save_product_taxonomy(self):
         """Save links between related ProductModel subclasses"""
-        family = self.pnodes.first().get_family()
+        family = self.pnodes.get().get_family()
         # Get obj from raw nodes - no way to return related __product obj in values_list()
         products = ProductNode.get_products(family, lookup="").first().obj
         productversions = tuple(

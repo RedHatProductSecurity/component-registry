@@ -131,7 +131,7 @@ def update_variant_repos() -> None:
                 logger.warning("Product Variant %s from ET not found in models", name)
                 continue
 
-            pv_node = pv.pnodes.first()
+            pv_node = pv.pnodes.get()
 
             for repo in et_variant_data["repos"]:
                 # Filter out inactive repos in pulp and get content_set

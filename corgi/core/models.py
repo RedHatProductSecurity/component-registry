@@ -181,6 +181,8 @@ class ComponentNode(NodeModel):
         # https://github.com/containerbuildsystem/cachito/#feature-definitions
         PROVIDES_DEV = "PROVIDES_DEV"
 
+    PROVIDES_NODE_TYPES = (ComponentNodeType.PROVIDES, ComponentNodeType.PROVIDES_DEV)
+
     # TODO: This shadows built-in name "type" and creates a warning when updating openapi.yml
     type = models.CharField(
         choices=ComponentNodeType.choices, default=ComponentNodeType.SOURCE, max_length=20
@@ -1282,19 +1284,26 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     ) -> QuerySet[ComponentNode]:
         """return a QuerySet of descendants with PROVIDES ComponentNode type"""
         # Used in manifests / taxonomies. Returns whole objects to access their properties
-        type_list = [ComponentNode.ComponentNodeType.PROVIDES]
+        type_list: tuple[ComponentNode.ComponentNodeType, ...] = (
+            ComponentNode.ComponentNodeType.PROVIDES,
+        )
         if include_dev:
-            type_list.append(ComponentNode.ComponentNodeType.PROVIDES_DEV)
+            type_list = ComponentNode.PROVIDES_NODE_TYPES
         return self.cnodes.get_queryset().get_descendants().filter(type__in=type_list).using(using)
 
-    def get_sources_nodes(self, using: str = "read_only") -> QuerySet[ComponentNode]:
-        """return all root node objects"""
-        return (
-            self.cnodes.get_queryset()
-            .get_ancestors(include_self=False)
-            .filter(parent=None)
-            .using(using)
+    def get_sources_nodes(
+        self, include_dev: bool = True, using: str = "read_only"
+    ) -> QuerySet[ComponentNode]:
+        """Return a QuerySet of ancestors for all PROVIDES ComponentNodes"""
+        type_list: tuple[ComponentNode.ComponentNodeType, ...] = (
+            ComponentNode.ComponentNodeType.PROVIDES,
         )
+        if include_dev:
+            type_list = ComponentNode.PROVIDES_NODE_TYPES
+        # Return ancestors of only PROVIDES nodes for this component
+        # Sources should be inverse of provides, so don't consider other nodes
+        # Inverting "PROVIDES descendants of all nodes" gives "all ancestors of PROVIDES nodes"
+        return self.cnodes.filter(type__in=type_list).get_ancestors(include_self=False).using(using)
 
     def get_upstreams_nodes(self, using: str = "read_only") -> list[ComponentNode]:
         """return upstreams component ancestors in family trees"""

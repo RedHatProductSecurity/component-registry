@@ -732,10 +732,12 @@ def test_fetch_rpm_build(mock_sca, mock_brew):
     )
     assert jquery.software_build_id is None
     # jQuery is embedded in Cockpit
-    assert (
-        jquery.get_sources_nodes(using="default").values_list("purl", flat=True).get()
-        == "pkg:rpm/redhat/cockpit@251-1.el8?arch=src"
-    )
+    # jQuery has two sources, because both the cockpit SRPM
+    # and the cockpit-system container list jQuery in their "provides"
+    assert sorted(jquery.sources.values_list("purl", flat=True)) == [
+        "pkg:rpm/redhat/cockpit-system@251-1.el8?arch=noarch",
+        "pkg:rpm/redhat/cockpit@251-1.el8?arch=src",
+    ]
 
 
 @pytest.mark.django_db

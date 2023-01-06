@@ -427,10 +427,6 @@ paths:
         description: Number of results to return per page.
         schema:
           type: integer
-      - in: query
-        name: name
-        schema:
-          type: string
       - name: offset
         required: false
         in: query
@@ -537,10 +533,6 @@ paths:
         description: Number of results to return per page.
         schema:
           type: integer
-      - in: query
-        name: name
-        schema:
-          type: string
       - name: offset
         required: false
         in: query
@@ -626,10 +618,6 @@ paths:
         description: Number of results to return per page.
         schema:
           type: integer
-      - in: query
-        name: name
-        schema:
-          type: string
       - name: offset
         required: false
         in: query
@@ -715,10 +703,6 @@ paths:
         description: Number of results to return per page.
         schema:
           type: integer
-      - in: query
-        name: name
-        schema:
-          type: string
       - name: offset
         required: false
         in: query

@@ -318,8 +318,7 @@ def test_rpm_detail(client, api_path):
     assert response.status_code == 200
     assert response.json()["count"] == 1
     response = client.get(f"{api_path}/components?purl={quote(c1.purl)}")
-    assert response.status_code == 302
-    assert response.headers["Location"] == f"{api_path}/components/{c1.uuid}"
+    assert response.status_code == 200
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
@@ -336,7 +335,7 @@ def test_purl_reserved(client, api_path):
     )
     assert response.status_code == 200
     response = client.get(f"{api_path}/components?purl={quote(c1.purl)}")
-    assert response.status_code == 302
+    assert response.status_code == 200
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
@@ -482,10 +481,10 @@ def test_products(client, api_path):
     assert response.json()["count"] == 2
 
     response = client.get(f"{api_path}/products?ofuri=o:redhat:rhel-av")
-    assert response.status_code == 302
+    assert response.status_code == 200
 
     response = client.get(f"{api_path}/products?ofuri=o:redhat:rhel")
-    assert response.status_code == 302
+    assert response.status_code == 200
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
@@ -498,10 +497,10 @@ def test_product_versions(client, api_path):
     assert response.json()["count"] == 2
 
     response = client.get(f"{api_path}/product_versions?ofuri=o:redhat:rhel-av:8")
-    assert response.status_code == 302
+    assert response.status_code == 200
 
     response = client.get(f"{api_path}/product_versions?ofuri=o:redhat:rhel:8")
-    assert response.status_code == 302
+    assert response.status_code == 200
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
@@ -518,10 +517,10 @@ def test_product_streams(client, api_path):
     assert response.json()["count"] == 2
 
     response = client.get(f"{api_path}/product_streams?ofuri=o:redhat:rhel-av:8.5.0-z")
-    assert response.status_code == 302
+    assert response.status_code == 200
 
     response = client.get(f"{api_path}/product_streams?ofuri=o:redhat:rhel:8.5.0-z")
-    assert response.status_code == 302
+    assert response.status_code == 200
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
@@ -534,10 +533,10 @@ def test_product_variants(client, api_path):
     assert response.json()["count"] == 2
 
     response = client.get(f"{api_path}/product_variants?ofuri={pv_appstream.ofuri}")
-    assert response.status_code == 302
+    assert response.status_code == 200
 
     response = client.get(f"{api_path}/product_variants?ofuri={pv_baseos.ofuri}")
-    assert response.status_code == 302
+    assert response.status_code == 200
 
 
 @pytest.mark.django_db(databases=("read_only",))

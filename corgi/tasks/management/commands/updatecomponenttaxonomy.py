@@ -37,3 +37,5 @@ class Command(BaseCommand):
                 )
             )
             sb.save_product_taxonomy()
+            for component in sb.components.get_queryset():
+                component.save_component_taxonomy()

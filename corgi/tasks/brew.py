@@ -35,6 +35,8 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
         if not force_process:
             logger.info("Already processed build_id %s, only saving product taxonomy", build_id)
             softwarebuild.save_product_taxonomy()
+            for related_component in softwarebuild.components.get_queryset():
+                related_component.save_component_taxonomy()
             return
         else:
             logger.info("Fetching brew build with build_id: %s", build_id)
@@ -92,13 +94,15 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
         logger.warning(f"Build {build_id} type is not supported: {component['type']}")
         return
 
-    for c in component.get("components", []):
-        save_component(c, root_node, softwarebuild)
+    for child_component in component.get("components", []):
+        save_component(child_component, root_node, softwarebuild)
 
     # We don't call save_product_taxonomy by default to allow async call of slow_load_errata task
     # See CORGI-21
     if save_product:
         softwarebuild.save_product_taxonomy()
+        for related_component in softwarebuild.components.get_queryset():
+            related_component.save_component_taxonomy()
 
     # for builds with errata tags set ProductComponentRelation
     # get_component_data always calls _extract_advisory_ids to set tags, but list may be empty

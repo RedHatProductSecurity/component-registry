@@ -103,7 +103,7 @@ class ProductNode(NodeModel):
     # - Each method spits out all unique "name" attributes of all found node objects.
     #
     # - Each method assumes that an object model will always link to a single ProductNode (thus
-    #   the use of `pnodes.first()`).
+    #   the use of `pnodes.get()`).
     #
     # - The `values_list()` query relies on the GenericRelation of each model's pnodes
     #   attribute's related query name.
@@ -133,7 +133,7 @@ class ProductNode(NodeModel):
         mapping_model = target_model.title().replace("_", "")
         # No .distinct() since __name on all ProductModel subclasses + Channel is always unique
         return (
-            product_model.pnodes.first()
+            product_model.pnodes.get()
             .get_family()
             .filter(level=MODEL_NODE_LEVEL_MAPPING[mapping_model])
             .values_list(f"{target_model}__name", flat=True)
@@ -180,6 +180,8 @@ class ComponentNode(NodeModel):
         # eg. dev dependencies from Cachito builds
         # https://github.com/containerbuildsystem/cachito/#feature-definitions
         PROVIDES_DEV = "PROVIDES_DEV"
+
+    PROVIDES_NODE_TYPES = (ComponentNodeType.PROVIDES, ComponentNodeType.PROVIDES_DEV)
 
     # TODO: This shadows built-in name "type" and creates a warning when updating openapi.yml
     type = models.CharField(
@@ -442,7 +444,7 @@ class ProductModel(TimeStampedModel):
 
     def save_product_taxonomy(self):
         """Save links between related ProductModel subclasses"""
-        family = self.pnodes.first().get_family()
+        family = self.pnodes.get().get_family()
         # Get obj from raw nodes - no way to return related __product obj in values_list()
         products = ProductNode.get_products(family, lookup="").first().obj
         productversions = tuple(
@@ -1095,6 +1097,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         )
 
     def save_component_taxonomy(self):
+        """Link related components together using foreign keys. Avoids repeated MPTT tree lookups"""
         upstreams = self.get_upstreams_pks(using="default")
         self.upstreams.set(upstreams)
         provides = self.get_provides_nodes(using="default").values_list("component__pk", flat=True)
@@ -1281,32 +1284,26 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     ) -> QuerySet[ComponentNode]:
         """return a QuerySet of descendants with PROVIDES ComponentNode type"""
         # Used in manifests / taxonomies. Returns whole objects to access their properties
-        type_list = [ComponentNode.ComponentNodeType.PROVIDES]
+        type_list: tuple[ComponentNode.ComponentNodeType, ...] = (
+            ComponentNode.ComponentNodeType.PROVIDES,
+        )
         if include_dev:
-            type_list.append(ComponentNode.ComponentNodeType.PROVIDES_DEV)
+            type_list = ComponentNode.PROVIDES_NODE_TYPES
         return self.cnodes.get_queryset().get_descendants().filter(type__in=type_list).using(using)
 
-    def get_provides_purls(self, include_dev: bool = True, using: str = "read_only") -> QuerySet:
-        """return a QuerySet of unique descendant PURLs with PROVIDES ComponentNode type"""
-        # Used in serializers. Returns identifiers (purls) to track relationships
-        return (
-            self.get_provides_nodes(include_dev=include_dev, using=using)
-            .values_list("purl", flat=True)
-            .distinct()
+    def get_sources_nodes(
+        self, include_dev: bool = True, using: str = "read_only"
+    ) -> QuerySet[ComponentNode]:
+        """Return a QuerySet of ancestors for all PROVIDES ComponentNodes"""
+        type_list: tuple[ComponentNode.ComponentNodeType, ...] = (
+            ComponentNode.ComponentNodeType.PROVIDES,
         )
-
-    def get_sources_nodes(self, using: str = "read_only") -> QuerySet[ComponentNode]:
-        """return all root node objects"""
-        return (
-            self.cnodes.get_queryset()
-            .get_ancestors(include_self=False)
-            .filter(parent=None)
-            .using(using)
-        )
-
-    def get_sources_purls(self, using: str = "read_only") -> QuerySet:
-        """return all root node purls"""
-        return self.get_sources_nodes(using=using).values_list("purl", flat=True).distinct()
+        if include_dev:
+            type_list = ComponentNode.PROVIDES_NODE_TYPES
+        # Return ancestors of only PROVIDES nodes for this component
+        # Sources should be inverse of provides, so don't consider other nodes
+        # Inverting "PROVIDES descendants of all nodes" gives "all ancestors of PROVIDES nodes"
+        return self.cnodes.filter(type__in=type_list).get_ancestors(include_self=False).using(using)
 
     def get_upstreams_nodes(self, using: str = "read_only") -> list[ComponentNode]:
         """return upstreams component ancestors in family trees"""
@@ -1347,7 +1344,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
     def get_upstreams_pks(self, using: str = "read_only") -> tuple[str, ...]:
         """Return only the primary keys from the set of all upstream nodes"""
-        linked_pks = set(node.component.pk for node in self.get_upstreams_nodes(using=using))
+        linked_pks = set(node.obj.pk for node in self.get_upstreams_nodes(using=using) if node.obj)
         return tuple(linked_pks)
 
     def get_upstreams_purls(self, using: str = "read_only") -> set[str]:

@@ -512,10 +512,7 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
             return Response(status=404)
         dicts = get_component_taxonomy(
             obj,
-            (
-                ComponentNode.ComponentNodeType.PROVIDES,
-                ComponentNode.ComponentNodeType.PROVIDES_DEV,
-            ),
+            ComponentNode.PROVIDES_NODE_TYPES,
         )
         return Response(dicts)
 
@@ -524,15 +521,7 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         obj = self.queryset.filter(uuid=uuid).first()
         if not obj:
             return Response(status=404)
-        dicts = get_component_taxonomy(
-            obj,
-            (
-                ComponentNode.ComponentNodeType.SOURCE,
-                ComponentNode.ComponentNodeType.PROVIDES_DEV,
-                ComponentNode.ComponentNodeType.REQUIRES,
-                ComponentNode.ComponentNodeType.PROVIDES,
-            ),
-        )
+        dicts = get_component_taxonomy(obj, tuple(ComponentNode.ComponentNodeType.values))
         return Response(dicts)
 
 

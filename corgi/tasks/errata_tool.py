@@ -9,6 +9,7 @@ from corgi.collectors.models import CollectorRPMRepository
 from corgi.core.models import (
     Channel,
     ProductComponentRelation,
+    ProductNode,
     ProductVariant,
     SoftwareBuild,
 )
@@ -131,7 +132,7 @@ def update_variant_repos() -> None:
                 logger.warning("Product Variant %s from ET not found in models", name)
                 continue
 
-            pv_node = pv.pnodes.first()
+            pv_node = pv.pnodes.get()
 
             for repo in et_variant_data["repos"]:
                 # Filter out inactive repos in pulp and get content_set
@@ -156,7 +157,9 @@ def update_variant_repos() -> None:
                 # Create a Product Node for each CDN repo linked to a Variant. This means that one
                 # CDN repo (since we run update_or_create above) can be linked to
                 # multiple product nodes, each linked to a different Variant.
-                repo.pnodes.get_or_create(object_id=repo.pk, parent=pv_node, defaults={"obj": repo})
+                ProductNode.objects.get_or_create(
+                    object_id=repo.pk, parent=pv_node, defaults={"obj": repo}
+                )
                 # Saving the Channel's taxonomy automatically links it to all other models
                 # Those other models don't need to have their taxonomies saved separately
                 repo.save_product_taxonomy()

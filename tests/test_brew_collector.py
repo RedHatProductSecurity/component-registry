@@ -202,7 +202,7 @@ def test_get_component_data(
             "components",
             "build_meta",
         ]
-        set(c["meta"].keys()) == {
+        assert set(c["meta"].keys()) == {
             "nvr",
             "name",
             "version",
@@ -211,6 +211,11 @@ def test_get_component_data(
             "arch",
             "source",
             "rpm_id",
+            "description",
+            "license",
+            "source_files",
+            "summary",
+            "url",
         }
     assert c["build_meta"]["build_info"]["source"] == build_source
     assert c["build_meta"]["build_info"]["build_id"] == build_id

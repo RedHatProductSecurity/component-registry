@@ -19,6 +19,13 @@ paths:
       operationId: v1_builds_list
       description: View for api/v1/builds
       parameters:
+      - in: query
+        name: build_type
+        schema:
+          type: string
+          enum:
+          - BREW
+          - KOJI
       - name: limit
         required: false
         in: query
@@ -45,13 +52,6 @@ paths:
         name: tags
         schema:
           type: integer
-      - in: query
-        name: type
-        schema:
-          type: string
-          enum:
-          - BREW
-          - KOJI
       tags:
       - v1
       responses:
@@ -926,6 +926,11 @@ paths:
           description: ''
 components:
   schemas:
+    BuildTypeEnum:
+      enum:
+      - BREW
+      - KOJI
+      type: string
     Channel:
       type: object
       properties:
@@ -1679,8 +1684,8 @@ components:
           type: integer
           maximum: 2147483647
           minimum: -2147483648
-        type:
-          $ref: '#/components/schemas/Type111Enum'
+        build_type:
+          $ref: '#/components/schemas/BuildTypeEnum'
         name:
           type: string
         source:
@@ -1707,6 +1712,7 @@ components:
           readOnly: true
       required:
       - build_id
+      - build_type
       - components
       - created_at
       - last_changed
@@ -1714,7 +1720,6 @@ components:
       - name
       - source
       - tags
-      - type
       - web_url
     SoftwareBuildSummary:
       type: object
@@ -1726,18 +1731,18 @@ components:
           type: integer
           maximum: 2147483647
           minimum: -2147483648
-        type:
-          $ref: '#/components/schemas/Type111Enum'
+        build_type:
+          $ref: '#/components/schemas/BuildTypeEnum'
         name:
           type: string
         source:
           type: string
       required:
       - build_id
+      - build_type
       - link
       - name
       - source
-      - type
     Tag:
       type: object
       properties:
@@ -1755,8 +1760,3 @@ components:
       required:
       - created_at
       - name
-    Type111Enum:
-      enum:
-      - BREW
-      - KOJI
-      type: string

@@ -70,7 +70,7 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
     softwarebuild, created = SoftwareBuild.objects.get_or_create(
         build_id=component["build_meta"]["build_info"]["build_id"],
         defaults={
-            "type": SoftwareBuild.Type.BREW,
+            "build_type": SoftwareBuild.Type.BREW,
             "name": component["meta"]["name"],
             "source": component["build_meta"]["build_info"]["source"],
             "meta_attr": build_meta,

@@ -181,7 +181,7 @@ class SoftwareBuildSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_web_url(build: SoftwareBuild) -> str:
-        if build.type == SoftwareBuild.Type.BREW:
+        if build.build_type == SoftwareBuild.Type.BREW:
             return f"{settings.BREW_WEB_URL}/brew/buildinfo?buildID={build.build_id}"
         return ""
 
@@ -195,7 +195,7 @@ class SoftwareBuildSerializer(serializers.ModelSerializer):
             "link",
             "web_url",
             "build_id",
-            "type",
+            "build_type",
             "name",
             "source",
             "tags",
@@ -216,7 +216,7 @@ class SoftwareBuildSummarySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SoftwareBuild
-        fields = ["link", "build_id", "type", "name", "source"]
+        fields = ["link", "build_id", "build_type", "name", "source"]
 
 
 class ProductTaxonomySerializer(serializers.ModelSerializer):

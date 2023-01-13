@@ -260,7 +260,7 @@ class SoftwareBuild(TimeStampedModel):
         KOJI = "KOJI"  # Fedora's Koji build system, the upstream equivalent of Red Hat's Brew
 
     build_id = models.IntegerField(primary_key=True)
-    type = models.CharField(choices=Type.choices, max_length=20)
+    build_type = models.CharField(choices=Type.choices, max_length=20)
     name = models.TextField()  # Arbitrary identifier for a build
     source = models.TextField()  # Source code reference for build
     completion_time = models.DateTimeField(null=True)  # meta_attr["completion_time"]

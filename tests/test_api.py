@@ -559,7 +559,7 @@ def test_api_listing(client, api_path):
 @pytest.mark.django_db(databases=("read_only",))
 def test_api_component_404(client, api_path):
     response = client.get(
-        f"{api_path}/components?purl=pkg:rpm/redhat/non-existent-fake-libs@3.26.0-15.el8?arch=x86_64"  # noqa
+        f"{api_path}/components?purl=pkg:rpm/redhat/fake-libs@3.26.0-15.el8?arch=x86_64"
     )
     assert response.status_code == 404
 

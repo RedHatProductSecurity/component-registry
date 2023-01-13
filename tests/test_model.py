@@ -1,5 +1,6 @@
 import pytest
 from django.apps import apps
+from django.core.exceptions import ValidationError
 from django.db.utils import IntegrityError, ProgrammingError
 from packageurl import PackageURL
 
@@ -146,7 +147,18 @@ def create_product_hierarchy():
 
 
 def test_component_model():
-    c1 = SrpmComponentFactory(name="curl")
+    c1 = ComponentFactory(name="curl")
+    c1.arch = Component.Arch.i386
+    c1.type = "invalid"
+    with pytest.raises(ValidationError) as exc_info:
+        c1.full_clean()
+    assert "type" in exc_info.value.args[0]
+
+    c1.type = Component.Type.RPM
+    c1.arch = "invalid"
+    with pytest.raises(ValidationError) as exc_info:
+        c1.full_clean()
+    assert "arch" in exc_info.value.args[0]
     assert Component.objects.get(name="curl") == c1
 
 

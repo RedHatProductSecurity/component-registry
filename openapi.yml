@@ -156,6 +156,19 @@ paths:
         name: arch
         schema:
           type: string
+          enum:
+          - aarch64
+          - i386
+          - i686
+          - ia64
+          - noarch
+          - ppc
+          - ppc64
+          - ppc64le
+          - s390
+          - s390x
+          - src
+          - x86_64
       - in: query
         name: channels
         schema:
@@ -910,6 +923,21 @@ paths:
           description: ''
 components:
   schemas:
+    ArchEnum:
+      enum:
+      - aarch64
+      - i386
+      - i686
+      - ia64
+      - noarch
+      - ppc
+      - ppc64
+      - ppc64le
+      - s390
+      - s390x
+      - src
+      - x86_64
+      type: string
     Channel:
       type: object
       properties:
@@ -1023,8 +1051,7 @@ components:
           type: string
           maxLength: 1024
         arch:
-          type: string
-          maxLength: 1024
+          $ref: '#/components/schemas/ArchEnum'
         nvr:
           type: string
           maxLength: 1024
@@ -1125,6 +1152,7 @@ components:
         filename:
           type: string
       required:
+      - arch
       - channels
       - description
       - download_url

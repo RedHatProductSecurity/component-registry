@@ -918,6 +918,20 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         UPSTREAM = "UPSTREAM"
         REDHAT = "REDHAT"
 
+    class Arch(models.TextChoices):
+        aarch64 = "aarch64"
+        i386 = "i386"
+        i686 = "i686"
+        ia64 = "ia64"
+        noarch = "noarch"
+        ppc = "ppc"
+        ppc64 = "ppc64"
+        ppc64le = "ppc64le"
+        s390 = "s390"
+        s390x = "s390x"
+        src = "src"
+        x86_64 = "x86_64"
+
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.TextField()
     description = models.TextField()
@@ -927,7 +941,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     namespace = models.CharField(choices=Namespace.choices, max_length=20)
     version = models.CharField(max_length=1024)
     release = models.CharField(max_length=1024, default="")
-    arch = models.CharField(max_length=1024, default="")
+    arch = models.CharField(choices=Arch.choices, max_length=20)
 
     purl = models.CharField(max_length=1024, default="")
     nvr = models.CharField(max_length=1024, default="")

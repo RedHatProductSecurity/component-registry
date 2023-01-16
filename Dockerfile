@@ -1,4 +1,4 @@
-FROM registry.redhat.io/ubi8/ubi:8.6
+FROM registry.redhat.io/ubi8/ubi
 
 ARG PIP_INDEX_URL="https://pypi.org/simple"
 ENV PYTHONUNBUFFERED=1 \

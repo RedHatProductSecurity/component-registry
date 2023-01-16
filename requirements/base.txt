@@ -109,10 +109,6 @@ djangorestframework @ https://github.com/encode/django-rest-framework/archive/cc
     # via
     #   -r requirements/base.in
     #   drf-spectacular
-dnspython==2.2.1 \
-    --hash=sha256:0f7569a4a6ff151958b64304071d370daa3243d15941a7beedf0c9fe5105603e \
-    --hash=sha256:a851e51367fb93e9e1361732c1d60dab63eff98712e503ea7d92e6eccb109b4f
-    # via eventlet
 drf-spectacular @ https://github.com/tfranzel/drf-spectacular/archive/0f01020ff378135033855ad5bf100d99f9a14440.zip \
     --hash=sha256:3f00c1df0635600cbcfebb06a1ab879a608ac16de5692cf7e7e3771edbbc9997
     # via -r requirements/base.in
@@ -120,10 +116,6 @@ drf-spectacular-sidecar==2022.11.1 \
     --hash=sha256:46614fb4eff1bccbac176d74bd76e0240ab459dc62d9fd8b9d4d1479fb76ba0a \
     --hash=sha256:503860a34d4215d6b3c46d54b90d991dd0d202363e3b69b832348f08e4a8634b
     # via drf-spectacular
-eventlet==0.33.1 \
-    --hash=sha256:a085922698e5029f820cf311a648ac324d73cec0e4792877609d978a4b5bbf31 \
-    --hash=sha256:afbe17f06a58491e9aebd7a4a03e70b0b63fd4cf76d8307bae07f280479b1515
-    # via -r requirements/base.in
 flower==1.2.0 \
     --hash=sha256:46493c7e8d9ca2167e8a46eb97ae8d280997cb40a81993230124d74f0fe40bac \
     --hash=sha256:ae2977cf7343c526cf44def8c7e7173db8dedb8249b91ba4b88cfd18e7a2d486
@@ -219,9 +211,7 @@ greenlet==1.1.2 \
     --hash=sha256:f9d29ca8a77117315101425ec7ec2a47a22ccf59f5593378fc4077ac5b754fce \
     --hash=sha256:fa877ca7f6b48054f847b61d6fa7bed5cebb663ebc55e018fda12db09dcc664c \
     --hash=sha256:fdcec0b8399108577ec290f55551d926d9a1fa6cad45882093a7a07ac5ec147b
-    # via
-    #   eventlet
-    #   gevent
+    # via gevent
 gssapi==1.7.2 \
     --hash=sha256:0b02bbdd850c079b1d453546579fc283f0646f56ff4b39cd3b0e27263a6af97e \
     --hash=sha256:145bee55bff2461d2704b958bb6f45f6abf11442efe0f2e7a612f0ab049613f2 \
@@ -406,7 +396,6 @@ six==1.16.0 \
     --hash=sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254
     # via
     #   click-repl
-    #   eventlet
     #   koji
     #   python-dateutil
 splitstream==1.2.6 \

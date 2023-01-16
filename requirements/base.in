@@ -5,7 +5,6 @@ django-celery-beat
 django-celery-results
 django-csp
 django-filter
-eventlet
 
 # The latest main-branch commit on our fork of django-mptt
 # This includes a fix for concurrent writes causing tree corruption
@@ -14,9 +13,7 @@ django-mptt @ https://github.com/RedHatProductSecurity/django-mptt/archive/25d49
 # Unreleased Django-REST-Framework commit with a fix for strong Content-Security-Policies
 djangorestframework @ https://github.com/encode/django-rest-framework/archive/cc3c89a11c7ee9cf7cfd732e0a329c318ace71b2.zip#egg=djangorestframework
 
-# Unreleased drf-spectacular commit with a fix for strong Content-Security-Policies
-drf-spectacular[sidecar] @ https://github.com/tfranzel/drf-spectacular/archive/0f01020ff378135033855ad5bf100d99f9a14440.zip#egg=drf-spectacular
-
+drf-spectacular[sidecar]
 flower
 gunicorn[gevent]
 koji

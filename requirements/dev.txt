@@ -205,9 +205,9 @@ detect-secrets==1.2.0 \
     --hash=sha256:51a8fc5d89340ba6d0c688049fc3381a2f24c6fbaf2f542e15f5b873b95bafe3 \
     --hash=sha256:c160e897b3d0e81bf9cf0f6cc2e5e6434fa609a159f9a2849fcae0a08b4e2a30
     # via -r requirements/lint.txt
-django==3.2.15 \
-    --hash=sha256:115baf5049d5cf4163e43492cdc7139c306ed6d451e7d3571fe9612903903713 \
-    --hash=sha256:f71934b1a822f14a86c9ac9634053689279cd04ae69cb6ade4a59471b886582b
+django==3.2.16 \
+    --hash=sha256:18ba8efa36b69cfcd4b670d0fa187c6fe7506596f0ababe580e16909bcdec121 \
+    --hash=sha256:3adc285124244724a394fa9b9839cc8cd116faf7d159554c43ecdaa8cdf0b94d
     # via
     #   -r requirements/base.txt
     #   -r requirements/test.txt
@@ -295,15 +295,9 @@ djangorestframework-stubs==1.7.0 \
     --hash=sha256:3ac1447fc87f68fe7d8622d4725b5cef820bcc17918f36c7da3f667363fb7a43 \
     --hash=sha256:6e8a80a0716d8af02aa387dae47f8ef97b6c0efdf159d83a5918d582f8b1ea07
     # via -r requirements/test.txt
-dnspython==2.2.1 \
-    --hash=sha256:0f7569a4a6ff151958b64304071d370daa3243d15941a7beedf0c9fe5105603e \
-    --hash=sha256:a851e51367fb93e9e1361732c1d60dab63eff98712e503ea7d92e6eccb109b4f
-    # via
-    #   -r requirements/base.txt
-    #   -r requirements/test.txt
-    #   eventlet
-drf-spectacular @ https://github.com/tfranzel/drf-spectacular/archive/0f01020ff378135033855ad5bf100d99f9a14440.zip \
-    --hash=sha256:3f00c1df0635600cbcfebb06a1ab879a608ac16de5692cf7e7e3771edbbc9997
+drf-spectacular[sidecar]==0.25.1 \
+    --hash=sha256:789696f9845ef2397c52f66154aec6d96411baf6aa09a5d40c5f0b0e99f6b3d8 \
+    --hash=sha256:d58684e702f5ad436c5bd1735d46df0e123e64de883092d38f1debb9fa4a03c9
     # via
     #   -r requirements/base.txt
     #   -r requirements/test.txt
@@ -313,12 +307,7 @@ drf-spectacular-sidecar==2022.11.1 \
     # via
     #   -r requirements/base.txt
     #   -r requirements/test.txt
-eventlet==0.33.1 \
-    --hash=sha256:a085922698e5029f820cf311a648ac324d73cec0e4792877609d978a4b5bbf31 \
-    --hash=sha256:afbe17f06a58491e9aebd7a4a03e70b0b63fd4cf76d8307bae07f280479b1515
-    # via
-    #   -r requirements/base.txt
-    #   -r requirements/test.txt
+    #   drf-spectacular
 executing==0.8.2 \
     --hash=sha256:32fc6077b103bd19e6494a72682d66d5763cf20a106d5aa7c5ccbea4e47b0df7 \
     --hash=sha256:c23bf42e9a7b9b212f185b1b2c3c91feb895963378887bb10e64a2e612ec0023
@@ -446,7 +435,6 @@ greenlet==1.1.2 \
     # via
     #   -r requirements/base.txt
     #   -r requirements/test.txt
-    #   eventlet
     #   gevent
 gssapi==1.7.2 \
     --hash=sha256:0b02bbdd850c079b1d453546579fc283f0646f56ff4b39cd3b0e27263a6af97e \
@@ -998,7 +986,6 @@ six==1.16.0 \
     #   -r requirements/test.txt
     #   click-repl
     #   django-coverage-plugin
-    #   eventlet
     #   koji
     #   python-dateutil
     #   requests-mock

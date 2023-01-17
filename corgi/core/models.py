@@ -272,11 +272,6 @@ class SoftwareBuild(TimeStampedModel):
     class Meta:
         indexes = (models.Index(fields=("completion_time",)),)
 
-    def save_datascore(self):
-        for component in self.components.get_queryset():
-            component.save_datascore()
-        return None
-
     def save_product_taxonomy(self):
         """update ('materialize') product taxonomy on all build components
 
@@ -970,9 +965,6 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
     related_url = models.CharField(max_length=1024, default="")
 
-    data_score = models.IntegerField(default=0)
-    data_report = fields.ArrayField(models.CharField(max_length=200), default=list)
-
     objects = ComponentQuerySet.as_manager()
 
     class Meta:
@@ -1350,49 +1342,6 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     def get_upstreams_purls(self, using: str = "read_only") -> set[str]:
         """Return only the purls from the set of all upstream nodes"""
         return set(node.purl for node in self.get_upstreams_nodes(using=using))
-
-    def save_datascore(self):
-        score = 0
-        report = set()
-        if self.namespace == Component.Namespace.UPSTREAM and not self.related_url:
-            score += 20
-            report.add("upstream has no related_url")
-        if not self.description:
-            score += 10
-            report.add("no description")
-        if not self.version:
-            score += 10
-            report.add("no version")
-        if not self.license_declared_raw:
-            score += 10
-            report.add("no license declared")
-        if not self.products.exists():
-            score += 10
-            report.add("no products")
-        if not self.productversions.exists():
-            score += 10
-            report.add("no product versions")
-        if not self.productstreams.exists():
-            score += 10
-            report.add("no product streams")
-        if not self.productvariants.exists():
-            score += 20
-            report.add("no product variants")
-        if not self.sources.exists():
-            score += 10
-            report.add("no sources")
-        if not self.provides.exists():
-            score += 10
-            report.add("no provides")
-        if not self.upstreams.exists():
-            score += 10
-            report.add("no upstream")
-        if not self.software_build:
-            score += 10
-            report.add("no software build")
-        self.data_score = score
-        self.data_report = list(report)
-        self.save()
 
 
 class ComponentTag(Tag):

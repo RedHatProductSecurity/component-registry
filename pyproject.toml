@@ -32,7 +32,7 @@ filterwarnings = [
 line-length = 100
 
 [tool.coverage.run]
-omit = ["corgi/core/migrations/*"]
+omit = ["corgi/core/migrations/*","corgi/collectors/migrations/*","corgi/tasks/management/commands/*"]
 plugins = ["django_coverage_plugin"]
 
 [tool.coverage.django_coverage_plugin]

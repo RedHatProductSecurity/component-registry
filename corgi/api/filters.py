@@ -69,6 +69,7 @@ class ComponentFilter(FilterSet):
 class ProductDataFilter(FilterSet):
     """Class that filters queries to Product-related list views."""
 
+    name = CharFilter()
     re_name = CharFilter(lookup_expr="regex", field_name="name")
     re_ofuri = CharFilter(lookup_expr="regex", field_name="ofuri")
     tags = TagFilter()

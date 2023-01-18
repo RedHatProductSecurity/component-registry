@@ -522,6 +522,10 @@ def test_product_streams(client, api_path):
     response = client.get(f"{api_path}/product_streams?ofuri=o:redhat:rhel:8.5.0-z")
     assert response.status_code == 200
 
+    response = client.get(f"{api_path}/product_streams?name=rhel-av-8.5.0-z")
+    assert response.status_code == 200
+    assert response.json()["name"] == "rhel-av-8.5.0-z"
+
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_product_variants(client, api_path):

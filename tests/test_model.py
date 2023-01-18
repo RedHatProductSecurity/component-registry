@@ -77,8 +77,8 @@ def test_cpes():
     ps3node = ProductNode.objects.create(parent=pv2node, obj=ps3)
     assert ps3node
 
-    assert ps3node.name == "Brantabernicla"
-    assert ps3node.desc == "The brant or brent goose is a small goose of the genus Branta."
+    assert ps3node.name == ps3.name
+    assert ps3node.desc == ps3.description
 
     assert pv1.cpes == ("cpe:/o:redhat:enterprise_linux:8",)
     assert sorted(p1.cpes) == [

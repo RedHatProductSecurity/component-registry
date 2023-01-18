@@ -59,6 +59,7 @@ def test_cpes():
     ps3 = ProductStreamFactory(
         name="Brantabernicla",
         cpe="cpe:/o:redhat:Brantabernicla:8",
+        description="The brant or brent goose is a small goose of the genus Branta.",
         products=p1,
         productversions=pv2,
     )
@@ -75,6 +76,9 @@ def test_cpes():
     assert ps2node
     ps3node = ProductNode.objects.create(parent=pv2node, obj=ps3)
     assert ps3node
+
+    assert ps3node.name == ps3.name
+    assert ps3node.desc == ps3.description
 
     assert pv1.cpes == ("cpe:/o:redhat:enterprise_linux:8",)
     assert sorted(p1.cpes) == [

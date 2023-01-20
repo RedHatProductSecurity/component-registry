@@ -46,7 +46,7 @@ def save_errata_product_taxonomy(erratum_id: int):
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def slow_load_errata(erratum_name):
+def slow_load_errata(erratum_name, force_process: bool = False):
     et = ErrataTool()
     if not erratum_name.isdigit():
         erratum_id = et.normalize_erratum_id(erratum_name)
@@ -96,7 +96,11 @@ def slow_load_errata(erratum_name):
             # slow_fetch_brew_build task, eg CORGI-21. We call save_product_taxonomy from
             # this task only after all the builds in the errata have been loaded instead.
             logger.info("Calling slow_fetch_brew_build for %s", build_id)
-            app.send_task("corgi.tasks.brew.slow_fetch_brew_build", args=(build_id, False))
+            app.send_task(
+                "corgi.tasks.brew.slow_fetch_brew_build",
+                args=(build_id,),
+                kwargs={"force_process": force_process},
+            )
     else:
         logger.info("Finished processing %s", erratum_id)
 

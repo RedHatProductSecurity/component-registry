@@ -70,7 +70,7 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
     softwarebuild, created = SoftwareBuild.objects.get_or_create(
         build_id=component["build_meta"]["build_info"]["build_id"],
         defaults={
-            "type": SoftwareBuild.Type.BREW,
+            "build_type": SoftwareBuild.Type.BREW,
             "name": component["meta"]["name"],
             "source": component["build_meta"]["build_info"]["source"],
             "meta_attr": build_meta,
@@ -110,20 +110,20 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
         logger.info("no errata tags")
     else:
         if isinstance(build_meta["errata_tags"], str):
-            slow_load_errata.delay(build_meta["errata_tags"])
+            slow_load_errata.delay(build_meta["errata_tags"], force_process=force_process)
         else:
             for e in build_meta["errata_tags"]:
-                slow_load_errata.delay(e)
+                slow_load_errata.delay(e, force_process=force_process)
 
     build_ids = component.get("nested_builds", ())
     logger.info("Fetching brew builds for %s", build_ids)
     for b_id in build_ids:
         logger.info("Requesting fetch of nested build: %s", b_id)
-        slow_fetch_brew_build.delay(b_id)
+        slow_fetch_brew_build.delay(b_id, force_process=force_process)
 
     logger.info("Requesting software composition analysis for %s", build_id)
     if settings.SCA_ENABLED:
-        cpu_software_composition_analysis.delay(build_id)
+        cpu_software_composition_analysis.delay(build_id, force_process=force_process)
 
     logger.info("Finished fetching brew build: %s", build_id)
 

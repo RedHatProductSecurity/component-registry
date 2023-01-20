@@ -69,7 +69,7 @@ def save_component(component: dict[str, Any], parent: ComponentNode):
     retry_kwargs=RETRY_KWARGS,
     soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
 )
-def cpu_software_composition_analysis(build_id: int):
+def cpu_software_composition_analysis(build_id: int, force_process: bool = False):
     logger.info("Started software composition analysis for %s", build_id)
     software_build = SoftwareBuild.objects.get(build_id=build_id)
 
@@ -104,7 +104,12 @@ def cpu_software_composition_analysis(build_id: int):
     distgit_sources = _get_distgit_sources(software_build.source, build_id)
 
     no_of_new_components = _scan_files(root_node, distgit_sources)
-    if no_of_new_components > 0:
+    if no_of_new_components > 0 or force_process:
+        if no_of_new_components > 0:
+            logger.warning(
+                f"Root component {root_component.purl} for build {build_id}"
+                "had child components that were not found in remote-sources.json!"
+            )
         software_build.save_product_taxonomy()
         for component in software_build.components.get_queryset():
             component.save_component_taxonomy()
@@ -168,7 +173,7 @@ def _clone_source(source_url: str, build_id: int) -> Tuple[Path, str, str]:
 
     # We only support git, git+https, git+ssh
     if not url.scheme.startswith("git"):
-        raise ValueError("Cannot download raw source for anything but git protocol")
+        raise ValueError(f"Build {build_id} had a source_url with a non-git protocol: {source_url}")
 
     protocol = url.scheme
     if protocol.startswith("git+"):

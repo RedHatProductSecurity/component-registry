@@ -205,7 +205,7 @@ def test_component_provides():
 
 def test_software_build_model():
     sb1 = SoftwareBuildFactory(
-        type=SoftwareBuild.Type.BREW,
+        build_type=SoftwareBuild.Type.BREW,
         meta_attr={"build_id": 9999, "a": 1, "b": 2, "brew_tags": ["RHSA-123-123"]},
     )
     assert SoftwareBuild.objects.get(build_id=sb1.build_id) == sb1

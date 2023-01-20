@@ -35,8 +35,8 @@ def save_variant_cdn_repo_mapping() -> None:
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def save_errata_product_taxonomy(erratum_id: int):
-    logger.info(f"save_errata_product_taxonomy called for {erratum_id}")
+def slow_save_errata_product_taxonomy(erratum_id: int):
+    logger.info(f"slow_save_errata_product_taxonomy called for {erratum_id}")
     relation_build_ids = _get_relation_build_ids(erratum_id)
     for b in relation_build_ids:
         logger.info("Saving product taxonomy for build %s", b)
@@ -46,7 +46,7 @@ def save_errata_product_taxonomy(erratum_id: int):
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def slow_load_errata(erratum_name):
+def slow_load_errata(erratum_name, force_process: bool = False):
     et = ErrataTool()
     if not erratum_name.isdigit():
         erratum_id = et.normalize_erratum_id(erratum_name)
@@ -59,7 +59,8 @@ def slow_load_errata(erratum_name):
     # so we don't load all the software builds at this point
     no_of_processed_builds = SoftwareBuild.objects.filter(build_id__in=relation_build_ids).count()
 
-    if len(relation_build_ids) == 0:
+    # If we have no relations at all, or we want to update them
+    if len(relation_build_ids) == 0 or force_process:
         # Save PCR
         logger.info("Saving product components for errata %s", erratum_id)
         variant_to_component_map = et.get_erratum_components(str(erratum_id))
@@ -68,7 +69,7 @@ def slow_load_errata(erratum_name):
                 for build_id, errata_components in build_obj.items():
                     # Add to relations list as we go, so we can fetch them below
                     relation_build_ids.add(int(build_id))
-                    ProductComponentRelation.objects.get_or_create(
+                    ProductComponentRelation.objects.update_or_create(
                         external_system_id=erratum_id,
                         product_ref=variant_id,
                         build_id=build_id,
@@ -80,11 +81,11 @@ def slow_load_errata(erratum_name):
     # If the number of relations was more than 0 check if we've processed all the builds
     # in the errata
     elif len(relation_build_ids) == no_of_processed_builds:
-        logger.info(f"Calling save_errata_product_taxonomy for {erratum_id}")
-        save_errata_product_taxonomy.delay(erratum_id)
+        logger.info(f"Calling slow_save_errata_product_taxonomy for {erratum_id}")
+        slow_save_errata_product_taxonomy.delay(erratum_id)
 
     # Check if we are only part way through loading the errata
-    if no_of_processed_builds < len(relation_build_ids):
+    if no_of_processed_builds < len(relation_build_ids) or force_process:
         # Calculate and print the percentage of builds for the errata
         if len(relation_build_ids) > 0:
             percentage_complete = int(no_of_processed_builds / len(relation_build_ids) * 100)
@@ -96,9 +97,16 @@ def slow_load_errata(erratum_name):
             # slow_fetch_brew_build task, eg CORGI-21. We call save_product_taxonomy from
             # this task only after all the builds in the errata have been loaded instead.
             logger.info("Calling slow_fetch_brew_build for %s", build_id)
-            app.send_task("corgi.tasks.brew.slow_fetch_brew_build", args=(build_id, False))
-    else:
-        logger.info("Finished processing %s", erratum_id)
+            app.send_task(
+                "corgi.tasks.brew.slow_fetch_brew_build",
+                args=(build_id,),
+                kwargs={"force_process": force_process},
+            )
+
+    if force_process:
+        slow_save_errata_product_taxonomy.delay(erratum_id)
+
+    logger.info("Finished processing %s", erratum_id)
 
 
 def _get_relation_build_ids(erratum_id: int) -> set[int]:

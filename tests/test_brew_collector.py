@@ -202,7 +202,7 @@ def test_get_component_data(
             "components",
             "build_meta",
         ]
-        set(c["meta"].keys()) == {
+        assert set(c["meta"].keys()) == {
             "nvr",
             "name",
             "version",
@@ -211,6 +211,11 @@ def test_get_component_data(
             "arch",
             "source",
             "rpm_id",
+            "description",
+            "license",
+            "source_files",
+            "summary",
+            "url",
         }
     assert c["build_meta"]["build_info"]["source"] == build_source
     assert c["build_meta"]["build_info"]["build_id"] == build_id
@@ -777,11 +782,11 @@ def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, moc
     # Verify calls were made to slow_fetch_brew_build.delay for rpm builds
     assert len(mock_fetch_brew_build.call_args_list) == len(RPM_BUILD_IDS)
     mock_fetch_brew_build.assert_has_calls(
-        [call(build_id) for build_id in RPM_BUILD_IDS],
+        tuple(call(build_id, force_process=False) for build_id in RPM_BUILD_IDS),
         any_order=True,
     )
-    mock_load_errata.assert_called_with("RHEA-2021:4610")
-    mock_sca.assert_called_with(1781353)
+    mock_load_errata.assert_called_with("RHEA-2021:4610", force_process=False)
+    mock_sca.assert_called_with(1781353, force_process=False)
 
 
 @pytest.mark.django_db

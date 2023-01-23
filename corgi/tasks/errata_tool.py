@@ -100,7 +100,7 @@ def slow_load_errata(erratum_name, force_process: bool = False):
             app.send_task(
                 "corgi.tasks.brew.slow_fetch_brew_build",
                 args=(build_id,),
-                kwargs={"force_process": False},
+                kwargs={"save_product": False, "force_process": force_process},
             )
 
     if force_process:

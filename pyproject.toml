@@ -17,6 +17,7 @@ addopts = """
 --strict-config --strict-markers
 """
 markers = [
+    "django_db",
     "unit",
     "integration",
 ]
@@ -31,7 +32,7 @@ filterwarnings = [
 line-length = 100
 
 [tool.coverage.run]
-omit = ["corgi/core/migrations/*"]
+omit = ["corgi/**/migrations/*"]
 plugins = ["django_coverage_plugin"]
 
 [tool.coverage.django_coverage_plugin]

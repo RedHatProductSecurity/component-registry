@@ -25,11 +25,12 @@ class Command(BaseCommand):
             )
             .values_list("build_id", flat=True)
             .distinct()
+            .using("read_only")
             .iterator()
         ):
             if not build_id:
                 continue
-            if not SoftwareBuild.objects.filter(build_id=int(build_id)).exists():
+            if not SoftwareBuild.objects.filter(build_id=int(build_id)).using("read_only").exists():
                 self.stdout.write(self.style.SUCCESS(f"Loading build with id: {build_id}"))
                 slow_fetch_modular_build.delay(build_id)
                 processed_builds += 1

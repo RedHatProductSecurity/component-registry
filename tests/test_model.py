@@ -27,7 +27,7 @@ from .factories import (
     SrpmComponentFactory,
 )
 
-pytestmark = pytest.mark.unit
+pytestmark = [pytest.mark.unit, pytest.mark.django_db]
 
 
 def test_product_model():
@@ -49,6 +49,7 @@ def test_productstream_model():
     assert p1.cpe == "cpe:/o:redhat:enterprise_linux:8"
 
 
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_cpes():
     p1 = ProductFactory(name="RHEL")
     pv1 = ProductVersionFactory(name="RHEL-7", version="7", products=p1)
@@ -58,6 +59,7 @@ def test_cpes():
     ps3 = ProductStreamFactory(
         name="Brantabernicla",
         cpe="cpe:/o:redhat:Brantabernicla:8",
+        description="The brant or brent goose is a small goose of the genus Branta.",
         products=p1,
         productversions=pv2,
     )
@@ -74,6 +76,9 @@ def test_cpes():
     assert ps2node
     ps3node = ProductNode.objects.create(parent=pv2node, obj=ps3)
     assert ps3node
+
+    assert ps3node.name == ps3.name
+    assert ps3node.desc == ps3.description
 
     assert pv1.cpes == ("cpe:/o:redhat:enterprise_linux:8",)
     assert sorted(p1.cpes) == [
@@ -191,12 +196,16 @@ def test_component_provides():
         purl=dev_comp.purl,
         defaults={"obj": dev_comp},
     )
-    assert dev_comp.purl in upstream.get_provides_purls()
+    # provides is inverse of sources
+    # so calling save_component_taxonomy on either dev_comp or upstream
+    # works the same way - the two components will be linked together
+    dev_comp.save_component_taxonomy()
+    assert upstream.provides.filter(purl=dev_comp.purl).exists()
 
 
 def test_software_build_model():
     sb1 = SoftwareBuildFactory(
-        type=SoftwareBuild.Type.BREW,
+        build_type=SoftwareBuild.Type.BREW,
         meta_attr={"build_id": 9999, "a": 1, "b": 2, "brew_tags": ["RHSA-123-123"]},
     )
     assert SoftwareBuild.objects.get(build_id=sb1.build_id) == sb1
@@ -219,8 +228,8 @@ def test_get_roots():
         purl=rpm.purl,
         defaults={"obj": rpm},
     )
-    assert rpm.get_roots == [srpm_cnode]
-    assert srpm.get_roots == [srpm_cnode]
+    assert rpm.get_roots(using="default") == [srpm_cnode]
+    assert srpm.get_roots(using="default") == [srpm_cnode]
 
     nested = ComponentFactory(name="nested")
     ComponentNode.objects.get_or_create(
@@ -229,7 +238,7 @@ def test_get_roots():
         purl=nested.purl,
         defaults={"obj": nested},
     )
-    assert nested.get_roots == [srpm_cnode]
+    assert nested.get_roots(using="default") == [srpm_cnode]
 
     container = ContainerImageComponentFactory(name="container")
     container_cnode, _ = ComponentNode.objects.get_or_create(
@@ -245,8 +254,8 @@ def test_get_roots():
         purl=container_rpm.purl,
         defaults={"obj": container_rpm},
     )
-    assert not container_rpm.get_roots
-    assert container.get_roots == [container_cnode]
+    assert not container_rpm.get_roots(using="default")
+    assert container.get_roots(using="default") == [container_cnode]
 
     container_source = ComponentFactory(
         name="container_source", namespace=Component.Namespace.UPSTREAM, type=Component.Type.GITHUB
@@ -257,7 +266,7 @@ def test_get_roots():
         purl=container_source.purl,
         defaults={"obj": container_source},
     )
-    assert container_source.get_roots == [container_cnode]
+    assert container_source.get_roots(using="default") == [container_cnode]
     container_nested = ComponentFactory(name="container_nested", type=Component.Type.NPM)
     ComponentNode.objects.get_or_create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
@@ -265,7 +274,7 @@ def test_get_roots():
         purl=container_nested.purl,
         defaults={"obj": container_nested},
     )
-    assert container_nested.get_roots == [container_cnode]
+    assert container_nested.get_roots(using="default") == [container_cnode]
 
 
 def test_product_component_relations():
@@ -300,6 +309,7 @@ def test_product_component_relations_errata():
     assert rhel_8_2 in c.productstreams.get_queryset()
 
 
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_product_stream_builds():
     rhel_8_2_build = SoftwareBuildFactory()
     rhel_8_2_base_build = SoftwareBuildFactory()
@@ -341,6 +351,7 @@ def test_product_stream_builds():
     assert rhel_8_2_build.build_id not in [int(b) for b in rhel_8_1.builds]
 
 
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_component_errata():
     sb = SoftwareBuildFactory()
     c = ComponentFactory(software_build=sb)
@@ -372,7 +383,7 @@ def test_get_upstream():
         purl=srpm_upstream.purl,
         defaults={"obj": srpm_upstream},
     )
-    assert sorted(rpm.get_upstreams_purls()) == [srpm_upstream.purl]
+    assert sorted(rpm.get_upstreams_purls(using="default")) == [srpm_upstream.purl]
 
 
 def test_get_upstream_container():
@@ -390,7 +401,7 @@ def test_get_upstream_container():
         purl=container_rpm.purl,
         defaults={"obj": container_rpm},
     )
-    assert container_rpm.get_upstreams_purls() == set()
+    assert container_rpm.get_upstreams_purls(using="default") == set()
 
     container_source = ContainerImageComponentFactory(name="container_source")
     container_source_cnode, _ = ComponentNode.objects.get_or_create(
@@ -407,7 +418,7 @@ def test_get_upstream_container():
         purl=container_source.purl,
         defaults={"obj": container_nested},
     )
-    assert sorted(container_nested.get_upstreams_purls()) == [container_source.purl]
+    assert sorted(container_nested.get_upstreams_purls(using="default")) == [container_source.purl]
 
     container_o_source = ComponentFactory(
         name="contain_upstream_other",
@@ -430,7 +441,9 @@ def test_get_upstream_container():
         purl=container_other_nested.purl,
         defaults={"obj": container_other_nested},
     )
-    assert sorted(container_other_nested.get_upstreams_purls()) == [container_o_source.purl]
+    assert sorted(container_other_nested.get_upstreams_purls(using="default")) == [
+        container_o_source.purl
+    ]
 
 
 def test_duplicate_insert_fails():

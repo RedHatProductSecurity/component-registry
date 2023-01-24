@@ -1,8 +1,11 @@
 import json
 import logging
+from typing import Type, Union
 
 import django_filters.rest_framework
-from django.db import connection
+from django.db import connections
+from django.db.models import QuerySet
+from django.http import Http404
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
@@ -16,7 +19,6 @@ from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet
 
 from config import utils
 from corgi import __version__
-from corgi.core.constants import NODE_LEVEL_MODEL_MAPPING
 from corgi.core.models import (
     AppStreamLifeCycle,
     Channel,
@@ -47,7 +49,6 @@ from .serializers import (
     ProductVersionSerializer,
     SoftwareBuildSerializer,
     get_component_purl_link,
-    get_model_ofuri_link,
     get_model_ofuri_type,
 )
 
@@ -112,12 +113,12 @@ class StatusViewSet(GenericViewSet):
             }
         },
     )
-    def list(self, request):
+    def list(self, request: Request) -> Response:
         # pg has well known limitation with counting
         #        (https://wiki.postgresql.org/wiki/Slow_Counting)
         # the following approach provides an estimate for raw table counts which performs
         # much better.
-        with connection.cursor() as cursor:
+        with connections["read_only"].cursor() as cursor:
             cursor.execute("SELECT pg_size_pretty(pg_database_size(current_database()));")
             db_size = cursor.fetchone()
             cursor.execute(
@@ -149,25 +150,36 @@ class StatusViewSet(GenericViewSet):
                 },
                 "relations": {"count": pcr_count},
                 "products": {
-                    "count": Product.objects.count(),
+                    "count": Product.objects.db_manager("read_only").count(),
                 },
                 "product_versions": {
-                    "count": ProductVersion.objects.count(),
+                    "count": ProductVersion.objects.db_manager("read_only").count(),
                 },
                 "product_streams": {
-                    "count": ProductStream.objects.count(),
+                    "count": ProductStream.objects.db_manager("read_only").count(),
                 },
                 "product_variants": {
-                    "count": ProductVariant.objects.count(),
+                    "count": ProductVariant.objects.db_manager("read_only").count(),
                 },
                 "channels": {
-                    "count": Channel.objects.count(),
+                    "count": Channel.objects.db_manager("read_only").count(),
                 },
             }
         )
 
 
-def recursive_component_node_to_dict(node, component_type):
+# A dict with string keys and string or tuple values
+# The tuples recursively contain taxonomy dicts
+taxonomy_dict_type = dict[str, Union[str, tuple["taxonomy_dict_type", ...]]]
+
+
+def recursive_component_node_to_dict(
+    node: ComponentNode, component_type: tuple[str, ...]
+) -> taxonomy_dict_type:
+    """Recursively build a dict of purls, links, and children for some ComponentNode"""
+    if not node.obj:
+        raise ValueError(f"Node {node} had no linked obj")
+
     result = {}
     if node.type in component_type:
         result = {
@@ -178,39 +190,35 @@ def recursive_component_node_to_dict(node, component_type):
             # "uuid": node.obj.uuid,
             "description": node.obj.description,
         }
-    children = [recursive_component_node_to_dict(c, component_type) for c in node.get_children()]
+    children = tuple(
+        recursive_component_node_to_dict(c, component_type) for c in node.get_children()
+    )
     if children:
         result["deps"] = children
     return result
 
 
-def recursive_product_node_to_dict(node):
-    product_type = NODE_LEVEL_MODEL_MAPPING.get(node.level, "")
-    if not product_type:
-        raise ValueError(f"Node {node} had level {node.level} which is invalid")
-
-    # Usually e.g. "products" and "product_versions"
-    # or "channels" and "" since channels is the lowest level in our taxonomy
-    product_type = f"{product_type}s"
-    child_product_type = NODE_LEVEL_MODEL_MAPPING.get(node.level + 1, "")
-    child_product_type = f"{child_product_type}s" if child_product_type else ""
-
-    result = {
-        "link": get_model_ofuri_link(product_type, node.obj.ofuri),
-        "ofuri": node.obj.ofuri,
-        "name": node.obj.name,
-    }
-    children = [recursive_product_node_to_dict(c) for c in node.get_children()]
-
-    if children:
-        result[child_product_type] = children
-    return result
+def get_component_taxonomy(
+    obj: Component, component_types: tuple[str, ...]
+) -> tuple[taxonomy_dict_type, ...]:
+    """Look up and return the taxonomy for a particular Component."""
+    root_nodes = cache_tree_children(
+        obj.cnodes.get_queryset().get_descendants(include_self=True).using("read_only")
+    )
+    dicts = tuple(
+        recursive_component_node_to_dict(
+            node,
+            component_types,
+        )
+        for node in root_nodes
+    )
+    return dicts
 
 
 class SoftwareBuildViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled until auth is added
     """View for api/v1/builds"""
 
-    queryset = SoftwareBuild.objects.order_by("-build_id")
+    queryset = SoftwareBuild.objects.order_by("-build_id").using("read_only")
     serializer_class = SoftwareBuildSerializer
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend, filters.SearchFilter]
     filterset_class = SoftwareBuildFilter
@@ -229,141 +237,147 @@ class ProductViewSet(ProductDataViewSet):
     """View for api/v1/products"""
 
     # Can't use self / super() yet
-    queryset = Product.objects.order_by(ProductDataViewSet.ordering_field)
+    queryset = Product.objects.order_by(ProductDataViewSet.ordering_field).using("read_only")
     serializer_class = ProductSerializer
 
-    def list(self, request, *args, **kwargs):
+    def list(self, request: Request, *args: tuple, **kwargs: dict) -> Response:
         req = self.request
         ofuri = req.query_params.get("ofuri")
         if not ofuri:
             return super().list(request)
-        p = Product.objects.filter(ofuri=ofuri).first()
-        if not p:
-            return Response(status=404)
-        response = Response(status=302)
-        response["Location"] = f"/api/{CORGI_API_VERSION}/products/{p.uuid}"
-        return response
+        return super().retrieve(request)
 
-    @action(methods=["get"], detail=True)
-    def taxonomy(self, request, uuid=None):
-        obj = self.queryset.filter(uuid=uuid).first()
-        if not obj:
-            return Response(status=404)
-        root_nodes = cache_tree_children(obj.pnodes.get_descendants(include_self=True))
-        dicts = []
-        for n in root_nodes:
-            dicts.append(recursive_product_node_to_dict(n))
-        return Response(dicts[0])
+    def get_object(self):
+        req = self.request
+        p_ofuri = req.query_params.get("ofuri")
+        p_name = req.query_params.get("name")
+        try:
+            if p_name:
+                p = Product.objects.db_manager("read_only").get(name=p_name)
+            elif p_ofuri:
+                p = Product.objects.db_manager("read_only").get(ofuri=p_ofuri)
+            else:
+                pk = req.path.split("/")[-1]  # there must be better ways ...
+                p = Product.objects.db_manager("read_only").get(uuid=pk)
+            return p
+        except Product.DoesNotExist:
+            raise Http404
 
 
 class ProductVersionViewSet(ProductDataViewSet):
     """View for api/v1/product_versions"""
 
-    queryset = ProductVersion.objects.order_by(ProductDataViewSet.ordering_field)
+    queryset = ProductVersion.objects.order_by(ProductDataViewSet.ordering_field).using("read_only")
     serializer_class = ProductVersionSerializer
 
-    def list(self, request, *args, **kwargs):
+    def list(self, request: Request, *args: tuple, **kwargs: dict) -> Response:
         req = self.request
         ofuri = req.query_params.get("ofuri")
         if not ofuri:
             return super().list(request)
-        pv = ProductVersion.objects.filter(ofuri=ofuri).first()
-        if not pv:
-            return Response(status=404)
-        response = Response(status=302)
-        response["Location"] = f"/api/{CORGI_API_VERSION}/product_versions/{pv.uuid}"
-        return response
+        return super().retrieve(request)
 
-    @action(methods=["get"], detail=True)
-    def taxonomy(self, request, uuid=None):
-        obj = self.queryset.filter(uuid=uuid).first()
-        if not obj:
-            return Response(status=404)
-        root_nodes = cache_tree_children(obj.pnodes.get_descendants(include_self=True))
-        dicts = []
-        for n in root_nodes:
-            dicts.append(recursive_product_node_to_dict(n))
-        return Response(dicts)
+    def get_object(self):
+        req = self.request
+        pv_ofuri = req.query_params.get("ofuri")
+        pv_name = req.query_params.get("name")
+        try:
+            if pv_name:
+                pv = ProductVersion.objects.db_manager("read_only").get(name=pv_name)
+            elif pv_ofuri:
+                pv = ProductVersion.objects.db_manager("read_only").get(ofuri=pv_ofuri)
+            else:
+                pk = req.path.split("/")[-1]  # there must be better ways ...
+                pv = ProductVersion.objects.db_manager("read_only").get(uuid=pk)
+            return pv
+        except ProductVersion.DoesNotExist:
+            raise Http404
 
 
 class ProductStreamViewSetSet(ProductDataViewSet):
     """View for api/v1/product_streams"""
 
-    queryset = ProductStream.objects.filter(active=True).order_by(ProductDataViewSet.ordering_field)
+    queryset = (
+        ProductStream.objects.filter(active=True)
+        .order_by(ProductDataViewSet.ordering_field)
+        .using("read_only")
+    )
     serializer_class = ProductStreamSerializer
 
     @extend_schema(
         parameters=[OpenApiParameter("active", OpenApiTypes.STR, OpenApiParameter.QUERY)]
     )
-    def list(self, request, *args, **kwargs):
-        req = self.request
+    def list(self, request: Request, *args: tuple, **kwargs: dict) -> Response:
+        ps_ofuri = request.query_params.get("ofuri")
+        ps_name = request.query_params.get("name")
         active = request.query_params.get("active")
         if active == "all":
-            self.queryset = ProductStream.objects.order_by(super().ordering_field)
-        ofuri = req.query_params.get("ofuri")
-        if not ofuri:
+            self.queryset = ProductStream.objects.order_by(super().ordering_field).using(
+                "read_only"
+            )
+        if not ps_ofuri and not ps_name:
             return super().list(request)
-        ps = ProductStream.objects.filter(ofuri=ofuri).first()
-        if not ps:
-            return Response(status=404)
-        response = Response(status=302)
-        response["Location"] = f"/api/{CORGI_API_VERSION}/product_streams/{ps.uuid}"
-        return response
+        return super().retrieve(request)
+
+    def get_object(self):
+        req = self.request
+        ps_ofuri = req.query_params.get("ofuri")
+        ps_name = req.query_params.get("name")
+        try:
+            if ps_name:
+                ps = ProductStream.objects.db_manager("read_only").get(name=ps_name)
+            elif ps_ofuri:
+                ps = ProductStream.objects.db_manager("read_only").get(ofuri=ps_ofuri)
+            else:
+                pk = req.path.split("/")[-1]  # there must be better ways ...
+                ps = ProductStream.objects.db_manager("read_only").get(uuid=pk)
+            return ps
+        except ProductStream.DoesNotExist:
+            raise Http404
 
     @action(methods=["get"], detail=True)
-    def manifest(self, request, uuid=None):
+    def manifest(self, request: Request, uuid: Union[str, None] = None) -> Response:
         obj = self.queryset.filter(uuid=uuid).first()
         if not obj:
             return Response(status=404)
         manifest = json.loads(obj.manifest)
         return Response(manifest)
 
-    @action(methods=["get"], detail=True)
-    def taxonomy(self, request, uuid=None):
-        obj = self.queryset.filter(uuid=uuid).first()
-        if not obj:
-            return Response(status=404)
-        root_nodes = cache_tree_children(obj.pnodes.get_descendants(include_self=True))
-        dicts = []
-        for n in root_nodes:
-            dicts.append(recursive_product_node_to_dict(n))
-        return Response(dicts)
-
 
 class ProductVariantViewSetSet(ProductDataViewSet):
     """View for api/v1/product_variants"""
 
-    queryset = ProductVariant.objects.order_by(ProductDataViewSet.ordering_field)
+    queryset = ProductVariant.objects.order_by(ProductDataViewSet.ordering_field).using("read_only")
     serializer_class = ProductVariantSerializer
 
-    def list(self, request, *args, **kwargs):
+    def list(self, request: Request, *args: tuple, **kwargs: dict) -> Response:
         req = self.request
         ofuri = req.query_params.get("ofuri")
         if not ofuri:
             return super().list(request)
-        pv = ProductVariant.objects.filter(ofuri=ofuri).first()
-        if not pv:
-            return Response(status=404)
-        response = Response(status=302)
-        response["Location"] = f"/api/{CORGI_API_VERSION}/product_variants/{pv.uuid}"
-        return response
+        return super().retrieve(request)
 
-    @action(methods=["get"], detail=True)
-    def taxonomy(self, request, uuid=None):
-        obj = self.queryset.filter(uuid=uuid).first()
-        if not obj:
-            return Response(status=404)
-        root_nodes = cache_tree_children(obj.pnodes.get_descendants(include_self=True))
-        dicts = []
-        for n in root_nodes:
-            dicts.append(recursive_product_node_to_dict(n))
-        return Response(dicts)
+    def get_object(self):
+        req = self.request
+        pv_ofuri = req.query_params.get("ofuri")
+        pv_name = req.query_params.get("name")
+        try:
+            if pv_name:
+                pv = ProductVariant.objects.db_manager("read_only").get(name=pv_name)
+            elif pv_ofuri:
+                pv = ProductVariant.objects.db_manager("read_only").get(ofuri=pv_ofuri)
+            else:
+                pk = req.path.split("/")[-1]  # there must be better ways ...
+                pv = ProductVariant.objects.db_manager("read_only").get(uuid=pk)
+            return pv
+        except ProductVariant.DoesNotExist:
+            raise Http404
 
 
 class ChannelViewSet(ReadOnlyModelViewSet):
     """View for api/v1/channels"""
 
-    queryset = Channel.objects.order_by("name")
+    queryset = Channel.objects.order_by("name").using("read_only")
     serializer_class = ChannelSerializer
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend, filters.SearchFilter]
     filterset_class = ChannelFilter
@@ -373,14 +387,18 @@ class ChannelViewSet(ReadOnlyModelViewSet):
 class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled until auth is added
     """View for api/v1/components"""
 
-    queryset = Component.objects.order_by("name", "type", "arch", "version", "release")
-    serializer_class = ComponentSerializer
+    queryset = Component.objects.order_by("name", "type", "arch", "version", "release").using(
+        "read_only"
+    )
+    serializer_class: Union[
+        Type[ComponentSerializer], Type[ComponentListSerializer]
+    ] = ComponentSerializer
     search_fields = ["name", "description", "release", "version", "meta_attr"]
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend, filters.SearchFilter]
     filterset_class = ComponentFilter
     lookup_url_kwarg = "uuid"
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Component]:
         # 'latest' filter only relevant in terms of a specific offering/product
         ofuri = self.request.query_params.get("ofuri")
         if not ofuri:
@@ -409,10 +427,10 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
             OpenApiParameter("purl", OpenApiTypes.STR, OpenApiParameter.QUERY),
         ]
     )
-    def list(self, request, *args, **kwargs):
+    def list(self, request: Request, *args: tuple, **kwargs: dict) -> Response:
         # purl are stored with each segment url encoded as per the specification. The purl query
         # param here is url decoded, to ensure special characters such as '@' and '?'
-        # are not interpreted  as part of the request.
+        # are not interpreted as part of the request.
         view = request.query_params.get("view")
         if view == "summary":
             self.serializer_class = ComponentListSerializer
@@ -420,15 +438,23 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         purl = request.query_params.get("purl")
         if not purl:
             return super().list(request)
-        # We re-encode the purl here to ensure each segment of the purl is url encoded,
-        # as it's stored in the DB.
-        purl = f"{PackageURL.from_string(purl)}"
-        component = Component.objects.filter(purl=purl).first()
-        if not component:
-            return Response(status=404)
-        response = Response(status=302)
-        response["Location"] = f"/api/{CORGI_API_VERSION}/components/{component.uuid}"
-        return response
+        return super().retrieve(request)
+
+    def get_object(self):
+        req = self.request
+        purl = req.query_params.get("purl")
+        try:
+            if purl:
+                # We re-encode the purl here to ensure each segment of the purl is url encoded,
+                # as it's stored in the DB.
+                purl = f"{PackageURL.from_string(purl)}"
+                component = Component.objects.db_manager("read_only").get(purl=purl)
+            else:
+                pk = req.path.split("/")[-1]  # there must be better ways ...
+                component = Component.objects.db_manager("read_only").get(uuid=pk)
+            return component
+        except Component.DoesNotExist:
+            raise Http404
 
     @action(methods=["get"], detail=True)
     def manifest(self, request: Request, uuid: str = "") -> Response:
@@ -439,7 +465,7 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         return Response(manifest)
 
     @action(methods=["put"], detail=True)
-    def olcs_test(self, request, uuid=None):
+    def olcs_test(self, request: Request, uuid: Union[str, None] = None) -> Response:
         """Allow OpenLCS to upload copyright text / license scan results for a component"""
         # In the future these could be separate endpoints
         # For testing we'll just keep it under one endpoint
@@ -447,7 +473,7 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
             # This is only temporary for OpenLCS testing
             # Do not enable in production until we add OIDC authentication
             return Response(status=403)
-        component = self.queryset.filter(uuid=uuid).first()
+        component = self.queryset.filter(uuid=uuid).using("default").first()
         if not component:
             return Response(status=404)
 
@@ -480,43 +506,22 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         return response
 
     @action(methods=["get"], detail=True)
-    def provides(self, request, uuid=None):
+    def provides(self, request: Request, uuid: Union[str, None] = None) -> Response:
         obj = self.queryset.filter(uuid=uuid).first()
         if not obj:
             return Response(status=404)
-        root_nodes = cache_tree_children(obj.cnodes.get_descendants(include_self=True))
-        dicts = []
-        for n in root_nodes:
-            dicts.append(
-                recursive_component_node_to_dict(
-                    n,
-                    [
-                        ComponentNode.ComponentNodeType.PROVIDES,
-                        ComponentNode.ComponentNodeType.PROVIDES_DEV,
-                    ],
-                )
-            )
+        dicts = get_component_taxonomy(
+            obj,
+            ComponentNode.PROVIDES_NODE_TYPES,
+        )
         return Response(dicts)
 
     @action(methods=["get"], detail=True)
-    def taxonomy(self, request, uuid=None):
+    def taxonomy(self, request: Request, uuid: Union[str, None] = None) -> Response:
         obj = self.queryset.filter(uuid=uuid).first()
         if not obj:
             return Response(status=404)
-        root_nodes = cache_tree_children(obj.cnodes.get_descendants(include_self=True))
-        dicts = []
-        for n in root_nodes:
-            dicts.append(
-                recursive_component_node_to_dict(
-                    n,
-                    [
-                        ComponentNode.ComponentNodeType.SOURCE,
-                        ComponentNode.ComponentNodeType.PROVIDES_DEV,
-                        ComponentNode.ComponentNodeType.REQUIRES,
-                        ComponentNode.ComponentNodeType.PROVIDES,
-                    ],
-                )
-            )
+        dicts = get_component_taxonomy(obj, tuple(ComponentNode.ComponentNodeType.values))
         return Response(dicts)
 
 
@@ -525,5 +530,5 @@ class AppStreamLifeCycleViewSet(ReadOnlyModelViewSet):
 
     queryset = AppStreamLifeCycle.objects.order_by(
         "name", "type", "product", "initial_product_version", "stream"
-    )
+    ).using("read_only")
     serializer_class = AppStreamLifeCycleSerializer

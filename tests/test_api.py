@@ -22,13 +22,15 @@ from .factories import (
 
 pytestmark = pytest.mark.unit
 
-PRODUCT_DEFINITIONS_CASSETTE = "test_products.yaml"
-
 
 def extract_tag_tuples(tags: list[dict]) -> set[tuple]:
     return {(t["name"], t["value"]) for t in tags}
 
 
+# Different DB names which really point to the same DB run in different transactions by default
+# so writes to "default" don't appear in "read_only" without workarounds
+# https://code.djangoproject.com/ticket/23718#comment:6
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_software_build_details(client, api_path):
     build = SoftwareBuildFactory(tag__name="t0", tag__value="v0")
 
@@ -44,6 +46,7 @@ def test_software_build_details(client, api_path):
     assert response.json()["count"] == 1
 
 
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 @pytest.mark.parametrize(
     "model, endpoint_name",
     [
@@ -71,6 +74,7 @@ def test_product_data_detail(model, endpoint_name, client, api_path):
     assert response.json()["count"] == 1
 
 
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_channel_detail(client, api_path):
     p1 = ChannelFactory(name="Repo1")
 
@@ -83,6 +87,7 @@ def test_channel_detail(client, api_path):
     assert response.json()["name"] == "Repo1"
 
 
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_component_detail(client, api_path):
     c1 = ComponentFactory(name="curl")
 
@@ -95,6 +100,7 @@ def test_component_detail(client, api_path):
     assert response.json()["name"] == "curl"
 
 
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_component_detail_olcs_put(client, api_path):
     """Test that OpenLCS can upload scan results for a component"""
     c1 = ComponentFactory()
@@ -143,6 +149,7 @@ def test_component_detail_olcs_put(client, api_path):
     assert response.status_code == 404
 
 
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_component_detail_dev(client, api_path):
     upstream = ComponentFactory(
         name="upstream",
@@ -184,6 +191,7 @@ def test_component_detail_dev(client, api_path):
     # assert dev_comp.purl in response.json()["provides"][0]["purl"]
 
 
+@pytest.mark.django_db
 def test_component_write_not_allowed(client, api_path):
     # Currently, only read operations are allowed on all models besides tags
     c = ComponentFactory(name="curl")
@@ -193,6 +201,7 @@ def test_component_write_not_allowed(client, api_path):
     assert response.status_code == 405
 
 
+@pytest.mark.django_db(databases=("read_only",))
 def test_component_does_not_exist(client, api_path):
     response = client.get(f"{api_path}/components/18ead2f2-6e0a-409c-8135-79f0f4d7740d")
     assert response.status_code == 404
@@ -262,6 +271,7 @@ def test_component_tags_delete(client, api_path):
     assert response.json()["tags"] == []
 
 
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_component_add_uri(client, api_path):
     c1 = ComponentFactory(
         name="curl",
@@ -278,6 +288,7 @@ def test_component_add_uri(client, api_path):
     assert tags == {"name": "component_review", "value": "https://someexample.org/review/curl.doc"}
 
 
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_srpm_detail(client, api_path):
     c1 = SrpmComponentFactory(name="curl-7.19.7-35.el6.src")
     response = client.get(f"{api_path}/components?type=RPM&arch=src")
@@ -293,6 +304,7 @@ def test_srpm_detail(client, api_path):
     assert response.json()["count"] == 1
 
 
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_rpm_detail(client, api_path):
     c1 = ComponentFactory(
         type=Component.Type.RPM, name="curl", version="7.19.7", release="35.el6", arch="x86_64"
@@ -306,10 +318,10 @@ def test_rpm_detail(client, api_path):
     assert response.status_code == 200
     assert response.json()["count"] == 1
     response = client.get(f"{api_path}/components?purl={quote(c1.purl)}")
-    assert response.status_code == 302
-    assert response.headers["Location"] == f"{api_path}/components/{c1.uuid}"
+    assert response.status_code == 200
 
 
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_purl_reserved(client, api_path):
     c1 = ComponentFactory(
         name="dbus-glib-debuginfo",
@@ -323,9 +335,10 @@ def test_purl_reserved(client, api_path):
     )
     assert response.status_code == 200
     response = client.get(f"{api_path}/components?purl={quote(c1.purl)}")
-    assert response.status_code == 302
+    assert response.status_code == 200
 
 
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_re_name_filter(client, api_path):
     c1 = ComponentFactory(type=Component.Type.RPM, name="autotrace-devel")
     response = client.get(f"{api_path}/components?type=RPM")
@@ -337,6 +350,7 @@ def test_re_name_filter(client, api_path):
     assert response.json()["count"] == 1
 
 
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_re_purl_filter(client, api_path):
     c1 = ComponentFactory(
         type=Component.Type.RPM, namespace=Component.Namespace.REDHAT, name="autotrace-devel"
@@ -352,6 +366,7 @@ def test_re_purl_filter(client, api_path):
     assert response.json()["count"] == 1
 
 
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_nvr_nevra_filter(client, api_path):
     c1 = ComponentFactory(
         type=Component.Type.RPM,
@@ -373,6 +388,7 @@ def test_nvr_nevra_filter(client, api_path):
     assert response.json()["count"] == 1
 
 
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_filter_component_tags(client, api_path):
     openssl = ComponentFactory(name="openssl", type=Component.Type.RPM, tag=None)
     ComponentTagFactory(tagged_model=openssl, name="prodsec_priority", value="")
@@ -455,6 +471,7 @@ def test_retrieve_lifecycle_defs(requests_mock):
     ] == sorted(data[0].keys())
 
 
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_products(client, api_path):
     ProductFactory(name="rhel")
     ProductFactory(name="rhel-av")
@@ -464,12 +481,13 @@ def test_products(client, api_path):
     assert response.json()["count"] == 2
 
     response = client.get(f"{api_path}/products?ofuri=o:redhat:rhel-av")
-    assert response.status_code == 302
+    assert response.status_code == 200
 
     response = client.get(f"{api_path}/products?ofuri=o:redhat:rhel")
-    assert response.status_code == 302
+    assert response.status_code == 200
 
 
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_product_versions(client, api_path):
     ProductVersionFactory(name="rhel-8", version="8")
     ProductVersionFactory(name="rhel-av-8", version="8")
@@ -479,12 +497,13 @@ def test_product_versions(client, api_path):
     assert response.json()["count"] == 2
 
     response = client.get(f"{api_path}/product_versions?ofuri=o:redhat:rhel-av:8")
-    assert response.status_code == 302
+    assert response.status_code == 200
 
     response = client.get(f"{api_path}/product_versions?ofuri=o:redhat:rhel:8")
-    assert response.status_code == 302
+    assert response.status_code == 200
 
 
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_product_streams(client, api_path):
     ProductStreamFactory(name="rhel-8.5.0-z", version="8.5.0-z")
     ProductStreamFactory(name="rhel-av-8.5.0-z", version="8.5.0-z", active=False)
@@ -498,12 +517,17 @@ def test_product_streams(client, api_path):
     assert response.json()["count"] == 2
 
     response = client.get(f"{api_path}/product_streams?ofuri=o:redhat:rhel-av:8.5.0-z")
-    assert response.status_code == 302
+    assert response.status_code == 200
 
     response = client.get(f"{api_path}/product_streams?ofuri=o:redhat:rhel:8.5.0-z")
-    assert response.status_code == 302
+    assert response.status_code == 200
+
+    response = client.get(f"{api_path}/product_streams?name=rhel-av-8.5.0-z")
+    assert response.status_code == 200
+    assert response.json()["name"] == "rhel-av-8.5.0-z"
 
 
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_product_variants(client, api_path):
     pv_appstream = ProductVariantFactory(name="AppStream-8.5.0.Z.MAIN")
     pv_baseos = ProductVariantFactory(name="BaseOS-8.5.0.Z.MAIN")
@@ -513,12 +537,13 @@ def test_product_variants(client, api_path):
     assert response.json()["count"] == 2
 
     response = client.get(f"{api_path}/product_variants?ofuri={pv_appstream.ofuri}")
-    assert response.status_code == 302
+    assert response.status_code == 200
 
     response = client.get(f"{api_path}/product_variants?ofuri={pv_baseos.ofuri}")
-    assert response.status_code == 302
+    assert response.status_code == 200
 
 
+@pytest.mark.django_db(databases=("read_only",))
 def test_status(client, api_path):
     response = client.get(f"{api_path}/status")
     assert response.status_code == 200
@@ -531,9 +556,10 @@ def test_api_listing(client, api_path):
     assert response.status_code == 200
 
 
+@pytest.mark.django_db(databases=("read_only",))
 def test_api_component_404(client, api_path):
     response = client.get(
-        f"{api_path}/components?purl=pkg:rpm/redhat/non-existent-fake-libs@3.26.0-15.el8?arch=x86_64"  # noqa
+        f"{api_path}/components?purl=pkg:rpm/redhat/fake-libs@3.26.0-15.el8?arch=x86_64"
     )
     assert response.status_code == 404
 
@@ -543,6 +569,7 @@ def test_api_component_400(client, api_path):
     assert response.status_code == 400
 
 
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_product_components_ofuri(client, api_path):
     """test 'latest' filter on components"""
 
@@ -584,6 +611,7 @@ def test_product_components_ofuri(client, api_path):
     assert response.json()["count"] == 1
 
 
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_product_components_versions(client, api_path):
     ps1 = ProductStreamFactory(name="rhel-7", version="7")
     assert ps1.ofuri == "o:redhat:rhel:7"
@@ -619,6 +647,7 @@ def test_product_components_versions(client, api_path):
     assert response.json()["count"] == 1
 
 
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_product_components(client, api_path):
     openssl = ComponentFactory(name="openssl")
     curl = ComponentFactory(name="curl")

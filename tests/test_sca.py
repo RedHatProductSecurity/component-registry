@@ -77,6 +77,7 @@ def test_golist_scan_files(go_source):
     assert GoList.scan_files([archive])
 
 
+@pytest.mark.django_db
 @patch("corgi.collectors.go_list.GoList.scan_files")
 def test_add_go_stdlib_version(go_list_scan_files):
     go_list_scan_files.return_value = [
@@ -93,6 +94,7 @@ def test_add_go_stdlib_version(go_list_scan_files):
     Component.objects.get(type=Component.Type.GOLANG, name="go-package", version=GO_STDLIB_VERSION)
 
 
+@pytest.mark.django_db
 @patch("corgi.collectors.go_list.GoList.scan_files")
 def test_anchor_node_without_go_stdlib_version(go_list_scan_files):
     go_list_scan_files.return_value = [
@@ -108,6 +110,7 @@ def test_anchor_node_without_go_stdlib_version(go_list_scan_files):
     assert go_package.version == ""
 
 
+@pytest.mark.django_db
 @patch("corgi.collectors.go_list.GoList.scan_files")
 def test_go_package_with_version(go_list_scan_files):
     go_list_scan_files.return_value = [
@@ -126,6 +129,7 @@ def test_go_package_with_version(go_list_scan_files):
     assert go_package.version == GO_PACKAGE_VERSION
 
 
+@pytest.mark.django_db
 @patch("corgi.collectors.go_list.GoList.scan_files")
 def test_go_package_type(go_list_scan_files):
     go_list_scan_files.return_value = [
@@ -361,6 +365,7 @@ def mock_clone(package_name: str, build_id: int) -> Tuple[Path, str, str]:
     return target_path, package_type, package_name
 
 
+@pytest.mark.django_db
 @pytest.mark.parametrize(
     "build_id,is_container,package_name,lookaside_file,download_path,syft_results,expected_purl",
     slow_software_composition_analysis_test_data,

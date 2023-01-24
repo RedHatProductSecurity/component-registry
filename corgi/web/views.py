@@ -72,14 +72,15 @@ def data_list(request: HttpRequest) -> HttpResponse:
     """Renders a count of all cached resources in the DB."""
     models = sorted(
         apps.get_app_config("core").get_models(),
-        key=lambda model: model._meta.verbose_name,  # type: ignore
+        key=lambda model: model._meta.verbose_name,  # type: ignore[arg-type,return-value]
     )
     return render(
         request,
         "data.html",
         {
             "counts": [
-                (model._meta.verbose_name_plural, model.objects.count()) for model in models
+                (model._meta.verbose_name_plural, model.objects.db_manager("read_only").count())
+                for model in models
             ],
             "nbar": "data",  # Navbar identifier
         },

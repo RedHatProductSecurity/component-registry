@@ -1,27 +1,28 @@
 import logging
 import subprocess
 from datetime import timedelta
-from ssl import SSLError
 
-from django.db.utils import InterfaceError
+from django.db.utils import InterfaceError as DjangoInterfaceError
 from django.utils import timezone
 from django_celery_results.models import TaskResult
 from psycopg2.errors import InterfaceError as Psycopg2InterfaceError
+from redis.exceptions import ConnectionError as RedisConnectionError
 from requests.exceptions import RequestException
 
 from corgi.core.models import ProductComponentRelation
 
 BACKOFF_KWARGS = {"max_tries": 5, "jitter": None}
 
+# DjangoInterfaceError should just be a wrapper around Psycopg2InterfaceError
+# But check for and retry both just in case
 # InterfaceError is "connection already closed" or some other connection-level error
 # This can be safely retried. OperationalError is potentially a connection-level error
 # But can also be due to database operation failures that should NOT be retried
 RETRYABLE_ERRORS = (
-    InterfaceError,
+    DjangoInterfaceError,
     Psycopg2InterfaceError,
+    RedisConnectionError,
     RequestException,
-    SSLError,
-    TimeoutError,
 )
 
 RETRY_KWARGS = {
@@ -56,6 +57,7 @@ def get_last_success_for_task(task_name: str) -> timezone.datetime:
         TaskResult.objects.filter(task_name=task_name, status="SUCCESS")
         .order_by("-date_created")
         .values_list("date_created", flat=True)
+        .using("read_only")
         .first()
     )
     return (

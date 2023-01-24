@@ -35,6 +35,8 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
         if not force_process:
             logger.info("Already processed build_id %s, only saving product taxonomy", build_id)
             softwarebuild.save_product_taxonomy()
+            for related_component in softwarebuild.components.get_queryset():
+                related_component.save_component_taxonomy()
             return
         else:
             logger.info("Fetching brew build with build_id: %s", build_id)
@@ -68,7 +70,7 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
     softwarebuild, created = SoftwareBuild.objects.get_or_create(
         build_id=component["build_meta"]["build_info"]["build_id"],
         defaults={
-            "type": SoftwareBuild.Type.BREW,
+            "build_type": SoftwareBuild.Type.BREW,
             "name": component["meta"]["name"],
             "source": component["build_meta"]["build_info"]["source"],
             "meta_attr": build_meta,
@@ -92,13 +94,15 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
         logger.warning(f"Build {build_id} type is not supported: {component['type']}")
         return
 
-    for c in component.get("components", []):
-        save_component(c, root_node, softwarebuild)
+    for child_component in component.get("components", []):
+        save_component(child_component, root_node, softwarebuild)
 
     # We don't call save_product_taxonomy by default to allow async call of slow_load_errata task
     # See CORGI-21
     if save_product:
         softwarebuild.save_product_taxonomy()
+        for related_component in softwarebuild.components.get_queryset():
+            related_component.save_component_taxonomy()
 
     # for builds with errata tags set ProductComponentRelation
     # get_component_data always calls _extract_advisory_ids to set tags, but list may be empty
@@ -106,20 +110,20 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
         logger.info("no errata tags")
     else:
         if isinstance(build_meta["errata_tags"], str):
-            slow_load_errata.delay(build_meta["errata_tags"])
+            slow_load_errata.delay(build_meta["errata_tags"], force_process=force_process)
         else:
             for e in build_meta["errata_tags"]:
-                slow_load_errata.delay(e)
+                slow_load_errata.delay(e, force_process=force_process)
 
     build_ids = component.get("nested_builds", ())
     logger.info("Fetching brew builds for %s", build_ids)
     for b_id in build_ids:
         logger.info("Requesting fetch of nested build: %s", b_id)
-        slow_fetch_brew_build.delay(b_id)
+        slow_fetch_brew_build.delay(b_id, force_process=force_process)
 
     logger.info("Requesting software composition analysis for %s", build_id)
     if settings.SCA_ENABLED:
-        cpu_software_composition_analysis.delay(build_id)
+        cpu_software_composition_analysis.delay(build_id, force_process=force_process)
 
     logger.info("Finished fetching brew build: %s", build_id)
 
@@ -490,6 +494,7 @@ def fetch_unprocessed_relations(
         ProductComponentRelation.objects.filter(type=relation_type, created_at__gte=created_since)
         .values_list("build_id", flat=True)
         .distinct()
+        .using("read_only")
     )
     logger.info(f"Processing relations of type {relation_type}")
     processed_builds = 0
@@ -497,7 +502,7 @@ def fetch_unprocessed_relations(
         if not build_id:
             # build_id defaults to "" and int() will fail in this case
             continue
-        if not SoftwareBuild.objects.filter(build_id=int(build_id)).exists():
+        if not SoftwareBuild.objects.filter(build_id=int(build_id)).using("read_only").exists():
             logger.info("Processing CDN relation build with id: %s", build_id)
             slow_fetch_modular_build.delay(build_id, force_process=force_process)
             processed_builds += 1

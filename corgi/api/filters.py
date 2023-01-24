@@ -99,4 +99,4 @@ class SoftwareBuildFilter(FilterSet):
 
     class Meta:
         model = SoftwareBuild
-        fields = ("type",)
+        fields = ("build_type",)

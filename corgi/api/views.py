@@ -339,7 +339,7 @@ class ProductStreamViewSetSet(ProductDataViewSet):
     def manifest(self, request: Request, uuid: Union[str, None] = None) -> Response:
         obj = self.queryset.filter(uuid=uuid).first()
         if not obj:
-            return Response(status=404)
+            return Response(status=status.HTTP_404_NOT_FOUND)
         manifest = json.loads(obj.manifest)
         return Response(manifest)
 
@@ -418,7 +418,7 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
             return self.queryset.filter(productvariants__ofuri=ofuri)
         else:
             # No matching model instance found, or invalid ofuri
-            return self.queryset
+            raise Http404
 
     @extend_schema(
         parameters=[
@@ -460,7 +460,7 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
     def manifest(self, request: Request, uuid: str = "") -> Response:
         obj = self.queryset.filter(uuid=uuid).first()
         if not obj:
-            return Response(status=404)
+            return Response(status=status.HTTP_404_NOT_FOUND)
         manifest = json.loads(obj.manifest)
         return Response(manifest)
 
@@ -472,10 +472,10 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         if utils.running_prod():
             # This is only temporary for OpenLCS testing
             # Do not enable in production until we add OIDC authentication
-            return Response(status=403)
+            return Response(status=status.HTTP_403_FORBIDDEN)
         component = self.queryset.filter(uuid=uuid).using("default").first()
         if not component:
-            return Response(status=404)
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
         copyright_text = request.data.get("copyright_text")
         license_concluded = request.data.get("license_concluded")
@@ -488,7 +488,7 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
             and not openlcs_scan_version
         ):
             # At least one of above is required, else Bad Request
-            return Response(status=400)
+            return Response(status=status.HTTP_400_BAD_REQUEST)
 
         # if it's None, it wasn't included in the request
         # But it might be "" if the user wants to empty out the value
@@ -501,7 +501,7 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         if openlcs_scan_version is not None:
             component.openlcs_scan_version = openlcs_scan_version
         component.save()
-        response = Response(status=302)
+        response = Response(status=status.HTTP_302_FOUND)
         response["Location"] = f"/api/{CORGI_API_VERSION}/components/{component.uuid}"
         return response
 
@@ -509,7 +509,7 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
     def provides(self, request: Request, uuid: Union[str, None] = None) -> Response:
         obj = self.queryset.filter(uuid=uuid).first()
         if not obj:
-            return Response(status=404)
+            return Response(status=status.HTTP_404_NOT_FOUND)
         dicts = get_component_taxonomy(
             obj,
             ComponentNode.PROVIDES_NODE_TYPES,
@@ -520,7 +520,7 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
     def taxonomy(self, request: Request, uuid: Union[str, None] = None) -> Response:
         obj = self.queryset.filter(uuid=uuid).first()
         if not obj:
-            return Response(status=404)
+            return Response(status=status.HTTP_404_NOT_FOUND)
         dicts = get_component_taxonomy(obj, tuple(ComponentNode.ComponentNodeType.values))
         return Response(dicts)
 

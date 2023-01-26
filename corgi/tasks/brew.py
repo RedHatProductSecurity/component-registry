@@ -33,10 +33,12 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
         pass
     else:
         if not force_process:
-            logger.info("Already processed build_id %s, only saving product taxonomy", build_id)
-            softwarebuild.save_product_taxonomy()
-            for related_component in softwarebuild.components.get_queryset():
-                related_component.save_component_taxonomy()
+            logger.info("Already processed build_id %s", build_id),
+            if save_product:
+                logger.info("Only saving product taxonomy for build_id %s", build_id)
+                softwarebuild.save_product_taxonomy()
+                for related_component in softwarebuild.components.get_queryset():
+                    related_component.save_component_taxonomy()
             return
         else:
             logger.info("Fetching brew build with build_id: %s", build_id)
@@ -119,7 +121,7 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
     logger.info("Fetching brew builds for %s", build_ids)
     for b_id in build_ids:
         logger.info("Requesting fetch of nested build: %s", b_id)
-        slow_fetch_brew_build.delay(b_id, force_process=force_process)
+        slow_fetch_brew_build.delay(b_id, save_product=save_product, force_process=force_process)
 
     logger.info("Requesting software composition analysis for %s", build_id)
     if settings.SCA_ENABLED:

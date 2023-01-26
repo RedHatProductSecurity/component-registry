@@ -114,6 +114,10 @@ def tasks_list(request):
 @require_safe
 def running_tasks(request):
     def add_tasks(ret, task_dict, status, scheduled=False):
+        # Celery sometimes randomly fails (network glitches?)
+        # Nested call chain is too complex to understand / file a bug for
+        if not task_dict:
+            return None
         for worker in task_dict:
             for task in task_dict[worker]:
                 if scheduled:

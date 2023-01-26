@@ -73,7 +73,7 @@ def cpu_software_composition_analysis(build_id: int, force_process: bool = False
     logger.info("Started software composition analysis for %s", build_id)
     software_build = SoftwareBuild.objects.get(build_id=build_id)
 
-    component_qs = Component.objects.filter(software_build=software_build)
+    component_qs = Component.objects.filter(software_build_id=build_id)
     try:
         # Get root component for this build.
         root_component = component_qs.root_components().get()

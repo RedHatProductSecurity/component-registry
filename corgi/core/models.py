@@ -633,13 +633,13 @@ class ProductStream(ProductModel):
                 ROOT_COMPONENTS_CONDITION,
                 productstreams__ofuri=self.ofuri,
             )
-            .exclude(software_build__isnull=True)
             .prefetch_related(
                 Prefetch(
                     "software_build",
                     queryset=SoftwareBuild.objects.all().only("completion_time").using(using),
                 )
             )
+            .exclude(software_build__isnull=True)
             .annotate(
                 latest=models.Subquery(
                     Component.objects.filter(
@@ -647,7 +647,6 @@ class ProductStream(ProductModel):
                         name=models.OuterRef("name"),
                         productstreams__ofuri=self.ofuri,
                     )
-                    .exclude(software_build__isnull=True)
                     .prefetch_related(
                         Prefetch(
                             "software_build",
@@ -656,6 +655,7 @@ class ProductStream(ProductModel):
                             .using(using),
                         )
                     )
+                    .exclude(software_build__isnull=True)
                     .annotate(
                         version_arr=Func(
                             F("version"),
@@ -682,8 +682,8 @@ class ProductStream(ProductModel):
                         "-version_arr",
                         "-release_arr",
                     )
+                    .values_list("uuid", flat=True)[:1]
                     .using(using)
-                    .values("uuid")[:1]
                 )
             )
             .filter(

@@ -8,14 +8,16 @@ from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelatio
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
 from django.db import models
-from django.db.models import F, Func, Prefetch, QuerySet, TextField, Value
+from django.db.models import Prefetch, QuerySet
 from mptt.managers import TreeManager
 from mptt.models import MPTTModel, TreeForeignKey
 from packageurl import PackageURL
 
 from corgi.core.constants import (
     CONTAINER_DIGEST_FORMATS,
+    EL_MATCH_RE,
     MODEL_NODE_LEVEL_MAPPING,
+    RELEASE_VERSION_DELIM_RE,
     ROOT_COMPONENTS_CONDITION,
     SRPM_CONDITION,
 )
@@ -656,26 +658,6 @@ class ProductStream(ProductModel):
                             .using(using),
                         )
                     )
-                    .annotate(
-                        version_arr=Func(
-                            F("version"),
-                            Value("[.,-]"),
-                            function="regexp_split_to_array",
-                            output=fields.ArrayField(TextField()),
-                        ),
-                        release_arr=Func(
-                            F("release"),
-                            Value("[.,-]"),
-                            function="regexp_split_to_array",
-                            output=fields.ArrayField(TextField()),
-                        ),
-                        el_match=Func(
-                            F("release"),
-                            Value(".([a-z]*el(\\d+\\.)?(\\d+\\.)?(\\*|\\d+))"),
-                            function="regexp_match",
-                            output=fields.ArrayField(TextField()),
-                        ),
-                    )
                     .order_by(
                         "-el_match",
                         "-software_build__completion_time",
@@ -965,6 +947,12 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
     related_url = models.CharField(max_length=1024, default="")
 
+    # these are generated fields eg, we parse version and release on root components to
+    # enhance performance of filters (ex. latest)
+    version_arr = fields.ArrayField(models.CharField(max_length=200), default=list)
+    release_arr = fields.ArrayField(models.CharField(max_length=200), default=list)
+    el_match = fields.ArrayField(models.CharField(max_length=200), default=list)
+
     objects = ComponentQuerySet.as_manager()
 
     class Meta:
@@ -1121,6 +1109,21 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         self.nevra = self.get_nevra()
         purl = self.get_purl()
         self.purl = purl.to_string()
+
+        # generate version_arr, release_arr and el_match (used by filters, ex. latest filter)
+        if (self.type == Component.Type.RPM and self.arch == "src") or (
+            self.type == Component.Type.CONTAINER_IMAGE and self.arch == "noarch"
+        ):
+            version_arr = re.split(RELEASE_VERSION_DELIM_RE, self.version)
+            if version_arr:
+                self.version_arr = version_arr
+            release_arr = re.split(RELEASE_VERSION_DELIM_RE, self.release)
+            if release_arr:
+                self.release_arr = release_arr
+            el_match = re.match(EL_MATCH_RE, self.release)
+            if el_match:
+                self.el_match = [x for x in el_match.groups() if x]
+
         super().save(*args, **kwargs)
 
     def save_product_taxonomy(

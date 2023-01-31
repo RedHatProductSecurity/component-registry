@@ -456,18 +456,14 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         if not ofuri:
             return self.queryset
 
-        model, _ = get_model_ofuri_type(ofuri)
-        if isinstance(model, Product):
-            return self.queryset.filter(products__ofuri=ofuri)
-        elif isinstance(model, ProductVersion):
-            return self.queryset.filter(productversions__ofuri=ofuri)
-        elif isinstance(model, ProductStream):
-            return self.queryset.filter(productstreams__ofuri=ofuri)
-        elif isinstance(model, ProductVariant):
-            return self.queryset.filter(productvariants__ofuri=ofuri)
-        else:
+        # TODO: All uses of ofuri should just rely on a filter, not custom code
+        model, model_name = get_model_ofuri_type(ofuri)
+        if not model:
             # No matching model instance found, or invalid ofuri
             raise Http404
+        else:
+            lookup = {f"{model_name.lower()}s__ofuri": ofuri}
+            return self.queryset.filter(**lookup)
 
     @extend_schema(
         parameters=[

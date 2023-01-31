@@ -95,7 +95,7 @@ def get_model_ofuri_type(ofuri: str) -> tuple[Optional[ProductModel], str]:
         return missing_or_invalid
 
     # ProductVersions and ProductStreams both have 4 parts in their ofuri
-    if version := ProductVersion.objects.filter(ofuri=ofuri).using("read_only").first():
+    elif version := ProductVersion.objects.filter(ofuri=ofuri).using("read_only").first():
         return version, "ProductVersion"
     elif stream := ProductStream.objects.filter(ofuri=ofuri).using("read_only").first():
         return stream, "ProductStream"

@@ -1,9 +1,10 @@
 import logging
 
 from django.core.validators import EMPTY_VALUES
+from django.db.models import QuerySet
 from django_filters.rest_framework import BooleanFilter, CharFilter, Filter, FilterSet
 
-from corgi.core.models import Channel, Component, SoftwareBuild
+from corgi.core.models import Channel, Component, ComponentQuerySet, SoftwareBuild
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ class TagFilter(Filter):
     def filter(self, queryset, value):
         # TODO: currently defaults to AND condition, we should make this configurable for both
         # OR and AND conditions.
-        if not value:
+        if value in EMPTY_VALUES:
             return queryset
         search_tags = value.split(",")
         for tag in search_tags:
@@ -74,6 +75,13 @@ class ComponentFilter(FilterSet):
     re_upstream = CharFilter(lookup_expr="purl__regex", field_name="upstreams")
 
     el_match = CharFilter(label="RHEL version for layered products", lookup_expr="icontains")
+    latest_components = BooleanFilter(
+        method="filter_latest_components", label="Show only latest component versions"
+    )
+    root_components = BooleanFilter(
+        method="filter_root_components",
+        label="Show only root components (source RPMs, index container images)",
+    )
 
     missing_copyright = EmptyStringFilter(
         field_name="copyright_text",
@@ -84,6 +92,32 @@ class ComponentFilter(FilterSet):
         field_name="license_concluded_raw",
         label="Show only unscanned components (where license concluded is empty)",
     )
+
+    @staticmethod
+    def filter_latest_components(
+        queryset: ComponentQuerySet, _name: str, value: bool
+    ) -> QuerySet["Component"]:
+        """Show only latest / non-latest components in some queryset if user chose YES / NO"""
+        if value in EMPTY_VALUES:
+            # User gave an empty ?param= so return the unfiltered queryset
+            return queryset
+        # Else user gave a non-empty value
+        # Truthy values return the filtered queryset (only latest components)
+        # Falsey values return the excluded queryset (only non-latest components)
+        return queryset.latest_components(include=value)
+
+    @staticmethod
+    def filter_root_components(
+        queryset: ComponentQuerySet, _name: str, value: bool
+    ) -> QuerySet["Component"]:
+        """Show only root / non-root components in some queryset if user chose YES / NO"""
+        if value in EMPTY_VALUES:
+            # User gave an empty ?param= so return the unfiltered queryset
+            return queryset
+        # Else user gave a non-empty value
+        # Truthy values return the filtered queryset (only root components)
+        # Falsey values return the excluded queryset (only non-root components)
+        return queryset.root_components(include=value)
 
 
 class ProductDataFilter(FilterSet):

@@ -43,13 +43,14 @@ def test_product_manifest_properties():
         schema = json.load(spec_file)
     jsonschema.validate(manifest, schema)
 
+    latest_root_components = stream.components.root_components().latest_components()
     # One component linked to this product
-    num_components = len(stream.get_latest_components())
+    num_components = len(latest_root_components)
     assert num_components == 1
 
     num_provided = 0
-    for latest_component in stream.get_latest_components():
-        num_provided += latest_component.get_provides_nodes().count()
+    for latest_root_component in latest_root_components:
+        num_provided += latest_root_component.get_provides_nodes().count()
 
     assert num_provided == 2
 

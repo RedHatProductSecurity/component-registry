@@ -714,11 +714,12 @@ def test_product_components_ofuri(client, api_path):
     curl = SrpmComponentFactory(name="curl", software_build=sb2, release="2")
     curl.productstreams.add(ps2)
 
-    response = client.get(f"{api_path}/components?ofuri=o:redhat:rhel:8.6.0.z")
+    root_latest = "root_components=True&latest_components=true"
+    response = client.get(f"{api_path}/components?ofuri={ps2.ofuri}&{root_latest}")
     assert response.status_code == 200
     assert response.json()["count"] == 1
 
-    response = client.get(f"{api_path}/components?ofuri=o:redhat:rhel:8.6.0")
+    response = client.get(f"{api_path}/components?ofuri={ps1.ofuri}&{root_latest}")
     assert response.status_code == 200
     assert response.json()["count"] == 1
 
@@ -748,13 +749,15 @@ def test_product_components_versions(client, api_path):
     curl_srpm = SrpmComponentFactory(name="curl", software_build=sb2)
     curl_srpm.productstreams.add(ps1)
 
-    response = client.get(f"{api_path}/components?product_streams=o:redhat:rhel:8")
+    root_latest = "root_components=True&latest_components=true"
+    # Return all components, including non-root and non-latest, for the given ofuri
+    response = client.get(f"{api_path}/components?product_streams={ps2.ofuri}")
     assert response.status_code == 200
     assert response.json()["count"] == 2
 
-    # ofuri returns 'latest' build root components (eg. including SRPM,
-    #  noarch CONTAINER_IMAGE and RHEL_MODULE)
-    response = client.get(f"{api_path}/components?ofuri=o:redhat:rhel:7")
+    # Return 'latest' build root components (eg. including SRPM,
+    #  noarch CONTAINER_IMAGE and RHEL_MODULE) for the given ofuri
+    response = client.get(f"{api_path}/components?ofuri={ps1.ofuri}&{root_latest}")
     assert response.status_code == 200
     assert response.json()["count"] == 1
 

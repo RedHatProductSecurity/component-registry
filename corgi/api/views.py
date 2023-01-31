@@ -462,10 +462,7 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         elif isinstance(model, ProductVersion):
             return self.queryset.filter(productversions__ofuri=ofuri)
         elif isinstance(model, ProductStream):
-            # only ProductStream defines get_latest_components()
-            # TODO: Should this be a ProductModel method? For e.g. Products,
-            #  we could return get_latest_components() for each child stream
-            return model.get_latest_components()
+            return self.queryset.filter(productstreams__ofuri=ofuri)
         elif isinstance(model, ProductVariant):
             return self.queryset.filter(productvariants__ofuri=ofuri)
         else:

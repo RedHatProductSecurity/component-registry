@@ -615,35 +615,6 @@ class ProductStream(ProductModel):
         """Return an SPDX-style manifest in JSON format."""
         return ProductManifestFile(self).render_content()
 
-    def get_latest_components(self, using: str = "read_only") -> QuerySet["Component"]:
-        """Return root components from latest builds, using specified DB (read-only by default)."""
-        return (
-            Component.objects.filter(
-                ROOT_COMPONENTS_CONDITION,
-                productstreams__ofuri=self.ofuri,
-            )
-            .annotate(
-                latest=models.Subquery(
-                    Component.objects.filter(
-                        ROOT_COMPONENTS_CONDITION,
-                        name=models.OuterRef("name"),
-                        el_match=models.OuterRef("el_match"),
-                        productstreams__ofuri=self.ofuri,
-                    )
-                    .order_by(
-                        "-version_arr",
-                        "-release_arr",
-                    )
-                    .using(using)
-                    .values("uuid")[:1]
-                )
-            )
-            .filter(
-                uuid=models.F("latest"),
-            )
-            .using(using)
-        )
-
 
 class ProductStreamTag(Tag):
     tagged_model = models.ForeignKey(ProductStream, on_delete=models.CASCADE, related_name="tags")
@@ -843,8 +814,38 @@ class ComponentQuerySet(models.QuerySet):
     def srpms(self) -> models.QuerySet["Component"]:
         return self.filter(SRPM_CONDITION)
 
-    def root_components(self) -> models.QuerySet["Component"]:
-        return self.filter(ROOT_COMPONENTS_CONDITION)
+    def root_components(self, include: bool = True) -> models.QuerySet["Component"]:
+        """Show only root components by default, or only non-root components if include=False"""
+        if include:
+            # Truthy values return the filtered queryset (only root components)
+            return self.filter(ROOT_COMPONENTS_CONDITION)
+        # Falsey values return the excluded queryset (only non-root components)
+        return self.exclude(ROOT_COMPONENTS_CONDITION)
+
+    def latest_components(self, include: bool = True) -> models.QuerySet["Component"]:
+        """Return latest versions of components in some queryset by default,
+        or only non-latest components if include=False."""
+        latest_components_subquery = models.Subquery(
+            # Find components with matching name and RHEL version
+            self.filter(
+                name=models.OuterRef("name"),
+                el_match=models.OuterRef("el_match"),
+            )
+            # Order by descending version, release to find latest version (RPM semantics)
+            .order_by(
+                "-version_arr",
+                "-release_arr",
+            )
+            # Include only the UUID of the latest component in the result (the first UUID)
+            .values_list("pk", flat=True)[:1]
+        )
+
+        result = self.annotate(latest=latest_components_subquery)
+        if include:
+            # Truthy values return the filtered queryset (only latest components)
+            return result.filter(pk=models.F("latest"))
+        # Falsey values return the excluded queryset (only non-latest components)
+        return result.exclude(pk=models.F("latest"))
 
 
 class Component(TimeStampedModel, ProductTaxonomyMixin):

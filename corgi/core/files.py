@@ -54,8 +54,9 @@ class ProductManifestFile(ManifestFile):
     # Or to handle different ways of generating manifest properties from Product properties
 
     def render_content(self) -> str:
-
-        latest_components = self.obj.get_latest_components()  # type: ignore[attr-defined]
+        latest_components = (
+            self.obj.components.root_components().latest_components()  # type: ignore[attr-defined]
+        )
 
         kwargs_for_template = {
             "obj": self.obj,

@@ -8,7 +8,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelatio
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
 from django.db import models
-from django.db.models import Prefetch, QuerySet
+from django.db.models import QuerySet
 from mptt.managers import TreeManager
 from mptt.models import MPTTModel, TreeForeignKey
 from packageurl import PackageURL
@@ -616,38 +616,21 @@ class ProductStream(ProductModel):
         return ProductManifestFile(self).render_content()
 
     def get_latest_components(self, using: str = "read_only") -> QuerySet["Component"]:
-        """Return root components from latest builds, using specified DB (read-only by default."""
+        """Return root components from latest builds, using specified DB (read-only by default)."""
         return (
             Component.objects.filter(
                 ROOT_COMPONENTS_CONDITION,
                 productstreams__ofuri=self.ofuri,
-            )
-            .exclude(software_build__isnull=True)
-            .prefetch_related(
-                Prefetch(
-                    "software_build",
-                    queryset=SoftwareBuild.objects.all().only("completion_time").using(using),
-                )
             )
             .annotate(
                 latest=models.Subquery(
                     Component.objects.filter(
                         ROOT_COMPONENTS_CONDITION,
                         name=models.OuterRef("name"),
+                        el_match=models.OuterRef("el_match"),
                         productstreams__ofuri=self.ofuri,
                     )
-                    .exclude(software_build__isnull=True)
-                    .prefetch_related(
-                        Prefetch(
-                            "software_build",
-                            queryset=SoftwareBuild.objects.all()
-                            .only("completion_time")
-                            .using(using),
-                        )
-                    )
                     .order_by(
-                        "-el_match",
-                        "-software_build__completion_time",
                         "-version_arr",
                         "-release_arr",
                     )

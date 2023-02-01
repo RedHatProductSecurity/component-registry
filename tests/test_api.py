@@ -88,6 +88,77 @@ def test_channel_detail(client, api_path):
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_component_include_exclude_fields(client, api_path):
+    SrpmComponentFactory(name="curl")
+
+    response = client.get(
+        f"{api_path}/components?include_fields=software_build.source,product_streams"
+    )
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 1
+    srpm = response["results"][0]
+
+    # Only software_build dict and its child source key are present
+    assert srpm.get("product_streams") == []
+    assert srpm.get("software_build") is not None
+    assert srpm["software_build"].get("source") is not None
+
+    # Other keys on Component and subkeys on SoftwareBuild are missing
+    assert srpm.get("products") is None
+    assert srpm["software_build"].get("build_id") is None
+
+    response = client.get(
+        f"{api_path}/components?exclude_fields=software_build.source,product_streams"
+    )
+    assert response.status_code == 200
+    srpm = response.json()["results"][0]
+
+    # Only product_streams key and SoftwareBuild's child source key are missing
+    assert srpm.get("product_streams") is None
+    assert srpm.get("software_build") is not None
+    assert srpm["software_build"].get("source") is None
+
+    # Other keys on Component and subkeys on SoftwareBuild are present
+    assert srpm.get("products") == []
+    assert srpm["software_build"].get("build_id") is not None
+
+    # When both are given, include_fields takes precedence
+    response = client.get(
+        f"{api_path}/components?include_fields=software_build"
+        "&exclude_fields=software_build.source,product_streams"
+    )
+    assert response.status_code == 200
+    srpm = response.json()["results"][0]
+
+    # Only keys in software_build dict are present
+    assert srpm.get("software_build") is not None
+    assert srpm["software_build"].get("build_id") is not None
+
+    # Other keys on Component and SoftwareBuild's child source key are missing
+    assert srpm.get("products") is None
+    assert srpm.get("product_streams") is None
+    assert srpm["software_build"].get("source") is None
+
+    # When both are given and we exclude an entire object, some subkeys can still be present
+    response = client.get(
+        f"{api_path}/components?include_fields=software_build.source"
+        "&exclude_fields=software_build,product_streams"
+    )
+    assert response.status_code == 200
+    srpm = response.json()["results"][0]
+
+    # Only SoftwareBuild's child source key is present
+    assert srpm.get("software_build") is not None
+    assert srpm["software_build"].get("source") is not None
+
+    # Other keys on Component and SoftwareBuild are missing
+    assert srpm.get("products") is None
+    assert srpm.get("product_streams") is None
+    assert srpm["software_build"].get("build_id") is None
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_component_detail(client, api_path):
     c1 = ComponentFactory(name="curl")
 

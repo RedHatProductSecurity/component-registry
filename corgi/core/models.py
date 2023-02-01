@@ -1284,7 +1284,13 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         )
         if include_dev:
             type_list = ComponentNode.PROVIDES_NODE_TYPES
-        return self.cnodes.get_queryset().get_descendants().filter(type__in=type_list).using(using)
+        return (
+            self.cnodes.get_queryset()
+            .get_descendants()
+            .filter(type__in=type_list)
+            .prefetch_related("obj")
+            .using(using)
+        )
 
     def get_sources_nodes(
         self, include_dev: bool = True, using: str = "read_only"

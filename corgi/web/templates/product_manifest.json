@@ -1,7 +1,7 @@
 {# ProductModel manifest, obj is a ProductModel subclass here #}
 {% extends "base_manifest.json" %}
 {% block packages %}
-{% for component in obj.get_latest_components %}{# Below will eventually become component.manifest #}
+{% for component in latest_components %}{# Below will eventually become component.manifest #}
         {% include "package_manifest.json" %}
         {% for provided in component.provides_queryset %}
             {% include "package_manifest.json" with component=provided %}
@@ -35,7 +35,7 @@
     }
 {% endblock %}
 {% block relationships %}
-    {% for component in obj.get_latest_components %}
+    {% for component in latest_components %}
         {% include "provided_relationships_manifest.json" %}
         {
           "relatedSpdxElement": "SPDXRef-{{obj.uuid}}",

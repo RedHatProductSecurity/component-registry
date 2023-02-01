@@ -52,3 +52,15 @@ class ProductManifestFile(ManifestFile):
     # We use the same template file for all products we want to manifest
     # We can subclass this to handle different Product subclasses with different properties
     # Or to handle different ways of generating manifest properties from Product properties
+
+    def render_content(self) -> str:
+
+        latest_components = self.obj.get_latest_components()  # type: ignore
+
+        kwargs_for_template = {
+            "obj": self.obj,
+            "latest_components": latest_components,
+        }
+        content = render_to_string(self.file_name, kwargs_for_template)
+
+        return self._validate_and_clean(content)

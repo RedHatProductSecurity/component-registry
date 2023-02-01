@@ -526,6 +526,10 @@ def test_product_streams(client, api_path):
     assert response.status_code == 200
     assert response.json()["name"] == "rhel-av-8.5.0-z"
 
+    response = client.get(f"{api_path}/product_streams?re_name=rhel&view=summary")
+    assert response.status_code == 200
+    assert response.json()["count"] == 1
+
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_product_variants(client, api_path):
@@ -645,6 +649,10 @@ def test_product_components_versions(client, api_path):
     response = client.get(f"{api_path}/components?ofuri=o:redhat:rhel:7")
     assert response.status_code == 200
     assert response.json()["count"] == 1
+
+    response = client.get(f"{api_path}/components?name=curl&view=product")
+    assert response.status_code == 200
+    assert response.json()["count"] == 2
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)

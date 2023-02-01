@@ -4,7 +4,7 @@ from typing import Type, Union
 
 import django_filters.rest_framework
 from django.db import connections
-from django.db.models import QuerySet
+from django.db.models import QuerySet, Value
 from django.http import Http404
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
@@ -42,9 +42,11 @@ from .serializers import (
     AppStreamLifeCycleSerializer,
     ChannelSerializer,
     ComponentListSerializer,
+    ComponentProductStreamSummarySerializer,
     ComponentSerializer,
     ProductSerializer,
     ProductStreamSerializer,
+    ProductStreamSummarySerializer,
     ProductVariantSerializer,
     ProductVersionSerializer,
     SoftwareBuildSerializer,
@@ -302,12 +304,15 @@ class ProductStreamViewSetSet(ProductDataViewSet):
         .order_by(ProductDataViewSet.ordering_field)
         .using("read_only")
     )
-    serializer_class = ProductStreamSerializer
+    serializer_class: Union[
+        Type[ProductStreamSerializer], Type[ProductStreamSummarySerializer]
+    ] = ProductStreamSerializer
 
     @extend_schema(
         parameters=[OpenApiParameter("active", OpenApiTypes.STR, OpenApiParameter.QUERY)]
     )
     def list(self, request: Request, *args: tuple, **kwargs: dict) -> Response:
+        view = request.query_params.get("view")
         ps_ofuri = request.query_params.get("ofuri")
         ps_name = request.query_params.get("name")
         active = request.query_params.get("active")
@@ -316,6 +321,8 @@ class ProductStreamViewSetSet(ProductDataViewSet):
                 "read_only"
             )
         if not ps_ofuri and not ps_name:
+            if view == "summary":
+                self.serializer_class = ProductStreamSummarySerializer
             return super().list(request)
         return super().retrieve(request)
 
@@ -432,11 +439,25 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         # param here is url decoded, to ensure special characters such as '@' and '?'
         # are not interpreted as part of the request.
         view = request.query_params.get("view")
-        if view == "summary":
-            self.serializer_class = ComponentListSerializer
-            return super().list(request)
         purl = request.query_params.get("purl")
         if not purl:
+            if view == "product":
+                component_name = self.request.query_params.get("name")
+                product_streams_arr = []
+                for c in (
+                    self.get_queryset()
+                    .filter(name=component_name)
+                    .prefetch_related("productstreams")
+                ):
+                    annotated_ps_qs = c.productstreams.all().annotate(component_purl=Value(c.purl))
+                    product_streams_arr.append(annotated_ps_qs)
+
+                ps_qs = ProductStream.objects.none()
+                productstreams = ps_qs.union(*product_streams_arr)
+                serializer = ComponentProductStreamSummarySerializer(productstreams, many=True)
+                return Response({"count": productstreams.count(), "results": serializer.data})
+            if view == "summary":
+                self.serializer_class = ComponentListSerializer
             return super().list(request)
         return super().retrieve(request)
 

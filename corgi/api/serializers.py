@@ -483,6 +483,57 @@ class ProductStreamSerializer(ProductModelSerializer):
         ]
 
 
+class ProductStreamSummarySerializer(ProductModelSerializer):
+    manifest = serializers.SerializerMethodField()
+
+    @staticmethod
+    def get_link(instance: ProductStream) -> str:
+        return get_model_ofuri_link("product_streams", instance.ofuri)
+
+    class Meta(ProductModelSerializer.Meta):
+        model = ProductStream
+        fields = [
+            "link",
+            "ofuri",
+            "name",
+            "components",
+            "upstreams",
+            "manifest",
+        ]
+
+
+class ComponentProductStreamSummarySerializer(ProductModelSerializer):
+    """custom component view displaying product information."""
+
+    component_link = serializers.SerializerMethodField(read_only=True)
+    manifest = serializers.SerializerMethodField(read_only=True)
+    component_purl = serializers.SerializerMethodField(read_only=True)
+
+    def get_component_purl(self, obj):
+        return obj.component_purl
+
+    @staticmethod
+    def get_link(instance: ProductStream) -> str:
+        return get_model_ofuri_link("product_streams", instance.ofuri)
+
+    @staticmethod
+    def get_component_link(instance: Component) -> str:
+        return get_component_purl_link(instance.component_purl)  # type: ignore
+
+    class Meta(ProductModelSerializer.Meta):
+        model = ProductStream
+        fields = [
+            "link",
+            "ofuri",
+            "name",
+            "components",
+            "upstreams",
+            "manifest",
+            "component_link",
+            "component_purl",
+        ]
+
+
 class ProductVariantSerializer(ProductModelSerializer):
     products = serializers.SerializerMethodField()
     product_versions = serializers.SerializerMethodField()

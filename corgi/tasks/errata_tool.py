@@ -100,7 +100,10 @@ def slow_load_errata(erratum_name, force_process: bool = False):
             app.send_task(
                 "corgi.tasks.brew.slow_fetch_brew_build",
                 args=(build_id,),
-                kwargs={"save_product": False, "force_process": force_process},
+                # Do not pass force_process through to child tasks
+                # Or Celery will get stuck in an infinite loop
+                # processing the same Brew builds / errata repeatedly
+                kwargs={"save_product": False, "force_process": False},
             )
 
     if force_process:

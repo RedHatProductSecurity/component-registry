@@ -438,6 +438,7 @@ class ComponentSerializer(ProductTaxonomySerializer):
             "tags",
             "version",
             "release",
+            "el_match",
             "arch",
             "nvr",
             "nevra",

@@ -164,6 +164,11 @@ paths:
         name: description
         schema:
           type: string
+      - in: query
+        name: el_match
+        schema:
+          type: string
+        description: RHEL version for layered products
       - name: limit
         required: false
         in: query
@@ -1057,6 +1062,12 @@ components:
         release:
           type: string
           readOnly: true
+        el_match:
+          type: array
+          items:
+            type: string
+            maxLength: 200
+          readOnly: true
         arch:
           type: string
           readOnly: true
@@ -1171,6 +1182,7 @@ components:
       - copyright_text
       - description
       - download_url
+      - el_match
       - epoch
       - errata
       - filename

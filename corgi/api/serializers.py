@@ -286,7 +286,7 @@ class ComponentSerializer(ProductTaxonomySerializer):
 
     @staticmethod
     def get_upstreams(instance: Component) -> list[dict[str, str]]:
-        return get_component_data_list(instance.get_upstreams_purls())
+        return get_component_data_list(instance.upstreams.values_list("purl", flat=True))
 
     @staticmethod
     def get_manifest(instance: Component) -> str:

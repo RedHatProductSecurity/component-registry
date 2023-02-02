@@ -394,8 +394,10 @@ class ChannelViewSet(ReadOnlyModelViewSet):
 class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled until auth is added
     """View for api/v1/components"""
 
-    queryset = Component.objects.order_by("name", "type", "arch", "version", "release").using(
-        "read_only"
+    queryset = (
+        Component.objects.order_by("name", "type", "arch", "version", "release")
+        .using("read_only")
+        .select_related("software_build")
     )
     serializer_class: Union[
         Type[ComponentSerializer], Type[ComponentListSerializer]

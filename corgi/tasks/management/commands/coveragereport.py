@@ -16,5 +16,6 @@ class Command(BaseCommand):
                 .using("read_only")
                 .count()
             )
-            if ps.builds.count() > 0 or component_count > 0:
-                self.stdout.write(f"{ps.ofuri}, {ps.builds.count()}, {component_count}")
+            ps_builds_count = ps.builds.count()
+            if ps_builds_count > 0 or component_count > 0:
+                self.stdout.write(f"{ps.ofuri}, {ps_builds_count}, {component_count}")

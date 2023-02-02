@@ -403,17 +403,17 @@ class ProductModel(TimeStampedModel):
         return ProductComponentRelation.objects.none()
 
     @property
-    def coverage(self) -> int:
-        if not self.pnodes.db_manager("read_only").exists():
-            return 0
+    def coverage(self) -> float:
         pnode_children = self.pnodes.get_queryset().get_descendants().using("read_only")
-        if not pnode_children.exists():
+        # Evaluate queryset once, so it's cached when we reuse it below
+        pnode_children_count = len(pnode_children)
+        if pnode_children_count == 0:
             return 0
-        has_build = 0
+        build_count = 0
         for pn in pnode_children:
             if pn.obj.builds.exists():
-                has_build += 1
-        return round(has_build / pnode_children.count(), 2)
+                build_count += 1
+        return round(build_count / pnode_children_count, 2)
 
     @property
     def cpes(self) -> tuple[str, ...]:

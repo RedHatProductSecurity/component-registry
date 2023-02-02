@@ -28,6 +28,15 @@ MODEL_NODE_LEVEL_MAPPING = {
     value.title().replace("_", ""): key for key, value in NODE_LEVEL_MODEL_MAPPING.items()
 }
 
+# Take a model name like ProductVariant, make it lowercase
+# then add an underscore to match the product_variants= filter in the API
+MODEL_FILTER_NAME_MAPPING = {
+    "Product": "products",
+    "ProductVersion": "product_versions",
+    "ProductStream": "product_streams",
+    "ProductVariant": "product_variants",
+}
+
 # Filter on "root components": SRPMs or index container images
 SRPM_CONDITION = Q(type="RPM", arch="src")
 INDEX_CONTAINER_CONDITION = Q(type="OCI", arch="noarch")

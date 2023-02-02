@@ -41,29 +41,18 @@ class ComponentFilter(FilterSet):
     description = CharFilter(lookup_expr="icontains")
     tags = TagFilter()
 
-    products = CharFilter(method="filter_productmodel")
-    product_versions = CharFilter(method="filter_productmodel")
-    product_streams = CharFilter(method="filter_productmodel")
-    product_variants = CharFilter(method="filter_productmodel")
-    channels = CharFilter(method="filter_productmodel")
+    # User gave a filter like ?ofuri= in URL, assume they wanted a stream
+    ofuri = CharFilter(field_name="productstreams", lookup_expr="ofuri")
+    products = CharFilter(lookup_expr="ofuri")
+    product_versions = CharFilter(field_name="productversions", lookup_expr="ofuri")
+    product_streams = CharFilter(field_name="productstreams", lookup_expr="ofuri")
+    product_variants = CharFilter(field_name="productvariants", lookup_expr="ofuri")
+    channels = CharFilter(lookup_expr="name")
 
-    sources = CharFilter(lookup_expr="icontains")
-    provides = CharFilter(lookup_expr="icontains")
-    upstreams = CharFilter(lookup_expr="icontains")
-    re_upstream = CharFilter(lookup_expr="regex", field_name="upstreams")
-
-    @staticmethod
-    def filter_productmodel(queryset, name, value):
-        if name == "ofuri":
-            # User gave a filter like ?ofuri= in URL, assume they wanted a stream
-            name = "productstreams"
-        if name == "channels":
-            # Linked channels have no ofuri, look up by name instead
-            lookup = f"{name}__name"
-        else:
-            # All ProductModel subclasses define an ofuri field
-            lookup = f"{name.replace('_', '')}__ofuri"
-        return queryset.filter(**{lookup: value})
+    sources = CharFilter(lookup_expr="purl__icontains")
+    provides = CharFilter(lookup_expr="purl__icontains")
+    upstreams = CharFilter(lookup_expr="purl__icontains")
+    re_upstream = CharFilter(lookup_expr="purl__regex", field_name="upstreams")
 
 
 class ProductDataFilter(FilterSet):

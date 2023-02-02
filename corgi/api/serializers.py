@@ -10,6 +10,7 @@ from rest_framework import serializers
 
 from config import utils
 from corgi.api.constants import CORGI_API_VERSION
+from corgi.core.constants import MODEL_FILTER_NAME_MAPPING
 from corgi.core.models import (
     AppStreamLifeCycle,
     Channel,
@@ -101,14 +102,12 @@ def get_model_ofuri_type(ofuri: str) -> tuple[Optional[ProductModel], str]:
 
 
 def get_upstream_link(
-    product_stream: str,
+    model_ofuri: str,
+    model_name: str,
 ) -> str:
-    """method to return all a product_stream upstream components."""
-    link = (
-        f"{CORGI_API_URL}/components?product_streams={product_stream}&"
-        "namespace=UPSTREAM&view=summary"
-    )
-    return link
+    """Return a link to a list of upstream components for some ProductModel subclass."""
+    filter_name = MODEL_FILTER_NAME_MAPPING[model_name]
+    return f"{CORGI_API_URL}/components?{filter_name}={model_ofuri}&namespace=UPSTREAM&view=summary"
 
 
 def get_model_id_link(
@@ -378,7 +377,7 @@ class ProductModelSerializer(ProductTaxonomySerializer):
 
     @staticmethod
     def get_upstreams(instance: ProductModel) -> str:
-        return get_upstream_link(instance.ofuri)
+        return get_upstream_link(instance.ofuri, type(instance).__name__)
 
     @staticmethod
     def get_builds(instance: ProductModel) -> str:

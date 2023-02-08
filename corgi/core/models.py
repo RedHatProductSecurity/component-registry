@@ -403,19 +403,6 @@ class ProductModel(TimeStampedModel):
         return ProductComponentRelation.objects.none()
 
     @property
-    def coverage(self) -> float:
-        pnode_children = self.pnodes.get_queryset().get_descendants().using("read_only")
-        # Evaluate queryset once, so it's cached when we reuse it below
-        pnode_children_count = len(pnode_children)
-        if pnode_children_count == 0:
-            return 0
-        build_count = 0
-        for pn in pnode_children:
-            if pn.obj.builds.exists():
-                build_count += 1
-        return round(build_count / pnode_children_count, 2)
-
-    @property
     def cpes(self) -> tuple[str, ...]:
         """Return CPEs for child streams / variants."""
         # include_self=True so we don't have to override this property for streams

@@ -54,6 +54,8 @@ class ComponentFilter(FilterSet):
     upstreams = CharFilter(lookup_expr="purl__icontains")
     re_upstream = CharFilter(lookup_expr="purl__regex", field_name="upstreams")
 
+    el_match = CharFilter(label="RHEL version for layered products", lookup_expr="icontains")
+
 
 class ProductDataFilter(FilterSet):
     """Class that filters queries to Product-related list views."""

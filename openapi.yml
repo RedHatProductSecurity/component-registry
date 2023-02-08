@@ -176,6 +176,16 @@ paths:
         schema:
           type: integer
       - in: query
+        name: missing_copyright
+        schema:
+          type: boolean
+        description: Show only unscanned components (where copyright text is empty)
+      - in: query
+        name: missing_license
+        schema:
+          type: boolean
+        description: Show only unscanned components (where license concluded is empty)
+      - in: query
         name: name
         schema:
           type: string

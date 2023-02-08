@@ -451,12 +451,18 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
                     .filter(name=component_name)
                     .prefetch_related("productstreams")
                 ):
-                    annotated_ps_qs = c.productstreams.all().annotate(component_purl=Value(c.purl))
+                    annotated_ps_qs = (
+                        c.productstreams.get_queryset()
+                        .annotate(component_purl=Value(c.purl))
+                        .using("read_only")
+                    )
                     product_streams_arr.append(annotated_ps_qs)
 
                 ps_qs = ProductStream.objects.none()
-                productstreams = ps_qs.union(*product_streams_arr)
-                serializer = ComponentProductStreamSummarySerializer(productstreams, many=True)
+                productstreams = ps_qs.union(*product_streams_arr).using("read_only")
+                serializer = ComponentProductStreamSummarySerializer(
+                    productstreams, many=True, read_only=True
+                )
                 return Response({"count": productstreams.count(), "results": serializer.data})
             if view == "summary":
                 self.serializer_class = ComponentListSerializer

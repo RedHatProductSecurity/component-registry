@@ -282,7 +282,7 @@ class SoftwareBuildSerializer(IncludeExcludeFieldsSerializer):
 
     tags = TagSerializer(many=True, read_only=True)
 
-    link = serializers.SerializerMethodField(read_only=True)
+    link = serializers.SerializerMethodField()
     web_url = serializers.SerializerMethodField()
     components = serializers.SerializerMethodField()
 
@@ -302,7 +302,7 @@ class SoftwareBuildSerializer(IncludeExcludeFieldsSerializer):
 
     class Meta:
         model = SoftwareBuild
-        fields = [
+        fields = (
             "link",
             "web_url",
             "build_id",
@@ -313,14 +313,15 @@ class SoftwareBuildSerializer(IncludeExcludeFieldsSerializer):
             "created_at",
             "last_changed",
             "components",
-        ]
+        )
+        read_only_fields = fields
 
 
 class SoftwareBuildSummarySerializer(IncludeExcludeFieldsSerializer):
     """Show summary information for a SoftwareBuild.
     Add or remove fields using ?include_fields=&exclude_fields="""
 
-    link = serializers.SerializerMethodField(read_only=True)
+    link = serializers.SerializerMethodField()
 
     @staticmethod
     def get_link(instance: SoftwareBuild) -> str:
@@ -328,7 +329,8 @@ class SoftwareBuildSummarySerializer(IncludeExcludeFieldsSerializer):
 
     class Meta:
         model = SoftwareBuild
-        fields = ["link", "build_id", "build_type", "name", "source"]
+        fields = ("link", "build_id", "build_type", "name", "source")
+        read_only_fields = fields
 
 
 class ProductTaxonomySerializer(IncludeExcludeFieldsSerializer):
@@ -369,7 +371,7 @@ class ComponentSerializer(ProductTaxonomySerializer):
     software_build = serializers.SerializerMethodField()
     tags = TagSerializer(many=True, read_only=True)
 
-    link = serializers.SerializerMethodField(read_only=True)
+    link = serializers.SerializerMethodField()
 
     products = serializers.SerializerMethodField()
     product_versions = serializers.SerializerMethodField()
@@ -381,7 +383,7 @@ class ComponentSerializer(ProductTaxonomySerializer):
     sources = serializers.SerializerMethodField()
     upstreams = serializers.SerializerMethodField()
 
-    manifest = serializers.SerializerMethodField(read_only=True)
+    manifest = serializers.SerializerMethodField()
 
     @extend_schema_field(SoftwareBuildSummarySerializer(many=False, read_only=True))
     def get_software_build(self, obj):
@@ -413,7 +415,9 @@ class ComponentSerializer(ProductTaxonomySerializer):
 
     @staticmethod
     def get_upstreams(instance: Component) -> list[dict[str, str]]:
-        return get_component_data_list(instance.upstreams.values_list("purl", flat=True))
+        return get_component_data_list(
+            instance.upstreams.values_list("purl", flat=True).using("read_only")
+        )
 
     @staticmethod
     def get_manifest(instance: Component) -> str:
@@ -421,7 +425,7 @@ class ComponentSerializer(ProductTaxonomySerializer):
 
     class Meta:
         model = Component
-        fields = [
+        fields = (
             "link",
             "download_url",
             "uuid",
@@ -457,16 +461,15 @@ class ComponentSerializer(ProductTaxonomySerializer):
             "upstreams",
             "manifest",
             "filename",
-        ]
+        )
+        read_only_fields = fields
 
 
 class ComponentListSerializer(IncludeExcludeFieldsSerializer):
     """List all Components. Add or remove fields using ?include_fields=&exclude_fields="""
 
-    link = serializers.SerializerMethodField(read_only=True)
-    build_completion_dt = serializers.DateTimeField(
-        source="software_build.completion_time", read_only=True
-    )
+    link = serializers.SerializerMethodField()
+    build_completion_dt = serializers.DateTimeField(source="software_build.completion_time")
 
     @staticmethod
     def get_link(instance: Component) -> str:
@@ -474,14 +477,14 @@ class ComponentListSerializer(IncludeExcludeFieldsSerializer):
 
     class Meta:
         model = Component
-        fields = [
+        fields = (
             "link",
             "purl",
             "name",
             "version",
             "nvr",
             "build_completion_dt",
-        ]
+        )
         read_only_fields = fields
 
 
@@ -490,7 +493,7 @@ class ProductModelSerializer(ProductTaxonomySerializer):
     components = serializers.SerializerMethodField()
     upstreams = serializers.SerializerMethodField()
     builds = serializers.SerializerMethodField()
-    link = serializers.SerializerMethodField(read_only=True)
+    link = serializers.SerializerMethodField()
     build_count = serializers.SerializerMethodField()
     channels = serializers.SerializerMethodField()
 
@@ -538,6 +541,7 @@ class ProductModelSerializer(ProductTaxonomySerializer):
             "tags",
             "channels",
         ]
+        read_only_fields = fields
 
 
 class ProductSerializer(ProductModelSerializer):
@@ -560,6 +564,7 @@ class ProductSerializer(ProductModelSerializer):
             "product_streams",
             "product_variants",
         ]
+        read_only_fields = fields
 
 
 class ProductVersionSerializer(ProductModelSerializer):
@@ -582,6 +587,7 @@ class ProductVersionSerializer(ProductModelSerializer):
             "product_streams",
             "product_variants",
         ]
+        read_only_fields = fields
 
 
 class ProductStreamSerializer(ProductModelSerializer):
@@ -617,6 +623,7 @@ class ProductStreamSerializer(ProductModelSerializer):
             "product_variants",
             "channels",
         ]
+        read_only_fields = fields
 
 
 class ProductStreamSummarySerializer(ProductModelSerializer):
@@ -639,16 +646,18 @@ class ProductStreamSummarySerializer(ProductModelSerializer):
             "upstreams",
             "manifest",
         ]
+        read_only_fields = fields
 
 
 class ComponentProductStreamSummarySerializer(ProductModelSerializer):
     """custom component view displaying product information."""
 
-    component_link = serializers.SerializerMethodField(read_only=True)
-    manifest = serializers.SerializerMethodField(read_only=True)
-    component_purl = serializers.SerializerMethodField(read_only=True)
+    component_link = serializers.SerializerMethodField()
+    manifest = serializers.SerializerMethodField()
+    component_purl = serializers.SerializerMethodField()
 
-    def get_component_purl(self, obj):
+    @staticmethod
+    def get_component_purl(obj):
         return obj.component_purl
 
     @staticmethod
@@ -671,6 +680,7 @@ class ComponentProductStreamSummarySerializer(ProductModelSerializer):
             "component_link",
             "component_purl",
         ]
+        read_only_fields = fields
 
 
 class ProductVariantSerializer(ProductModelSerializer):
@@ -697,13 +707,14 @@ class ProductVariantSerializer(ProductModelSerializer):
             "product_streams",
             "channels",
         ]
+        read_only_fields = fields
 
 
 class ChannelSerializer(ProductTaxonomySerializer):
     """Show detailed information for Channel(s).
     Add or remove fields using ?include_fields=&exclude_fields="""
 
-    link = serializers.SerializerMethodField(read_only=True)
+    link = serializers.SerializerMethodField()
     products = serializers.SerializerMethodField()
     product_versions = serializers.SerializerMethodField()
     product_streams = serializers.SerializerMethodField()
@@ -711,7 +722,7 @@ class ChannelSerializer(ProductTaxonomySerializer):
 
     class Meta:
         model = Channel
-        fields = [
+        fields = (
             "uuid",
             "link",
             "last_changed",
@@ -724,7 +735,8 @@ class ChannelSerializer(ProductTaxonomySerializer):
             "product_versions",
             "product_streams",
             "product_variants",
-        ]
+        )
+        read_only_fields = fields
 
     @staticmethod
     def get_link(instance: ProductVariant) -> str:
@@ -738,3 +750,4 @@ class AppStreamLifeCycleSerializer(IncludeExcludeFieldsSerializer):
     class Meta:
         model = AppStreamLifeCycle
         fields = "__all__"
+        read_only_fields = fields

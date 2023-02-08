@@ -358,7 +358,6 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/Component'
-        required: true
       responses:
         '200':
           content:
@@ -954,13 +953,17 @@ components:
           readOnly: true
         name:
           type: string
+          readOnly: true
         relative_url:
           type: string
-          maxLength: 200
+          readOnly: true
         type:
-          $ref: '#/components/schemas/ChannelTypeEnum'
+          allOf:
+          - $ref: '#/components/schemas/ChannelTypeEnum'
+          readOnly: true
         description:
           type: string
+          readOnly: true
         products:
           type: array
           items:
@@ -991,6 +994,7 @@ components:
           readOnly: true
       required:
       - created_at
+      - description
       - last_changed
       - link
       - name
@@ -998,6 +1002,7 @@ components:
       - product_variants
       - product_versions
       - products
+      - relative_url
       - type
       - uuid
     ChannelTypeEnum:
@@ -1022,19 +1027,25 @@ components:
           format: uuid
           readOnly: true
         type:
-          $ref: '#/components/schemas/ComponentTypeEnum'
+          allOf:
+          - $ref: '#/components/schemas/ComponentTypeEnum'
+          readOnly: true
         namespace:
-          $ref: '#/components/schemas/NamespaceEnum'
+          allOf:
+          - $ref: '#/components/schemas/NamespaceEnum'
+          readOnly: true
         purl:
           type: string
-          maxLength: 1024
+          readOnly: true
         name:
           type: string
+          readOnly: true
         description:
           type: string
+          readOnly: true
         related_url:
           type: string
-          maxLength: 1024
+          readOnly: true
         tags:
           type: array
           items:
@@ -1042,24 +1053,25 @@ components:
           readOnly: true
         version:
           type: string
-          maxLength: 1024
+          readOnly: true
         release:
           type: string
-          maxLength: 1024
+          readOnly: true
         arch:
           type: string
-          maxLength: 1024
+          readOnly: true
         nvr:
           type: string
-          maxLength: 1024
+          readOnly: true
         nevra:
           type: string
-          maxLength: 1024
+          readOnly: true
         epoch:
           type: string
           readOnly: true
         copyright_text:
           type: string
+          readOnly: true
         license_concluded:
           type: string
           readOnly: true
@@ -1078,8 +1090,10 @@ components:
           readOnly: true
         openlcs_scan_url:
           type: string
+          readOnly: true
         openlcs_scan_version:
           type: string
+          readOnly: true
         software_build:
           allOf:
           - $ref: '#/components/schemas/SoftwareBuildSummary'
@@ -1150,12 +1164,16 @@ components:
           readOnly: true
         filename:
           type: string
+          readOnly: true
       required:
+      - arch
       - channels
+      - copyright_text
       - description
       - download_url
       - epoch
       - errata
+      - filename
       - license_concluded
       - license_concluded_list
       - license_declared
@@ -1164,11 +1182,18 @@ components:
       - manifest
       - name
       - namespace
+      - nevra
+      - nvr
+      - openlcs_scan_url
+      - openlcs_scan_version
       - product_streams
       - product_variants
       - product_versions
       - products
       - provides
+      - purl
+      - related_url
+      - release
       - software_build
       - sources
       - tags
@@ -1350,11 +1375,13 @@ components:
           readOnly: true
         ofuri:
           type: string
-          maxLength: 1024
+          readOnly: true
         name:
           type: string
+          readOnly: true
         description:
           type: string
+          readOnly: true
         build_count:
           type: integer
           readOnly: true
@@ -1405,8 +1432,10 @@ components:
       - builds
       - channels
       - components
+      - description
       - link
       - name
+      - ofuri
       - product_streams
       - product_variants
       - product_versions
@@ -1428,11 +1457,13 @@ components:
           readOnly: true
         ofuri:
           type: string
-          maxLength: 1024
+          readOnly: true
         name:
           type: string
+          readOnly: true
         description:
           type: string
+          readOnly: true
         build_count:
           type: integer
           readOnly: true
@@ -1459,25 +1490,30 @@ components:
           readOnly: true
         cpe:
           type: string
-          maxLength: 1000
+          readOnly: true
         active:
           type: boolean
+          readOnly: true
         brew_tags:
           type: object
           additionalProperties: {}
+          readOnly: true
         yum_repositories:
           type: array
           items:
             type: string
             maxLength: 200
+          readOnly: true
         composes:
           type: object
           additionalProperties: {}
+          readOnly: true
         et_product_versions:
           type: array
           items:
             type: string
             maxLength: 200
+          readOnly: true
         manifest:
           type: string
           readOnly: true
@@ -1510,13 +1546,20 @@ components:
               type: string
           readOnly: true
       required:
+      - active
+      - brew_tags
       - build_count
       - builds
       - channels
       - components
+      - composes
+      - cpe
+      - description
+      - et_product_versions
       - link
       - manifest
       - name
+      - ofuri
       - product_variants
       - product_versions
       - products
@@ -1524,6 +1567,7 @@ components:
       - tags
       - upstreams
       - uuid
+      - yum_repositories
     ProductVariant:
       type: object
       description: |-
@@ -1539,11 +1583,13 @@ components:
           readOnly: true
         ofuri:
           type: string
-          maxLength: 1024
+          readOnly: true
         name:
           type: string
+          readOnly: true
         description:
           type: string
+          readOnly: true
         build_count:
           type: integer
           readOnly: true
@@ -1601,8 +1647,10 @@ components:
       - builds
       - channels
       - components
+      - description
       - link
       - name
+      - ofuri
       - product_streams
       - product_versions
       - products
@@ -1625,11 +1673,13 @@ components:
           readOnly: true
         ofuri:
           type: string
-          maxLength: 1024
+          readOnly: true
         name:
           type: string
+          readOnly: true
         description:
           type: string
+          readOnly: true
         build_count:
           type: integer
           readOnly: true
@@ -1680,8 +1730,10 @@ components:
       - builds
       - channels
       - components
+      - description
       - link
       - name
+      - ofuri
       - product_streams
       - product_variants
       - products
@@ -1702,14 +1754,17 @@ components:
           readOnly: true
         build_id:
           type: integer
-          maximum: 2147483647
-          minimum: -2147483648
+          readOnly: true
         build_type:
-          $ref: '#/components/schemas/BuildTypeEnum'
+          allOf:
+          - $ref: '#/components/schemas/BuildTypeEnum'
+          readOnly: true
         name:
           type: string
+          readOnly: true
         source:
           type: string
+          readOnly: true
         tags:
           type: array
           items:
@@ -1752,14 +1807,17 @@ components:
           readOnly: true
         build_id:
           type: integer
-          maximum: 2147483647
-          minimum: -2147483648
+          readOnly: true
         build_type:
-          $ref: '#/components/schemas/BuildTypeEnum'
+          allOf:
+          - $ref: '#/components/schemas/BuildTypeEnum'
+          readOnly: true
         name:
           type: string
+          readOnly: true
         source:
           type: string
+          readOnly: true
       required:
       - build_id
       - build_type

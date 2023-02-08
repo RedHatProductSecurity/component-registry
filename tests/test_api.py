@@ -172,6 +172,43 @@ def test_component_detail(client, api_path):
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_component_detail_unscanned_filter(client, api_path):
+    ComponentFactory(name="copyright", copyright_text="test")
+    ComponentFactory(name="license", license_concluded_raw="test")
+    ComponentFactory(name="unscanned")
+
+    response = client.get(f"{api_path}/components")
+    assert response.status_code == 200
+    assert response.json()["count"] == 3
+
+    response = client.get(f"{api_path}/components?missing_copyright=True")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 2
+    assert response["results"][0]["name"] == "license"
+    assert response["results"][1]["name"] == "unscanned"
+
+    response = client.get(f"{api_path}/components?missing_copyright=False")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 1
+    assert response["results"][0]["name"] == "copyright"
+
+    response = client.get(f"{api_path}/components?missing_license=True")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 2
+    assert response["results"][0]["name"] == "copyright"
+    assert response["results"][1]["name"] == "unscanned"
+
+    response = client.get(f"{api_path}/components?missing_license=False")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 1
+    assert response["results"][0]["name"] == "license"
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_component_detail_olcs_put(client, api_path):
     """Test that OpenLCS can upload scan results for a component"""
     c1 = ComponentFactory()

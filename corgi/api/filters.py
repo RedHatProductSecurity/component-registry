@@ -1,10 +1,29 @@
 import logging
 
-from django_filters.rest_framework import CharFilter, Filter, FilterSet
+from django.core.validators import EMPTY_VALUES
+from django_filters.rest_framework import BooleanFilter, CharFilter, Filter, FilterSet
 
 from corgi.core.models import Channel, Component, SoftwareBuild
 
 logger = logging.getLogger(__name__)
+
+
+class EmptyStringFilter(BooleanFilter):
+    """Filter or exclude an arbitrary field against an empty string value"""
+
+    def filter(self, qs, value):
+        if value in EMPTY_VALUES:
+            # User gave an empty ?param= so return the unfiltered queryset
+            return qs
+
+        # Use .exclude() if the filter declares exclude=True
+        # or if the user choose BooleanFilter's "NO" option in the UI
+        # e.g. "show empty licenses" -> NO means show only components with licenses
+        # Otherwise use .filter()
+        exclude = self.exclude ^ (value is False)
+        method = qs.exclude if exclude else qs.filter
+
+        return method(**{self.field_name: ""})
 
 
 class TagFilter(Filter):
@@ -55,6 +74,16 @@ class ComponentFilter(FilterSet):
     re_upstream = CharFilter(lookup_expr="purl__regex", field_name="upstreams")
 
     el_match = CharFilter(label="RHEL version for layered products", lookup_expr="icontains")
+
+    missing_copyright = EmptyStringFilter(
+        field_name="copyright_text",
+        label="Show only unscanned components (where copyright text is empty)",
+    )
+
+    missing_license = EmptyStringFilter(
+        field_name="license_concluded_raw",
+        label="Show only unscanned components (where license concluded is empty)",
+    )
 
 
 class ProductDataFilter(FilterSet):

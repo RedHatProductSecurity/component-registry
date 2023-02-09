@@ -865,11 +865,13 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
 
         copyright_text = request.data.get("copyright_text")
         license_concluded = request.data.get("license_concluded")
+        license_declared = request.data.get("license_declared")
         openlcs_scan_url = request.data.get("openlcs_scan_url")
         openlcs_scan_version = request.data.get("openlcs_scan_version")
         if (
             not copyright_text
             and not license_concluded
+            and not license_declared
             and not openlcs_scan_url
             and not openlcs_scan_version
         ):
@@ -882,6 +884,11 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
             component.copyright_text = copyright_text
         if license_concluded is not None:
             component.license_concluded_raw = license_concluded
+        if license_declared is not None:
+            if component.license_declared_raw:
+                # The field already has an existing value, don't allow overwrites
+                return Response(status=status.HTTP_400_BAD_REQUEST)
+            component.license_declared_raw = license_declared
         if openlcs_scan_url is not None:
             component.openlcs_scan_url = openlcs_scan_url
         if openlcs_scan_version is not None:

@@ -26,6 +26,22 @@ paths:
           enum:
           - BREW
           - KOJI
+      - in: query
+        name: exclude_fields
+        schema:
+          type: array
+          items:
+            type: string
+        description: 'Exclude only specified fields in the response. Multiple values
+          may be separated by commas.Example: `include_fields=build_id,name`'
+      - in: query
+        name: include_fields
+        schema:
+          type: array
+          items:
+            type: string
+        description: 'Include only specified fields in the response. Multiple values
+          may be separated by commas.Example: `include_fields=build_id,name`'
       - name: limit
         required: false
         in: query
@@ -74,6 +90,22 @@ paths:
           minimum: -2147483648
         description: A unique value identifying this software build.
         required: true
+      - in: query
+        name: exclude_fields
+        schema:
+          type: array
+          items:
+            type: string
+        description: 'Exclude only specified fields in the response. Multiple values
+          may be separated by commas.Example: `include_fields=build_id,name`'
+      - in: query
+        name: include_fields
+        schema:
+          type: array
+          items:
+            type: string
+        description: 'Include only specified fields in the response. Multiple values
+          may be separated by commas.Example: `include_fields=build_id,name`'
       tags:
       - v1
       responses:
@@ -88,6 +120,22 @@ paths:
       operationId: v1_channels_list
       description: View for api/v1/channels
       parameters:
+      - in: query
+        name: exclude_fields
+        schema:
+          type: array
+          items:
+            type: string
+        description: 'Exclude only specified fields in the response. Multiple values
+          may be separated by commas.Example: `exclude_fields=name,ofuri`'
+      - in: query
+        name: include_fields
+        schema:
+          type: array
+          items:
+            type: string
+        description: 'Include only specified fields in the response. Multiple values
+          may be separated by commas.Example: `include_fields=name,ofuri`'
       - name: limit
         required: false
         in: query
@@ -131,6 +179,22 @@ paths:
       operationId: v1_channels_retrieve
       description: View for api/v1/channels
       parameters:
+      - in: query
+        name: exclude_fields
+        schema:
+          type: array
+          items:
+            type: string
+        description: 'Exclude only specified fields in the response. Multiple values
+          may be separated by commas.Example: `exclude_fields=name,ofuri`'
+      - in: query
+        name: include_fields
+        schema:
+          type: array
+          items:
+            type: string
+        description: 'Include only specified fields in the response. Multiple values
+          may be separated by commas.Example: `include_fields=name,ofuri`'
       - in: path
         name: uuid
         schema:
@@ -169,6 +233,22 @@ paths:
         schema:
           type: string
         description: RHEL version for layered products
+      - in: query
+        name: exclude_fields
+        schema:
+          type: array
+          items:
+            type: string
+        description: 'Exclude only specified fields in the response. Multiple values
+          may be separated by commas.Example: `exclude_fields=name,version`'
+      - in: query
+        name: include_fields
+        schema:
+          type: array
+          items:
+            type: string
+        description: 'Include only specified fields in the response. Multiple values
+          may be separated by commas.Example: `include_fields=name,version`'
       - name: limit
         required: false
         in: query
@@ -310,6 +390,22 @@ paths:
       operationId: v1_components_retrieve
       description: View for api/v1/components
       parameters:
+      - in: query
+        name: exclude_fields
+        schema:
+          type: array
+          items:
+            type: string
+        description: 'Exclude only specified fields in the response. Multiple values
+          may be separated by commas.Example: `exclude_fields=name,version`'
+      - in: query
+        name: include_fields
+        schema:
+          type: array
+          items:
+            type: string
+        description: 'Include only specified fields in the response. Multiple values
+          may be separated by commas.Example: `include_fields=name,version`'
       - in: path
         name: uuid
         schema:
@@ -435,6 +531,22 @@ paths:
         name: channels
         schema:
           type: string
+      - in: query
+        name: exclude_fields
+        schema:
+          type: array
+          items:
+            type: string
+        description: 'Exclude only specified fields in the response. Multiple values
+          may be separated by commas.Example: `exclude_fields=name,ofuri`'
+      - in: query
+        name: include_fields
+        schema:
+          type: array
+          items:
+            type: string
+        description: 'Include only specified fields in the response. Multiple values
+          may be separated by commas.Example: `include_fields=name,ofuri`'
       - name: limit
         required: false
         in: query
@@ -499,6 +611,22 @@ paths:
       operationId: v1_product_streams_retrieve
       description: View for api/v1/product_streams
       parameters:
+      - in: query
+        name: exclude_fields
+        schema:
+          type: array
+          items:
+            type: string
+        description: 'Exclude only specified fields in the response. Multiple values
+          may be separated by commas.Example: `exclude_fields=name,ofuri`'
+      - in: query
+        name: include_fields
+        schema:
+          type: array
+          items:
+            type: string
+        description: 'Include only specified fields in the response. Multiple values
+          may be separated by commas.Example: `include_fields=name,ofuri`'
       - in: path
         name: uuid
         schema:
@@ -545,6 +673,22 @@ paths:
         name: channels
         schema:
           type: string
+      - in: query
+        name: exclude_fields
+        schema:
+          type: array
+          items:
+            type: string
+        description: 'Exclude only specified fields in the response. Multiple values
+          may be separated by commas.Example: `exclude_fields=name,ofuri`'
+      - in: query
+        name: include_fields
+        schema:
+          type: array
+          items:
+            type: string
+        description: 'Include only specified fields in the response. Multiple values
+          may be separated by commas.Example: `include_fields=name,ofuri`'
       - name: limit
         required: false
         in: query
@@ -609,6 +753,22 @@ paths:
       operationId: v1_product_variants_retrieve
       description: View for api/v1/product_variants
       parameters:
+      - in: query
+        name: exclude_fields
+        schema:
+          type: array
+          items:
+            type: string
+        description: 'Exclude only specified fields in the response. Multiple values
+          may be separated by commas.Example: `exclude_fields=name,ofuri`'
+      - in: query
+        name: include_fields
+        schema:
+          type: array
+          items:
+            type: string
+        description: 'Include only specified fields in the response. Multiple values
+          may be separated by commas.Example: `include_fields=name,ofuri`'
       - in: path
         name: uuid
         schema:
@@ -634,6 +794,22 @@ paths:
         name: channels
         schema:
           type: string
+      - in: query
+        name: exclude_fields
+        schema:
+          type: array
+          items:
+            type: string
+        description: 'Exclude only specified fields in the response. Multiple values
+          may be separated by commas.Example: `exclude_fields=name,ofuri`'
+      - in: query
+        name: include_fields
+        schema:
+          type: array
+          items:
+            type: string
+        description: 'Include only specified fields in the response. Multiple values
+          may be separated by commas.Example: `include_fields=name,ofuri`'
       - name: limit
         required: false
         in: query
@@ -698,6 +874,22 @@ paths:
       operationId: v1_product_versions_retrieve
       description: View for api/v1/product_versions
       parameters:
+      - in: query
+        name: exclude_fields
+        schema:
+          type: array
+          items:
+            type: string
+        description: 'Exclude only specified fields in the response. Multiple values
+          may be separated by commas.Example: `exclude_fields=name,ofuri`'
+      - in: query
+        name: include_fields
+        schema:
+          type: array
+          items:
+            type: string
+        description: 'Include only specified fields in the response. Multiple values
+          may be separated by commas.Example: `include_fields=name,ofuri`'
       - in: path
         name: uuid
         schema:
@@ -723,6 +915,22 @@ paths:
         name: channels
         schema:
           type: string
+      - in: query
+        name: exclude_fields
+        schema:
+          type: array
+          items:
+            type: string
+        description: 'Exclude only specified fields in the response. Multiple values
+          may be separated by commas.Example: `exclude_fields=name,ofuri`'
+      - in: query
+        name: include_fields
+        schema:
+          type: array
+          items:
+            type: string
+        description: 'Include only specified fields in the response. Multiple values
+          may be separated by commas.Example: `include_fields=name,ofuri`'
       - name: limit
         required: false
         in: query
@@ -787,6 +995,22 @@ paths:
       operationId: v1_products_retrieve
       description: View for api/v1/products
       parameters:
+      - in: query
+        name: exclude_fields
+        schema:
+          type: array
+          items:
+            type: string
+        description: 'Exclude only specified fields in the response. Multiple values
+          may be separated by commas.Example: `exclude_fields=name,ofuri`'
+      - in: query
+        name: include_fields
+        schema:
+          type: array
+          items:
+            type: string
+        description: 'Include only specified fields in the response. Multiple values
+          may be separated by commas.Example: `include_fields=name,ofuri`'
       - in: path
         name: uuid
         schema:

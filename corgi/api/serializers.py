@@ -1,3 +1,4 @@
+import datetime
 import logging
 from abc import abstractmethod
 from collections import defaultdict
@@ -470,7 +471,15 @@ class ComponentListSerializer(IncludeExcludeFieldsSerializer):
     """List all Components. Add or remove fields using ?include_fields=&exclude_fields="""
 
     link = serializers.SerializerMethodField()
-    build_completion_dt = serializers.DateTimeField(source="software_build.completion_time")
+    build_completion_dt = serializers.SerializerMethodField()
+
+    @staticmethod
+    def get_build_completion_dt(instance: Component) -> Optional[datetime.datetime]:
+        if instance.software_build:
+            # instance is a root component with a linked software_build
+            return instance.software_build.completion_time
+        # else the software_build is null / we're not a root component
+        return None
 
     @staticmethod
     def get_link(instance: Component) -> str:

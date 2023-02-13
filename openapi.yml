@@ -33,7 +33,7 @@ paths:
           items:
             type: string
         description: 'Exclude only specified fields in the response. Multiple values
-          may be separated by commas.Example: `include_fields=build_id,name`'
+          may be separated by commas. Example: `exclude_fields=software_build.build_id,name`'
       - in: query
         name: include_fields
         schema:
@@ -41,7 +41,7 @@ paths:
           items:
             type: string
         description: 'Include only specified fields in the response. Multiple values
-          may be separated by commas.Example: `include_fields=build_id,name`'
+          may be separated by commas. Example: `include_fields=software_build.build_id,name`'
       - name: limit
         required: false
         in: query
@@ -97,7 +97,7 @@ paths:
           items:
             type: string
         description: 'Exclude only specified fields in the response. Multiple values
-          may be separated by commas.Example: `include_fields=build_id,name`'
+          may be separated by commas. Example: `exclude_fields=software_build.build_id,name`'
       - in: query
         name: include_fields
         schema:
@@ -105,7 +105,7 @@ paths:
           items:
             type: string
         description: 'Include only specified fields in the response. Multiple values
-          may be separated by commas.Example: `include_fields=build_id,name`'
+          may be separated by commas. Example: `include_fields=software_build.build_id,name`'
       tags:
       - v1
       responses:
@@ -127,7 +127,7 @@ paths:
           items:
             type: string
         description: 'Exclude only specified fields in the response. Multiple values
-          may be separated by commas.Example: `exclude_fields=name,ofuri`'
+          may be separated by commas. Example: `exclude_fields=software_build.build_id,name`'
       - in: query
         name: include_fields
         schema:
@@ -135,7 +135,7 @@ paths:
           items:
             type: string
         description: 'Include only specified fields in the response. Multiple values
-          may be separated by commas.Example: `include_fields=name,ofuri`'
+          may be separated by commas. Example: `include_fields=software_build.build_id,name`'
       - name: limit
         required: false
         in: query
@@ -186,7 +186,7 @@ paths:
           items:
             type: string
         description: 'Exclude only specified fields in the response. Multiple values
-          may be separated by commas.Example: `exclude_fields=name,ofuri`'
+          may be separated by commas. Example: `exclude_fields=software_build.build_id,name`'
       - in: query
         name: include_fields
         schema:
@@ -194,7 +194,7 @@ paths:
           items:
             type: string
         description: 'Include only specified fields in the response. Multiple values
-          may be separated by commas.Example: `include_fields=name,ofuri`'
+          may be separated by commas. Example: `include_fields=software_build.build_id,name`'
       - in: path
         name: uuid
         schema:
@@ -240,7 +240,7 @@ paths:
           items:
             type: string
         description: 'Exclude only specified fields in the response. Multiple values
-          may be separated by commas.Example: `exclude_fields=name,version`'
+          may be separated by commas. Example: `exclude_fields=software_build.build_id,name`'
       - in: query
         name: include_fields
         schema:
@@ -248,7 +248,7 @@ paths:
           items:
             type: string
         description: 'Include only specified fields in the response. Multiple values
-          may be separated by commas.Example: `include_fields=name,version`'
+          may be separated by commas. Example: `include_fields=software_build.build_id,name`'
       - name: limit
         required: false
         in: query
@@ -397,7 +397,7 @@ paths:
           items:
             type: string
         description: 'Exclude only specified fields in the response. Multiple values
-          may be separated by commas.Example: `exclude_fields=name,version`'
+          may be separated by commas. Example: `exclude_fields=software_build.build_id,name`'
       - in: query
         name: include_fields
         schema:
@@ -405,7 +405,7 @@ paths:
           items:
             type: string
         description: 'Include only specified fields in the response. Multiple values
-          may be separated by commas.Example: `include_fields=name,version`'
+          may be separated by commas. Example: `include_fields=software_build.build_id,name`'
       - in: path
         name: uuid
         schema:
@@ -538,7 +538,7 @@ paths:
           items:
             type: string
         description: 'Exclude only specified fields in the response. Multiple values
-          may be separated by commas.Example: `exclude_fields=name,ofuri`'
+          may be separated by commas. Example: `exclude_fields=software_build.build_id,name`'
       - in: query
         name: include_fields
         schema:
@@ -546,7 +546,7 @@ paths:
           items:
             type: string
         description: 'Include only specified fields in the response. Multiple values
-          may be separated by commas.Example: `include_fields=name,ofuri`'
+          may be separated by commas. Example: `include_fields=software_build.build_id,name`'
       - name: limit
         required: false
         in: query
@@ -618,7 +618,7 @@ paths:
           items:
             type: string
         description: 'Exclude only specified fields in the response. Multiple values
-          may be separated by commas.Example: `exclude_fields=name,ofuri`'
+          may be separated by commas. Example: `exclude_fields=software_build.build_id,name`'
       - in: query
         name: include_fields
         schema:
@@ -626,7 +626,7 @@ paths:
           items:
             type: string
         description: 'Include only specified fields in the response. Multiple values
-          may be separated by commas.Example: `include_fields=name,ofuri`'
+          may be separated by commas. Example: `include_fields=software_build.build_id,name`'
       - in: path
         name: uuid
         schema:
@@ -680,7 +680,7 @@ paths:
           items:
             type: string
         description: 'Exclude only specified fields in the response. Multiple values
-          may be separated by commas.Example: `exclude_fields=name,ofuri`'
+          may be separated by commas. Example: `exclude_fields=software_build.build_id,name`'
       - in: query
         name: include_fields
         schema:
@@ -688,7 +688,7 @@ paths:
           items:
             type: string
         description: 'Include only specified fields in the response. Multiple values
-          may be separated by commas.Example: `include_fields=name,ofuri`'
+          may be separated by commas. Example: `include_fields=software_build.build_id,name`'
       - name: limit
         required: false
         in: query
@@ -760,7 +760,7 @@ paths:
           items:
             type: string
         description: 'Exclude only specified fields in the response. Multiple values
-          may be separated by commas.Example: `exclude_fields=name,ofuri`'
+          may be separated by commas. Example: `exclude_fields=software_build.build_id,name`'
       - in: query
         name: include_fields
         schema:
@@ -768,7 +768,7 @@ paths:
           items:
             type: string
         description: 'Include only specified fields in the response. Multiple values
-          may be separated by commas.Example: `include_fields=name,ofuri`'
+          may be separated by commas. Example: `include_fields=software_build.build_id,name`'
       - in: path
         name: uuid
         schema:
@@ -801,7 +801,7 @@ paths:
           items:
             type: string
         description: 'Exclude only specified fields in the response. Multiple values
-          may be separated by commas.Example: `exclude_fields=name,ofuri`'
+          may be separated by commas. Example: `exclude_fields=software_build.build_id,name`'
       - in: query
         name: include_fields
         schema:
@@ -809,7 +809,7 @@ paths:
           items:
             type: string
         description: 'Include only specified fields in the response. Multiple values
-          may be separated by commas.Example: `include_fields=name,ofuri`'
+          may be separated by commas. Example: `include_fields=software_build.build_id,name`'
       - name: limit
         required: false
         in: query
@@ -881,7 +881,7 @@ paths:
           items:
             type: string
         description: 'Exclude only specified fields in the response. Multiple values
-          may be separated by commas.Example: `exclude_fields=name,ofuri`'
+          may be separated by commas. Example: `exclude_fields=software_build.build_id,name`'
       - in: query
         name: include_fields
         schema:
@@ -889,7 +889,7 @@ paths:
           items:
             type: string
         description: 'Include only specified fields in the response. Multiple values
-          may be separated by commas.Example: `include_fields=name,ofuri`'
+          may be separated by commas. Example: `include_fields=software_build.build_id,name`'
       - in: path
         name: uuid
         schema:
@@ -922,7 +922,7 @@ paths:
           items:
             type: string
         description: 'Exclude only specified fields in the response. Multiple values
-          may be separated by commas.Example: `exclude_fields=name,ofuri`'
+          may be separated by commas. Example: `exclude_fields=software_build.build_id,name`'
       - in: query
         name: include_fields
         schema:
@@ -930,7 +930,7 @@ paths:
           items:
             type: string
         description: 'Include only specified fields in the response. Multiple values
-          may be separated by commas.Example: `include_fields=name,ofuri`'
+          may be separated by commas. Example: `include_fields=software_build.build_id,name`'
       - name: limit
         required: false
         in: query
@@ -1002,7 +1002,7 @@ paths:
           items:
             type: string
         description: 'Exclude only specified fields in the response. Multiple values
-          may be separated by commas.Example: `exclude_fields=name,ofuri`'
+          may be separated by commas. Example: `exclude_fields=software_build.build_id,name`'
       - in: query
         name: include_fields
         schema:
@@ -1010,7 +1010,7 @@ paths:
           items:
             type: string
         description: 'Include only specified fields in the response. Multiple values
-          may be separated by commas.Example: `include_fields=name,ofuri`'
+          may be separated by commas. Example: `include_fields=software_build.build_id,name`'
       - in: path
         name: uuid
         schema:

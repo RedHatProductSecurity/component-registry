@@ -4,7 +4,7 @@ from typing import Type, Union
 
 import django_filters.rest_framework
 from django.db import connections
-from django.db.models import QuerySet, Value
+from django.db.models import Value
 from django.http import Http404
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
@@ -51,7 +51,6 @@ from .serializers import (
     ProductVersionSerializer,
     SoftwareBuildSerializer,
     get_component_purl_link,
-    get_model_ofuri_type,
 )
 
 logger = logging.getLogger(__name__)
@@ -450,24 +449,8 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
     filterset_class = ComponentFilter
     lookup_url_kwarg = "uuid"
 
-    def get_queryset(self) -> QuerySet[Component]:
-        # 'latest' filter only relevant in terms of a specific offering/product
-        ofuri = self.request.query_params.get("ofuri")
-        if not ofuri:
-            return self.queryset
-
-        # TODO: All uses of ofuri should just rely on a filter, not custom code
-        model, model_name = get_model_ofuri_type(ofuri)
-        if not model:
-            # No matching model instance found, or invalid ofuri
-            raise Http404
-        else:
-            lookup = {f"{model_name.lower()}s__ofuri": ofuri}
-            return self.queryset.filter(**lookup)
-
     @extend_schema(
         parameters=[
-            OpenApiParameter("ofuri", OpenApiTypes.STR, OpenApiParameter.QUERY),
             OpenApiParameter("view", OpenApiTypes.STR, OpenApiParameter.QUERY),
             OpenApiParameter("purl", OpenApiTypes.STR, OpenApiParameter.QUERY),
         ]

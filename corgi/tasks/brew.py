@@ -255,7 +255,7 @@ def save_component(
 
 
 def save_srpm(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
-    obj, created = Component.objects.get_or_create(
+    obj, created = Component.objects.update_or_create(
         name=build_data["meta"].get("name"),
         type=build_data["type"],
         arch=build_data["meta"].get("arch", ""),
@@ -264,6 +264,7 @@ def save_srpm(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
         defaults={
             "license_declared_raw": build_data["meta"].get("license", ""),
             "description": build_data["meta"].get("description", ""),
+            "related_url": build_data["meta"].get("url", ""),
             "software_build": softwarebuild,
             "meta_attr": build_data["meta"],
             "namespace": build_data["namespace"],
@@ -281,7 +282,7 @@ def save_srpm(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
     # Handle case when key is present but value is None
     related_url = build_data["meta"].get("url", "")
     if related_url:
-        new_upstream, created = Component.objects.get_or_create(
+        new_upstream, created = Component.objects.update_or_create(
             type=build_data["type"],
             namespace=Component.Namespace.UPSTREAM,
             name=build_data["meta"].get("name"),

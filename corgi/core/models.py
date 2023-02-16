@@ -1272,6 +1272,20 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             return f"{central_maven_server}/{namespace}/{name}/{version}{classifier}"
         return ""
 
+    def _build_pypi_download_url(self) -> str:
+        """Return a PyPI download URL from the `purl` string."""
+        # TODO: Open PR for this upstream
+        #  Or don't, this predictable URL is a legacy thing we're not really supposed to use
+        # https://stackoverflow.com/questions/47781035/does-pypi-have-simple-urls-for-package-downloads#47840593
+        purl_data = PackageURL.from_string(self.purl)
+        central_pypi_server = "https://pypi.io/packages/source"
+
+        name = purl_data.name
+        version = self.strip_release_from_version(purl_data.version)
+        if name and version:
+            return f"{central_pypi_server}/{name[0]}/{name}/{name}-{version}.tar.gz"
+        return ""
+
     def save_component_taxonomy(self):
         """Link related components together using foreign keys. Avoids repeated MPTT tree lookups"""
         upstreams = self.get_upstreams_pks(using="default")

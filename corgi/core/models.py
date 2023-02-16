@@ -1222,6 +1222,56 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             else:
                 return f"https://pkg.go.dev/{namespace}/{name}@{version}"
 
+    def _build_maven_download_url(self) -> str:
+        """Return a maven download URL from the `purl` string."""
+        # TODO: Open PR for this upstream
+        # Based on existing url2purl logic for Maven, and official docs:
+        # https://maven.apache.org/repositories/layout.html
+        purl_data = PackageURL.from_string(self.purl)
+        central_maven_server = "https://repo1.maven.org/maven2"
+
+        namespace = purl_data.namespace
+        if namespace:
+            namespace = namespace.split(".")
+            namespace = "/".join(namespace)
+
+        name = purl_data.name
+        version = self.strip_release_from_version(purl_data.version)
+        classifier = purl_data.qualifiers.get("classifier")
+        classifier = f"-{classifier}" if classifier else ""
+        extension = purl_data.qualifiers.get("type")
+
+        if namespace and name and version and extension:
+            return (
+                f"{central_maven_server}/{namespace}/{name}/{version}/"
+                f"{name}-{version}{classifier}.{extension}"
+            )
+
+        elif namespace and name and version:
+            return f"{central_maven_server}/{namespace}/{name}/{version}/"
+
+        else:
+            return ""
+
+    def _build_maven_repo_url(self) -> str:
+        """Return a maven repository URL from the `purl` string."""
+        # TODO: Open PR for this upstream
+        # Based on existing url2purl logic for Maven, and official docs:
+        # https://maven.apache.org/repositories/layout.html
+        purl_data = PackageURL.from_string(self.purl)
+        central_maven_server = "https://mvnrepository.com/artifact"
+
+        namespace = purl_data.namespace
+        name = purl_data.name
+        version = self.strip_release_from_version(purl_data.version)
+
+        classifier = purl_data.qualifiers.get("classifier")
+        classifier = f"-{classifier}" if classifier else ""
+
+        if namespace and name and version:
+            return f"{central_maven_server}/{namespace}/{name}/{version}{classifier}"
+        return ""
+
     def save_component_taxonomy(self):
         """Link related components together using foreign keys. Avoids repeated MPTT tree lookups"""
         upstreams = self.get_upstreams_pks(using="default")

@@ -271,9 +271,9 @@ prometheus-client==0.14.1 \
     --hash=sha256:522fded625282822a89e2773452f42df14b5a8e84a86433e3f8a189c1d54dc01 \
     --hash=sha256:5459c427624961076277fdc6dc50540e2bacb98eebde99886e59ec55ed92093a
     # via flower
-prompt-toolkit==3.0.24 \
-    --hash=sha256:1bb05628c7d87b645974a1bad3f17612be0c29fa39af9f7688030163f680bad6 \
-    --hash=sha256:e56f2ff799bacecd3e88165b1e2f5ebf9bcd59e80e06d395fa0cc4b8bd7bb506
+prompt-toolkit==3.0.30 \
+    --hash=sha256:859b283c50bde45f5f97829f77a4674d1c1fcd88539364f1b28a37805cfd89c0 \
+    --hash=sha256:d8916d3f62a7b67ab353a952ce4ced6a1d2587dfe9ef8ebc30dd7c386751f289
     # via click-repl
 psycopg2==2.9.2 \
     --hash=sha256:26322c3f114de1f60c1b0febf8fdd595c221b4f624524178f515d07350a71bd1 \

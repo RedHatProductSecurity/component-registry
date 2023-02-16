@@ -1,6 +1,7 @@
 import logging
 
 from django.core.validators import EMPTY_VALUES
+from django.db.models import QuerySet
 from django_filters.rest_framework import BooleanFilter, CharFilter, Filter, FilterSet
 
 from corgi.core.models import Channel, Component, SoftwareBuild
@@ -62,10 +63,10 @@ class ComponentFilter(FilterSet):
 
     # User gave a filter like ?ofuri= in URL, assume they wanted a stream
     ofuri = CharFilter(field_name="productstreams", lookup_expr="ofuri")
-    products = CharFilter(lookup_expr="ofuri")
-    product_versions = CharFilter(field_name="productversions", lookup_expr="ofuri")
-    product_streams = CharFilter(field_name="productstreams", lookup_expr="ofuri")
-    product_variants = CharFilter(field_name="productvariants", lookup_expr="ofuri")
+    products = CharFilter(method="filter_ofuri_or_name")
+    product_versions = CharFilter(field_name="productversions", method="filter_ofuri_or_name")
+    product_streams = CharFilter(field_name="productstreams", method="filter_ofuri_or_name")
+    product_variants = CharFilter(field_name="productvariants", method="filter_ofuri_or_name")
     channels = CharFilter(lookup_expr="name")
 
     sources = CharFilter(lookup_expr="purl__icontains")
@@ -84,6 +85,22 @@ class ComponentFilter(FilterSet):
         field_name="license_concluded_raw",
         label="Show only unscanned components (where license concluded is empty)",
     )
+
+    @staticmethod
+    def filter_ofuri_or_name(
+        queryset: QuerySet["Component"], name: str, value: str
+    ) -> QuerySet["Component"]:
+        """Filter some field by a ProductModel subclass's ofuri
+        Or else by a name, depending on the user's input"""
+        if value.startswith("o:redhat:"):
+            # User provided an ofuri
+            # Filter using "products__ofuri", "productversions__ofuri", etc.
+            lookup_expr = f"{name}__ofuri"
+        else:
+            # We don't have a valid ofuri, so assume the user gave a name
+            # Filter using "product__name", "productversions__name", etc.
+            lookup_expr = f"{name}__name"
+        return queryset.filter(**{lookup_expr: value})
 
 
 class ProductDataFilter(FilterSet):

@@ -255,7 +255,7 @@ def save_component(
 
 
 def save_srpm(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
-    obj, created = Component.objects.get_or_create(
+    obj, created = Component.objects.update_or_create(
         name=build_data["meta"].get("name"),
         type=build_data["type"],
         arch=build_data["meta"].get("arch", ""),
@@ -264,6 +264,7 @@ def save_srpm(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
         defaults={
             "license_declared_raw": build_data["meta"].get("license", ""),
             "description": build_data["meta"].get("description", ""),
+            "related_url": build_data["meta"].get("url", ""),
             "software_build": softwarebuild,
             "meta_attr": build_data["meta"],
             "namespace": build_data["namespace"],
@@ -281,7 +282,7 @@ def save_srpm(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
     # Handle case when key is present but value is None
     related_url = build_data["meta"].get("url", "")
     if related_url:
-        new_upstream, created = Component.objects.get_or_create(
+        new_upstream, created = Component.objects.update_or_create(
             type=build_data["type"],
             namespace=Component.Namespace.UPSTREAM,
             name=build_data["meta"].get("name"),
@@ -390,13 +391,21 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
 
     if "sources" in build_data:
         for source in build_data["sources"]:
-            # Handle case when key is present but value is None
+            component_name = source["meta"].pop("name")
             related_url = source["meta"].pop("url", "")
-            if related_url is None:
+            if not related_url:
+                # Handle case when key is present but value is None
                 related_url = ""
-            new_upstream, created = Component.objects.get_or_create(
+                if component_name.startswith("github.com"):
+                    related_url = f"https://{component_name}"
+                if "openshift-priv" in related_url:
+                    # Component name is something like github.com/openshift-priv/cluster-api
+                    # The public repo we want is just github.com/openshift/cluster-api
+                    related_url = related_url.replace("openshift-priv", "openshift")
+
+            new_upstream, created = Component.objects.update_or_create(
                 type=source["type"],
-                name=source["meta"].pop("name"),
+                name=component_name,
                 version=source["meta"].pop("version"),
                 defaults={
                     "meta_attr": source["meta"],

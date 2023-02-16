@@ -56,6 +56,42 @@ from .serializers import (
 
 logger = logging.getLogger(__name__)
 
+INCLUDE_FIELDS_PARAMETER = OpenApiParameter(
+    "include_fields",
+    type={"type": "array", "items": {"type": "string"}},
+    location=OpenApiParameter.QUERY,
+    description=(
+        "Include only specified fields in the response. "
+        "Multiple values may be separated by commas. "
+        "Example: `include_fields=software_build.build_id,name`"
+    ),
+)
+
+EXCLUDE_FIELDS_PARAMETER = OpenApiParameter(
+    "exclude_fields",
+    type={"type": "array", "items": {"type": "string"}},
+    location=OpenApiParameter.QUERY,
+    description=(
+        "Exclude only specified fields in the response. "
+        "Multiple values may be separated by commas. "
+        "Example: `exclude_fields=software_build.build_id,name`"
+    ),
+)
+
+
+# Use below as a decorator on all viewsets that support
+# ?include_fields&exclude_fields= parameters
+# A custom IncludeExcludeFieldsViewSet class that other
+# ViewSet classes inherit from does not work
+INCLUDE_EXCLUDE_FIELDS_SCHEMA = extend_schema_view(
+    list=extend_schema(
+        parameters=[INCLUDE_FIELDS_PARAMETER, EXCLUDE_FIELDS_PARAMETER],
+    ),
+    retrieve=extend_schema(
+        parameters=[INCLUDE_FIELDS_PARAMETER, EXCLUDE_FIELDS_PARAMETER],
+    ),
+)
+
 
 @extend_schema(request=None, responses=None)
 @api_view(["GET"])
@@ -217,57 +253,7 @@ def get_component_taxonomy(
     return dicts
 
 
-@extend_schema_view(
-    list=extend_schema(
-        parameters=[
-            OpenApiParameter(
-                "include_fields",
-                type={"type": "array", "items": {"type": "string"}},
-                location=OpenApiParameter.QUERY,
-                description=(
-                    "Include only specified fields in the response. "
-                    "Multiple values may be separated by commas."
-                    "Example: `include_fields=build_id,name`"
-                ),
-            ),
-            OpenApiParameter(
-                "exclude_fields",
-                type={"type": "array", "items": {"type": "string"}},
-                location=OpenApiParameter.QUERY,
-                description=(
-                    "Exclude only specified fields in the response. "
-                    "Multiple values may be separated by commas."
-                    "Example: `include_fields=build_id,name`"
-                ),
-            ),
-        ],
-    ),
-    retrieve=extend_schema(
-        responses=SoftwareBuildSerializer,
-        parameters=[
-            OpenApiParameter(
-                "include_fields",
-                type={"type": "array", "items": {"type": "string"}},
-                location=OpenApiParameter.QUERY,
-                description=(
-                    "Include only specified fields in the response. "
-                    "Multiple values may be separated by commas."
-                    "Example: `include_fields=build_id,name`"
-                ),
-            ),
-            OpenApiParameter(
-                "exclude_fields",
-                type={"type": "array", "items": {"type": "string"}},
-                location=OpenApiParameter.QUERY,
-                description=(
-                    "Exclude only specified fields in the response. "
-                    "Multiple values may be separated by commas."
-                    "Example: `include_fields=build_id,name`"
-                ),
-            ),
-        ],
-    ),
-)
+@INCLUDE_EXCLUDE_FIELDS_SCHEMA
 class SoftwareBuildViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled until auth is added
     """View for api/v1/builds"""
 
@@ -286,57 +272,7 @@ class ProductDataViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled u
     ordering_field = "name"
 
 
-@extend_schema_view(
-    list=extend_schema(
-        parameters=[
-            OpenApiParameter(
-                "include_fields",
-                type={"type": "array", "items": {"type": "string"}},
-                location=OpenApiParameter.QUERY,
-                description=(
-                    "Include only specified fields in the response. "
-                    "Multiple values may be separated by commas."
-                    "Example: `include_fields=name,ofuri`"
-                ),
-            ),
-            OpenApiParameter(
-                "exclude_fields",
-                type={"type": "array", "items": {"type": "string"}},
-                location=OpenApiParameter.QUERY,
-                description=(
-                    "Exclude only specified fields in the response. "
-                    "Multiple values may be separated by commas."
-                    "Example: `exclude_fields=name,ofuri`"
-                ),
-            ),
-        ],
-    ),
-    retrieve=extend_schema(
-        responses=ProductSerializer,
-        parameters=[
-            OpenApiParameter(
-                "include_fields",
-                type={"type": "array", "items": {"type": "string"}},
-                location=OpenApiParameter.QUERY,
-                description=(
-                    "Include only specified fields in the response. "
-                    "Multiple values may be separated by commas."
-                    "Example: `include_fields=name,ofuri`"
-                ),
-            ),
-            OpenApiParameter(
-                "exclude_fields",
-                type={"type": "array", "items": {"type": "string"}},
-                location=OpenApiParameter.QUERY,
-                description=(
-                    "Exclude only specified fields in the response. "
-                    "Multiple values may be separated by commas."
-                    "Example: `exclude_fields=name,ofuri`"
-                ),
-            ),
-        ],
-    ),
-)
+@INCLUDE_EXCLUDE_FIELDS_SCHEMA
 class ProductViewSet(ProductDataViewSet):
     """View for api/v1/products"""
 
@@ -368,57 +304,7 @@ class ProductViewSet(ProductDataViewSet):
             raise Http404
 
 
-@extend_schema_view(
-    list=extend_schema(
-        parameters=[
-            OpenApiParameter(
-                "include_fields",
-                type={"type": "array", "items": {"type": "string"}},
-                location=OpenApiParameter.QUERY,
-                description=(
-                    "Include only specified fields in the response. "
-                    "Multiple values may be separated by commas."
-                    "Example: `include_fields=name,ofuri`"
-                ),
-            ),
-            OpenApiParameter(
-                "exclude_fields",
-                type={"type": "array", "items": {"type": "string"}},
-                location=OpenApiParameter.QUERY,
-                description=(
-                    "Exclude only specified fields in the response. "
-                    "Multiple values may be separated by commas."
-                    "Example: `exclude_fields=name,ofuri`"
-                ),
-            ),
-        ],
-    ),
-    retrieve=extend_schema(
-        responses=ProductVersionSerializer,
-        parameters=[
-            OpenApiParameter(
-                "include_fields",
-                type={"type": "array", "items": {"type": "string"}},
-                location=OpenApiParameter.QUERY,
-                description=(
-                    "Include only specified fields in the response. "
-                    "Multiple values may be separated by commas."
-                    "Example: `include_fields=name,ofuri`"
-                ),
-            ),
-            OpenApiParameter(
-                "exclude_fields",
-                type={"type": "array", "items": {"type": "string"}},
-                location=OpenApiParameter.QUERY,
-                description=(
-                    "Exclude only specified fields in the response. "
-                    "Multiple values may be separated by commas."
-                    "Example: `exclude_fields=name,ofuri`"
-                ),
-            ),
-        ],
-    ),
-)
+@INCLUDE_EXCLUDE_FIELDS_SCHEMA
 class ProductVersionViewSet(ProductDataViewSet):
     """View for api/v1/product_versions"""
 
@@ -449,57 +335,7 @@ class ProductVersionViewSet(ProductDataViewSet):
             raise Http404
 
 
-@extend_schema_view(
-    list=extend_schema(
-        parameters=[
-            OpenApiParameter(
-                "include_fields",
-                type={"type": "array", "items": {"type": "string"}},
-                location=OpenApiParameter.QUERY,
-                description=(
-                    "Include only specified fields in the response. "
-                    "Multiple values may be separated by commas."
-                    "Example: `include_fields=name,ofuri`"
-                ),
-            ),
-            OpenApiParameter(
-                "exclude_fields",
-                type={"type": "array", "items": {"type": "string"}},
-                location=OpenApiParameter.QUERY,
-                description=(
-                    "Exclude only specified fields in the response. "
-                    "Multiple values may be separated by commas."
-                    "Example: `exclude_fields=name,ofuri`"
-                ),
-            ),
-        ],
-    ),
-    retrieve=extend_schema(
-        responses=ProductStreamSerializer,
-        parameters=[
-            OpenApiParameter(
-                "include_fields",
-                type={"type": "array", "items": {"type": "string"}},
-                location=OpenApiParameter.QUERY,
-                description=(
-                    "Include only specified fields in the response. "
-                    "Multiple values may be separated by commas."
-                    "Example: `include_fields=name,ofuri`"
-                ),
-            ),
-            OpenApiParameter(
-                "exclude_fields",
-                type={"type": "array", "items": {"type": "string"}},
-                location=OpenApiParameter.QUERY,
-                description=(
-                    "Exclude only specified fields in the response. "
-                    "Multiple values may be separated by commas."
-                    "Example: `exclude_fields=name,ofuri`"
-                ),
-            ),
-        ],
-    ),
-)
+@INCLUDE_EXCLUDE_FIELDS_SCHEMA
 class ProductStreamViewSetSet(ProductDataViewSet):
     """View for api/v1/product_streams"""
 
@@ -555,57 +391,7 @@ class ProductStreamViewSetSet(ProductDataViewSet):
         return Response(manifest)
 
 
-@extend_schema_view(
-    list=extend_schema(
-        parameters=[
-            OpenApiParameter(
-                "include_fields",
-                type={"type": "array", "items": {"type": "string"}},
-                location=OpenApiParameter.QUERY,
-                description=(
-                    "Include only specified fields in the response. "
-                    "Multiple values may be separated by commas."
-                    "Example: `include_fields=name,ofuri`"
-                ),
-            ),
-            OpenApiParameter(
-                "exclude_fields",
-                type={"type": "array", "items": {"type": "string"}},
-                location=OpenApiParameter.QUERY,
-                description=(
-                    "Exclude only specified fields in the response. "
-                    "Multiple values may be separated by commas."
-                    "Example: `exclude_fields=name,ofuri`"
-                ),
-            ),
-        ],
-    ),
-    retrieve=extend_schema(
-        responses=ProductVariantSerializer,
-        parameters=[
-            OpenApiParameter(
-                "include_fields",
-                type={"type": "array", "items": {"type": "string"}},
-                location=OpenApiParameter.QUERY,
-                description=(
-                    "Include only specified fields in the response. "
-                    "Multiple values may be separated by commas."
-                    "Example: `include_fields=name,ofuri`"
-                ),
-            ),
-            OpenApiParameter(
-                "exclude_fields",
-                type={"type": "array", "items": {"type": "string"}},
-                location=OpenApiParameter.QUERY,
-                description=(
-                    "Exclude only specified fields in the response. "
-                    "Multiple values may be separated by commas."
-                    "Example: `exclude_fields=name,ofuri`"
-                ),
-            ),
-        ],
-    ),
-)
+@INCLUDE_EXCLUDE_FIELDS_SCHEMA
 class ProductVariantViewSetSet(ProductDataViewSet):
     """View for api/v1/product_variants"""
 
@@ -636,57 +422,7 @@ class ProductVariantViewSetSet(ProductDataViewSet):
             raise Http404
 
 
-@extend_schema_view(
-    list=extend_schema(
-        parameters=[
-            OpenApiParameter(
-                "include_fields",
-                type={"type": "array", "items": {"type": "string"}},
-                location=OpenApiParameter.QUERY,
-                description=(
-                    "Include only specified fields in the response. "
-                    "Multiple values may be separated by commas."
-                    "Example: `include_fields=name,ofuri`"
-                ),
-            ),
-            OpenApiParameter(
-                "exclude_fields",
-                type={"type": "array", "items": {"type": "string"}},
-                location=OpenApiParameter.QUERY,
-                description=(
-                    "Exclude only specified fields in the response. "
-                    "Multiple values may be separated by commas."
-                    "Example: `exclude_fields=name,ofuri`"
-                ),
-            ),
-        ],
-    ),
-    retrieve=extend_schema(
-        responses=ChannelSerializer,
-        parameters=[
-            OpenApiParameter(
-                "include_fields",
-                type={"type": "array", "items": {"type": "string"}},
-                location=OpenApiParameter.QUERY,
-                description=(
-                    "Include only specified fields in the response. "
-                    "Multiple values may be separated by commas."
-                    "Example: `include_fields=name,ofuri`"
-                ),
-            ),
-            OpenApiParameter(
-                "exclude_fields",
-                type={"type": "array", "items": {"type": "string"}},
-                location=OpenApiParameter.QUERY,
-                description=(
-                    "Exclude only specified fields in the response. "
-                    "Multiple values may be separated by commas."
-                    "Example: `exclude_fields=name,ofuri`"
-                ),
-            ),
-        ],
-    ),
-)
+@INCLUDE_EXCLUDE_FIELDS_SCHEMA
 class ChannelViewSet(ReadOnlyModelViewSet):
     """View for api/v1/channels"""
 
@@ -697,57 +433,7 @@ class ChannelViewSet(ReadOnlyModelViewSet):
     lookup_url_kwarg = "uuid"
 
 
-@extend_schema_view(
-    list=extend_schema(
-        parameters=[
-            OpenApiParameter(
-                "include_fields",
-                type={"type": "array", "items": {"type": "string"}},
-                location=OpenApiParameter.QUERY,
-                description=(
-                    "Include only specified fields in the response. "
-                    "Multiple values may be separated by commas."
-                    "Example: `include_fields=name,version`"
-                ),
-            ),
-            OpenApiParameter(
-                "exclude_fields",
-                type={"type": "array", "items": {"type": "string"}},
-                location=OpenApiParameter.QUERY,
-                description=(
-                    "Exclude only specified fields in the response. "
-                    "Multiple values may be separated by commas."
-                    "Example: `exclude_fields=name,version`"
-                ),
-            ),
-        ],
-    ),
-    retrieve=extend_schema(
-        responses=ComponentSerializer,
-        parameters=[
-            OpenApiParameter(
-                "include_fields",
-                type={"type": "array", "items": {"type": "string"}},
-                location=OpenApiParameter.QUERY,
-                description=(
-                    "Include only specified fields in the response. "
-                    "Multiple values may be separated by commas."
-                    "Example: `include_fields=name,version`"
-                ),
-            ),
-            OpenApiParameter(
-                "exclude_fields",
-                type={"type": "array", "items": {"type": "string"}},
-                location=OpenApiParameter.QUERY,
-                description=(
-                    "Exclude only specified fields in the response. "
-                    "Multiple values may be separated by commas."
-                    "Example: `exclude_fields=name,version`"
-                ),
-            ),
-        ],
-    ),
-)
+@INCLUDE_EXCLUDE_FIELDS_SCHEMA
 class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled until auth is added
     """View for api/v1/components"""
 

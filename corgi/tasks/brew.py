@@ -391,13 +391,21 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
 
     if "sources" in build_data:
         for source in build_data["sources"]:
-            # Handle case when key is present but value is None
+            component_name = source["meta"].pop("name")
             related_url = source["meta"].pop("url", "")
-            if related_url is None:
+            if not related_url:
+                # Handle case when key is present but value is None
                 related_url = ""
-            new_upstream, created = Component.objects.get_or_create(
+                if component_name.startswith("github.com"):
+                    related_url = f"https://{component_name}"
+                if "openshift-priv" in related_url:
+                    # Component name is something like github.com/openshift-priv/cluster-api
+                    # The public repo we want is just github.com/openshift/cluster-api
+                    related_url = related_url.replace("openshift-priv", "openshift")
+
+            new_upstream, created = Component.objects.update_or_create(
                 type=source["type"],
-                name=source["meta"].pop("name"),
+                name=component_name,
                 version=source["meta"].pop("version"),
                 defaults={
                     "meta_attr": source["meta"],

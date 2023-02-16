@@ -1098,6 +1098,130 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             return f"https://github.com/{name}/archive/{version}.zip"
         return ""
 
+    def _build_golang_download_url(self) -> str:
+        """
+        Return a download URL from the `purl` string for golang.
+        Due to the non deterministic nature of go package locations
+        this function works in a best effort basis.
+        """
+        # Copied from open PR upstream, not merged yet:
+        # https://github.com/package-url/packageurl-python/pull/113/files
+
+        purl_data = PackageURL.from_string(self.purl)
+
+        namespace = purl_data.namespace
+        name = purl_data.name
+        version = self.strip_release_from_version(purl_data.version)
+
+        download_url = purl_data.qualifiers.get("download_url")
+
+        if download_url:
+            return download_url
+
+        if not (namespace and name and version):
+            return ""
+
+        if "github.com" in namespace:
+
+            namespace = namespace.split("/")
+            exp = re.compile(r"v\d+")
+
+            # if the version is a pseudo version and contains several sections
+            # separated by - the last section is a git commit id
+            # what should be referred in the tree of the repo
+            # https://stackoverflow.com/questions/57355929/
+            # what-does-incompatible-in-go-mod-mean-will-it-cause-harm
+            if "-" in version:
+                version = version.split("-")[-1]
+                if exp.match(name):
+                    return f"https://{namespace[0]}/{namespace[1]}/{namespace[2]}/tree/{version}"
+                else:
+                    return f"https://{namespace[0]}/{namespace[1]}/{name}/tree/{version}"
+
+            # if the version refers to a module using semantic versioning,
+            # but not opted to use modules it has a
+            # '+incompatible' differentiator in the version what can be just omitted in our case.
+            # Ref: https://stackoverflow.com/questions/57355929/
+            # what-does-incompatible-in-go-mod-mean-will-it-cause-harm
+            # Ref: https://github.com/golang/go/wiki/
+            # Modules#can-a-module-consume-a-package-that-has-not-opted-in-to-modules
+
+            version = version.replace("+incompatible", "")
+            # If the referred module is in a directory of a repo,
+            # then parts of the url are added as a part of a tag
+            if len(namespace) >= 3:
+                # Constructing the basic part of the URL
+                url = f"https://{namespace[0]}/{namespace[1]}/{namespace[2]}/releases/tag/"
+                # adding the remains of the path to the tag
+                for i in range(3, len(namespace)):
+                    url += f"{namespace[i]}%2F"
+                # and finally adding the version
+                if exp.match(name):
+                    url = f"{url}{version}"
+                else:
+                    url = f"{url}{name}%2F{version}"
+                return url
+            else:
+                if exp.match(name):
+                    return f"https://{purl_data.namespace}/releases/tag/{version}"
+                else:
+                    return f"https://{purl_data.namespace}/{name}/releases/tag/{version}"
+        else:
+            if "-" in version:
+                # Version is not semantic version, therefore not compatible with pkg.go.dev
+                return ""
+            else:
+                return f"https://pkg.go.dev/{namespace}/{name}@{version}"
+
+    def _build_golang_repo_url(self) -> str:
+        """
+        Return a golang repository URL from the `purl` string.
+        Due to the non deterministic nature of go package locations
+        this function works in a best effort basis.
+        """
+
+        purl_data = PackageURL.from_string(self.purl)
+
+        namespace = purl_data.namespace
+        name = purl_data.name
+        version = self.strip_release_from_version(purl_data.version)
+
+        if not (namespace and name and version):
+            return ""
+
+        if "github.com" in namespace:
+
+            namespace = namespace.split("/")
+            exp = re.compile(r"v\d+")
+
+            # if the version is a pseudo version and contains several sections
+            # separated by - the last section is a git commit id
+            # what should be referred in the tree of the repo
+            # https://stackoverflow.com/questions/57355929/
+            # what-does-incompatible-in-go-mod-mean-will-it-cause-harm
+            if "-" in version:
+                if exp.match(name):
+                    return f"https://{namespace[0]}/{namespace[1]}/{namespace[2]}/"
+                else:
+                    return f"https://{namespace[0]}/{namespace[1]}/{name}/"
+
+            # If the referred module is in a directory of a repo,
+            # then parts of the url are added as a part of a tag
+            if len(namespace) >= 3:
+                # Constructing the basic part of the URL
+                return f"https://{namespace[0]}/{namespace[1]}/{namespace[2]}/"
+            else:
+                if exp.match(name):
+                    return f"https://{purl_data.namespace}"
+                else:
+                    return f"https://{purl_data.namespace}/{name}"
+        else:
+            if "-" in version:
+                # Version is not semantic version, therefore not compatible with pkg.go.dev
+                return ""
+            else:
+                return f"https://pkg.go.dev/{namespace}/{name}@{version}"
+
     def save_component_taxonomy(self):
         """Link related components together using foreign keys. Avoids repeated MPTT tree lookups"""
         upstreams = self.get_upstreams_pks(using="default")

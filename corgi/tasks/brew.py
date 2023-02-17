@@ -396,7 +396,7 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
             if not related_url:
                 # Handle case when key is present but value is None
                 related_url = ""
-                if component_name.startswith("github.com"):
+                if component_name.startswith("github.com/"):
                     related_url = f"https://{component_name}"
                 if "openshift-priv" in related_url:
                     # Component name is something like github.com/openshift-priv/cluster-api

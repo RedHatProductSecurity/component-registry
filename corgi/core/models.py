@@ -1085,6 +1085,19 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             return purl_version.rsplit("-", maxsplit=1)[0]
         return purl_version
 
+    def _build_github_download_url(self, purl: str) -> str:
+        """Return a GitHub download URL from the `purl` string."""
+        # TODO: Open PR for this upstream
+        # github download urls are just zip files like below:
+        # https://github.com/RedHatProductSecurity/django-mptt/archive/commit_hash.zip
+        purl_data = PackageURL.from_string(purl)
+        name = purl_data.name
+        version = self.strip_release_from_version(purl_data.version)
+
+        if name and version:
+            return f"https://github.com/{name}/archive/{version}.zip"
+        return ""
+
     def save_component_taxonomy(self):
         """Link related components together using foreign keys. Avoids repeated MPTT tree lookups"""
         upstreams = self.get_upstreams_pks(using="default")

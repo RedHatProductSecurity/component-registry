@@ -1530,13 +1530,19 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         # 5d9347b8dd19c70159f2f6e4?architecture=s390x&tag=v4.4.0-202007171809.p0
         # We can't build URLs like above because the hash is required,
         # but doesn't match any hash in the meta_attr / other properties.
-        # We could use repository_url instead, if we decide to store it on the model.
-        # Currently it's only in the meta_attr and should not be used (CORGI-341).
+        # repository_url is the customer-facing download location, but per OpenLCS
+        # they want to see the internal registry-proxy URL from Brew.
 
         # TODO: self.filename, AKA the filename of the image archive a container is included in,
         #  is always unset. This is not the digest SHA but the config layer SHA.
         elif self.type == Component.Type.CONTAINER_IMAGE:
-            return "https://catalog.redhat.com/software/containers/search"
+            pull_url = self.meta_attr.get("pull", [])
+            # First pull URL is based on hash, others are based on tags
+            # if we have an empty list, just return a generic URL
+            pull_url = (
+                pull_url[0] if pull_url else "https://catalog.redhat.com/software/containers/search"
+            )
+            return pull_url
 
         else:
             # Usually a remote-source component

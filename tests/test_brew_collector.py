@@ -193,6 +193,7 @@ def test_get_component_data(
             "name",
             "digests",
             "source",
+            "pull",
         }
     else:
         assert list(c.keys()) == [

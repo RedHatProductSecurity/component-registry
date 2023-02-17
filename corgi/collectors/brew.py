@@ -321,8 +321,10 @@ class Brew:
         remote_sources: dict[str, Tuple] = {}
         # TODO: Should we raise an error if build_info["extra"] is missing?
         if build_info["extra"]:
-            if "index" in build_info["extra"]["image"]:
-                component["meta"]["digests"] = build_info["extra"]["image"]["index"]["digests"]
+            index = build_info["extra"]["image"].get("index", {})
+            if index:
+                component["meta"]["digests"] = index["digests"]
+                component["meta"]["pull"] = index.get("pull", [])
 
             if "parent_build_id" in build_info["extra"]["image"]:
                 parent_image = build_info["extra"]["image"]["parent_build_id"]

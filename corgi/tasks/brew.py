@@ -216,10 +216,14 @@ def save_component(
     if not (softwarebuild and parent.obj is not None and parent.obj.is_srpm()):
         softwarebuild = None
 
-    # Handle case when key is present but value is None
     related_url = meta.pop("url", "")
-    if related_url is None:
+    if not related_url:
+        # Only RPMs have a URL header, containers might have below
+        related_url = meta.get("repository_url", "")
+    if not related_url:
+        # Handle case when key is present but value is None
         related_url = ""
+
     obj, _ = Component.objects.update_or_create(
         type=component_type,
         name=meta.pop("name", ""),
@@ -326,6 +330,7 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
         release=build_data["meta"]["release"],
         defaults={
             "software_build": softwarebuild,
+            "related_url": build_data["meta"].get("repository_url", ""),
             "meta_attr": build_data["meta"],
             "namespace": build_data.get("namespace", ""),
         },

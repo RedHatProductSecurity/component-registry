@@ -748,17 +748,20 @@ def test_product_components_versions(client, api_path):
     curl_srpm = SrpmComponentFactory(name="curl", software_build=sb2)
     curl_srpm.productstreams.add(ps1)
 
-    response = client.get(f"{api_path}/components?product_streams=o:redhat:rhel:8")
+    response = client.get(f"{api_path}/components?product_streams={ps2.ofuri}")
+    assert response.status_code == 200
+    assert response.json()["count"] == 2
+    response = client.get(f"{api_path}/components?product_streams={ps2.name}")
     assert response.status_code == 200
     assert response.json()["count"] == 2
 
     # ofuri returns 'latest' build root components (eg. including SRPM,
     #  noarch CONTAINER_IMAGE and RHEL_MODULE)
-    response = client.get(f"{api_path}/components?ofuri=o:redhat:rhel:7")
+    response = client.get(f"{api_path}/components?ofuri={ps1.ofuri}")
     assert response.status_code == 200
     assert response.json()["count"] == 1
 
-    response = client.get(f"{api_path}/components?name=curl&view=product")
+    response = client.get(f"{api_path}/components?name={curl.name}&view=product")
     assert response.status_code == 200
     assert response.json()["count"] == 2
 
@@ -773,10 +776,16 @@ def test_product_components(client, api_path):
     openssl.products.add(rhel)
     curl.products.add(rhel_br)
 
-    response = client.get(f"{api_path}/components?products=o:redhat:rhel")
+    response = client.get(f"{api_path}/components?products={rhel.ofuri}")
+    assert response.status_code == 200
+    assert response.json()["count"] == 1
+    response = client.get(f"{api_path}/components?products={rhel.name}")
     assert response.status_code == 200
     assert response.json()["count"] == 1
 
-    response = client.get(f"{api_path}/components?products=o:redhat:rhel-br")
+    response = client.get(f"{api_path}/components?products={rhel_br.ofuri}")
+    assert response.status_code == 200
+    assert response.json()["count"] == 1
+    response = client.get(f"{api_path}/components?products={rhel_br.name}")
     assert response.status_code == 200
     assert response.json()["count"] == 1

@@ -446,6 +446,176 @@ def test_get_upstream_container():
     ]
 
 
+def test_purl2url():
+    component = ComponentFactory(type=Component.Type.RPM, arch="src")
+    assert component.download_url == Component.RPM_PACKAGE_BROWSER
+    component = ComponentFactory(type=Component.Type.RPM)
+    assert component.download_url == Component.RPM_PACKAGE_BROWSER
+
+    component = ComponentFactory(type=Component.Type.CONTAINER_IMAGE)
+    assert component.download_url == Component.CONTAINER_CATALOG_SEARCH
+    component.meta_attr["pull"] = ["registry.redhat.io/openshift3/grafana"]
+    assert component.download_url == "registry.redhat.io/openshift3/grafana"
+    component.meta_attr["pull"] = []
+    assert component.download_url == Component.CONTAINER_CATALOG_SEARCH
+
+    component = ComponentFactory(type=Component.Type.GEM, release="")
+    assert component.download_url.startswith("https://rubygems.org/downloads/")
+    assert component.download_url.endswith(f"{component.name}-{component.version}.gem")
+
+    component = ComponentFactory(type=Component.Type.GENERIC)
+    assert component.download_url == ""
+    orig_name = component.name
+    component.name = f"github.com/{component.name}"
+    assert component.download_url.startswith("https://github.com/")
+    assert component.download_url.endswith(f"{orig_name}/archive/{component.version}.zip")
+    component.name = f"git@github.com:{component.name}"
+    assert component.download_url.startswith("https://github.com/")
+    assert component.download_url.endswith(f"{orig_name}/archive/{component.version}.zip")
+
+    component = ComponentFactory(type=Component.Type.GITHUB)
+    assert component.download_url.startswith("https://github.com/")
+    assert component.download_url.endswith(f"{component.name}/archive/{component.version}.zip")
+
+    # semantic version
+    # name with namespace component
+    component = ComponentFactory(
+        type=Component.Type.GOLANG,
+        namespace=Component.Namespace.UPSTREAM,
+        name="4d63.com/gochecknoglobals",
+        version="v3.0.0",
+    )
+    assert component.download_url.startswith("https://pkg.go.dev/")
+    assert component.download_url.endswith(f"{component.name}@{component.version}")
+
+    # no namespace
+    component = ComponentFactory(
+        type=Component.Type.GOLANG,
+        namespace=Component.Namespace.UPSTREAM,
+        name="gochecknoglobals",
+        version="v3.0.0",
+    )
+    assert component.download_url == ""
+
+    # non schemantic version
+    component = ComponentFactory(
+        type=Component.Type.GOLANG,
+        namespace=Component.Namespace.UPSTREAM,
+        name="4d63.com/gochecknoglobals",
+        version="v3.0.0-6",
+    )
+
+    assert component.download_url == ""
+    assert component.related_url == ""
+
+    # pseudo version
+    component = ComponentFactory(
+        type=Component.Type.GOLANG,
+        namespace=Component.Namespace.UPSTREAM,
+        name="github.com/14rcole/gopopulate",
+        version="v0.0.0-20180821133914-b175b219e774",
+    )
+    assert component.download_url == "https://github.com/14rcole/gopopulate/tree/b175b219e774"
+    assert component.related_url == "https://github.com/14rcole/gopopulate/"
+
+    # pseudo version with namespace length of 3
+    component = ComponentFactory(
+        type=Component.Type.GOLANG,
+        namespace=Component.Namespace.UPSTREAM,
+        version="v0.10.1-0.20221206164259-31a0ef8b04df",
+        name="github.com/3scale/3scale-operator/controllers/" "capabilities",
+    )
+    assert component.download_url == "https://github.com/3scale/3scale-operator/tree/31a0ef8b04df"
+    assert component.related_url == "https://github.com/3scale/3scale-operator/"
+
+    # semantic version
+    component = ComponentFactory(
+        type=Component.Type.GOLANG,
+        namespace=Component.Namespace.UPSTREAM,
+        version="1.18.0",
+        name="github.com/18F/hmacauth",
+    )
+    assert component.download_url == "https://github.com/18F/hmacauth/releases/tag/1.18.0"
+    assert component.related_url == "https://github.com/18F/hmacauth/"
+
+    # semantic version
+    component = ComponentFactory(
+        type=Component.Type.GOLANG,
+        namespace=Component.Namespace.UPSTREAM,
+        version="v1.18.0",
+        name="github.com/18F/hmacauth",
+    )
+    assert component.download_url == "https://github.com/18F/hmacauth/releases/tag/v1.18.0"
+    assert component.related_url == "https://github.com/18F/hmacauth/"
+
+    # incompatiable version
+    component = ComponentFactory(
+        type=Component.Type.GOLANG,
+        namespace=Component.Namespace.UPSTREAM,
+        version="v51.2.0+incompatible",
+        name="github.com/Azure/azure-sdk-for-go/services/dns/" "mgmt/2016-04-01/dns",
+    )
+    assert (
+        component.download_url == "https://github.com/Azure/azure-sdk-for-go/releases/tag/v51.2.0"
+    )
+    assert component.related_url == "https://github.com/Azure/azure-sdk-for-go/"
+
+    component = ComponentFactory(
+        type=Component.Type.MAVEN,
+        namespace=Component.Namespace.REDHAT,
+        name="io.vertx/vertx-grpc",
+        version="4.3.7.redhat-00002",
+    )
+    assert component.download_url == "https://repo1.maven.org/maven2/io/vertx/vertx-grpc/4.3.7/"
+    assert (
+        component.related_url == "https://mvnrepository.com/artifact/redhat/io.vertx/"
+        "vertx-grpc/4.3.7"
+    )
+
+    # maven with group_id
+    component = ComponentFactory(
+        type=Component.Type.MAVEN,
+        namespace="",
+        meta_attr={"group_id": "io.prestosql.benchto"},
+        name="benchto-driver",
+        version="0.7",
+    )
+    assert (
+        component.download_url == "https://repo1.maven.org/maven2/io/prestosql/benchto/"
+        "benchto-driver/0.7/"
+    )
+    assert (
+        component.related_url == "https://mvnrepository.com/artifact/io.prestosql.benchto/"
+        "benchto-driver/0.7"
+    )
+
+    # maven with classifier and type
+    component = ComponentFactory(
+        type=Component.Type.MAVEN,
+        namespace="",
+        meta_attr={"classifier": "noapt", "type": "jar", "group_id": "io.dekorate"},
+        name="knative-annotations",
+        version="2.11.3.redhat-00001",
+    )
+
+    assert (
+        component.download_url == "https://repo1.maven.org/maven2/io/dekorate/"
+        "knative-annotations/2.11.3/"
+    )
+    assert (
+        component.related_url == "https://mvnrepository.com/artifact/io.dekorate/"
+        "knative-annotations/2.11.3"
+    )
+
+    # pypi component
+    component = ComponentFactory(type=Component.Type.PYPI, name="aiohttp", version="3.6.2")
+
+    assert (
+        component.download_url == "https://pypi.io/packages/source/a/aiohttp/"
+        "aiohttp-3.6.2.tar.gz"
+    )
+
+
 def test_duplicate_insert_fails():
     """Test that DB constraints block inserting nodes with same (type, parent, purl)"""
     component = ComponentFactory()

@@ -17,4 +17,4 @@ python39-devel
 python39-pip
 python39-setuptools
 python39-wheel
-https://github.com/anchore/syft/releases/download/v0.60.1/syft_0.60.1_linux_amd64.rpm
+https://github.com/anchore/syft/releases/download/v0.72.0/syft_0.72.0_linux_amd64.rpm

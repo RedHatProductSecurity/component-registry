@@ -12,8 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class Syft:
-    # Syft packages types https://github.com/anchore/syft/
-    # blob/v0.60.1/syft/pkg/type.go#L8
+    # Syft packages types: https://github.com/anchore/syft/blob/v0.72.0/syft/pkg/type.go
     SYFT_PKG_TYPE_MAPPING = {
         "go-module": Component.Type.GOLANG,
         "npm": Component.Type.NPM,
@@ -59,8 +58,6 @@ class Syft:
         if "descriptor" in raw_result:
             syft_version = raw_result["descriptor"].get("version", "")
         if "artifacts" in raw_result:
-            # Syft packages types https://github.com/anchore/syft/
-            # blob/v0.60.1/syft/pkg/type.go#L8
             for artifact in raw_result["artifacts"]:
                 if artifact["type"] in cls.SYFT_PKG_TYPE_MAPPING:
                     pkg_type = cls.SYFT_PKG_TYPE_MAPPING[artifact["type"]]

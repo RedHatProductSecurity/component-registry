@@ -1,0 +1,201 @@
+{
+  "bomFormat" : "CycloneDX",
+  "specVersion" : "1.4",
+  "version" : 1,
+  "components" : [
+    {
+      "publisher" : "redhat",
+      "group" : "org.apache.qpid",
+      "name" : "qpid-jms-client",
+      "version" : "1.7.0.redhat-00002",
+      "description" : "The core JMS Client implementation",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "e69cb5121bba23728f633b73090ebd5b"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "585500822429915f6ed3958b90ca5fab0ec97b06"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "021a6ecae67b81ab2164d38293cb24c835bb0a5649403ab3fe725e0edbcb2285"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.apache.qpid/qpid-jms-client@1.7.0.redhat-00002?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "https://qpid.apache.org/qpid-jms-client"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.apache.org/jira/browse/QPIDJMS"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://mail-archives.apache.org/mod_mbox/www-announce/"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://gitbox.apache.org/repos/asf/qpid-jms"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWEAMETUS3YAA"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.amqphub.quarkus",
+      "name" : "quarkus-qpid-jms",
+      "version" : "0.38.0.redhat-00010",
+      "description" : "Use JMS APIs with AMQP 1.0 servers such as ActiveMQ Artemis, ActiveMQ 5, Qpid Broker-J, Qpid Dispatch router, Azure Service Bus, and more",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "480a118f38d7c1278cf66fd81004a8f5"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "3a48721d75d53731a66a7faebf982bcbd3fee7c5"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "f1e5bfdaee622b8bec1ef44fe9d909aba937498c97bf56075155cdf719f9fe31"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.amqphub.quarkus/quarkus-qpid-jms@0.38.0.redhat-00010?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "https://github.com/amqphub/quarkus-qpid-jms/quarkus-qpid-jms"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com/amqphub/quarkus-qpid-jms"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWYWRYDD3AQAA"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.amqphub.quarkus",
+      "name" : "quarkus-qpid-jms-deployment",
+      "version" : "0.38.0.redhat-00010",
+      "description" : "Extension enabling use of the AMQP 1.0 Qpid JMS client in a Quarkus application",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "7a655bd4c45a19ae980b6d2f0660de69"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "ad00adbe0f622026e95fdc846c03615a1dff0cb8"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "ae38d56fed89f10f1576abb7a9b38a3b3d668b61e4c4f3b8c9a2f96f1a01434c"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.amqphub.quarkus/quarkus-qpid-jms-deployment@0.38.0.redhat-00010?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "https://github.com/amqphub/quarkus-qpid-jms/quarkus-qpid-jms-deployment"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com/amqphub/quarkus-qpid-jms"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWYWRYDD3AQAA"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    }
+  ]
+}

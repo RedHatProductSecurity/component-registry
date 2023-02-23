@@ -1,0 +1,3328 @@
+{
+  "bomFormat" : "CycloneDX",
+  "specVersion" : "1.4",
+  "version" : 1,
+  "components" : [
+    {
+      "publisher" : "redhat",
+      "group" : "org.drools",
+      "name" : "drools-mvel-compiler",
+      "version" : "8.29.0.Final-redhat-00013",
+      "description" : "The repo contains all code related to Drools project.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "c07b969289f1a13bae156b13564e4a0e"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "662bf5071d7dd35abd65250959f3195d2dda8c2e"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "8d3c83f64d48ef5300df40df9dc2d877df5021f8cba966a1207480aaae28313b"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.drools/drools-mvel-compiler@8.29.0.Final-redhat-00013?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "http://www.drools.org/drools-build-parent/drools-model/drools-mvel-compiler"
+        },
+        {
+          "type" : "build-system",
+          "url" : "https://jenkins-kieci.rhcloud.com"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.jboss.org/browse/DROOLS"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/drools-setup"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com:kiegroup/drools"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAE"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.kie",
+      "name" : "kie-api",
+      "version" : "8.29.0.Final-redhat-00013",
+      "description" : "The Drools and jBPM public API which is backwards compatible between releases.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "7c10061a1255c117a0fb74a59b61a612"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "f70e22a3c55381520010c162c250dfb20f7f8a48"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "7aca258565e8cc51de493be098e0212d3e7f31963fd35a466936e4e633c8321a"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.kie/kie-api@8.29.0.Final-redhat-00013?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "http://www.drools.org/drools-build-parent/kie-api"
+        },
+        {
+          "type" : "build-system",
+          "url" : "https://jenkins-kieci.rhcloud.com"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.jboss.org/browse/DROOLS"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/drools-setup"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com:kiegroup/drools"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAE"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.drools",
+      "name" : "drools-canonical-model",
+      "version" : "8.29.0.Final-redhat-00013",
+      "description" : "The repo contains all code related to Drools project.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "46ec15959580cd20fe2f8a827c4aa1bf"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "db6bc76231ecc53c179246895489d84fb92e8966"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "73c6d357039f1c8657dd51e975ba026a5f13d15ee084461174c83802d48394f7"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.drools/drools-canonical-model@8.29.0.Final-redhat-00013?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "http://www.drools.org/drools-build-parent/drools-model/drools-canonical-model"
+        },
+        {
+          "type" : "build-system",
+          "url" : "https://jenkins-kieci.rhcloud.com"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.jboss.org/browse/DROOLS"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/drools-setup"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com:kiegroup/drools"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAE"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.drools",
+      "name" : "drools-wiring-static",
+      "version" : "8.29.0.Final-redhat-00013",
+      "description" : "This module implements the wiring API in a static hardcoded way, that is native compilation friendly.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "347ce3821868ce774b4b4d89f0ec5438"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "29aaa18b61a94920f9833fece7061dbe063b9191"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "d478034ba4141d7760d50b51e7555072447e9a08fc12cd3001dc45ddf5fe3a20"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.drools/drools-wiring-static@8.29.0.Final-redhat-00013?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "http://www.drools.org/drools-build-parent/drools-wiring/drools-wiring-static"
+        },
+        {
+          "type" : "build-system",
+          "url" : "https://jenkins-kieci.rhcloud.com"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.jboss.org/browse/DROOLS"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/drools-setup"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com:kiegroup/drools"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAE"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.drools",
+      "name" : "drools-util",
+      "version" : "8.29.0.Final-redhat-00013",
+      "description" : "The repo contains all code related to Drools project.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "c61a9b00115a80fa8e294415c4b374b9"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "9ed318d57fd986a3fe5ed7f17017765732cf3c73"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "5bb7349025f2d3b45abdb86971b2a48a9ff993006b5fa107210ea14104a59693"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.drools/drools-util@8.29.0.Final-redhat-00013?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "http://www.drools.org/drools-build-parent/drools-util"
+        },
+        {
+          "type" : "build-system",
+          "url" : "https://jenkins-kieci.rhcloud.com"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.jboss.org/browse/DROOLS"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/drools-setup"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com:kiegroup/drools"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAE"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.kie",
+      "name" : "kie-internal",
+      "version" : "8.29.0.Final-redhat-00013",
+      "description" : "The Drools and jBPM internal API which is NOT backwards compatible between releases.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "2daff2198a4b4bbe150560385a1cd0c5"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "ac85d1107dcf4b2bd425ca228b35e84580e27a0f"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "654a69af7f73ceb945f28064e30274d87c2984fa7c7ee4e78f4c6d0f0cca814c"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.kie/kie-internal@8.29.0.Final-redhat-00013?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "http://www.drools.org/drools-build-parent/kie-internal"
+        },
+        {
+          "type" : "build-system",
+          "url" : "https://jenkins-kieci.rhcloud.com"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.jboss.org/browse/DROOLS"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/drools-setup"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com:kiegroup/drools"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAE"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.kie",
+      "name" : "kie-util-maven-support",
+      "version" : "8.29.0.Final-redhat-00013",
+      "description" : "Top level pom for KIE utility classes",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "39062732272a2f4b2d8aab7fcd4cd226"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "1e4f62c12e7c0a489ed7c70aabd951d98de28323"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "7d32a2e268ac08228ba344a4686c396dbf4c2e383fc3925f18c093700de4ca6e"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.kie/kie-util-maven-support@8.29.0.Final-redhat-00013?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "http://www.drools.org/drools-build-parent/kie-util/kie-util-maven-support"
+        },
+        {
+          "type" : "build-system",
+          "url" : "https://jenkins-kieci.rhcloud.com"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.jboss.org/browse/DROOLS"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/drools-setup"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com:kiegroup/drools"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAE"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.drools",
+      "name" : "drools-tms",
+      "version" : "8.29.0.Final-redhat-00013",
+      "description" : "The repo contains all code related to Drools project.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "cf39ca373a84d2cc56a2195b40352a28"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "0d3956bcac012b0f729dff85fca2f974cdde0227"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "be886554d7ee0cfb6b4ec57f827b9391e19a6b3a0c7c236ffcdb7d9e69d2d970"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.drools/drools-tms@8.29.0.Final-redhat-00013?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "http://www.drools.org/drools-build-parent/drools-tms"
+        },
+        {
+          "type" : "build-system",
+          "url" : "https://jenkins-kieci.rhcloud.com"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.jboss.org/browse/DROOLS"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/drools-setup"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com:kiegroup/drools"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAE"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.drools",
+      "name" : "drools-io",
+      "version" : "8.29.0.Final-redhat-00013",
+      "description" : "The repo contains all code related to Drools project.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "c400f9464b4fa09338e705280f8fae3c"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "003f9a4e2effccc2096b5af33f49cadba3f95fa1"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "1d9600cef61f9772122c4223c732893914e43b3bc20703621cdceb78f4b2408d"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.drools/drools-io@8.29.0.Final-redhat-00013?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "http://www.drools.org/drools-build-parent/drools-io"
+        },
+        {
+          "type" : "build-system",
+          "url" : "https://jenkins-kieci.rhcloud.com"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.jboss.org/browse/DROOLS"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/drools-setup"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com:kiegroup/drools"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAE"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.drools",
+      "name" : "drools-drl-ast",
+      "version" : "8.29.0.Final-redhat-00013",
+      "description" : "The repo contains all code related to Drools project.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "e265aee7a60c3229115fab50a0ad558e"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "19597251814723665483b177be4331d95b3eff8b"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "7e7ce630365d871d449166c940fa854d47fbc13f7fd2c36bc55c2cd0e822459e"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.drools/drools-drl-ast@8.29.0.Final-redhat-00013?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "http://www.drools.org/drools-build-parent/drools-drl-ast"
+        },
+        {
+          "type" : "build-system",
+          "url" : "https://jenkins-kieci.rhcloud.com"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.jboss.org/browse/DROOLS"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/drools-setup"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com:kiegroup/drools"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAE"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.drools",
+      "name" : "drools-drl-extensions",
+      "version" : "8.29.0.Final-redhat-00013",
+      "description" : "The repo contains all code related to Drools project.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "6135a295993f2487e6ab5ad2882a037e"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "5345a3512765e69c6fa7fce11f8c7052831c0f7c"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "8a52e4d589117d67252a1494f83fde2916bb4837d763099ad3ded75a946c565f"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.drools/drools-drl-extensions@8.29.0.Final-redhat-00013?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "http://www.drools.org/drools-build-parent/drools-drl-extensions"
+        },
+        {
+          "type" : "build-system",
+          "url" : "https://jenkins-kieci.rhcloud.com"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.jboss.org/browse/DROOLS"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/drools-setup"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com:kiegroup/drools"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAE"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.drools",
+      "name" : "drools-engine",
+      "version" : "8.29.0.Final-redhat-00013",
+      "description" : "Bundle module for drools engine with rules evaluation based on executable model.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "39ec3cf2b3f9d399ae5da9c8cfdf6323"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "0e6f7cee4740924630d9fbed9aa8393d953cb86e"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "594c9fee31cdebfdec861cd8a6544b14e39d47d21146a5b4225784253a912f0d"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.drools/drools-engine@8.29.0.Final-redhat-00013?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "http://www.drools.org/drools-build-parent/drools-engine"
+        },
+        {
+          "type" : "build-system",
+          "url" : "https://jenkins-kieci.rhcloud.com"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.jboss.org/browse/DROOLS"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/drools-setup"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com:kiegroup/drools"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAE"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.drools",
+      "name" : "drools-alphanetwork-compiler",
+      "version" : "8.29.0.Final-redhat-00013",
+      "description" : "The repo contains all code related to Drools project.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "26a2b85b8df8b1e939c159a70fe99b77"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "54ff141f68d0f73b2008f3f455fb63e2c010e0c2"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "41e4f743b536836f6f01ff19fe9f9df0bbb6d7c04b6db87d8e228053fb2b2c79"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.drools/drools-alphanetwork-compiler@8.29.0.Final-redhat-00013?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "http://www.drools.org/drools-build-parent/drools-alphanetwork-compiler"
+        },
+        {
+          "type" : "build-system",
+          "url" : "https://jenkins-kieci.rhcloud.com"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.jboss.org/browse/DROOLS"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/drools-setup"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com:kiegroup/drools"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAE"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.drools",
+      "name" : "drools-kiesession",
+      "version" : "8.29.0.Final-redhat-00013",
+      "description" : "The repo contains all code related to Drools project.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "6c42a22b9aee2318e981807335794819"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "3d5c44886085e7bdc4102b428c5add521054322f"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "bb6f889461e4f812f5dd4a0872c89af4e61627e98092edf8d7707f327c93f9d6"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.drools/drools-kiesession@8.29.0.Final-redhat-00013?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "http://www.drools.org/drools-build-parent/drools-kiesession"
+        },
+        {
+          "type" : "build-system",
+          "url" : "https://jenkins-kieci.rhcloud.com"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.jboss.org/browse/DROOLS"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/drools-setup"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com:kiegroup/drools"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAE"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.drools",
+      "name" : "drools-model-compiler",
+      "version" : "8.29.0.Final-redhat-00013",
+      "description" : "The repo contains all code related to Drools project.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "1ca824120a13d58a9d5ec70d3c9182ef"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "b559b6d4d5390a10b4fd437dd194ab10d92b6f6d"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "ba013cadb75b29d2c2337004a127b7336de18a60ca054c6e1de234700fef711f"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.drools/drools-model-compiler@8.29.0.Final-redhat-00013?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "http://www.drools.org/drools-build-parent/drools-model/drools-model-compiler"
+        },
+        {
+          "type" : "build-system",
+          "url" : "https://jenkins-kieci.rhcloud.com"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.jboss.org/browse/DROOLS"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/drools-setup"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com:kiegroup/drools"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAE"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.kie",
+      "name" : "kie-memory-compiler",
+      "version" : "8.29.0.Final-redhat-00013",
+      "description" : "Utility module to compile and load in a classloader programmatically generated Java Source Files",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "77242bce5b348acb7899754699296d43"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "b0e48e4207acc9eb024ae7622d9ea8254e9ccbf6"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "d3137f037606f9aca879d95d4ecff0f25efad90b4ee53d22c25c594d52122583"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.kie/kie-memory-compiler@8.29.0.Final-redhat-00013?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "http://www.drools.org/drools-build-parent/kie-memory-compiler"
+        },
+        {
+          "type" : "build-system",
+          "url" : "https://jenkins-kieci.rhcloud.com"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.jboss.org/browse/DROOLS"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/drools-setup"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com:kiegroup/drools"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAE"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.drools",
+      "name" : "drools-compiler",
+      "version" : "8.29.0.Final-redhat-00013",
+      "description" : "The repo contains all code related to Drools project.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "73cca6bf8c16db4c267cf677d1b0b5c1"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "3730722f7fa08b7603c3643f0b50d6e07409297e"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "805dcde49e916b5247320cdb037b008c81a8a05b76060808f9c084298eee6125"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.drools/drools-compiler@8.29.0.Final-redhat-00013?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "http://www.drools.org/drools-build-parent/drools-compiler"
+        },
+        {
+          "type" : "build-system",
+          "url" : "https://jenkins-kieci.rhcloud.com"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.jboss.org/browse/DROOLS"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/drools-setup"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com:kiegroup/drools"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAE"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.drools",
+      "name" : "drools-mvel-parser",
+      "version" : "8.29.0.Final-redhat-00013",
+      "description" : "Parsing of constraints in LHS",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "43b9e45d5adf3f9b0710649c64f8bf18"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "56e8b57415c831d043f439fea2e841e76eaabdaf"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "a011f286a3de0e734060152d0164b47b84d69f97ca03f321d63326668553b46b"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.drools/drools-mvel-parser@8.29.0.Final-redhat-00013?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "http://www.drools.org/drools-build-parent/drools-model/drools-mvel-parser"
+        },
+        {
+          "type" : "build-system",
+          "url" : "https://jenkins-kieci.rhcloud.com"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.jboss.org/browse/DROOLS"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/drools-setup"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com:kiegroup/drools"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAE"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.drools",
+      "name" : "drools-model-codegen",
+      "version" : "8.29.0.Final-redhat-00013",
+      "description" : "The repo contains all code related to Drools project.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "d10d09c6fa0d36ffb338fe76b375d662"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "b88e74aff6439b0bfc8a49332657484c3dc19678"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "3048f0889f5077a62eedf3510de3605a1a46edcd3bfe3421ba5b5807321211d3"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.drools/drools-model-codegen@8.29.0.Final-redhat-00013?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "http://www.drools.org/drools-build-parent/drools-model/drools-model-codegen"
+        },
+        {
+          "type" : "build-system",
+          "url" : "https://jenkins-kieci.rhcloud.com"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.jboss.org/browse/DROOLS"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/drools-setup"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com:kiegroup/drools"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAE"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.drools",
+      "name" : "drools-wiring-api",
+      "version" : "8.29.0.Final-redhat-00013",
+      "description" : "This module defines an API for wiring classloaders and other services used in Drools.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "7ffb15ec48c6a1ca877b71d94c61c085"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "c81fd8f29dc6a51a62529911f78b50d77cd3b385"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "71c679825e2045a5ac85dbfb7ec976b2132db714b8081e7268a1f07dcb4819a8"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.drools/drools-wiring-api@8.29.0.Final-redhat-00013?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "http://www.drools.org/drools-build-parent/drools-wiring/drools-wiring-api"
+        },
+        {
+          "type" : "build-system",
+          "url" : "https://jenkins-kieci.rhcloud.com"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.jboss.org/browse/DROOLS"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/drools-setup"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com:kiegroup/drools"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAE"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.drools",
+      "name" : "drools-codegen-common",
+      "version" : "8.29.0.Final-redhat-00013",
+      "description" : "The repo contains all code related to Drools project.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "0e52a45c8da5484779e5e6f6dea620d7"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "cb51470f3b2dd3c5630a69727b7e0eb1f51d06be"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "d1a5cda758df05da52c1f4c4ec491cde90aea9fe2d9f3e94171680504b86d4e9"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.drools/drools-codegen-common@8.29.0.Final-redhat-00013?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "http://www.drools.org/drools-build-parent/drools-model/drools-codegen-common"
+        },
+        {
+          "type" : "build-system",
+          "url" : "https://jenkins-kieci.rhcloud.com"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.jboss.org/browse/DROOLS"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/drools-setup"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com:kiegroup/drools"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAE"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.drools",
+      "name" : "drools-drl-parser",
+      "version" : "8.29.0.Final-redhat-00013",
+      "description" : "The repo contains all code related to Drools project.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "8e669d4ab09971df0c16409f458d9f37"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "4f9d0b03795f5840204a0a145f9e859b77ba7214"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "a82a88faa5f9573ac38b8f5e5908373f5bbce5316a9910bd9fcfb5ce79a230f3"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.drools/drools-drl-parser@8.29.0.Final-redhat-00013?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "http://www.drools.org/drools-build-parent/drools-drl-parser"
+        },
+        {
+          "type" : "build-system",
+          "url" : "https://jenkins-kieci.rhcloud.com"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.jboss.org/browse/DROOLS"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/drools-setup"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com:kiegroup/drools"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAE"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.kie",
+      "name" : "kie-util-xml",
+      "version" : "8.29.0.Final-redhat-00013",
+      "description" : "Top level pom for KIE utility classes",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "960485743b5e255dd8b313cd2869a053"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "911763dec38906734d9230433ada408e299b1fbe"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "de3935b97a4e11e95feb2cc24e615a5861cf5010572be312c9753f8d358b141a"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.kie/kie-util-xml@8.29.0.Final-redhat-00013?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "http://www.drools.org/drools-build-parent/kie-util/kie-util-xml"
+        },
+        {
+          "type" : "build-system",
+          "url" : "https://jenkins-kieci.rhcloud.com"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.jboss.org/browse/DROOLS"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/drools-setup"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com:kiegroup/drools"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAE"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.drools",
+      "name" : "drools-core",
+      "version" : "8.29.0.Final-redhat-00013",
+      "description" : "The repo contains all code related to Drools project.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "a32be3ab93d14edba4b5355bcd4a5494"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "a5e928507beab301d8a3f598f14ce5a46cbae53e"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "9671eb7051bdc1541cf0933e7a80202306b050d20c2c59677e47908e5da14600"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.drools/drools-core@8.29.0.Final-redhat-00013?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "http://www.drools.org/drools-build-parent/drools-core"
+        },
+        {
+          "type" : "build-system",
+          "url" : "https://jenkins-kieci.rhcloud.com"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.jboss.org/browse/DROOLS"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/drools-setup"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com:kiegroup/drools"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAE"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.drools",
+      "name" : "drools-ecj",
+      "version" : "8.29.0.Final-redhat-00013",
+      "description" : "The repo contains all code related to Drools project.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "2705f85f054247056c6e2c4d63e51102"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "be80231e4cec3298da762bf052b58a94b1cdc517"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "983273686083447b469b1c7d25c2062b2b4d2a334731bc5ab75ef8b591e1eaf2"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.drools/drools-ecj@8.29.0.Final-redhat-00013?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "http://www.drools.org/drools-build-parent/drools-ecj"
+        },
+        {
+          "type" : "build-system",
+          "url" : "https://jenkins-kieci.rhcloud.com"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.jboss.org/browse/DROOLS"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/drools-setup"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com:kiegroup/drools"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAE"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.jfree",
+      "name" : "jfreechart",
+      "version" : "1.5.4.redhat-00002",
+      "description" : "JFreeChart is a class library, written in Java, for generating charts. Utilising the Java2D API, it supports a wide range of chart types including bar charts, pie charts, line charts, XY-plots, time series plots, Sankey charts and more.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "e44b622b968674c5b94427131284f674"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "3ee65ec43316c0567f6be72704df286497f862b6"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "186ecac6df1c3bda21e036eaec54cda1122adef41285c9419d7757da92ca3232"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "name" : "GNU Lesser General Public Licence",
+            "url" : "http://www.gnu.org/licenses/lgpl.txt"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.jfree/jfreechart@1.5.4.redhat-00002?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "http://www.jfree.org/jfreechart/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://github.com/jfree/jfreechart/issues"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com/jfree/jfreechart"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWSVL7JTK3QAA"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.freemarker",
+      "name" : "freemarker",
+      "version" : "2.3.31.redhat-00001",
+      "description" : "FreeMarker is a \"template engine\"; a generic tool to generate text output based on templates.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "bb01a8036f3f2b97d1976b9e0ca31d3a"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "6ca610324223dc827cf9a556270e2f8c30e25e7f"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "136b16435d4b755eb3f6b45744188410148741dc610bcb825e556b2181f34c91"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.freemarker/freemarker@2.3.31.redhat-00001?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "http://freemarker.apache.org/"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.jboss.org/"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "http://lists.jboss.org/pipermail/jboss-user/"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://git-wip-us.apache.org/repos/asf/incubator-freemarker"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "94641"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.apache.commons",
+      "name" : "commons-math3",
+      "version" : "3.6.1.redhat-00001",
+      "description" : "The Apache Commons Math project is a library of lightweight, self-contained mathematics and statistics components addressing the most common practical problems not immediately available in the Java programming language or commons-lang.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "8eb2fbf6b806a6bf3c33938dfd2c1f09"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "e3e04cfbad5dc4447abaf35b779ccc2bd44c25de"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "414ef89113b42fce28921647c862b5e0ba18c80359b5069c468ee975a959deed"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.apache.commons/commons-math3@3.6.1.redhat-00001?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "http://commons.apache.org/proper/commons-math/"
+        },
+        {
+          "type" : "build-system",
+          "url" : "https://continuum-ci.apache.org/"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "http://issues.apache.org/jira/browse/MATH"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "http://mail-archives.apache.org/mod_mbox/commons-user/"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://git-wip-us.apache.org/repos/asf/commons-math"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "52413"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.optaplanner",
+      "name" : "optaplanner-quarkus-jackson-deployment",
+      "version" : "8.33.0.Final-redhat-00004",
+      "description" : "Quarkus deployment module for optaplanner-quarkus-jackson.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "4dffd861b2f2e5237995d3fe802f55c1"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "169069212e61ddc64e802c332733ee252d2b233c"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "fd0c2c4f41b1652029473ce4b4200867dbbc622a0e201b2de6e9368f429971f4"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.optaplanner/optaplanner-quarkus-jackson-deployment@8.33.0.Final-redhat-00004?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "https://www.optaplanner.org/optaplanner-quarkus-jackson-parent/optaplanner-quarkus-jackson-deployment"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.redhat.com/browse/PLANNER"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/optaplanner-dev"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com/kiegroup/optaplanner"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAG"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.optaplanner",
+      "name" : "optaplanner-constraint-drl",
+      "version" : "8.33.0.Final-redhat-00004",
+      "description" : "OptaPlanner solves planning problems. This lightweight, embeddable planning engine implements powerful and scalable algorithms to optimize business resource scheduling and planning. This module contains a deprecated implementation of constraint DRL.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "ee41751bb3c3f0c81fe08a5530539162"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "6dc1bcb9627c4fa57e19211c5716ab4908e01d4c"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "03c3116b02ed87a95dbbcfa3365ed48a807b897931464a2d1e660d5ad9f3b4dc"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.optaplanner/optaplanner-constraint-drl@8.33.0.Final-redhat-00004?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "https://www.optaplanner.org"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.redhat.com/browse/PLANNER"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/optaplanner-dev"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com/kiegroup/optaplanner"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAG"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.optaplanner",
+      "name" : "optaplanner-persistence-jackson",
+      "version" : "8.33.0.Final-redhat-00004",
+      "description" : "OptaPlanner solves planning problems. This lightweight, embeddable planning engine implements powerful and scalable algorithms to optimize business resource scheduling and planning. This module contains the Jackson integration.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "77c9605dd41dd2c520bf3fb0d4adabed"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "5142c3b47dbbd0d657bf40996608ee577b776735"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "9916688e1e720b936a308946dff89ed732f79888199001a7a4cf1f76e5875f0e"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.optaplanner/optaplanner-persistence-jackson@8.33.0.Final-redhat-00004?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "https://www.optaplanner.org"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.redhat.com/browse/PLANNER"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/optaplanner-dev"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com/kiegroup/optaplanner"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAG"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.optaplanner",
+      "name" : "optaplanner-quarkus-jackson",
+      "version" : "8.33.0.Final-redhat-00004",
+      "description" : "Activate Jackson bindings for OptaPlanner's Score classes",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "a79cd2b1b4477755f117838624389140"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "9512c2c5bfa31d6c04b35d7b74ab0d892c5384ed"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "7def0cfc322642370f329b6678551d23ad8e00f8d3922c7f2a510980e479f15d"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.optaplanner/optaplanner-quarkus-jackson@8.33.0.Final-redhat-00004?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "https://www.optaplanner.org/optaplanner-quarkus-jackson-parent/optaplanner-quarkus-jackson"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.redhat.com/browse/PLANNER"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/optaplanner-dev"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com/kiegroup/optaplanner"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAG"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.optaplanner",
+      "name" : "optaplanner-quarkus-benchmark",
+      "version" : "8.33.0.Final-redhat-00004",
+      "description" : "Benchmark an OptaPlanner project to power tweak the solver configuration for speed and scalability.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "0ef88609e7bfec82324ed2c9bfa4c57d"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "e3ff01560e9893c9533ebcf302d58277dbb30a86"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "ceae932e02f7a7892b17355647d9335e5ccbf0f945a85e9d0a26d76868009532"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.optaplanner/optaplanner-quarkus-benchmark@8.33.0.Final-redhat-00004?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "https://www.optaplanner.org/optaplanner-quarkus-benchmark-parent/optaplanner-quarkus-benchmark"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.redhat.com/browse/PLANNER"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/optaplanner-dev"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com/kiegroup/optaplanner"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAG"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.optaplanner",
+      "name" : "optaplanner-quarkus-benchmark-deployment",
+      "version" : "8.33.0.Final-redhat-00004",
+      "description" : "Quarkus deployment module for optaplanner-quarkus-benchmark.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "5a79154c4ef892caf2f06a7288e39773"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "55533f318f4ee243b99c4ffea6675c325521c352"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "4ba7897d754330bc4a5432998cdea13758bc6a1adba7f27d76e9783522d49d25"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.optaplanner/optaplanner-quarkus-benchmark-deployment@8.33.0.Final-redhat-00004?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "https://www.optaplanner.org/optaplanner-quarkus-benchmark-parent/optaplanner-quarkus-benchmark-deployment"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.redhat.com/browse/PLANNER"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/optaplanner-dev"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com/kiegroup/optaplanner"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAG"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.optaplanner",
+      "name" : "optaplanner-persistence-common",
+      "version" : "8.33.0.Final-redhat-00004",
+      "description" : "OptaPlanner solves planning problems. This lightweight, embeddable planning engine implements powerful and scalable algorithms to optimize business resource scheduling and planning. This module contains the common persistence integration.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "657e6dbf5ce16fafe39913b19d0cd51d"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "cd2008d0f19895d4782974107890df610cef0271"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "43cb25dbdf8ec48360178a34f0fba50869649c682fbf8e2c28673376c7de5e56"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.optaplanner/optaplanner-persistence-common@8.33.0.Final-redhat-00004?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "https://www.optaplanner.org"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.redhat.com/browse/PLANNER"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/optaplanner-dev"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com/kiegroup/optaplanner"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAG"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.optaplanner",
+      "name" : "optaplanner-quarkus-deployment",
+      "version" : "8.33.0.Final-redhat-00004",
+      "description" : "Quarkus deployment module for optaplanner-quarkus.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "ad13104e09dd85fb6e5b08a98130bb65"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "4ed11f6ba4a1c12f46b744d00efe8ebce9dd0ab7"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "285ff8ca956c2ad52d89d91bffecabf376775ca90d7ef716a534666d8919989c"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.optaplanner/optaplanner-quarkus-deployment@8.33.0.Final-redhat-00004?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "https://www.optaplanner.org/optaplanner-quarkus-parent/optaplanner-quarkus-deployment"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.redhat.com/browse/PLANNER"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/optaplanner-dev"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com/kiegroup/optaplanner"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAG"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.optaplanner",
+      "name" : "optaplanner-quarkus-jsonb-deployment",
+      "version" : "8.33.0.Final-redhat-00004",
+      "description" : "Quarkus deployment module for optaplanner-quarkus-jsonb.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "98aec32d5d042564684ad1d4185743a4"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "164ba34a068fcf0bb3e80975368700e88d9281ac"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "1bb9294bb2979367b6264a09cc952ceb0f73245742d01f4b78061276cef283ed"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.optaplanner/optaplanner-quarkus-jsonb-deployment@8.33.0.Final-redhat-00004?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "https://www.optaplanner.org/optaplanner-quarkus-jsonb-parent/optaplanner-quarkus-jsonb-deployment"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.redhat.com/browse/PLANNER"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/optaplanner-dev"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com/kiegroup/optaplanner"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAG"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.optaplanner",
+      "name" : "optaplanner-persistence-jsonb",
+      "version" : "8.33.0.Final-redhat-00004",
+      "description" : "OptaPlanner solves planning problems. This lightweight, embeddable planning engine implements powerful and scalable algorithms to optimize business resource scheduling and planning. This module contains the JSON-B integration.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "e0d1257c038214e92d46428b6ca4ba8d"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "654e55df4171bee6a533ef318a27fad86dccc014"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "115d6da5e12aeeea60c71e4f8dce1c7874745ee01571891c88f5c1f001194b4f"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.optaplanner/optaplanner-persistence-jsonb@8.33.0.Final-redhat-00004?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "https://www.optaplanner.org"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.redhat.com/browse/PLANNER"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/optaplanner-dev"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com/kiegroup/optaplanner"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAG"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.optaplanner",
+      "name" : "optaplanner-quarkus",
+      "version" : "8.33.0.Final-redhat-00004",
+      "description" : "Solve planning and scheduling with AI constraint optimization of vehicle routes, employee rosters, maintenance, tasks, lessons, conferences, ...",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "40704f1d4bca08d7edb3abcfe85415bb"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "3cd5222dfc0e245e167eab3a1c1516222c366d1d"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "c4ba0d8d369be833905239c9c233b048315ced6c77d55b5032db17850124cbb2"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.optaplanner/optaplanner-quarkus@8.33.0.Final-redhat-00004?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "https://www.optaplanner.org/optaplanner-quarkus-parent/optaplanner-quarkus"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.redhat.com/browse/PLANNER"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/optaplanner-dev"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com/kiegroup/optaplanner"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAG"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.optaplanner",
+      "name" : "optaplanner-constraint-streams-common",
+      "version" : "8.33.0.Final-redhat-00004",
+      "description" : "OptaPlanner solves planning problems. This lightweight, embeddable planning engine implements powerful and scalable algorithms to optimize business resource scheduling and planning. This module contains classes common to each implementation of Constraint streams.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "438c387954e462f374da9debcb222f41"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "28c0e62f41ad3315d09f7311f7c1609e4cd5735d"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "293b76ec36f4e74c6f7c2e3976eeeb494295f646e4af3633dfe9fe6c2d6d3465"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.optaplanner/optaplanner-constraint-streams-common@8.33.0.Final-redhat-00004?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "https://www.optaplanner.org"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.redhat.com/browse/PLANNER"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/optaplanner-dev"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com/kiegroup/optaplanner"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAG"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.optaplanner",
+      "name" : "optaplanner-quarkus-jsonb",
+      "version" : "8.33.0.Final-redhat-00004",
+      "description" : "Activate JSON-B bindings for OptaPlanner's Score classes",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "8b3dc4b16a699af5a14f11625a634f8f"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "80485d4ca34ae4a18c0c1ca3cf8c5d16cb56748c"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "e29bf98d4fcf4ef26588658970e65680599f83c995494de40ca835aa2d9efacc"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.optaplanner/optaplanner-quarkus-jsonb@8.33.0.Final-redhat-00004?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "https://www.optaplanner.org/optaplanner-quarkus-jsonb-parent/optaplanner-quarkus-jsonb"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.redhat.com/browse/PLANNER"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/optaplanner-dev"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com/kiegroup/optaplanner"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAG"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.optaplanner",
+      "name" : "optaplanner-core",
+      "version" : "8.33.0.Final-redhat-00004",
+      "description" : "OptaPlanner solves planning problems. This lightweight, embeddable planning engine implements powerful and scalable algorithms to optimize business resource scheduling and planning. Aggregate dependency to bring in optaplanner-core and all the score directors.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "c2118daa30e325b88a4d1125d876870f"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "1d7b51b18d22f10df661e7f1583d68a32ff32949"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "0b0a8c8805a8f847a07a5802e53b6690031fcfcf975ca68f3d40683fc36134f7"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.optaplanner/optaplanner-core@8.33.0.Final-redhat-00004?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "https://www.optaplanner.org"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.redhat.com/browse/PLANNER"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/optaplanner-dev"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com/kiegroup/optaplanner"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAG"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.optaplanner",
+      "name" : "optaplanner-persistence-jaxb",
+      "version" : "8.33.0.Final-redhat-00004",
+      "description" : "OptaPlanner solves planning problems. This lightweight, embeddable planning engine implements powerful and scalable algorithms to optimize business resource scheduling and planning. This module contains the JAXB integration.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "76074f3a8f2093f7301d1933900c3083"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "5a2c2c187df1f6bfdc312b19c07a2ab114d734d1"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "ee7bb82d5c57195525c0ffac7ede33e2b3df9f075d7f2116892b33e3cd9805d7"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.optaplanner/optaplanner-persistence-jaxb@8.33.0.Final-redhat-00004?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "https://www.optaplanner.org"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.redhat.com/browse/PLANNER"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/optaplanner-dev"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com/kiegroup/optaplanner"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAG"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.optaplanner",
+      "name" : "optaplanner-constraint-streams-drools",
+      "version" : "8.33.0.Final-redhat-00004",
+      "description" : "OptaPlanner solves planning problems. This lightweight, embeddable planning engine implements powerful and scalable algorithms to optimize business resource scheduling and planning. This module contains the Drools implementation of Constraint streams.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "6f8a366186bc90a149c62670515619ae"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "2bac8074080676381853c148550c5c21a84f7511"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "1b2062e85567f611d9ceb6355a1153211a0e8021e55556750f74836372127843"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.optaplanner/optaplanner-constraint-streams-drools@8.33.0.Final-redhat-00004?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "https://www.optaplanner.org"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.redhat.com/browse/PLANNER"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/optaplanner-dev"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com/kiegroup/optaplanner"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAG"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.optaplanner",
+      "name" : "optaplanner-benchmark",
+      "version" : "8.33.0.Final-redhat-00004",
+      "description" : "OptaPlanner solves planning problems. This lightweight, embeddable planning engine implements powerful and scalable algorithms to optimize business resource scheduling and planning. This module contains the benchmarker toolkit.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "96562549b7c222de93877d6b0005478b"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "82b742b38411d7d7c58efcd406ae6459fbecbc8d"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "4e529fc51abba5a21f3392becdaadbaccfdaf80877fd9451a6c657f98360ed6f"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.optaplanner/optaplanner-benchmark@8.33.0.Final-redhat-00004?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "https://www.optaplanner.org"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.redhat.com/browse/PLANNER"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/optaplanner-dev"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com/kiegroup/optaplanner"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAG"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    },
+    {
+      "publisher" : "redhat",
+      "group" : "org.optaplanner",
+      "name" : "optaplanner-core-impl",
+      "version" : "8.33.0.Final-redhat-00004",
+      "description" : "OptaPlanner solves planning problems. This lightweight, embeddable planning engine implements powerful and scalable algorithms to optimize business resource scheduling and planning. This module contains the planning engine itself.",
+      "hashes" : [
+        {
+          "alg" : "MD5",
+          "content" : "6891c6b0bea00027ad2dd231d1e9b926"
+        },
+        {
+          "alg" : "SHA-1",
+          "content" : "1b154498237052a3804a16ca96064918e869a196"
+        },
+        {
+          "alg" : "SHA-256",
+          "content" : "119c54874919297754090a28d9db3bb3edfc1f01d58e14d2e6632be7bd679ab5"
+        }
+      ],
+      "licenses" : [
+        {
+          "license" : {
+            "id" : "Apache-2.0"
+          }
+        }
+      ],
+      "purl" : "pkg:maven/org.optaplanner/optaplanner-core-impl@8.33.0.Final-redhat-00004?type=jar",
+      "externalReferences" : [
+        {
+          "type" : "website",
+          "url" : "https://www.optaplanner.org"
+        },
+        {
+          "type" : "distribution",
+          "url" : "https://maven.repository.redhat.com/ga/"
+        },
+        {
+          "type" : "issue-tracker",
+          "url" : "https://issues.redhat.com/browse/PLANNER"
+        },
+        {
+          "type" : "mailing-list",
+          "url" : "https://groups.google.com/forum/#!forum/optaplanner-dev"
+        },
+        {
+          "type" : "vcs",
+          "url" : "https://github.com/kiegroup/optaplanner"
+        }
+      ],
+      "properties" : [
+        {
+          "name" : "package:type",
+          "value" : "maven"
+        },
+        {
+          "name" : "package:language",
+          "value" : "java"
+        },
+        {
+          "name" : "build-id",
+          "value" : "AWZCLOSCTAQAG"
+        },
+        {
+          "name" : "build-system",
+          "value" : "PNC"
+        }
+      ],
+      "type" : "library"
+    }
+  ]
+}

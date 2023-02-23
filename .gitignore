@@ -139,3 +139,6 @@ Makefile
 
 # SonarQube
 .scannerwork/
+
+# Vim Temp files
+*.swp

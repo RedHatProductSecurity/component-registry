@@ -19,17 +19,21 @@ class CycloneDxSbom:
             for p in comp["properties"]:
                 properties.update({p["name"]: p["value"]})
 
+            licenses = cls.build_license_list(comp["licenses"])
+
+            # Description isn't always present
+            description = comp.get("description", comp["name"])
+
             c: dict[str, Any] = {
                 "meta": {
                     "name": comp["name"],
                     "version": comp["version"],
-                    "derived_purl": comp["purl"],
+                    "description": description,
+                    "declared_purl": comp["purl"],
                     "group_id": comp["group"],
+                    "declared_licenses": licenses,
                 }
             }
-
-            # Description isn't always present
-            c["meta"]["description"] = comp.get("description", comp["name"])
 
             # Only handle Maven packages for now
             if properties["package:type"] == "maven":
@@ -38,3 +42,14 @@ class CycloneDxSbom:
                 logger.warning("Unknown type in CycloneDX SBOM: %s", properties["package:type"])
 
             yield c
+
+    @classmethod
+    def build_license_list(cls, licenses: list[dict[str, dict[str, str]]]) -> str:
+        license_names = []
+        for lic in licenses:
+            # This loses information like license URLs
+            name = lic["license"].get("id", lic["license"].get("name"))
+            if name:
+                license_names.append(name)
+
+        return " AND ".join(license_names)

@@ -711,9 +711,9 @@ mypy-extensions==0.4.3 \
     #   -r requirements/test.txt
     #   black
     #   mypy
-packageurl-python==0.9.9 \
-    --hash=sha256:07aa852d1c48b0e86e625f6a32d83f96427739806b269d0f8142788ee807114b \
-    --hash=sha256:872a0434b9a448b3fa97571711f69dd2a3fb72345ad66c90b17d827afea82f09
+packageurl-python==0.10.4 \
+    --hash=sha256:5c91334f942cd55d45eb0c67dd339a535ef90e25f05b9ec016ad188ed0ef9048 \
+    --hash=sha256:bf8a1ffe755634776f6563904d792fb0aa13b377fc86115c36fe17f69b6e59db
     # via
     #   -r requirements/base.txt
     #   -r requirements/test.txt

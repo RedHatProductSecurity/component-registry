@@ -2,7 +2,7 @@ import logging
 import re
 import uuid as uuid
 from abc import abstractmethod
-from typing import Union
+from typing import Any, Optional, Union
 
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
@@ -12,6 +12,7 @@ from django.db.models import Prefetch, QuerySet
 from mptt.managers import TreeManager
 from mptt.models import MPTTModel, TreeForeignKey
 from packageurl import PackageURL
+from packageurl.contrib import purl2url
 
 from corgi.core.constants import (
     CONTAINER_DIGEST_FORMATS,
@@ -882,6 +883,21 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         UPSTREAM = "UPSTREAM"
         REDHAT = "REDHAT"
 
+    RPM_PACKAGE_BROWSER = "https://access.redhat.com/downloads/content/package-browser"
+    CONTAINER_CATALOG_SEARCH = "https://catalog.redhat.com/software/containers/search"
+    MAVEN_CENTRAL_SERVER = "https://repo1.maven.org/maven2"
+
+    REMOTE_SOURCE_COMPONENT_TYPES = (
+        Type.CARGO,
+        Type.GEM,
+        Type.GENERIC,
+        Type.GITHUB,
+        Type.GOLANG,
+        Type.MAVEN,
+        Type.NPM,
+        Type.PYPI,
+    )
+
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.TextField()
     description = models.TextField()
@@ -1000,14 +1016,14 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
         return PackageURL(type=str(self.type).lower(), **purl_data)
 
-    def _build_maven_purl(self):
+    def _build_maven_purl(self) -> dict[str, str]:
         group_id = self.meta_attr.get("group_id")
         purl_data = dict(name=self.name, version=self.version)
         if group_id:
             purl_data["namespace"] = group_id
         return purl_data
 
-    def _build_module_purl(self):
+    def _build_module_purl(self) -> dict[str, str]:
         # Break down RHEL module version into its specific parts:
         # NSVC = Name, Stream, Version, Context
         version, _, context = self.release.partition(".")
@@ -1017,7 +1033,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             version=f"{stream}:{version}:{context}",
         )
 
-    def _build_rpm_purl(self):
+    def _build_rpm_purl(self) -> dict[str, Any]:
         qualifiers = {
             "arch": self.arch,
         }
@@ -1031,7 +1047,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             qualifiers=qualifiers,
         )
 
-    def _build_container_purl(self):
+    def _build_container_purl(self) -> dict[str, Any]:
         digest = ""
         if self.meta_attr.get("digests"):
             for digest_fmt in CONTAINER_DIGEST_FORMATS:
@@ -1063,6 +1079,191 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             qualifiers=qualifiers,
         )
 
+    def strip_release_from_version(self, purl_version: str) -> str:
+        """Remove self.release that we append to version strings in our purls"""
+        # TODO: Need to look at other enhancements / fixes for our purls
+        #  Some of them are missing recommended / necessary information for purl2url
+        #  Maybe we should add ?release= as a domain-specific qualifier
+        #  Instead of appending to upstream versions
+        if self.release:
+            return purl_version.rsplit("-", maxsplit=1)[0]
+        return purl_version
+
+    def _build_github_download_url(self, purl: str) -> str:
+        """Return a GitHub download URL from the `purl` string."""
+        # TODO: Open PR for this upstream
+        # github download urls are just zip files like below:
+        # https://github.com/RedHatProductSecurity/django-mptt/archive/commit_hash.zip
+        purl_data = PackageURL.from_string(purl)
+        name = purl_data.name
+        version = self.strip_release_from_version(purl_data.version)
+
+        if name and version:
+            return f"https://github.com/{name}/archive/{version}.zip"
+        return ""
+
+    def _get_download_url(
+        self, namespace_parts: list[str], name: str, version: Optional[str], path: Optional[str]
+    ):
+        if len(namespace_parts) == 2:
+            url = f"https://{namespace_parts[0]}/{namespace_parts[1]}/{name}/"
+        else:
+            url = f"https://{namespace_parts[0]}/{namespace_parts[1]}/{namespace_parts[2]}/"
+        if path:
+            url = url + path
+        if version:
+            url = url + version
+        return url
+
+    def _build_golang_download_url(self) -> str:
+        """
+        Return a download URL from the `purl` string for golang.
+        Due to the non deterministic nature of go package locations
+        this function works in a best effort basis.
+        """
+        # Copied from open PR upstream, not merged yet:
+        # https://github.com/package-url/packageurl-python/pull/113/files
+
+        purl_data = PackageURL.from_string(self.purl)
+
+        namespace = purl_data.namespace
+        name = purl_data.name
+        version = self.strip_release_from_version(purl_data.version)
+
+        download_url = purl_data.qualifiers.get("download_url")
+
+        if download_url:
+            return download_url
+
+        if not (namespace and name and version):
+            return ""
+
+        if "github.com" in namespace:
+
+            namespace_parts = namespace.split("/")
+
+            # if the version is a pseudo version and contains several sections
+            # separated by - the last section is a git commit id
+            # what should be referred in the tree of the repo
+            # https://stackoverflow.com/questions/57355929/
+            # what-does-incompatible-in-go-mod-mean-will-it-cause-harm
+            if "-" in version:
+                version = version.split("-")[-1]
+                return self._get_download_url(namespace_parts, purl_data.name, version, "tree/")
+
+            # if the version refers to a module using semantic versioning,
+            # but not opted to use modules it has a
+            # '+incompatible' differentiator in the version what can be just omitted in our case.
+            # Ref: https://stackoverflow.com/questions/57355929/
+            # what-does-incompatible-in-go-mod-mean-will-it-cause-harm
+            # Ref: https://github.com/golang/go/wiki/Modules#can-a-module-consume-a-package-
+            # that-has-not-opted-in-to-modules
+
+            version = version.replace("+incompatible", "")
+            return self._get_download_url(namespace_parts, purl_data.name, version, "releases/tag/")
+
+        else:
+            if "-" in version:
+                # Version is not semantic version, therefore not compatible with pkg.go.dev
+                return ""
+            else:
+                return f"https://pkg.go.dev/{namespace}/{name}@{version}"
+
+    def _build_golang_repo_url(self) -> str:
+        """
+        Return a golang repository URL from the `purl` string.
+        Due to the non deterministic nature of go package locations
+        this function works in a best effort basis.
+        """
+
+        purl_data = PackageURL.from_string(self.purl)
+
+        namespace = purl_data.namespace
+        name = purl_data.name
+
+        version = self.strip_release_from_version(purl_data.version)
+
+        if not (namespace and name and version):
+            return ""
+
+        if "github.com" in namespace:
+            namespace_parts = namespace.split("/")
+            return self._get_download_url(namespace_parts, name, path=None, version=None)
+
+        else:
+            if "-" in version:
+                # Version is not semantic version, therefore not compatible with pkg.go.dev
+                return ""
+            else:
+                return f"https://pkg.go.dev/{namespace}/{name}@{version}"
+
+    def _build_maven_download_url(self) -> str:
+        """Return a maven download URL from the `purl` string."""
+        # TODO: Open PR for this upstream
+        # Based on existing url2purl logic for Maven, and official docs:
+        # https://maven.apache.org/repositories/layout.html
+        purl_data = PackageURL.from_string(self.purl)
+        namespace = purl_data.namespace
+        if namespace:
+            namespace = namespace.split(".")
+            namespace = "/".join(namespace)
+            namespace = namespace.removeprefix("redhat/")
+
+        name = purl_data.name
+        version = purl_data.version
+        if ".redhat-" in version:
+            version = version.split(".redhat-", maxsplit=1)[0]
+        classifier = purl_data.qualifiers.get("classifier")
+        classifier = f"-{classifier}" if classifier else ""
+        extension = purl_data.qualifiers.get("type")
+
+        if namespace and name and version and extension:
+            return (
+                f"{self.MAVEN_CENTRAL_SERVER}/{namespace}/{name}/{version}/"
+                f"{name}-{version}{classifier}.{extension}"
+            )
+
+        elif namespace and name and version:
+            return f"{self.MAVEN_CENTRAL_SERVER}/{namespace}/{name}/{version}/"
+
+        else:
+            return ""
+
+    def _build_maven_repo_url(self) -> str:
+        """Return a maven repository URL from the `purl` string."""
+        # TODO: Open PR for this upstream
+        # Based on existing url2purl logic for Maven, and official docs:
+        # https://maven.apache.org/repositories/layout.html
+        purl_data = PackageURL.from_string(self.purl)
+        central_maven_server = "https://mvnrepository.com/artifact"
+
+        namespace = purl_data.namespace
+        name = purl_data.name
+        version = purl_data.version
+        if ".redhat-" in version:
+            version = version.split(".redhat-", maxsplit=1)[0]
+
+        classifier = purl_data.qualifiers.get("classifier")
+        classifier = f"-{classifier}" if classifier else ""
+
+        if namespace and name and version:
+            return f"{central_maven_server}/{namespace}/{name}/{version}{classifier}"
+        return ""
+
+    def _build_pypi_download_url(self) -> str:
+        """Return a PyPI download URL from the `purl` string."""
+        # TODO: Open PR for this upstream
+        #  Or don't, this predictable URL is a legacy thing we're not really supposed to use
+        # https://stackoverflow.com/questions/47781035/does-pypi-have-simple-urls-for-package-downloads#47840593
+        purl_data = PackageURL.from_string(self.purl)
+        central_pypi_server = "https://pypi.io/packages/source"
+
+        name = purl_data.name
+        version = self.strip_release_from_version(purl_data.version)
+        if name and version:
+            return f"{central_pypi_server}/{name[0]}/{name}/{name}-{version}.tar.gz"
+        return ""
+
     def save_component_taxonomy(self):
         """Link related components together using foreign keys. Avoids repeated MPTT tree lookups"""
         upstreams = self.get_upstreams_pks(using="default")
@@ -1091,11 +1292,62 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
         return f"{self.name}{epoch}-{self.version}{release}{arch}"
 
+    def _build_repo_url_for_type(self) -> str:
+        """Get an upstream repo URL based on a purl"""
+        if self.type == Component.Type.GEM:
+            # Work around a bug in the library
+            purl = self.purl.replace("pkg:gem/", "pkg:rubygems/")
+            related_url = purl2url.get_repo_url(purl)
+
+        elif self.type == Component.Type.GENERIC:
+            related_url = self.related_url
+            if not related_url:
+                # Usually (15k of 17k) generic upstream components point at Github
+                if self.name.startswith("github.com/"):
+                    purl = self.purl.replace("pkg:generic/github.com/", "pkg:github/")
+                    related_url = purl2url.get_repo_url(purl) or ""
+                elif self.name.startswith("git@github.com:"):
+                    purl = self.purl.replace("pkg:generic/git%40github.com:", "pkg:github/")
+                    related_url = purl2url.get_repo_url(purl) or ""
+                # else the component isn't hosted on Github, so we don't know
+
+            if "openshift-priv" in related_url:
+                # Sometimes we need to redirect to the public OpenShift repos
+                related_url = related_url.replace("openshift-priv", "openshift")
+
+            if not related_url:
+                # The component isn't available on Github
+                # TODO: We can't build a Cachito link here
+                #  We need a human-readable upstream page, not a download link
+                #  There's nothing in meta_attr besides RPM ID
+                #  We could call getRPMHeaders, but does the RPM's URL header
+                #  necessarily match the remote-source component's upstream?
+                pass
+
+        elif self.type == Component.Type.GOLANG:
+            related_url = self._build_golang_repo_url()
+
+        elif self.type == Component.Type.MAVEN:
+            related_url = self._build_maven_repo_url()
+
+        elif self.type in Component.REMOTE_SOURCE_COMPONENT_TYPES:
+            # All other remote-source component types are natively supported by purl2url
+            related_url = purl2url.get_repo_url(self.purl)
+
+        else:
+            # RPM or OCI have values set on ingestion, don't overwrite them
+            # We don't care about RPMMOD
+            related_url = ""
+        # purl2url.get_download_url() returns None if it failed
+        # If so, use the existing value for the field (or the empty string default value) instead
+        return related_url if related_url else self.related_url
+
     def save(self, *args, **kwargs):
         self.nvr = self.get_nvr()
         self.nevra = self.get_nevra()
         purl = self.get_purl()
         self.purl = purl.to_string()
+        self.related_url = self._build_repo_url_for_type()
 
         # generate version_arr, release_arr and el_match (used by filters, ex. latest filter)
         if (self.type == Component.Type.RPM and self.arch == "src") or (
@@ -1175,16 +1427,80 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     def build_meta(self):
         return self.software_build.meta_attr
 
+    def _build_download_url_for_type(self) -> str:
+        """Get a source code or binary download URL based on a purl"""
+        if self.type == Component.Type.GEM:
+            # Work around a bug in the library:
+            # https://github.com/package-url/packageurl-python/pull/114
+            purl_str = self.purl.replace("pkg:gem/", "pkg:rubygems/")
+            download_url = purl2url.get_download_url(purl_str)
+
+        elif self.type == Component.Type.GENERIC:
+            # purl2url can't support this type very well, for obvious reasons
+            # just return a download URL if the purl has an explicit one
+            purl = PackageURL.from_string(self.purl)
+            download_url = purl.qualifiers.get("download_url", "")
+
+            if not download_url:
+                # Usually (15k of 17k) generic upstream components point at Github
+                if self.name.startswith("github.com/"):
+                    purl = self.purl.replace("pkg:generic/github.com/", "pkg:github/")
+                    download_url = self._build_github_download_url(purl)
+                elif self.name.startswith("git@github.com:"):
+                    purl = self.purl.replace("pkg:generic/git%40github.com:", "pkg:github/")
+                    download_url = self._build_github_download_url(purl)
+                # else the component isn't hosted on Github, so we don't know
+
+            # if "openshift-priv" in download_url:
+            #    Sometimes we need to redirect to the public OpenShift repos
+            #    But different repos will have different commit IDs / "versions"
+            #    Users should just request access to the OpenShift repo in question
+            #    download_url = download_url.replace("openshift-priv", "openshift")
+
+            if not download_url:
+                # The component isn't available on Github
+                # TODO: Build some download link for an internal service,
+                #  but these generic components aren't available in
+                #  f"{settings.BREW_DOWNLOAD_ROOT_URL}/packages/"
+                #  and I can't figure out how to find them in Cachito
+                pass
+
+        elif self.type == Component.Type.GITHUB:
+            download_url = self._build_github_download_url(self.purl)
+
+        elif self.type == Component.Type.GOLANG:
+            download_url = self._build_golang_download_url()
+
+        elif self.type == Component.Type.MAVEN:
+            download_url = self._build_maven_download_url()
+
+        elif self.type == Component.Type.PYPI:
+            download_url = self._build_pypi_download_url()
+
+        elif self.type in Component.REMOTE_SOURCE_COMPONENT_TYPES:
+            # All other remote-source component types are natively supported by purl2url
+            download_url = purl2url.get_download_url(self.purl)
+
+        # All other component types are either not currently supported or have no downloadable
+        # artifacts (e.g. RHEL module builds).
+        else:
+            download_url = ""
+
+        # purl2url.get_download_url() returns None if it failed, but we need an empty string
+        return download_url if download_url else ""
+
     @property
     def download_url(self) -> str:
         """Report a URL for RPMs and container images that can be used in manifests"""
+        # TODO: Should we eventually make this a stored field on the model
+        #  instead of computing the property each time?
         # RPM ex:
         # /downloads/content/aspell-devel/0.60.8-8.el9/aarch64/fd431d51/package
         # We can't build URLs like above because the fd431d51 signing key is required,
         # but isn't available in the meta_attr / other properties (CORGI-342). Get it with:
         # rpm -q --qf %{SIGPGP:pgpsig} aspell-devel-0.60.8-8.el9.x86_64 | tail -c8
         if self.type == Component.Type.RPM:
-            return "https://access.redhat.com/downloads/content/package-browser"
+            return self.RPM_PACKAGE_BROWSER
 
         # Image ex:
         # /software/containers/container-native-virtualization/hco-bundle-registry/5ccae1925a13467289f2475b
@@ -1192,17 +1508,22 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         # 5d9347b8dd19c70159f2f6e4?architecture=s390x&tag=v4.4.0-202007171809.p0
         # We can't build URLs like above because the hash is required,
         # but doesn't match any hash in the meta_attr / other properties.
-        # We could use repository_url instead, if we decide to store it on the model.
-        # Currently it's only in the meta_attr and should not be used (CORGI-341).
+        # repository_url is the customer-facing download location, but per OpenLCS
+        # they want to see the internal registry-proxy URL from Brew.
 
         # TODO: self.filename, AKA the filename of the image archive a container is included in,
         #  is always unset. This is not the digest SHA but the config layer SHA.
         elif self.type == Component.Type.CONTAINER_IMAGE:
-            return "https://catalog.redhat.com/software/containers/search"
+            pull_url = self.meta_attr.get("pull", [])
+            # First pull URL is based on hash, others are based on tags
+            # if we have an empty list, just return a generic URL
+            pull_url = pull_url[0] if pull_url else self.CONTAINER_CATALOG_SEARCH
+            return pull_url
 
-        # All other component types are either not currently supported or have no downloadable
-        # artifacts (e.g. RHEL module builds).
-        return ""
+        else:
+            # Usually a remote-source component
+            # Anything else (RPMMOD) just returns an empty string
+            return self._build_download_url_for_type()
 
     @property
     def errata(self) -> list[str]:

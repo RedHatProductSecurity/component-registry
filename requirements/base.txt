@@ -263,9 +263,9 @@ kombu==5.2.3 \
     --hash=sha256:81a90c1de97e08d3db37dbf163eaaf667445e1068c98bfd89f051a40e9f6dbbd \
     --hash=sha256:eeaeb8024f3a5cfc71c9250e45cddb8493f269d74ada2f74909a93c59c4b4179
     # via celery
-packageurl-python==0.9.9 \
-    --hash=sha256:07aa852d1c48b0e86e625f6a32d83f96427739806b269d0f8142788ee807114b \
-    --hash=sha256:872a0434b9a448b3fa97571711f69dd2a3fb72345ad66c90b17d827afea82f09
+packageurl-python==0.10.4 \
+    --hash=sha256:5c91334f942cd55d45eb0c67dd339a535ef90e25f05b9ec016ad188ed0ef9048 \
+    --hash=sha256:bf8a1ffe755634776f6563904d792fb0aa13b377fc86115c36fe17f69b6e59db
     # via -r requirements/base.in
 prometheus-client==0.14.1 \
     --hash=sha256:522fded625282822a89e2773452f42df14b5a8e84a86433e3f8a189c1d54dc01 \

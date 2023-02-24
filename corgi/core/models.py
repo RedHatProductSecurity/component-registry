@@ -616,11 +616,19 @@ class ProductStream(ProductModel):
         """Return an SPDX-style manifest in JSON format."""
         return ProductManifestFile(self).render_content()
 
-    def get_latest_components(self, using: str = "read_only") -> QuerySet["Component"]:
+    def get_latest_components(
+        self, component_name=None, strict_search: bool = False, using: str = "read_only"
+    ) -> QuerySet["Component"]:
         """Return root components from latest builds, using specified DB (read-only by default."""
+        cond = {}
+        if component_name and not strict_search:
+            cond["name__iregex"] = component_name
+        if component_name and strict_search:
+            cond["name"] = component_name
         return (
             Component.objects.filter(
                 ROOT_COMPONENTS_CONDITION,
+                **cond,
                 productstreams__ofuri=self.ofuri,
             )
             .exclude(software_build__isnull=True)

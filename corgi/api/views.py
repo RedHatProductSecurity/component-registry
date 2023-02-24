@@ -485,7 +485,57 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         # are not interpreted as part of the request.
         view = request.query_params.get("view")
         purl = request.query_params.get("purl")
+        component_name = self.request.query_params.get("name")
+        component_re_name = self.request.query_params.get("re_name")
         if not purl:
+            # TODO: expiremental ?name={}&view=latest this may turn out to be temporary
+            if (component_re_name or component_name) and view == "latest":
+                ps_cond = {}
+                strict_search = True
+                if component_re_name:
+                    strict_search = False
+                    component_name = component_re_name
+                    ps_cond["name__iregex"] = component_name
+                else:
+                    ps_cond["name"] = component_name  # type: ignore
+                latest_components = []
+                product_stream_ofuris = list(
+                    set(
+                        self.get_queryset()
+                        .filter(**ps_cond)
+                        .values_list("productstreams__ofuri", flat=True)
+                        .using("read_only")
+                    )
+                )
+                for ps_ofuri in product_stream_ofuris:
+                    ps = ProductStream.objects.filter(ofuri=ps_ofuri, active=True).first()
+                    if ps:
+                        ps_components = ps.get_latest_components(
+                            component_name, strict_search=strict_search
+                        )
+                        if ps_components:
+                            for ps_component in ps_components:
+                                latest_components.append(
+                                    {
+                                        "product_stream": ps.name,
+                                        "product_ofuri": ps.ofuri,
+                                        "product_active": ps.active,
+                                        "purl": ps_component.purl,
+                                        "type": ps_component.type,
+                                        "namespace": ps_component.namespace,
+                                        "name": ps_component.name,
+                                        "release": ps_component.release,
+                                        "version": ps_component.version,
+                                        "nvr": ps_component.nvr,
+                                        "provides": [
+                                            provide.purl
+                                            for provide in ps_component.provides.all().using(
+                                                "read_only"
+                                            )
+                                        ],
+                                    }
+                                )
+                return Response({"results": latest_components})
             if view == "product":
                 component_name = self.request.query_params.get("name")
                 product_streams_arr = []

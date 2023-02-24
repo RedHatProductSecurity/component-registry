@@ -488,7 +488,7 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         component_name = self.request.query_params.get("name")
         component_re_name = self.request.query_params.get("re_name")
         if not purl:
-            # TODO: expiremental ?name={}&view=latest this may turn out to be temporary
+            # TODO: ?name={}&view=latest this may turn out to be temporary
             if (component_re_name or component_name) and view == "latest":
                 ps_cond = {}
                 strict_search = True
@@ -513,28 +513,34 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
                         ps_components = ps.get_latest_components(
                             component_name, strict_search=strict_search
                         )
-                        if ps_components:
-                            for ps_component in ps_components:
-                                latest_components.append(
-                                    {
-                                        "product_stream": ps.name,
-                                        "product_ofuri": ps.ofuri,
-                                        "product_active": ps.active,
-                                        "purl": ps_component.purl,
-                                        "type": ps_component.type,
-                                        "namespace": ps_component.namespace,
-                                        "name": ps_component.name,
-                                        "release": ps_component.release,
-                                        "version": ps_component.version,
-                                        "nvr": ps_component.nvr,
-                                        "provides": [
-                                            provide.purl
-                                            for provide in ps_component.provides.all().using(
-                                                "read_only"
-                                            )
-                                        ],
-                                    }
-                                )
+                        for ps_component in ps_components:
+                            component = {
+                                "product_version": ps.productversions.name,
+                                "product_version_ofuri": ps.productversions.ofuri,
+                                "product_stream": ps.name,
+                                "product_stream_ofuri": ps.ofuri,
+                                "product_active": ps.active,
+                                "purl": ps_component.purl,
+                                "type": ps_component.type,
+                                "namespace": ps_component.namespace,
+                                "name": ps_component.name,
+                                "release": ps_component.release,
+                                "version": ps_component.version,
+                                "nvr": ps_component.nvr,
+                                "build_id": None,
+                                "build_type": None,
+                                "build_source_url": None,
+                                "related_url": None,
+                                "upstream_purl": None,
+                            }
+                            if ps_component.software_build:
+                                component["build_id"] = ps_component.software_build.build_id
+                                component["build_type"] = ps_component.software_build.build_type
+                                component["build_source_url"] = ps_component.software_build.source
+                            if ps_component.upstreams.all():
+                                component["related_url"] = ps_component.upstreams.all().first().related_url  # type: ignore # noqa
+                                component["upstream_purl"] = ps_component.upstreams.all().first().purl  # type: ignore # noqa
+                            latest_components.append(component)
                 return Response({"results": latest_components})
             if view == "product":
                 component_name = self.request.query_params.get("name")

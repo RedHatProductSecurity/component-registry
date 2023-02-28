@@ -10,9 +10,8 @@ logger = logging.getLogger(__name__)
 
 class CycloneDxSbom:
     @classmethod
-    def parse(cls, path: Path) -> Iterator[dict[str, Any]]:
-        with open(path) as sbom:
-            contents = json.load(sbom)
+    def parse(cls, data: str) -> Iterator[dict[str, Any]]:
+        contents = json.loads(data)
 
         for comp in contents["components"]:
             properties = {}
@@ -42,6 +41,12 @@ class CycloneDxSbom:
                 logger.warning("Unknown type in CycloneDX SBOM: %s", properties["package:type"])
 
             yield c
+
+    @classmethod
+    def parse_file(cls, path: Path) -> Iterator[dict[str, Any]]:
+        with open(path) as sbom_file:
+            contents = sbom_file.read()
+        return cls.parse(contents)
 
     @classmethod
     def build_license_list(cls, licenses: list[dict[str, dict[str, str]]]) -> str:

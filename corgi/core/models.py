@@ -894,6 +894,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     RPM_PACKAGE_BROWSER = "https://access.redhat.com/downloads/content/package-browser"
     CONTAINER_CATALOG_SEARCH = "https://catalog.redhat.com/software/containers/search"
     MAVEN_CENTRAL_SERVER = "https://repo1.maven.org/maven2"
+    REDHAT_MAVEN_INDICATOR = ".redhat-"
 
     REMOTE_SOURCE_COMPONENT_TYPES = (
         Type.CARGO,
@@ -1219,8 +1220,8 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
         name = purl_data.name
         version = purl_data.version
-        if ".redhat-" in version:
-            version = version.split(".redhat-", maxsplit=1)[0]
+        if version is not None and self.REDHAT_MAVEN_INDICATOR in version:
+            version = version.split(self.REDHAT_MAVEN_INDICATOR, maxsplit=1)[0]
         classifier = purl_data.qualifiers.get("classifier")
         classifier = f"-{classifier}" if classifier else ""
         extension = purl_data.qualifiers.get("type")
@@ -1248,8 +1249,8 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         namespace = purl_data.namespace
         name = purl_data.name
         version = purl_data.version
-        if ".redhat-" in version:
-            version = version.split(".redhat-", maxsplit=1)[0]
+        if version is not None and self.REDHAT_MAVEN_INDICATOR in version:
+            version = version.split(self.REDHAT_MAVEN_INDICATOR, maxsplit=1)[0]
 
         classifier = purl_data.qualifiers.get("classifier")
         classifier = f"-{classifier}" if classifier else ""

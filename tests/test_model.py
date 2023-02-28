@@ -607,6 +607,11 @@ def test_purl2url():
         "knative-annotations/2.11.3"
     )
 
+    # empty version
+    component = ComponentFactory(type=Component.Type.MAVEN, name="test", version="")
+    assert component.download_url == ""
+    assert component.related_url == ""
+
     # pypi component
     component = ComponentFactory(type=Component.Type.PYPI, name="aiohttp", version="3.6.2")
 

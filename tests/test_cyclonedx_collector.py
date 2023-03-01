@@ -1,20 +1,18 @@
 import os
 
 import pytest
-from django.conf import settings
 
 from corgi.collectors.cyclonedx import CycloneDxSbom
 
-
 test_sboms = {
-                "camel": "camel-quarkus-2.13.7.Final-redhat-00003-sbom.json",
-                "optaplanner": "optaplanner-quarkus-2.13.7.Final-redhat-00003-sbom.json",
-                "qpid": "qpid-jms-client-quarkus-2.13.7.Final-redhar-00003-sbom.json",
-                "quarkus": "quarkus-2.13.7.Final-redhat-00003-sbom.json",
-            }
-
+    "camel": "camel-quarkus-2.13.7.Final-redhat-00003-sbom.json",
+    "optaplanner": "optaplanner-quarkus-2.13.7.Final-redhat-00003-sbom.json",
+    "qpid": "qpid-jms-client-quarkus-2.13.7.Final-redhar-00003-sbom.json",
+    "quarkus": "quarkus-2.13.7.Final-redhat-00003-sbom.json",
+}
 
 pytestmark = pytest.mark.unit
+
 
 @pytest.mark.parametrize("test_sbom", test_sboms.values())
 def test_parse_sbom(test_sbom):

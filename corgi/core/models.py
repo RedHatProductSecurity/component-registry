@@ -978,6 +978,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             models.Index(fields=("name", "type", "arch", "version", "release")),
             models.Index(fields=("type", "name")),
             models.Index(fields=("nvr",)),
+            models.Index(fields=("nevra",)),
             models.Index(fields=("purl",)),
             models.Index(
                 fields=("type", "name", "arch"),

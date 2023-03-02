@@ -730,6 +730,27 @@ def test_queryset_ordering_fails():
         len(misordered_products.distinct("description"))
 
 
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_filter_latest_by_name():
+    ps = ProductStreamFactory(name="rhel-7.9.z")
+    srpm_with_el = SrpmComponentFactory(name="sdb", version="1.2.1", release="21.el7")
+    srpm_with_el.productstreams.add(ps)
+    srpm = SrpmComponentFactory(name="sdb", version="1.2.1", release="3")
+    srpm.productstreams.add(ps)
+    assert ps.filter_latest_nevra_by_name(component_name="sdb") == "sdb-1.2.1-21.el7.src"
+
+    # test strict_search=True
+    srpm = SrpmComponentFactory(name="sdb2", version="1.2.1", release="22")
+    srpm.productstreams.add(ps)
+    assert "sdb2-1.2.1-22.src" == ps.filter_latest_nevra_by_name(
+        component_name="sdb", strict_search=True
+    )
+
+    # test no result
+    ps = ProductStreamFactory(name="rhel-7.7.z")
+    assert not ps.filter_latest_nevra_by_name(component_name="sdb")
+
+
 def test_version_release_arr_el_match():
     c = ComponentFactory(
         arch="src", type=Component.Type.RPM, release="2.Final_redhat_2.1.ep6.el7", version="1.2_3"

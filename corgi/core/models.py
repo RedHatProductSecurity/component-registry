@@ -1,3 +1,4 @@
+import functools
 import logging
 import re
 import uuid as uuid
@@ -8,11 +9,12 @@ from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelatio
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
 from django.db import models
-from django.db.models import Prefetch, QuerySet
+from django.db.models import Q, QuerySet
 from mptt.managers import TreeManager
 from mptt.models import MPTTModel, TreeForeignKey
 from packageurl import PackageURL
 from packageurl.contrib import purl2url
+from version_utils.rpm import compare_packages
 
 from corgi.core.constants import (
     CONTAINER_DIGEST_FORMATS,
@@ -616,59 +618,54 @@ class ProductStream(ProductModel):
         """Return an SPDX-style manifest in JSON format."""
         return ProductManifestFile(self).render_content()
 
+    def filter_latest_nevra_by_name(
+        self, component_name: str, strict_search: bool = False, using: str = "read_only"
+    ) -> str:
+        cond = {}
+        if strict_search:
+            cond["name__iregex"] = component_name
+        else:
+            cond["name"] = component_name
+        nevras = (
+            Component.objects.filter(
+                ROOT_COMPONENTS_CONDITION, **cond, productstreams__ofuri=self.ofuri
+            )
+            .using(using)
+            .values_list("nevra", flat=True)
+        )
+        if nevras:
+            # Get the latest NVR using python. This only works for valid RPM NVRs
+            return sorted(nevras, key=functools.cmp_to_key(compare_packages))[-1]
+        else:
+            return ""
+
     def get_latest_components(
         self, component_name=None, strict_search: bool = False, using: str = "read_only"
     ) -> QuerySet["Component"]:
         """Return root components from latest builds, using specified DB (read-only by default."""
-        cond = {}
-        if component_name and not strict_search:
-            cond["name__iregex"] = component_name
-        if component_name and strict_search:
-            cond["name"] = component_name
-        return (
-            Component.objects.filter(
-                ROOT_COMPONENTS_CONDITION,
-                **cond,
-                productstreams__ofuri=self.ofuri,
-            )
-            .exclude(software_build__isnull=True)
-            .prefetch_related(
-                Prefetch(
-                    "software_build",
-                    queryset=SoftwareBuild.objects.all().only("completion_time").using(using),
+
+        if component_name:
+            latest_nevra = self.filter_latest_nevra_by_name(component_name, strict_search, using)
+            if not latest_nevra:
+                return Component.objects.none()
+            return Component.objects.filter(ROOT_COMPONENTS_CONDITION, nevra=latest_nevra)
+        else:
+            names = (
+                Component.objects.filter(
+                    ROOT_COMPONENTS_CONDITION, productstreams__ofuri=self.ofuri
                 )
+                .distinct("name")
+                .values_list("name", flat=True)
+                .using(using)
             )
-            .annotate(
-                latest=models.Subquery(
-                    Component.objects.filter(
-                        ROOT_COMPONENTS_CONDITION,
-                        name=models.OuterRef("name"),
-                        productstreams__ofuri=self.ofuri,
-                    )
-                    .exclude(software_build__isnull=True)
-                    .prefetch_related(
-                        Prefetch(
-                            "software_build",
-                            queryset=SoftwareBuild.objects.all()
-                            .only("completion_time")
-                            .using(using),
-                        )
-                    )
-                    .order_by(
-                        "-el_match",
-                        "-software_build__completion_time",
-                        "-version_arr",
-                        "-release_arr",
-                    )
-                    .using(using)
-                    .values("uuid")[:1]
-                )
-            )
-            .filter(
-                uuid=models.F("latest"),
-            )
-            .using(using)
-        )
+            query = Q()
+            for name in names:
+                latest_nevra = self.filter_latest_nevra_by_name(component_name=name, using=using)
+                if latest_nevra:
+                    query |= Q(nevra=latest_nevra)
+            if not query:
+                return Component.objects.none()
+            return Component.objects.filter(Q(ROOT_COMPONENTS_CONDITION & query))
 
 
 class ProductStreamTag(Tag):

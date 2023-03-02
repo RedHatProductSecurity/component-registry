@@ -451,6 +451,10 @@ urllib3==1.26.7 \
     --hash=sha256:4987c65554f7a2dbf30c18fd48778ef124af6fab771a377103da0585e2336ece \
     --hash=sha256:c4fdf4019605b6e5423637e01bc9fe4daef873709a7973e195ceba0a62bbc844
     # via requests
+version-utils==0.3.2 \
+    --hash=sha256:308191f111395ac19ec5ef4650764af29962a6415d8391785027ae5328579299 \
+    --hash=sha256:4e0f3dff669d7a081dd66d8b616752dc309e7246a7b2c5ac800dde5ec0d9a555
+    # via -r requirements/base.in
 vine==5.0.0 \
     --hash=sha256:4c9dceab6f76ed92105027c49c823800dd33cacce13bdedc5b914e3514b7fb30 \
     --hash=sha256:7d3b1624a953da82ef63462013bbd271d3eb75751489f9807598e8f340bd637e

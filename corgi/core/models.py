@@ -618,17 +618,10 @@ class ProductStream(ProductModel):
         """Return an SPDX-style manifest in JSON format."""
         return ProductManifestFile(self).render_content()
 
-    def filter_latest_nevra_by_name(
-        self, component_name: str, strict_search: bool = False, using: str = "read_only"
-    ) -> str:
-        cond = {}
-        if strict_search:
-            cond["name__iregex"] = component_name
-        else:
-            cond["name"] = component_name
+    def filter_latest_nevra_by_name(self, component_name: str, using: str = "read_only") -> str:
         nevras = (
             Component.objects.filter(
-                ROOT_COMPONENTS_CONDITION, **cond, productstreams__ofuri=self.ofuri
+                ROOT_COMPONENTS_CONDITION, name=component_name, productstreams__ofuri=self.ofuri
             )
             .using(using)
             .values_list("nevra", flat=True)
@@ -643,12 +636,28 @@ class ProductStream(ProductModel):
         self, component_name=None, strict_search: bool = False, using: str = "read_only"
     ) -> QuerySet["Component"]:
         """Return root components from latest builds, using specified DB (read-only by default."""
-
         if component_name:
-            latest_nevra = self.filter_latest_nevra_by_name(component_name, strict_search, using)
-            if not latest_nevra:
+            cond = {}
+            if strict_search:
+                cond["name"] = component_name
+            else:
+                cond["name__iregex"] = component_name
+            names = (
+                Component.objects.filter(
+                    ROOT_COMPONENTS_CONDITION, **cond, productstreams__ofuri=self.ofuri
+                )
+                .distinct("name")
+                .values_list("name", flat=True)
+                .using(using)
+            )
+            query = Q()
+            for name in names:
+                latest_nevra = self.filter_latest_nevra_by_name(component_name=name, using=using)
+                if latest_nevra:
+                    query |= Q(nevra=latest_nevra)
+            if not query:
                 return Component.objects.none()
-            return Component.objects.filter(ROOT_COMPONENTS_CONDITION, nevra=latest_nevra)
+            return Component.objects.filter(Q(ROOT_COMPONENTS_CONDITION & query)).using(using)
         else:
             names = (
                 Component.objects.filter(
@@ -665,7 +674,7 @@ class ProductStream(ProductModel):
                     query |= Q(nevra=latest_nevra)
             if not query:
                 return Component.objects.none()
-            return Component.objects.filter(Q(ROOT_COMPONENTS_CONDITION & query))
+            return Component.objects.filter(Q(ROOT_COMPONENTS_CONDITION & query)).using(using)
 
 
 class ProductStreamTag(Tag):

@@ -1,6 +1,7 @@
 import json
 import logging
 from datetime import datetime
+from json import JSONDecodeError
 
 import jsonschema
 import pytest
@@ -231,3 +232,19 @@ def setup_products_and_components():
     # Link the components to the ProductModel instances
     build.save_product_taxonomy()
     return component, stream, provided, dev_provided
+
+
+def test_manifest_backslash():
+    """Test that a tailing backslash in a purl doesn't break rendering"""
+
+    stream = ProductStreamFactory()
+    sb = SoftwareBuildFactory(
+        completion_time=datetime.strptime("2017-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z")
+    )
+    component = SrpmComponentFactory(version="2.8.0 \\", software_build=sb)
+    component.productstreams.add(stream)
+
+    try:
+        stream.manifest
+    except JSONDecodeError:
+        assert False

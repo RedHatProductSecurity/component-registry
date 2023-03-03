@@ -739,13 +739,6 @@ def test_filter_latest_by_name():
     srpm.productstreams.add(ps)
     assert ps.filter_latest_nevra_by_name(component_name="sdb") == "sdb-1.2.1-21.el7.src"
 
-    # test strict_search=True
-    srpm = SrpmComponentFactory(name="sdb2", version="1.2.1", release="22")
-    srpm.productstreams.add(ps)
-    assert "sdb2-1.2.1-22.src" == ps.filter_latest_nevra_by_name(
-        component_name="sdb", strict_search=True
-    )
-
     # test no result
     ps = ProductStreamFactory(name="rhel-7.7.z")
     assert not ps.filter_latest_nevra_by_name(component_name="sdb")

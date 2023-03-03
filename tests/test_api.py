@@ -1,4 +1,3 @@
-from datetime import datetime
 from urllib.parse import quote
 
 import pytest
@@ -689,38 +688,35 @@ def test_product_components_ofuri(client, api_path):
     assert ps1.ofuri == "o:redhat:rhel:8.6.0"
     ps2 = ProductStreamFactory(name="rhel-8.6.0.z", version="8.6.0.z")
     assert ps2.ofuri == "o:redhat:rhel:8.6.0.z"
+    ps3 = ProductStreamFactory(name="rhel-8.5.0", version="8.5.0")
+    assert ps3.ofuri == "o:redhat:rhel:8.5.0"
 
-    old_sb1 = SoftwareBuildFactory(
-        completion_time=datetime.strptime("2017-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z")
-    )
-    old_openssl = SrpmComponentFactory(name="openssl", software_build=old_sb1, release="1")
+    old_openssl = SrpmComponentFactory(name="openssl", version="1.1.1k", release="5.el8_5")
     old_openssl.productstreams.add(ps1)
 
-    sb1 = SoftwareBuildFactory(
-        completion_time=datetime.strptime("2018-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z")
-    )
-    openssl = SrpmComponentFactory(name="openssl", software_build=sb1, release="2")
+    openssl = SrpmComponentFactory(name="openssl", version="1.1.1k", release="6.el8_5")
     openssl.productstreams.add(ps1)
 
-    old_sb2 = SoftwareBuildFactory(
-        completion_time=datetime.strptime("2017-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z")
-    )
-    old_curl = SrpmComponentFactory(name="curl", software_build=old_sb2, release="1")
+    old_curl = SrpmComponentFactory(name="curl", version="7.61.1", release="14.el8")
     old_curl.productstreams.add(ps2)
 
-    sb2 = SoftwareBuildFactory(
-        completion_time=datetime.strptime("2018-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z")
-    )
-    curl = SrpmComponentFactory(name="curl", software_build=sb2, release="2")
+    curl = SrpmComponentFactory(name="curl", version="7.61.1", release="22.el8_6.3")
     curl.productstreams.add(ps2)
 
     response = client.get(f"{api_path}/components?ofuri=o:redhat:rhel:8.6.0.z")
     assert response.status_code == 200
     assert response.json()["count"] == 1
+    assert response.json()["results"][0]["nvr"] == "curl-7.61.1-22.el8_6.3"
 
     response = client.get(f"{api_path}/components?ofuri=o:redhat:rhel:8.6.0")
     assert response.status_code == 200
     assert response.json()["count"] == 1
+    assert response.json()["results"][0]["nvr"] == "openssl-1.1.1k-6.el8_5"
+
+    # stream with no components
+    response = client.get(f"{api_path}/components?ofuri=o:redhat:rhel:8.5.0")
+    assert response.status_code == 200
+    assert response.json()["count"] == 0
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
@@ -730,22 +726,19 @@ def test_product_components_versions(client, api_path):
     ps2 = ProductStreamFactory(name="rhel-8", version="8")
     assert ps2.ofuri == "o:redhat:rhel:8"
 
-    sb1 = SoftwareBuildFactory(
-        completion_time=datetime.strptime("2018-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z")
-    )
     openssl = ComponentFactory(
-        type=Component.Type.RPM, arch="x86_64", name="openssl", software_build=sb1
+        type=Component.Type.RPM, arch="x86_64", name="openssl", version="1.1.1k", release="5.el8_5"
     )
+
     openssl.productstreams.add(ps2)
-    openssl_srpm = SrpmComponentFactory(name="openssl", software_build=sb1)
+    openssl_srpm = SrpmComponentFactory(name="openssl", version="1.1.1k", release="6.el8_5")
     openssl_srpm.productstreams.add(ps2)
 
-    sb2 = SoftwareBuildFactory(
-        completion_time=datetime.strptime("2018-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z")
+    curl = ComponentFactory(
+        type=Component.Type.RPM, arch="x86_64", name="curl", version="7.61.1", release="22.el8_6.3"
     )
-    curl = ComponentFactory(type=Component.Type.RPM, arch="x86_64", name="curl", software_build=sb2)
     curl.productstreams.add(ps1)
-    curl_srpm = SrpmComponentFactory(name="curl", software_build=sb2)
+    curl_srpm = SrpmComponentFactory(name="curl", version="7.61.1", release="22.el8_6.3")
     curl_srpm.productstreams.add(ps1)
 
     response = client.get(f"{api_path}/components?product_streams={ps2.ofuri}")

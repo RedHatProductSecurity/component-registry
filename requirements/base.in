@@ -23,4 +23,5 @@ python-qpid-proton
 requests
 requests-gssapi
 splitstream
+version_utils
 whitenoise

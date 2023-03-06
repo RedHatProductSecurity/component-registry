@@ -51,6 +51,31 @@ class Syft:
         return scan_results
 
     @classmethod
+    def scan_repo_image(cls, target_image: str) -> list[dict[str, Any]]:
+        """Scan a remote container image
+
+        `target_image` can point to a specific tag or a digest, e.g.:
+        quay.io/somerepo/example-container:latest
+        quay.io/somerepo/example-container@sha256:03103d6d7e04755319eb303953669182da42246397e32b30afee3f67ebd4d2bb
+
+        Note that this method assumes authentication credentials are set in ~/.docker/config.json
+        (or a location pointed to by DOCKER_CONFIG) for repositories in registries that are private.
+        """
+        scan_result = subprocess.check_output(  # nosec B603
+            [
+                "/usr/bin/syft",
+                "packages",
+                "-q",
+                "-o=syft-json",
+                "--exclude=**/vendor/**",
+                f"registry:{target_image}",
+            ],
+            text=True,
+        )
+        parsed_components = cls.parse_components(scan_result)
+        return parsed_components
+
+    @classmethod
     def parse_components(cls, syft_json: str) -> list[dict[str, Any]]:
         raw_result = json.loads(syft_json)
         components: list[dict[str, Any]] = []

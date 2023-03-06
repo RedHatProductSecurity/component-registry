@@ -59,6 +59,7 @@ class ComponentFilter(FilterSet):
     re_name = CharFilter(lookup_expr="regex", field_name="name")
     re_purl = CharFilter(lookup_expr="regex", field_name="purl")
     description = CharFilter(lookup_expr="icontains")
+    related_url = CharFilter(lookup_expr="icontains")
     tags = TagFilter()
 
     # User gave a filter like ?ofuri= in URL, assume they wanted a stream

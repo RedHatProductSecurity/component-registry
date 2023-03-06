@@ -331,6 +331,10 @@ paths:
         schema:
           type: string
       - in: query
+        name: related_url
+        schema:
+          type: string
+      - in: query
         name: release
         schema:
           type: string

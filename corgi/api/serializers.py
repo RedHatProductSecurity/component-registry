@@ -95,10 +95,12 @@ def get_model_ofuri_type(ofuri: str) -> tuple[Optional[ProductModel], str]:
         return missing_or_invalid
 
     # ProductVersions and ProductStreams both have 4 parts in their ofuri
-    if version := ProductVersion.objects.filter(ofuri=ofuri).using("read_only").first():
-        return version, "ProductVersion"
-    elif stream := ProductStream.objects.filter(ofuri=ofuri).using("read_only").first():
+    # Looking for matching ProductStreams first where version and stream share an ofuri
+    # See CORGI-499
+    if stream := ProductStream.objects.filter(ofuri=ofuri).using("read_only").first():
         return stream, "ProductStream"
+    elif version := ProductVersion.objects.filter(ofuri=ofuri).using("read_only").first():
+        return version, "ProductVersion"
     # TODO: Channels don't define an ofuri - should they?
     # else we know it's a version / stream but couldn't find a match
     return missing_or_invalid

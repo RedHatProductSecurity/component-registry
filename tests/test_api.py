@@ -159,7 +159,7 @@ def test_component_include_exclude_fields(client, api_path):
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_component_detail(client, api_path):
-    c1 = ComponentFactory(name="curl")
+    c1 = ComponentFactory(name="curl", related_url="https://curl.se")
 
     response = client.get(f"{api_path}/components")
     assert response.status_code == 200
@@ -168,6 +168,10 @@ def test_component_detail(client, api_path):
     response = client.get(f"{api_path}/components/{c1.uuid}")
     assert response.status_code == 200
     assert response.json()["name"] == "curl"
+
+    response = client.get(f"{api_path}/components?related_url=curl")
+    assert response.status_code == 200
+    assert response.json()["count"] == 1
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)

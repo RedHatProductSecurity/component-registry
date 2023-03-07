@@ -215,12 +215,10 @@ class ComponentNode(NodeModel):
         # 0037_custom_indexes.py contains the following custom performance indexes
         #    core_componentnode_tree_parent_lft_idx
         #    core_cn_tree_lft_purl_parent_idx
-        #    core_cn_lft_tree_idx
         #    core_cn_lft_rght_tree_idx
         indexes = (  # type: ignore[assignment]
             models.Index(fields=("type", "parent", "purl")),
             models.Index(fields=("parent",)),
-            models.Index(fields=("purl",)),
             *NodeModel.Meta.indexes,
         )
 

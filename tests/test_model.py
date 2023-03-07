@@ -448,23 +448,26 @@ def test_get_upstream_container():
 
 def test_purl2url():
     release = "Must_be_removed_from_every_purl_before_building_URL"
-    component = ComponentFactory(type=Component.Type.RPM, arch="src")
-    assert component.download_url == Component.RPM_PACKAGE_BROWSER
     component = ComponentFactory(type=Component.Type.RPM)
     assert component.download_url == Component.RPM_PACKAGE_BROWSER
 
     component = ComponentFactory(type=Component.Type.CONTAINER_IMAGE)
     assert component.download_url == Component.CONTAINER_CATALOG_SEARCH
+    assert "pull" not in component.meta_attr
     component.meta_attr["pull"] = ["registry.redhat.io/openshift3/grafana"]
-    assert component.download_url == "registry.redhat.io/openshift3/grafana"
+    assert component.download_url == component.meta_attr["pull"][0]
     component.meta_attr["pull"] = []
     assert component.download_url == Component.CONTAINER_CATALOG_SEARCH
 
     component = ComponentFactory(
         namespace=Component.Namespace.REDHAT, type=Component.Type.GEM, release=release
     )
-    assert component.download_url.startswith("https://rubygems.org/downloads/")
-    assert component.download_url.endswith(f"{component.name}-{component.version}.gem")
+    assert component.download_url == (
+        f"https://rubygems.org/downloads/{component.name}-{component.version}.gem"
+    )
+    assert component.related_url == (
+        f"https://rubygems.org/gems/{component.name}/versions/{component.version}"
+    )
 
     component = ComponentFactory(
         namespace=Component.Namespace.REDHAT,
@@ -490,15 +493,18 @@ def test_purl2url():
 
     component = ComponentFactory(
         namespace=Component.Namespace.REDHAT,
-        name="user/repo",
+        name="USER/REPO",
         type=Component.Type.GITHUB,
         release=release,
     )
     assert (
         component.download_url
-        == f"https://github.com/{component.name}/archive/{component.version}.zip"
+        == f"https://github.com/{component.name.lower()}/archive/{component.version}.zip"
     )
-    assert component.related_url == f"https://github.com/{component.name}/tree/{component.version}"
+    assert (
+        component.related_url
+        == f"https://github.com/{component.name.lower()}/tree/{component.version}"
+    )
 
     # semantic version
     # name with namespace component
@@ -564,8 +570,11 @@ def test_purl2url():
         name="github.com/18F/hmacauth",
         release=release,
     )
-    assert component.download_url == "https://github.com/18f/hmacauth/archive/1.18.0.zip"
-    assert component.related_url == "https://github.com/18f/hmacauth/tree/1.18.0"
+    assert (
+        component.download_url
+        == f"https://{component.name.lower()}/archive/{component.version}.zip"
+    )
+    assert component.related_url == f"https://{component.name.lower()}/tree/{component.version}"
 
     # +incompatible in version
     component = ComponentFactory(
@@ -659,6 +668,7 @@ def test_purl2url():
         component.download_url == "https://pypi.io/packages/source/a/aiohttp/"
         "aiohttp-3.6.2.tar.gz"
     )
+    assert component.related_url == "https://pypi.org/project/aiohttp/3.6.2/"
 
 
 def test_duplicate_insert_fails():

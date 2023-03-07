@@ -1371,16 +1371,18 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
         elif self.type == Component.Type.GENERIC:
             related_url = self.related_url
-            if not related_url:
-                # Usually (15k of 17k) generic upstream components point at Github
-                # TODO: Should this be purl.startswith()?
-                if self.name.startswith("github.com/"):
-                    purl = purl.replace("pkg:generic/github.com/", "pkg:github/")
-                    related_url = purl2url.get_repo_url(purl) or ""
-                elif self.name.startswith("git@github.com:"):
-                    purl = purl.replace("pkg:generic/git%40github.com:", "pkg:github/")
-                    related_url = purl2url.get_repo_url(purl) or ""
-                # else the component isn't hosted on Github, so we don't know
+            # Usually (15k of 17k) generic upstream components point at Github
+            generic_pkg_on_github_http = "pkg:generic/github.com/"
+            generic_pkg_on_github_git = "pkg:generic/git%40github.com:"
+            github_pkg = "pkg:github/"
+
+            if purl.startswith(generic_pkg_on_github_http):
+                purl = purl.replace(generic_pkg_on_github_http, github_pkg)
+                related_url = purl2url.get_repo_url(purl) or ""
+            elif purl.startswith(generic_pkg_on_github_git):
+                purl = purl.replace(generic_pkg_on_github_git, github_pkg)
+                related_url = purl2url.get_repo_url(purl) or ""
+            # else the component isn't hosted on Github, so we don't know
 
             if "openshift-priv" in related_url:
                 # Sometimes we need to redirect to the public OpenShift repos
@@ -1520,11 +1522,15 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
             if not download_url:
                 # Usually (15k of 17k) generic upstream components point at Github
-                if self.name.startswith("github.com/"):
-                    purl = purl.replace("pkg:generic/github.com/", "pkg:github/")
+                generic_pkg_on_github_http = "pkg:generic/github.com/"
+                generic_pkg_on_github_git = "pkg:generic/git%40github.com:"
+                github_pkg = "pkg:github/"
+
+                if purl.startswith(generic_pkg_on_github_http):
+                    purl = purl.replace(generic_pkg_on_github_http, github_pkg)
                     download_url = self._build_github_download_url(purl)
-                elif self.name.startswith("git@github.com:"):
-                    purl = purl.replace("pkg:generic/git%40github.com:", "pkg:github/")
+                elif purl.startswith(generic_pkg_on_github_git):
+                    purl = purl.replace(generic_pkg_on_github_git, github_pkg)
                     download_url = self._build_github_download_url(purl)
                 # else the component isn't hosted on Github, so we don't know
 

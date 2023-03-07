@@ -3,7 +3,7 @@ import logging
 import re
 import uuid as uuid
 from abc import abstractmethod
-from typing import Any, Optional, Union
+from typing import Any, Union
 
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
@@ -897,8 +897,6 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
     RPM_PACKAGE_BROWSER = "https://access.redhat.com/downloads/content/package-browser"
     CONTAINER_CATALOG_SEARCH = "https://catalog.redhat.com/software/containers/search"
-    MAVEN_CENTRAL_SERVER = "https://repo1.maven.org/maven2"
-    REDHAT_MAVEN_INDICATOR = ".redhat-"
 
     REMOTE_SOURCE_COMPONENT_TYPES = (
         Type.CARGO,
@@ -1116,19 +1114,6 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             return f"https://github.com/{name}/archive/{version}.zip"
         return ""
 
-    def _get_download_url(
-        self, namespace_parts: list[str], name: str, version: Optional[str], path: Optional[str]
-    ):
-        if len(namespace_parts) == 2:
-            url = f"https://{namespace_parts[0]}/{namespace_parts[1]}/{name}/"
-        else:
-            url = f"https://{namespace_parts[0]}/{namespace_parts[1]}/{namespace_parts[2]}/"
-        if path:
-            url = url + path
-        if version:
-            url = url + version
-        return url
-
     def _build_golang_download_url(self) -> str:
         """
         Return a download URL from the `purl` string for golang.
@@ -1154,7 +1139,8 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
         if "github.com" in namespace:
 
-            namespace_parts = namespace.split("/")
+            namespace = namespace.split("/")
+            exp = re.compile(r"v\d+")
 
             # if the version is a pseudo version and contains several sections
             # separated by - the last section is a git commit id
@@ -1163,19 +1149,39 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             # what-does-incompatible-in-go-mod-mean-will-it-cause-harm
             if "-" in version:
                 version = version.split("-")[-1]
-                return self._get_download_url(namespace_parts, purl_data.name, version, "tree/")
+                if exp.match(name):
+                    return f"https://{namespace[0]}/{namespace[1]}/{namespace[2]}/tree/{version}"
+                else:
+                    return f"https://{namespace[0]}/{namespace[1]}/{name}/tree/{version}"
 
             # if the version refers to a module using semantic versioning,
             # but not opted to use modules it has a
             # '+incompatible' differentiator in the version what can be just omitted in our case.
             # Ref: https://stackoverflow.com/questions/57355929/
             # what-does-incompatible-in-go-mod-mean-will-it-cause-harm
-            # Ref: https://github.com/golang/go/wiki/Modules#can-a-module-consume-a-package-
-            # that-has-not-opted-in-to-modules
+            # Ref: https://github.com/golang/go/wiki/
+            # Modules#can-a-module-consume-a-package-that-has-not-opted-in-to-modules
 
             version = version.replace("+incompatible", "")
-            return self._get_download_url(namespace_parts, purl_data.name, version, "releases/tag/")
-
+            # If the referred module is in a directory of a repo,
+            # then parts of the url are added as a part of a tag
+            if len(namespace) >= 3:
+                # Constructing the basic part of the URL
+                url = f"https://{namespace[0]}/{namespace[1]}/{namespace[2]}/releases/tag/"
+                # adding the remains of the path to the tag
+                for i in range(3, len(namespace)):
+                    url += f"{namespace[i]}%2F"
+                # and finally adding the version
+                if exp.match(name):
+                    url = f"{url}{version}"
+                else:
+                    url = f"{url}{name}%2F{version}"
+                return url
+            else:
+                if exp.match(name):
+                    return f"https://{purl_data.namespace}/releases/tag/{version}"
+                else:
+                    return f"https://{purl_data.namespace}/{name}/releases/tag/{version}"
         else:
             if "-" in version:
                 # Version is not semantic version, therefore not compatible with pkg.go.dev
@@ -1194,16 +1200,37 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
         namespace = purl_data.namespace
         name = purl_data.name
-
         version = self.strip_release_from_version(purl_data.version)
 
         if not (namespace and name and version):
             return ""
 
         if "github.com" in namespace:
-            namespace_parts = namespace.split("/")
-            return self._get_download_url(namespace_parts, name, path=None, version=None)
 
+            namespace = namespace.split("/")
+            exp = re.compile(r"v\d+")
+
+            # if the version is a pseudo version and contains several sections
+            # separated by - the last section is a git commit id
+            # what should be referred in the tree of the repo
+            # https://stackoverflow.com/questions/57355929/
+            # what-does-incompatible-in-go-mod-mean-will-it-cause-harm
+            if "-" in version:
+                if exp.match(name):
+                    return f"https://{namespace[0]}/{namespace[1]}/{namespace[2]}/"
+                else:
+                    return f"https://{namespace[0]}/{namespace[1]}/{name}/"
+
+            # If the referred module is in a directory of a repo,
+            # then parts of the url are added as a part of a tag
+            if len(namespace) >= 3:
+                # Constructing the basic part of the URL
+                return f"https://{namespace[0]}/{namespace[1]}/{namespace[2]}/"
+            else:
+                if exp.match(name):
+                    return f"https://{purl_data.namespace}"
+                else:
+                    return f"https://{purl_data.namespace}/{name}"
         else:
             if "-" in version:
                 # Version is not semantic version, therefore not compatible with pkg.go.dev
@@ -1217,28 +1244,27 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         # Based on existing url2purl logic for Maven, and official docs:
         # https://maven.apache.org/repositories/layout.html
         purl_data = PackageURL.from_string(self.purl)
+        central_maven_server = "https://repo1.maven.org/maven2"
+
         namespace = purl_data.namespace
         if namespace:
             namespace = namespace.split(".")
             namespace = "/".join(namespace)
-            namespace = namespace.removeprefix("redhat/")
 
         name = purl_data.name
-        version = purl_data.version
-        if version is not None and self.REDHAT_MAVEN_INDICATOR in version:
-            version = version.split(self.REDHAT_MAVEN_INDICATOR, maxsplit=1)[0]
+        version = self.strip_release_from_version(purl_data.version)
         classifier = purl_data.qualifiers.get("classifier")
         classifier = f"-{classifier}" if classifier else ""
         extension = purl_data.qualifiers.get("type")
 
         if namespace and name and version and extension:
             return (
-                f"{self.MAVEN_CENTRAL_SERVER}/{namespace}/{name}/{version}/"
+                f"{central_maven_server}/{namespace}/{name}/{version}/"
                 f"{name}-{version}{classifier}.{extension}"
             )
 
         elif namespace and name and version:
-            return f"{self.MAVEN_CENTRAL_SERVER}/{namespace}/{name}/{version}/"
+            return f"{central_maven_server}/{namespace}/{name}/{version}/"
 
         else:
             return ""
@@ -1253,9 +1279,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
         namespace = purl_data.namespace
         name = purl_data.name
-        version = purl_data.version
-        if version is not None and self.REDHAT_MAVEN_INDICATOR in version:
-            version = version.split(self.REDHAT_MAVEN_INDICATOR, maxsplit=1)[0]
+        version = self.strip_release_from_version(purl_data.version)
 
         classifier = purl_data.qualifiers.get("classifier")
         classifier = f"-{classifier}" if classifier else ""

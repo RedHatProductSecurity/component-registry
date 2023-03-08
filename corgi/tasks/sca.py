@@ -252,6 +252,7 @@ def _download_source(download_url: str, target_filepath: Path) -> None:
     package_dir.mkdir(parents=True, exist_ok=True)
     logger.info("Downloading sources from: %s, to: %s", download_url, target_filepath)
     r: Response = requests.get(download_url)
+    r.raise_for_status()
     with target_filepath.open("wb") as target_file:
         target_file.write(r.content)
 

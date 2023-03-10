@@ -447,6 +447,7 @@ def test_get_upstream_container():
 
 
 def test_purl2url():
+    release = "Must_be_removed_from_every_purl_before_building_URL"
     component = ComponentFactory(type=Component.Type.RPM, arch="src")
     assert component.download_url == Component.RPM_PACKAGE_BROWSER
     component = ComponentFactory(type=Component.Type.RPM)
@@ -459,11 +460,15 @@ def test_purl2url():
     component.meta_attr["pull"] = []
     assert component.download_url == Component.CONTAINER_CATALOG_SEARCH
 
-    component = ComponentFactory(type=Component.Type.GEM, release="")
+    component = ComponentFactory(
+        namespace=Component.Namespace.REDHAT, type=Component.Type.GEM, release=release
+    )
     assert component.download_url.startswith("https://rubygems.org/downloads/")
     assert component.download_url.endswith(f"{component.name}-{component.version}.gem")
 
-    component = ComponentFactory(type=Component.Type.GENERIC)
+    component = ComponentFactory(
+        namespace=Component.Namespace.REDHAT, type=Component.Type.GENERIC, release=release
+    )
     assert component.download_url == ""
     orig_name = component.name
     component.name = f"github.com/{component.name}"
@@ -473,7 +478,9 @@ def test_purl2url():
     assert component.download_url.startswith("https://github.com/")
     assert component.download_url.endswith(f"{orig_name}/archive/{component.version}.zip")
 
-    component = ComponentFactory(type=Component.Type.GITHUB)
+    component = ComponentFactory(
+        namespace=Component.Namespace.REDHAT, type=Component.Type.GITHUB, release=release
+    )
     assert component.download_url.startswith("https://github.com/")
     assert component.download_url.endswith(f"{component.name}/archive/{component.version}.zip")
 
@@ -481,9 +488,10 @@ def test_purl2url():
     # name with namespace component
     component = ComponentFactory(
         type=Component.Type.GOLANG,
-        namespace=Component.Namespace.UPSTREAM,
+        namespace=Component.Namespace.REDHAT,
         name="4d63.com/gochecknoglobals",
         version="v3.0.0",
+        release=release,
     )
     assert component.download_url.startswith("https://pkg.go.dev/")
     assert component.download_url.endswith(f"{component.name}@{component.version}")
@@ -491,18 +499,20 @@ def test_purl2url():
     # no namespace
     component = ComponentFactory(
         type=Component.Type.GOLANG,
-        namespace=Component.Namespace.UPSTREAM,
+        namespace=Component.Namespace.REDHAT,
         name="gochecknoglobals",
         version="v3.0.0",
+        release=release,
     )
     assert component.download_url == ""
 
     # non schemantic version
     component = ComponentFactory(
         type=Component.Type.GOLANG,
-        namespace=Component.Namespace.UPSTREAM,
+        namespace=Component.Namespace.REDHAT,
         name="4d63.com/gochecknoglobals",
         version="v3.0.0-6",
+        release=release,
     )
 
     assert component.download_url == ""
@@ -511,9 +521,10 @@ def test_purl2url():
     # pseudo version
     component = ComponentFactory(
         type=Component.Type.GOLANG,
-        namespace=Component.Namespace.UPSTREAM,
+        namespace=Component.Namespace.REDHAT,
         name="github.com/14rcole/gopopulate",
         version="v0.0.0-20180821133914-b175b219e774",
+        release=release,
     )
     assert component.download_url == "https://github.com/14rcole/gopopulate/tree/b175b219e774"
     assert component.related_url == "https://github.com/14rcole/gopopulate/"
@@ -521,9 +532,10 @@ def test_purl2url():
     # pseudo version with namespace length of 3
     component = ComponentFactory(
         type=Component.Type.GOLANG,
-        namespace=Component.Namespace.UPSTREAM,
+        namespace=Component.Namespace.REDHAT,
         version="v0.10.1-0.20221206164259-31a0ef8b04df",
         name="github.com/3scale/3scale-operator/controllers/" "capabilities",
+        release=release,
     )
     assert component.download_url == "https://github.com/3scale/3scale-operator/tree/31a0ef8b04df"
     assert component.related_url == "https://github.com/3scale/3scale-operator/"
@@ -531,9 +543,10 @@ def test_purl2url():
     # semantic version
     component = ComponentFactory(
         type=Component.Type.GOLANG,
-        namespace=Component.Namespace.UPSTREAM,
+        namespace=Component.Namespace.REDHAT,
         version="1.18.0",
         name="github.com/18F/hmacauth",
+        release=release,
     )
     assert component.download_url == "https://github.com/18F/hmacauth/releases/tag/1.18.0"
     assert component.related_url == "https://github.com/18F/hmacauth/"
@@ -541,9 +554,10 @@ def test_purl2url():
     # semantic version
     component = ComponentFactory(
         type=Component.Type.GOLANG,
-        namespace=Component.Namespace.UPSTREAM,
+        namespace=Component.Namespace.REDHAT,
         version="v1.18.0",
         name="github.com/18F/hmacauth",
+        release=release,
     )
     assert component.download_url == "https://github.com/18F/hmacauth/releases/tag/v1.18.0"
     assert component.related_url == "https://github.com/18F/hmacauth/"
@@ -551,9 +565,10 @@ def test_purl2url():
     # incompatiable version
     component = ComponentFactory(
         type=Component.Type.GOLANG,
-        namespace=Component.Namespace.UPSTREAM,
+        namespace=Component.Namespace.REDHAT,
         version="v51.2.0+incompatible",
         name="github.com/Azure/azure-sdk-for-go/services/dns/" "mgmt/2016-04-01/dns",
+        release=release,
     )
     assert (
         component.download_url == "https://github.com/Azure/azure-sdk-for-go/releases/tag/v51.2.0"
@@ -565,6 +580,7 @@ def test_purl2url():
         namespace=Component.Namespace.REDHAT,
         name="io.vertx/vertx-grpc",
         version="4.3.7.redhat-00002",
+        release=release,
     )
     assert component.download_url == "https://repo1.maven.org/maven2/io/vertx/vertx-grpc/4.3.7/"
     assert (
@@ -575,10 +591,11 @@ def test_purl2url():
     # maven with group_id
     component = ComponentFactory(
         type=Component.Type.MAVEN,
-        namespace="",
+        namespace=Component.Namespace.REDHAT,
         meta_attr={"group_id": "io.prestosql.benchto"},
         name="benchto-driver",
         version="0.7",
+        release=release,
     )
     assert (
         component.download_url == "https://repo1.maven.org/maven2/io/prestosql/benchto/"
@@ -592,10 +609,11 @@ def test_purl2url():
     # maven with classifier and type
     component = ComponentFactory(
         type=Component.Type.MAVEN,
-        namespace="",
+        namespace=Component.Namespace.REDHAT,
         meta_attr={"classifier": "noapt", "type": "jar", "group_id": "io.dekorate"},
         name="knative-annotations",
         version="2.11.3.redhat-00001",
+        release=release,
     )
 
     assert (
@@ -608,12 +626,24 @@ def test_purl2url():
     )
 
     # empty version
-    component = ComponentFactory(type=Component.Type.MAVEN, name="test", version="")
+    component = ComponentFactory(
+        namespace=Component.Namespace.REDHAT,
+        type=Component.Type.MAVEN,
+        name="test",
+        version="",
+        release=release,
+    )
     assert component.download_url == ""
     assert component.related_url == ""
 
     # pypi component
-    component = ComponentFactory(type=Component.Type.PYPI, name="aiohttp", version="3.6.2")
+    component = ComponentFactory(
+        namespace=Component.Namespace.REDHAT,
+        type=Component.Type.PYPI,
+        name="aiohttp",
+        version="3.6.2",
+        release=release,
+    )
 
     assert (
         component.download_url == "https://pypi.io/packages/source/a/aiohttp/"

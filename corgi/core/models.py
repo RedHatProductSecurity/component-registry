@@ -1117,10 +1117,15 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         # github download urls are just zip files like below:
         # https://github.com/RedHatProductSecurity/django-mptt/archive/commit_hash.zip
         purl_data = PackageURL.from_string(purl)
+
+        namespace = purl_data.namespace
         name = purl_data.name
         version = purl_data.version
 
-        if name and version:
+        if namespace and name and version:
+            return f"https://github.com/{namespace}/{name}/archive/{version}.zip"
+        elif name and version:
+            # Name should embed namespace if not discovered explicitly
             return f"https://github.com/{name}/archive/{version}.zip"
         return ""
 

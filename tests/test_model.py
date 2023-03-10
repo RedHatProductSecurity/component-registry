@@ -467,22 +467,38 @@ def test_purl2url():
     assert component.download_url.endswith(f"{component.name}-{component.version}.gem")
 
     component = ComponentFactory(
-        namespace=Component.Namespace.REDHAT, type=Component.Type.GENERIC, release=release
+        namespace=Component.Namespace.REDHAT,
+        name="user/repo",
+        type=Component.Type.GENERIC,
+        release=release,
     )
     assert component.download_url == ""
+    assert component.related_url == ""
     orig_name = component.name
-    component.name = f"github.com/{component.name}"
-    assert component.download_url.startswith("https://github.com/")
-    assert component.download_url.endswith(f"{orig_name}/archive/{component.version}.zip")
-    component.name = f"git@github.com:{component.name}"
-    assert component.download_url.startswith("https://github.com/")
-    assert component.download_url.endswith(f"{orig_name}/archive/{component.version}.zip")
+
+    component.name = f"github.com/{orig_name}"
+    component.save()
+    assert component.download_url == f"https://{component.name}/archive/{component.version}.zip"
+    assert component.related_url == f"https://{component.name}/tree/{component.version}"
+
+    component.name = f"git@github.com:{orig_name}"
+    component.save()
+    assert (
+        component.download_url == f"https://github.com/{orig_name}/archive/{component.version}.zip"
+    )
+    assert component.related_url == f"https://github.com/{orig_name}/tree/{component.version}"
 
     component = ComponentFactory(
-        namespace=Component.Namespace.REDHAT, type=Component.Type.GITHUB, release=release
+        namespace=Component.Namespace.REDHAT,
+        name="user/repo",
+        type=Component.Type.GITHUB,
+        release=release,
     )
-    assert component.download_url.startswith("https://github.com/")
-    assert component.download_url.endswith(f"{component.name}/archive/{component.version}.zip")
+    assert (
+        component.download_url
+        == f"https://github.com/{component.name}/archive/{component.version}.zip"
+    )
+    assert component.related_url == f"https://github.com/{component.name}/tree/{component.version}"
 
     # semantic version
     # name with namespace component

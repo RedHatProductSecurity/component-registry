@@ -1030,11 +1030,24 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
         return PackageURL(type=str(self.type).lower(), **purl_data)
 
-    def _build_maven_purl(self) -> dict[str, str]:
+    def _build_maven_purl(self) -> dict[str, Union[str, dict[str, str]]]:
+        qualifiers = {}
+        classifier = self.meta_attr.get("classifier")
+        if classifier:
+            qualifiers["classifier"] = classifier
+        extension = self.meta_attr.get("type")
+        if extension:
+            qualifiers["type"] = extension
+
+        purl_data: dict[str, Union[str, dict[str, str]]] = {
+            "name": self.name,
+            "version": self.version,
+            "qualifiers": qualifiers,
+        }
         group_id = self.meta_attr.get("group_id")
-        purl_data = dict(name=self.name, version=self.version)
         if group_id:
             purl_data["namespace"] = group_id
+
         return purl_data
 
     def _build_module_purl(self) -> dict[str, str]:
@@ -1264,6 +1277,9 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
         name = purl_data.name
         version = purl_data.version
+        if version and (".redhat" in version or "-redhat" in version):
+            central_maven_server = "https://maven.repository.redhat.com/ga"
+
         classifier = purl_data.qualifiers.get("classifier")
         classifier = f"-{classifier}" if classifier else ""
         extension = purl_data.qualifiers.get("type")
@@ -1275,7 +1291,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             )
 
         elif namespace and name and version:
-            return f"{central_maven_server}/{namespace}/{name}/{version}/"
+            return f"{central_maven_server}/{namespace}/{name}/{version}"
 
         else:
             return ""
@@ -1293,11 +1309,8 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         name = purl_data.name
         version = purl_data.version
 
-        classifier = purl_data.qualifiers.get("classifier")
-        classifier = f"-{classifier}" if classifier else ""
-
         if namespace and name and version:
-            return f"{central_maven_server}/{namespace}/{name}/{version}{classifier}"
+            return f"{central_maven_server}/{namespace}/{name}/{version}"
         return ""
 
     @staticmethod

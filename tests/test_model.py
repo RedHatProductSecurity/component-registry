@@ -585,10 +585,13 @@ def test_purl2url():
         version="4.3.7.redhat-00002",
         release=release,
     )
-    assert component.download_url == "https://repo1.maven.org/maven2/io/vertx/vertx-grpc/4.3.7/"
     assert (
-        component.related_url == "https://mvnrepository.com/artifact/redhat/io.vertx/"
-        "vertx-grpc/4.3.7"
+        component.download_url
+        == f"https://maven.repository.redhat.com/ga/io/vertx/vertx-grpc/{component.version}"
+    )
+    assert (
+        component.related_url
+        == f"https://mvnrepository.com/artifact/{component.name}/{component.version}"
     )
 
     # maven with group_id
@@ -602,7 +605,7 @@ def test_purl2url():
     )
     assert (
         component.download_url == "https://repo1.maven.org/maven2/io/prestosql/benchto/"
-        "benchto-driver/0.7/"
+        "benchto-driver/0.7"
     )
     assert (
         component.related_url == "https://mvnrepository.com/artifact/io.prestosql.benchto/"
@@ -620,12 +623,16 @@ def test_purl2url():
     )
 
     assert (
-        component.download_url == "https://repo1.maven.org/maven2/io/dekorate/"
-        "knative-annotations/2.11.3/"
+        component.download_url == "https://maven.repository.redhat.com/ga/"
+        f"{component.meta_attr['group_id'].replace('.', '/')}/"
+        f"{component.name}/{component.version}/"
+        f"{component.name}-{component.version}"
+        f"-{component.meta_attr['classifier']}.{component.meta_attr['type']}"
     )
     assert (
-        component.related_url == "https://mvnrepository.com/artifact/io.dekorate/"
-        "knative-annotations/2.11.3"
+        component.related_url == f"https://mvnrepository.com/artifact/"
+        f"{component.meta_attr['group_id']}/"
+        f"{component.name}/{component.version}"
     )
 
     # empty version

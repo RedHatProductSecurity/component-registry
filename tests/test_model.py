@@ -493,8 +493,11 @@ def test_purl2url():
         version="v3.0.0",
         release=release,
     )
-    assert component.download_url.startswith("https://pkg.go.dev/")
-    assert component.download_url.endswith(f"{component.name}@{component.version}")
+    assert (
+        component.download_url
+        == f"https://proxy.golang.org/{component.name}/@v/{component.version}.zip"
+    )
+    assert component.related_url == f"https://pkg.go.dev/{component.name}@{component.version}"
 
     # no namespace
     component = ComponentFactory(
@@ -504,17 +507,6 @@ def test_purl2url():
         version="v3.0.0",
         release=release,
     )
-    assert component.download_url == ""
-
-    # non schemantic version
-    component = ComponentFactory(
-        type=Component.Type.GOLANG,
-        namespace=Component.Namespace.REDHAT,
-        name="4d63.com/gochecknoglobals",
-        version="v3.0.0-6",
-        release=release,
-    )
-
     assert component.download_url == ""
     assert component.related_url == ""
 
@@ -526,19 +518,27 @@ def test_purl2url():
         version="v0.0.0-20180821133914-b175b219e774",
         release=release,
     )
-    assert component.download_url == "https://github.com/14rcole/gopopulate/tree/b175b219e774"
-    assert component.related_url == "https://github.com/14rcole/gopopulate/"
+    assert (
+        component.download_url == "https://github.com/14rcole/gopopulate/archive/b175b219e774.zip"
+    )
+    assert component.related_url == "https://github.com/14rcole/gopopulate/tree/b175b219e774"
 
     # pseudo version with namespace length of 3
     component = ComponentFactory(
         type=Component.Type.GOLANG,
         namespace=Component.Namespace.REDHAT,
+        name="github.com/3scale/3scale-operator/controllers/capabilities",
         version="v0.10.1-0.20221206164259-31a0ef8b04df",
-        name="github.com/3scale/3scale-operator/controllers/" "capabilities",
         release=release,
     )
-    assert component.download_url == "https://github.com/3scale/3scale-operator/tree/31a0ef8b04df"
-    assert component.related_url == "https://github.com/3scale/3scale-operator/"
+    assert (
+        component.download_url
+        == "https://github.com/3scale/3scale-operator/archive/31a0ef8b04df.zip"
+    )
+    assert (
+        component.related_url
+        == f"https://github.com/3scale/3scale-operator/tree/{component.version.split('-')[-1]}"
+    )
 
     # semantic version
     component = ComponentFactory(
@@ -548,32 +548,19 @@ def test_purl2url():
         name="github.com/18F/hmacauth",
         release=release,
     )
-    assert component.download_url == "https://github.com/18F/hmacauth/releases/tag/1.18.0"
-    assert component.related_url == "https://github.com/18F/hmacauth/"
+    assert component.download_url == "https://github.com/18f/hmacauth/archive/1.18.0.zip"
+    assert component.related_url == "https://github.com/18f/hmacauth/tree/1.18.0"
 
-    # semantic version
+    # +incompatible in version
     component = ComponentFactory(
         type=Component.Type.GOLANG,
         namespace=Component.Namespace.REDHAT,
-        version="v1.18.0",
-        name="github.com/18F/hmacauth",
-        release=release,
-    )
-    assert component.download_url == "https://github.com/18F/hmacauth/releases/tag/v1.18.0"
-    assert component.related_url == "https://github.com/18F/hmacauth/"
-
-    # incompatiable version
-    component = ComponentFactory(
-        type=Component.Type.GOLANG,
-        namespace=Component.Namespace.REDHAT,
+        name="github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2016-04-01/dns",
         version="v51.2.0+incompatible",
-        name="github.com/Azure/azure-sdk-for-go/services/dns/" "mgmt/2016-04-01/dns",
         release=release,
     )
-    assert (
-        component.download_url == "https://github.com/Azure/azure-sdk-for-go/releases/tag/v51.2.0"
-    )
-    assert component.related_url == "https://github.com/Azure/azure-sdk-for-go/"
+    assert component.download_url == "https://github.com/azure/azure-sdk-for-go/archive/v51.2.0.zip"
+    assert component.related_url == "https://github.com/azure/azure-sdk-for-go/tree/v51.2.0"
 
     component = ComponentFactory(
         type=Component.Type.MAVEN,

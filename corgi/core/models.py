@@ -1024,7 +1024,9 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
         # Red Hat components should be namespaced, everything else is assumed to be upstream.
         if self.namespace == Component.Namespace.REDHAT:
-            purl_data["namespace"] = str(self.namespace).lower()
+            # Don't wipe out Maven / other purl namespaces if they already exist
+            existing_namespace = purl_data.get("namespace", "")
+            purl_data["namespace"] = f"{Component.Namespace.REDHAT.lower()}/{existing_namespace}"
 
         return PackageURL(type=str(self.type).lower(), **purl_data)
 

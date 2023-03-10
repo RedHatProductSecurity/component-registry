@@ -42,7 +42,10 @@ class Syft:
                     "packages",
                     "-q",
                     "-o=syft-json",
+                    # see motivation for excluding test/fixtures in CORGI-510
+                    # For example skip test/fixtures/0-dns/package.json file in the nodejs
                     "--exclude=**/vendor/**",
+                    "--exclude=**/test/fixtures/**",
                     f"{scheme}:{target_file}",
                 ],
                 text=True,

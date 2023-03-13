@@ -129,7 +129,7 @@ def get_channel_data_list(manager: Manager["Channel"]) -> list[dict[str, str]]:
     # And channels have no ofuri, so we return a model UUID link instead
     return [
         {"name": name, "link": get_model_id_link("channels", uuid), "uuid": str(uuid)}
-        for (name, uuid) in manager.values_list("name", "uuid").using("read_only")
+        for (name, uuid) in manager.values_list("name", "uuid").using("read_only").iterator()
     ]
 
 
@@ -151,7 +151,9 @@ def get_product_data_list(
     # we're accessing the reverse side of a relation with many objects (via a manager)
     return [
         {"name": name, "link": get_model_ofuri_link(model_name, ofuri), "ofuri": ofuri}
-        for (name, ofuri) in obj_or_manager.values_list("name", "ofuri").using("read_only")
+        for (name, ofuri) in obj_or_manager.values_list("name", "ofuri")
+        .using("read_only")
+        .iterator()
     ]
 
 
@@ -407,7 +409,7 @@ class ComponentSerializer(ProductTaxonomySerializer):
     @staticmethod
     def get_provides(instance: Component) -> list[dict[str, str]]:
         return get_component_data_list(
-            instance.provides.values_list("purl", flat=True).using("read_only")
+            instance.provides.values_list("purl", flat=True).using("read_only").iterator()
         )
 
     @staticmethod
@@ -419,7 +421,7 @@ class ComponentSerializer(ProductTaxonomySerializer):
     @staticmethod
     def get_upstreams(instance: Component) -> list[dict[str, str]]:
         return get_component_data_list(
-            instance.upstreams.values_list("purl", flat=True).using("read_only")
+            instance.upstreams.values_list("purl", flat=True).using("read_only").iterator()
         )
 
     @staticmethod

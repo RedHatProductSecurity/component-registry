@@ -413,7 +413,7 @@ class ComponentSerializer(ProductTaxonomySerializer):
     @staticmethod
     def get_sources(instance: Component) -> list[dict[str, str]]:
         return get_component_data_list(
-            instance.sources.values_list("purl", flat=True).using("read_only")
+            instance.sources.values_list("purl", flat=True).using("read_only").iterator()
         )
 
     @staticmethod

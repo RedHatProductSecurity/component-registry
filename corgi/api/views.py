@@ -530,16 +530,16 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
                                 "build_id": None,
                                 "build_type": None,
                                 "build_source_url": None,
-                                "related_url": None,
-                                "upstream_purl": None,
+                                "related_url": ps_component.related_url,
+                                "download_url": ps_component.download_url,
+                                "upstream_purl": ps_component.upstreams.values_list(
+                                    "purl", flat=True
+                                ).first(),
                             }
                             if ps_component.software_build:
                                 component["build_id"] = ps_component.software_build.build_id
                                 component["build_type"] = ps_component.software_build.build_type
                                 component["build_source_url"] = ps_component.software_build.source
-                            if ps_component.upstreams.all():
-                                component["related_url"] = ps_component.upstreams.all().first().related_url  # type: ignore # noqa
-                                component["upstream_purl"] = ps_component.upstreams.all().first().purl  # type: ignore # noqa
                             latest_components.append(component)
                 return Response({"results": latest_components})
             if view == "product":

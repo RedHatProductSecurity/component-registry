@@ -65,7 +65,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1G  # Keep in sync with OpenShift mem limits to catch OOM problems
+          memory: 1.5G  # Keep in sync with OpenShift mem limits to catch OOM problems
     ports:
       - "8008:8008"
     env_file:

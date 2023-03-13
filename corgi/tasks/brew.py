@@ -259,6 +259,10 @@ def save_component(
 
 
 def save_srpm(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
+    related_url = build_data["meta"].pop("url", "")
+    if not related_url:
+        # Handle case when key is present but value is None
+        related_url = ""
     obj, created = Component.objects.update_or_create(
         name=build_data["meta"].get("name"),
         type=build_data["type"],
@@ -268,7 +272,7 @@ def save_srpm(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
         defaults={
             "license_declared_raw": build_data["meta"].get("license", ""),
             "description": build_data["meta"].get("description", ""),
-            "related_url": build_data["meta"].get("url", ""),
+            "related_url": related_url,
             "software_build": softwarebuild,
             "meta_attr": build_data["meta"],
             "namespace": build_data["namespace"],
@@ -283,16 +287,12 @@ def save_srpm(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
             "obj": obj,
         },
     )
-    # Handle case when key is present but value is None
-    related_url = build_data["meta"].get("url", "")
     if related_url:
         new_upstream, created = Component.objects.update_or_create(
             type=build_data["type"],
             namespace=Component.Namespace.UPSTREAM,
             name=build_data["meta"].get("name"),
             version=build_data["meta"].get("version", ""),
-            # To avoid any future variance of license_declared and related_url
-            # set only when initially created
             defaults={
                 "description": build_data["meta"].get("description", ""),
                 "filename": find_package_file_name(build_data["meta"].get("source_files", [])),
@@ -322,6 +322,10 @@ def process_image_components(image):
 
 
 def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
+    related_url = build_data["meta"].get("repository_url", "")
+    if not related_url:
+        # Handle case when key is present but value is None
+        related_url = ""
     obj, created = Component.objects.get_or_create(
         name=build_data["meta"]["name"],
         type=build_data["type"],
@@ -330,7 +334,7 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
         release=build_data["meta"]["release"],
         defaults={
             "software_build": softwarebuild,
-            "related_url": build_data["meta"].get("repository_url", ""),
+            "related_url": related_url,
             "meta_attr": build_data["meta"],
             "namespace": build_data.get("namespace", ""),
         },
@@ -403,10 +407,10 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
                 related_url = ""
                 if component_name.startswith("github.com/"):
                     related_url = f"https://{component_name}"
-                if "openshift-priv" in related_url:
-                    # Component name is something like github.com/openshift-priv/cluster-api
-                    # The public repo we want is just github.com/openshift/cluster-api
-                    related_url = related_url.replace("openshift-priv", "openshift")
+            if "openshift-priv" in related_url:
+                # Component name is something like github.com/openshift-priv/cluster-api
+                # The public repo we want is just github.com/openshift/cluster-api
+                related_url = related_url.replace("openshift-priv", "openshift")
 
             new_upstream, created = Component.objects.update_or_create(
                 type=source["type"],

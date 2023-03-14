@@ -1666,7 +1666,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         return self.meta_attr.get("epoch", "")
 
     def get_provides_nodes(self, include_dev: bool = True, using: str = "read_only") -> set[str]:
-        """return a QuerySet of descendants with PROVIDES ComponentNode type"""
+        """return a set of descendant ids with PROVIDES ComponentNode type"""
         # Used in manifests / taxonomies. Returns whole objects to access their properties
         provides_set = set()
 
@@ -1685,8 +1685,27 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             )
         return provides_set
 
+    def get_provides_nodes_queryset(
+        self, include_dev: bool = True, using: str = "read_only"
+    ) -> QuerySet[ComponentNode]:
+        """return a QuerySet of descendants with PROVIDES ComponentNode type"""
+        # TODO - leaving this here for now
+        # Used in manifests / taxonomies. Returns whole objects to access their properties
+        type_list: tuple[ComponentNode.ComponentNodeType, ...] = (
+            ComponentNode.ComponentNodeType.PROVIDES,
+        )
+        if include_dev:
+            type_list = ComponentNode.PROVIDES_NODE_TYPES
+        return (
+            self.cnodes.get_queryset()
+            .get_descendants()
+            .filter(type__in=type_list)
+            .prefetch_related("obj")
+            .using(using)
+        )
+
     def get_sources_nodes(self, include_dev: bool = True, using: str = "read_only") -> set[str]:
-        """Return a QuerySet of ancestors for all PROVIDES ComponentNodes"""
+        """Return a set of ancestors ids for all PROVIDES ComponentNodes"""
         sources_set = set()
         type_list: tuple[ComponentNode.ComponentNodeType, ...] = (
             ComponentNode.ComponentNodeType.PROVIDES,
@@ -1703,6 +1722,17 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
                 .values_list("component__pk", flat=True)
             )
         return sources_set
+
+    def get_sources_nodes_queryset(
+        self, include_dev: bool = True, using: str = "read_only"
+    ) -> QuerySet[ComponentNode]:
+        """return a QuerySet of descendants with PROVIDES ComponentNode type"""
+        # TODO - leaving this here for now
+        # Used in manifests / taxonomies. Returns whole objects to access their properties
+        type_list: tuple[ComponentNode.ComponentNodeType, ...] = (
+            ComponentNode.ComponentNodeType.PROVIDES,
+        )
+        return self.cnodes.filter(type__in=type_list).get_ancestors(include_self=False).using(using)
 
     def get_upstreams_nodes(self, using: str = "read_only") -> list[ComponentNode]:
         """return upstreams component ancestors in family trees"""

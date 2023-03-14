@@ -50,7 +50,7 @@ def test_product_manifest_properties():
 
     num_provided = 0
     for latest_component in stream.get_latest_components():
-        num_provided += latest_component.get_provides_nodes().count()
+        num_provided += len(latest_component.get_provides_nodes())
 
     assert num_provided == 2
 
@@ -134,7 +134,7 @@ def test_component_manifest_properties():
         schema = json.load(spec_file)
     jsonschema.validate(manifest, schema)
 
-    num_provided = component.get_provides_nodes().count()
+    num_provided = len(component.get_provides_nodes())
 
     assert num_provided == 2
 

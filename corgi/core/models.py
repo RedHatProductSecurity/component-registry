@@ -306,10 +306,12 @@ class SoftwareBuild(TimeStampedModel):
         for component in self.components.get_queryset():
             # This is needed for container image builds which pull in components not
             # built at Red Hat, and therefore not assigned a build_id
-            for d in component.cnodes.get_queryset().get_descendants(include_self=True):
-                if not d.obj:
-                    continue
-                components.add(d.obj)
+            for cnode in component.cnodes.get_queryset().prefetch_related("obj"):
+                components.add(cnode.obj)
+                for d in cnode.get_descendants():
+                    if not d.obj:
+                        continue
+                    components.add(d.obj)
 
         for component in components:
             component.save_product_taxonomy(product_details)
@@ -1332,10 +1334,8 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         """Link related components together using foreign keys. Avoids repeated MPTT tree lookups"""
         upstreams = self.get_upstreams_pks(using="default")
         self.upstreams.set(upstreams)
-        provides = self.get_provides_nodes(using="default").values_list("component__pk", flat=True)
-        self.provides.set(provides)
-        sources = self.get_sources_nodes(using="default").values_list("component__pk", flat=True)
-        self.sources.set(sources)
+        self.provides.set(self.get_provides_nodes(using="default"))
+        self.sources.set(self.get_sources_nodes(using="default"))
 
     @property
     def provides_queryset(self, using: str = "read_only") -> QuerySet["Component"]:
@@ -1665,10 +1665,31 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     def epoch(self) -> str:
         return self.meta_attr.get("epoch", "")
 
-    def get_provides_nodes(
+    def get_provides_nodes(self, include_dev: bool = True, using: str = "read_only") -> set[str]:
+        """return a set of descendant ids with PROVIDES ComponentNode type"""
+        # Used in manifests / taxonomies. Returns whole objects to access their properties
+        provides_set = set()
+
+        type_list: tuple[ComponentNode.ComponentNodeType, ...] = (
+            ComponentNode.ComponentNodeType.PROVIDES,
+        )
+        if include_dev:
+            type_list = ComponentNode.PROVIDES_NODE_TYPES
+        for cnode in self.cnodes.get_queryset():
+            provides_set.update(
+                cnode.get_descendants()
+                .filter(type__in=type_list)
+                .prefetch_related("obj")
+                .using(using)
+                .values_list("component__pk", flat=True)
+            )
+        return provides_set
+
+    def get_provides_nodes_queryset(
         self, include_dev: bool = True, using: str = "read_only"
     ) -> QuerySet[ComponentNode]:
         """return a QuerySet of descendants with PROVIDES ComponentNode type"""
+        # TODO - leaving this here for now
         # Used in manifests / taxonomies. Returns whole objects to access their properties
         type_list: tuple[ComponentNode.ComponentNodeType, ...] = (
             ComponentNode.ComponentNodeType.PROVIDES,
@@ -1683,10 +1704,9 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             .using(using)
         )
 
-    def get_sources_nodes(
-        self, include_dev: bool = True, using: str = "read_only"
-    ) -> QuerySet[ComponentNode]:
-        """Return a QuerySet of ancestors for all PROVIDES ComponentNodes"""
+    def get_sources_nodes(self, include_dev: bool = True, using: str = "read_only") -> set[str]:
+        """Return a set of ancestors ids for all PROVIDES ComponentNodes"""
+        sources_set = set()
         type_list: tuple[ComponentNode.ComponentNodeType, ...] = (
             ComponentNode.ComponentNodeType.PROVIDES,
         )
@@ -1695,6 +1715,23 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         # Return ancestors of only PROVIDES nodes for this component
         # Sources should be inverse of provides, so don't consider other nodes
         # Inverting "PROVIDES descendants of all nodes" gives "all ancestors of PROVIDES nodes"
+        for cnode in self.cnodes.filter(type__in=type_list):
+            sources_set.update(
+                cnode.get_ancestors(include_self=False)
+                .using(using)
+                .values_list("component__pk", flat=True)
+            )
+        return sources_set
+
+    def get_sources_nodes_queryset(
+        self, include_dev: bool = True, using: str = "read_only"
+    ) -> QuerySet[ComponentNode]:
+        """return a QuerySet of descendants with PROVIDES ComponentNode type"""
+        # TODO - leaving this here for now
+        # Used in manifests / taxonomies. Returns whole objects to access their properties
+        type_list: tuple[ComponentNode.ComponentNodeType, ...] = (
+            ComponentNode.ComponentNodeType.PROVIDES,
+        )
         return self.cnodes.filter(type__in=type_list).get_ancestors(include_self=False).using(using)
 
     def get_upstreams_nodes(self, using: str = "read_only") -> list[ComponentNode]:

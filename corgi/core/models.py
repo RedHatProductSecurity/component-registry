@@ -922,12 +922,13 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     release = models.CharField(max_length=1024, default="")
     arch = models.CharField(max_length=1024, default="")
 
-    purl = models.CharField(max_length=1024, default="")
+    purl = models.CharField(max_length=1024, default="", unique=True)
     nvr = models.CharField(max_length=1024, default="")
     nevra = models.CharField(max_length=1024, default="")
 
-    # related_name defaults to fieldname_set if not specified
-    # e.g. channels_set, upstreams_set
+    # related_name defaults to modelname_set if not specified
+    # e.g. an implicit component_set field is added on the Channel / Component model
+    # for all channels / downstream components linked to this component
     channels = models.ManyToManyField(Channel)
     upstreams = models.ManyToManyField("Component")
 

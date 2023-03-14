@@ -306,10 +306,12 @@ class SoftwareBuild(TimeStampedModel):
         for component in self.components.get_queryset():
             # This is needed for container image builds which pull in components not
             # built at Red Hat, and therefore not assigned a build_id
-            for d in component.cnodes.get_queryset().get_descendants(include_self=True):
-                if not d.obj:
-                    continue
-                components.add(d.obj)
+            for cnode in component.cnodes.get_queryset().prefetch_related("obj"):
+                components.add(cnode.obj)
+                for d in cnode.get_descendants():
+                    if not d.obj:
+                        continue
+                    components.add(d.obj)
 
         for component in components:
             component.save_product_taxonomy(product_details)

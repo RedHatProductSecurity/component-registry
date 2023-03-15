@@ -1681,7 +1681,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
                 .filter(type__in=type_list)
                 .prefetch_related("obj")
                 .using(using)
-                .values_list("component__pk", flat=True)
+                .values_list("object_id", flat=True)
             )
         return provides_set
 
@@ -1696,13 +1696,16 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         )
         if include_dev:
             type_list = ComponentNode.PROVIDES_NODE_TYPES
-        return (
-            self.cnodes.get_queryset()
-            .get_descendants()
-            .filter(type__in=type_list)
-            .prefetch_related("obj")
-            .using(using)
-        )
+
+        provides_set = set()
+        for cnode in self.cnodes.get_queryset():
+            provides_set.update(
+                cnode.get_descendants()
+                .filter(type__in=type_list)
+                .using(using)
+                .values_list("pk", flat=True)
+            )
+        return ComponentNode.objects.filter(pk__in=provides_set)
 
     def get_sources_nodes(self, include_dev: bool = True, using: str = "read_only") -> set[str]:
         """Return a set of ancestors ids for all PROVIDES ComponentNodes"""

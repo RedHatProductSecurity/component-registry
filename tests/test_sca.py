@@ -1,3 +1,4 @@
+import copy
 import os
 import shutil
 from pathlib import Path, PosixPath
@@ -6,6 +7,7 @@ from unittest.mock import call, patch
 
 import pytest
 from django.conf import settings
+from packageurl import PackageURL
 
 from corgi.collectors.go_list import GoList
 from corgi.collectors.syft import Syft
@@ -16,8 +18,10 @@ from corgi.tasks.sca import (
     _get_distgit_sources,
     _scan_files,
     cpu_software_composition_analysis,
+    save_component,
 )
 from tests.factories import (
+    ComponentFactory,
     ContainerImageComponentFactory,
     SoftwareBuildFactory,
     SrpmComponentFactory,
@@ -447,3 +451,52 @@ def test_slow_software_composition_analysis(
         root_component = Component.objects.srpms().get(software_build=sb)
     assert expected_component.meta_attr["source"] == ["syft-0.60.1"]
     mock_save_prod_tax.assert_called_once()
+
+
+@pytest.mark.django_db
+def test_save_component_skips_duplicates():
+    """Test that component names which only differ by dash / underscore,
+    or different casing, do not create duplicate purls"""
+    # Only type=PYPI doesn't distinguish between dash and underscore
+    # Only type=PYPI and type=GITHUB don't distinguish between uppercase and lowercase
+    # We have no Github components
+    old_component = ComponentFactory(
+        type=Component.Type.PYPI,
+        namespace=Component.Namespace.UPSTREAM,
+        name="requests_ntlm",
+        release="",
+        arch="",
+    )
+    image_component = ContainerImageComponentFactory(name="image_component")
+    root_node, _ = ComponentNode.objects.get_or_create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        purl=image_component.purl,
+        defaults={"obj": image_component},
+    )
+
+    new_component = {
+        "type": old_component.type,
+        "name": old_component.name.replace("_", "-").upper(),
+        "version": old_component.version,
+    }
+
+    new_purl = PackageURL(**new_component).to_string()
+    assert new_purl == old_component.purl
+
+    new_component["meta"] = {"name": new_component["name"], "version": new_component["version"]}
+    new_component_with_purl = copy.deepcopy(new_component)
+    new_component_with_purl["meta"]["purl"] = new_purl
+
+    # Find the existing component, don't create a duplicate
+    # Create a new node and link it to the root
+    assert old_component.cnodes.count() == 0
+    assert save_component(new_component, root_node) is True
+    assert Component.objects.filter(name=new_component["name"]).first() is None
+    assert old_component.cnodes.count() == 1
+
+    # Find the existing component, don't create a duplicate
+    # Find the existing node, don't create a duplicate
+    assert save_component(new_component_with_purl, root_node) is False
+    assert Component.objects.filter(name=new_component_with_purl["name"]).first() is None
+    assert old_component.cnodes.count() == 1

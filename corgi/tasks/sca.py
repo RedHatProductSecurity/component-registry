@@ -6,10 +6,12 @@ from pathlib import Path
 from typing import Any, Optional, Tuple
 from urllib.parse import urlparse
 
+import django.db
 import requests
 from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.conf import settings
+from packageurl import PackageURL
 from requests import Response
 
 from config.celery import app
@@ -29,26 +31,72 @@ lookaside_source_regexes = tuple(re.compile(p) for p in LOOKASIDE_REGEX_SOURCE_P
 logger = get_task_logger(__name__)
 
 
-def save_component(component: dict[str, Any], parent: ComponentNode):
+def find_duplicate_component(meta_name: str, syft_purl: str) -> Component:
+    """Find a component with matching purl but different name
+    Raise an error if the mismatch isn't a known edge case"""
+    possible_dupe = Component.objects.get(purl=syft_purl)
+
+    # Check if the dupe component fits one of our known edge cases
+    # Ignore dashes / underscores which are handled below
+    old_name = possible_dupe.name.replace("-", "_")
+    new_name = meta_name.replace("-", "_")
+    same_name_different_case = old_name.lower() == new_name.lower()
+    same_name_different_case &= old_name != new_name
+
+    if same_name_different_case:
+        # e.g. requests-ntlm and requests-NTLM
+        logger.warning("Duplicate component had case-insensitive matching name: %s", syft_purl)
+
+    # Ignore case differences which were handled above
+    old_name = possible_dupe.name.lower()
+    new_name = meta_name.lower()
+    dash_underscore_confusion = old_name.replace("-", "_") == new_name.replace("-", "_")
+    dash_underscore_confusion &= old_name != new_name
+
+    if dash_underscore_confusion:
+        # e.g. requests-ntlm and requests_ntlm
+        logger.warning("Duplicate component had mismatched dash or underscore: %s", syft_purl)
+
+    if same_name_different_case or dash_underscore_confusion:
+        return possible_dupe
+    else:
+        # Some other case we need to consider / handle in our code
+        raise ValueError(f"New edge case for duplicate component: {syft_purl}")
+
+
+def save_component(component: dict[str, Any], parent: ComponentNode) -> bool:
     meta = component.get("meta", {})
     if component["type"] not in Component.Type:
         logger.warning("Tried to save component with unknown type: %s", component["type"])
         return False
 
-    # Use all fields from Component index and uniqueness constraint
-    obj, created = Component.objects.get_or_create(
-        type=component["type"],
-        name=meta.pop("name", ""),
-        version=meta.pop("version", ""),
-        release="",
-        arch="",
-        defaults={"meta_attr": meta},
-    )
+    syft_purl = meta.get("purl")
+    if not syft_purl:
+        syft_purl = PackageURL(
+            type=component["type"], name=meta.get("name", ""), version=meta.get("version", "")
+        ).to_string()
 
-    if "purl" in meta and obj.purl != meta["purl"]:
-        logger.warning(
-            "Saved component purl %s, does not match Syft purl: %s", obj.purl, meta["purl"]
+    created = False
+    name = meta.pop("name", "")
+    try:
+        # Use all fields from Component index and uniqueness constraint
+        obj, created = Component.objects.get_or_create(
+            type=component["type"],
+            name=name,
+            version=meta.pop("version", ""),
+            release="",
+            arch="",
+            defaults={"meta_attr": meta},
         )
+    except django.db.IntegrityError:
+        # "Get the component" fails if the name is different
+        # "Create the component" fails if the purl is the same
+        # Find the existing component with the same purl / different name
+        # So we can add e.g. an existing PyPI package to a new container parent
+        obj = find_duplicate_component(name, syft_purl)
+
+    if syft_purl and syft_purl != obj.purl:
+        logger.warning("Saved component purl %s, does not match Syft purl: %s", obj.purl, syft_purl)
 
     node, node_created = ComponentNode.objects.get_or_create(
         type=ComponentNode.ComponentNodeType.PROVIDES,

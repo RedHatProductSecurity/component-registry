@@ -1,9 +1,11 @@
+import copy
 import json
 from types import SimpleNamespace
 from unittest.mock import call, patch
 
 import pytest
 from django.conf import settings
+from django.db import IntegrityError
 from yaml import safe_load
 
 from corgi.collectors.brew import Brew, BrewBuildTypeNotSupported
@@ -665,6 +667,40 @@ def test_save_component():
     save_component(rpm_dict, root_node, software_build)
     # Now it should have a software_build
     assert Component.objects.filter(type=Component.Type.RPM, software_build=software_build).exists()
+
+
+@pytest.mark.django_db
+def test_save_component_skips_duplicates():
+    """Test that component names which only differ by dash / underscore,
+    or different casing, do not create duplicate purls"""
+    image_component = ContainerImageComponentFactory(name="image_component")
+    root_node, _ = ComponentNode.objects.get_or_create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        purl=image_component.purl,
+        defaults={"obj": image_component},
+    )
+    name = "REQUESTS_NTLM"
+    new_component = {
+        "type": Component.Type.PYPI,
+        "namespace": Component.Namespace.UPSTREAM,
+        "meta": {"name": name, "version": "1.2.3", "arch": "noarch"},
+    }
+
+    new_component_with_same_purl = copy.deepcopy(new_component)
+    save_component(new_component, root_node, image_component.software_build)
+    pypi = Component.objects.get(name=name)
+    assert pypi.purl == "pkg:pypi/requests-ntlm@1.2.3"
+
+    name = name.lower().replace("_", "-")
+    new_component_with_same_purl["meta"]["name"] = name
+    with pytest.raises(IntegrityError):
+        # Shouldn't ever happen in real code
+        # The duplicate components are created by Syft / the SCA task
+        # We can't handle below since we don't know the correct purl yet
+        save_component(new_component_with_same_purl, root_node, image_component.software_build)
+    # The duplicate should not be saved
+    assert Component.objects.filter(name=name).first() is None
 
 
 @patch("koji.ClientSession")

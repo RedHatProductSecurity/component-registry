@@ -224,6 +224,11 @@ def save_component(
         # Handle case when key is present but value is None
         related_url = ""
 
+    # We can't build a purl before the component is saved,
+    # so we can't handle an IntegrityError (duplicate purl) here like we do in the SCA task
+    # But that's OK - this task shouldn't ever raise an IntegrityError
+    # The "original" component should be created here as part of normal ingestion
+    # The duplicate components (new name, same purl) are created by Syft / the SCA task later
     obj, _ = Component.objects.update_or_create(
         type=component_type,
         name=meta.pop("name", ""),

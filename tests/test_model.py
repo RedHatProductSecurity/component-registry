@@ -100,10 +100,9 @@ def test_nevra():
         else:
             assert not package_url.version.endswith("-")
         # epoch is a property of Component which retrieves the value for meta_attr
-        no_epoch = ComponentFactory(name=component_type, type=component_type)
-        assert ":" not in no_epoch.nevra
-        no_arch = ComponentFactory(name=component_type, arch="", type=component_type)
-        assert not no_arch.nevra.endswith("-")
+        no_epoch_or_arch = ComponentFactory(name=component_type, arch="", type=component_type)
+        assert ":" not in no_epoch_or_arch.nevra
+        assert not no_epoch_or_arch.nevra.endswith("-")
 
 
 def test_product_taxonomic_queries():

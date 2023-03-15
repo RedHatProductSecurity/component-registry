@@ -17,7 +17,7 @@
         "filesAnalyzed": false,
         "homepage": {% if obj.related_url %}"{{obj.related_url}}"{% else %}"NOASSERTION"{% endif %},
         "licenseComments": "Licensing information is automatically generated and may be incomplete or incorrect.",
-        "licenseConcluded": {% if obj.license_concluded %}"{{obj.license_concluded}}",{% else %}"NOASSERTION"{% endif %},
+        "licenseConcluded": {% if obj.license_concluded %}"{{obj.license_concluded}}"{% else %}"NOASSERTION"{% endif %},
         "licenseDeclared": {% if obj.license_declared %}"{{obj.license_declared}}"{% else %}"NOASSERTION"{% endif %},
         "name": "{{obj.name}}",
         "originator": "NOASSERTION",

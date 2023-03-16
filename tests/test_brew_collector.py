@@ -554,33 +554,39 @@ def test_parsing_bundled_provides():
         # Below entries do not match bundled deps and are not present in expected values
         "rh-nodejs12-npm",
         "",
+        # brew rpmID=8178747
+        "bundled(org.yaml:snakeyaml)",
+        "bundled(commons-codec:commons-codec)",
+        "bundled(biz.source_code:base64coder)",
     ]
     # Add mock version; we're testing component name parsing here only
     test_provides = [(str(provide), "0") for provide in test_provides]
 
     expected_values = [
-        ("GOLANG", "golang.org/x/crypto/acme"),
-        ("GOLANG", "github.com/git-lfs/go-netrc"),
-        ("GOLANG", "github.com/alexbrainman/sspi"),
-        ("GOLANG", "golang.org/x/net"),
-        ("PYPI", "certifi"),
-        ("PYPI", "pip"),
-        ("PYPI", "setuptools"),
-        ("PYPI", "django-stubs"),
-        ("PYPI", "selectors2"),
-        ("NPM", "@babel/code-frame"),
-        ("NPM", "yargs-parser"),
-        ("GEM", "fileutils"),
-        ("GEM", "example"),
-        ("GEM", "another-example"),
-        ("CARGO", "aho-corasick/default"),
-        ("GENERIC", "rh-nodejs12-zlib"),
-        ("NPM", "backbone"),
-        ("GENERIC", "hello-world"),
-        ("GENERIC", "libsomething"),
+        (Component.Type.GOLANG, "golang.org/x/crypto/acme"),
+        (Component.Type.GOLANG, "github.com/git-lfs/go-netrc"),
+        (Component.Type.GOLANG, "github.com/alexbrainman/sspi"),
+        (Component.Type.GOLANG, "golang.org/x/net"),
+        (Component.Type.PYPI, "certifi"),
+        (Component.Type.PYPI, "pip"),
+        (Component.Type.PYPI, "setuptools"),
+        (Component.Type.PYPI, "django-stubs"),
+        (Component.Type.PYPI, "selectors2"),
+        (Component.Type.NPM, "@babel/code-frame"),
+        (Component.Type.NPM, "yargs-parser"),
+        (Component.Type.GEM, "fileutils"),
+        (Component.Type.GEM, "example"),
+        (Component.Type.GEM, "another-example"),
+        (Component.Type.CARGO, "aho-corasick/default"),
+        (Component.Type.GENERIC, "rh-nodejs12-zlib"),
+        (Component.Type.NPM, "backbone"),
+        (Component.Type.GENERIC, "hello-world"),
+        (Component.Type.GENERIC, "libsomething"),
+        (Component.Type.MAVEN, "org.yaml/snakeyaml"),
+        (Component.Type.MAVEN, "commons-codec/commons-codec"),
+        (Component.Type.MAVEN, "biz.source_code/base64coder"),
     ]
     expected_values = [parsed + ("0",) for parsed in expected_values]
-
     assert Brew._extract_bundled_provides(test_provides) == expected_values
 
 

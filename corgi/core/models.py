@@ -1668,7 +1668,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
     def get_provides_nodes(self, include_dev: bool = True, using: str = "read_only") -> set[str]:
         """return a set of descendant ids with PROVIDES ComponentNode type"""
-        # Used in manifests / taxonomies. Returns whole objects to access their properties
+        # Used in taxonomies. Returns only PKs
         provides_set = set()
 
         type_list: tuple[ComponentNode.ComponentNodeType, ...] = (
@@ -1680,7 +1680,6 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             provides_set.update(
                 cnode.get_descendants()
                 .filter(type__in=type_list)
-                .prefetch_related("obj")
                 .using(using)
                 .values_list("object_id", flat=True)
             )
@@ -1690,8 +1689,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         self, include_dev: bool = True, using: str = "read_only"
     ) -> QuerySet[ComponentNode]:
         """return a QuerySet of descendants with PROVIDES ComponentNode type"""
-        # TODO - leaving this here for now
-        # Used in manifests / taxonomies. Returns whole objects to access their properties
+        # Used in manifests. Returns a QuerySet of (node type, linked component UUID)
         type_list: tuple[ComponentNode.ComponentNodeType, ...] = (
             ComponentNode.ComponentNodeType.PROVIDES,
         )
@@ -1706,7 +1704,11 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
                 .using(using)
                 .values_list("pk", flat=True)
             )
-        return ComponentNode.objects.filter(pk__in=provides_set)
+        return (
+            ComponentNode.objects.filter(pk__in=provides_set)
+            .using(using)
+            .values_list("type", "object_id")
+        )
 
     def get_sources_nodes(self, include_dev: bool = True, using: str = "read_only") -> set[str]:
         """Return a set of ancestors ids for all PROVIDES ComponentNodes"""

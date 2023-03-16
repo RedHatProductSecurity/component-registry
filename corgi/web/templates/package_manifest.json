@@ -19,5 +19,5 @@
     "packageFileName": {% if component.filename %}"{{component.filename}}"{% else %}"NOASSERTION"{% endif %},
     "SPDXID": "SPDXRef-{{component.uuid}}",
     "supplier": "Organization: Red Hat",
-    "versionInfo": "{{component.nevra}}"
+    "versionInfo": "{{component.nevra|escapejs}}"
 },

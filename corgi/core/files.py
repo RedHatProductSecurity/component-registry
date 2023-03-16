@@ -34,11 +34,6 @@ class ManifestFile(ABC):
         # to generate valid JSON and escape quotes + newlines
         # But this may output ugly Unicode like "\u000A",
         # so we convert from JSON back to JSON to get "\n" instead
-
-        # This is a workaround for packages detected by Syft 0.60.1 that have a trailing backslash
-        # see https://github.com/anchore/syft/issues/1644
-        content = content.replace("\\", "\\\\")
-
         content = json.loads(content)
         return json.dumps(content, indent=2, sort_keys=True)
 

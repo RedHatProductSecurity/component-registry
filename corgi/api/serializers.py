@@ -122,7 +122,9 @@ def get_model_id_link(
 ) -> str:
     """Generic method to get an ID-based link for an arbitrary Model subclass."""
     link = f"{CORGI_API_URL}/{model_name}/{uuid_or_build_id}"
-    return link if not manifest else f"{link}/manifest"
+    if manifest:
+        link = f"{link}/manifest?format=json"
+    return link
 
 
 def get_channel_data_list(manager: Manager["Channel"]) -> list[dict[str, str]]:

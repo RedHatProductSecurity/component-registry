@@ -1341,7 +1341,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     @property
     def provides_queryset(self, using: str = "read_only") -> QuerySet["Component"]:
         """Return the "provides" queryset using the read-only DB, for use in templates"""
-        return self.provides.get_queryset().using(using)
+        return self.provides.get_queryset().using(using).iterator()
 
     def is_srpm(self):
         return self.type == Component.Type.RPM and self.arch == "src"
@@ -1708,6 +1708,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             ComponentNode.objects.filter(pk__in=provides_set)
             .using(using)
             .values_list("type", "object_id")
+            .iterator()
         )
 
     def get_sources_nodes(self, include_dev: bool = True, using: str = "read_only") -> set[str]:

@@ -33,10 +33,17 @@
         "supplier": "Organization: Red Hat",
         "versionInfo": "{{obj.version}}"
     }
-{% endblock %}
-{% block relationships %}
-    {% for component in latest_components %}
-        {% include "provided_relationships_manifest.json" %}
+{% endblock %}{% block relationships %}{% for component in latest_components %}{% for node_type, node_id in component.get_provides_nodes_queryset %}
+        {
+          "relatedSpdxElement": "SPDXRef-{{component.uuid}}",{# subcomponent is built from, or contained in, component #}
+          "relationshipType": {% if node_type == "PROVIDES_DEV" %}"DEV_DEPENDENCY_OF"{% else %}"CONTAINED_BY"{% endif %},
+          "spdxElementId": "SPDXRef-{{node_id}}"
+        },
+        {
+          "relatedSpdxElement": "NONE",{# subcomponent is a leaf node #}
+          "relationshipType": "CONTAINS",
+          "spdxElementId": "SPDXRef-{{node_id}}"
+        },{% endfor %}
         {
           "relatedSpdxElement": "SPDXRef-{{obj.uuid}}",
           "relationshipType": "PACKAGE_OF",

@@ -224,6 +224,7 @@ def save_component(
         # Handle case when key is present but value is None
         related_url = ""
 
+    license_declared_raw = meta.pop("license", "")
     # We can't build a purl before the component is saved,
     # so we can't handle an IntegrityError (duplicate purl) here like we do in the SCA task
     # But that's OK - this task shouldn't ever raise an IntegrityError
@@ -238,12 +239,22 @@ def save_component(
         defaults={
             "description": meta.pop("description", ""),
             "filename": find_package_file_name(meta.pop("source_files", [])),
-            "license_declared_raw": meta.pop("license", ""),
             "namespace": component.get("namespace", ""),
             "related_url": related_url,
             "software_build": softwarebuild,
         },
     )
+
+    if license_declared_raw and license_declared_raw != obj.license_declared_raw:
+        # Any non-empty license here should be reported
+        # We only rely on OpenLCS if we don't know the license_declared
+        # But we can't set license_declared in update_or_create above
+        # If meta["license"] is an empty string and we are reprocessing,
+        # we might erase the license that OpenLCS provided
+        # They cannot erase any licenses we set ourselves (when the field is not empty)
+        # API endpoint blocks this (400 Bad Request)
+        obj.license_declared_raw = license_declared_raw
+        obj.save()
 
     # Usually component_meta is an empty dict by the time we get here, but if it's not, and we have
     # new keys, add them to the existing meta_attr. Only call save if something has been added

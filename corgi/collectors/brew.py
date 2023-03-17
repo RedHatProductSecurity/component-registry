@@ -5,7 +5,7 @@ import os
 import re
 from datetime import datetime
 from types import SimpleNamespace
-from typing import Any, Dict, Generator, List, Tuple
+from typing import Any, Dict, Generator, List, Optional, Tuple
 from urllib.parse import urlparse
 
 import koji
@@ -117,53 +117,73 @@ class Brew:
         return f"{parsed_url.netloc}{path}"
 
     @classmethod
+    def _bundled_or_golang(cls, component: str) -> str:
+        # Process bundled deps only; account for typed golang deps of type:
+        # "golang(golang.org/x/crypto/acme)"
+        if component.startswith("bundled("):
+            c = component.removeprefix("bundled(")
+        elif component.startswith("golang("):
+            c = component
+        else:
+            return ""
+        # Strip right parens
+        return c.replace(")", "")
+
+    @classmethod
+    def _check_maven_component(
+        cls, component: str, version: str
+    ) -> Optional[tuple[Component.Type, str, str]]:
+        if ":" in component:
+            return (Component.Type.MAVEN, component.replace(":", "/"), version)
+        return None
+
+    @classmethod
+    def _get_bundled_component_type(
+        cls, component_type: str, component: str
+    ) -> Optional[Component.Type]:
+        if component_type.startswith("python"):
+            return Component.Type.PYPI
+        elif component_type.startswith("ruby"):
+            return Component.Type.GEM
+        elif component_type == "golang":
+            # Need to skip arch names, See CORGI-48
+            if component in ("aarch-64", "ppc-64", "s390-64", "x86-64"):
+                return None
+            return Component.Type.GOLANG
+        elif component_type in cls.EXTERNAL_PKG_TYPE_MAPPING:
+            return cls.EXTERNAL_PKG_TYPE_MAPPING[component_type]
+        else:
+            return Component.Type.GENERIC
+
+    @classmethod
     def _extract_bundled_provides(
         cls, provides: list[tuple[str, str]]
     ) -> list[tuple[Component.Type, str, str]]:
-        bundled_components = []
+        bundled_components: List[tuple[Component.Type, str, str]] = []
         for component, version in provides:
-            # Process bundled deps only; account for typoed golang deps of type:
-            # "golang(golang.org/x/crypto/acme)"
-            if component.startswith("bundled("):
-                component = component.removeprefix("bundled(")
-            elif component.startswith("golang("):
-                pass
-            else:
-                # Else it's not bundled or golang, so just skip it
+            component = cls._bundled_or_golang(component)
+            if not component:
                 continue
-            # Strip right parens
-            component = component.replace(")", "")
+            bundled_component = cls._check_maven_component(component, version)
+            if bundled_component:
+                bundled_components.append(bundled_component)
+                continue
             # Split into namespace identifier and component name
             component_split = re.split(r"([(-])", component, maxsplit=1)
             if len(component_split) != 3:
-                component_type = Component.Type.GENERIC
+                bundled_components.append((Component.Type.GENERIC, component, version))
+                continue
             else:
-                # TODO: re.split always returns a list of 2 items because maxsplit=1
-                #  it does not return the separator like str.partition does
-                #  str.partition has no option to specify "only split once"
-                #  this code is currently unreachable (CORGI-343)
-                component_type, separator, component = component_split  # type: ignore[assignment]
-
-                if component_type.startswith("python"):
-                    component_type = Component.Type.PYPI
-                elif component_type.startswith("ruby"):
-                    component_type = Component.Type.GEM
-                elif component_type == "golang":
-                    # Need to skip arch names, See CORGI-48
-                    if component in ("aarch-64", "ppc-64", "s390-64", "x86-64"):
-                        continue
-                    component_type = Component.Type.GOLANG
-                elif component_type in cls.EXTERNAL_PKG_TYPE_MAPPING:
-                    component_type = cls.EXTERNAL_PKG_TYPE_MAPPING[component_type]
-                else:
-                    # Account for bundled deps like "bundled(rh-nodejs12-zlib)" where it's not clear
-                    # what is the component type and what is the actual component name.
-                    if separator == "-":
-                        # E.g. unknown / rh-nodejs12-zlib
-                        component = f"{component_type}-{component}"
-                    component_type = Component.Type.GENERIC
-
-            bundled_components.append((component_type, component, version))
+                component_type, seperator, component = component_split
+                bundled_component_type = cls._get_bundled_component_type(component_type, component)
+                if not bundled_component_type:
+                    continue
+                # Account for bundled deps like "bundled(rh-nodejs12-zlib)" where it's not clear
+                # what is the component type and what is the actual component name.
+                if bundled_component_type == Component.Type.GENERIC and seperator == "-":
+                    # E.g. unknown / rh-nodejs12-zlib
+                    component = f"{component_type}-{component}"
+            bundled_components.append((bundled_component_type, component, version))
         return bundled_components
 
     def get_rpm_build_data(self, build_id: int) -> dict:

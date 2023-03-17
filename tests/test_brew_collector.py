@@ -467,25 +467,46 @@ def test_extract_multiple_remote_sources(requests_mock):
     assert len(source_components[3]["components"]) > 0
 
 
-@patch("koji.ClientSession")
-def test_get_legacy_osbs_source(mock_koji_session, monkeypatch):
-    # buildID=1890187
-    build_info = {
-        "name": "golang-github-prometheus-node_exporter-container",
-        "version": "v4.10.0",
-        "release": "202202160023.p0.g0eed310.assembly.stream",
-        "epoch": None,
-        "extra": {
-            "image": {
-                "go": {"modules": [{"module": "github.com/openshift/node_exporter"}]},
-            },
+legacy_osbs_test_data = [
+    (
+        # buildID=1890187
+        {
+            "name": "golang-github-prometheus-node_exporter-container",
+            "version": "v4.10.0",
+            "release": "202202160023.p0.g0eed310.assembly.stream",
+            "epoch": None,
+            "extra": {
+                "image": {
+                    "go": {"modules": [{"module": "github.com/openshift/node_exporter"}]},
+                },
+             },
+         },
+        ("github.com/openshift/node_exporter",),
+    ),
+    (
+        {
+            "name": "cincinnati-operator-metadata-container",
+            "version": "v0.0.1",
+            "release": "33",
+            "epoch": None,
+            "extra": {
+                "image": {
+                    "go": {"modules": [{"module": "https://github.com/cincinnati/cincinnati-operator"}]}
+                }
+            }
         },
-    }
-    mock_koji_session.listArchives.return_value = []
-    brew = Brew()
-    monkeypatch.setattr(brew, "koji_session", mock_koji_session)
-    result = brew.get_container_build_data(1890187, build_info)
-    assert len(result["meta"]["upstream_go_modules"]) == 1
+        ("github.com/cincinnati/cincinnati-operator",),
+    )
+]
+@patch("koji.ClientSession")
+@pytest.mark.parametrize("build_info, upstream_go_modules", legacy_osbs_test_data)
+def test_get_legacy_osbs_source(mock_koji_session, build_info, upstream_go_modules, monkeypatch):
+     mock_koji_session.listArchives.return_value = []
+     brew = Brew()
+     monkeypatch.setattr(brew, "koji_session", mock_koji_session)
+     result = brew.get_container_build_data(1890187, build_info)
+     assert result["meta"]["upstream_go_modules"] == upstream_go_modules
+
 
 
 nvr_test_data = [

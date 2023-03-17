@@ -373,7 +373,7 @@ class Brew:
             # AND handle case when "modules" key is present but value is None
             if go and go.get("modules", []):
                 go_modules = tuple(
-                    module["module"] for module in go["modules"] if module.get("module")
+                    module["module"].removeprefix("https://") for module in go["modules"] if module.get("module")
                 )
                 if go_modules:
                     # Tuple above can be empty if .get("module") name is always None / an empty str

@@ -5,10 +5,14 @@
 
 # collect static files
 python3 manage.py collectstatic \
-    --ignore '*.xml' \
-    --ignore '*.bz2' \
-    --ignore 'tmp*' \
+    --ignore '.gitignore' \
+    --ignore '*.json' \
     --noinput
 
 # start gunicorn
-exec gunicorn config.wsgi --config gunicorn_config.py
+if [[ $1 == reload ]]; then
+    exec gunicorn config.wsgi --config gunicorn_config.py --reload
+else
+    exec gunicorn config.wsgi --config gunicorn_config.py
+fi
+

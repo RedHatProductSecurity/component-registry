@@ -398,7 +398,8 @@ def test_extract_remote_sources(requests_mock):
         requests_mock.get(json_url, text=remote_source_data.read())
     source_components = Brew()._extract_remote_sources("", remote_sources)
     assert len(source_components) == 1
-    assert source_components[0]["meta"]["name"] == "github.com/thomasmckay/clair"
+    assert source_components[0]["meta"]["name"] == "thomasmckay/clair"
+    assert source_components[0]["type"] == Component.Type.GITHUB
     assert len(source_components[0]["components"]) == 374
     xtext_modules = [
         d for d in source_components[0]["components"] if d["meta"]["name"] == "golang.org/x/text"
@@ -479,8 +480,8 @@ legacy_osbs_test_data = [
                 "image": {
                     "go": {"modules": [{"module": "github.com/openshift/node_exporter"}]},
                 },
-             },
-         },
+            },
+        },
         ("github.com/openshift/node_exporter",),
     ),
     (
@@ -491,22 +492,25 @@ legacy_osbs_test_data = [
             "epoch": None,
             "extra": {
                 "image": {
-                    "go": {"modules": [{"module": "https://github.com/cincinnati/cincinnati-operator"}]}
+                    "go": {
+                        "modules": [{"module": "https://github.com/cincinnati/cincinnati-operator"}]
+                    }
                 }
-            }
+            },
         },
         ("github.com/cincinnati/cincinnati-operator",),
-    )
+    ),
 ]
+
+
 @patch("koji.ClientSession")
 @pytest.mark.parametrize("build_info, upstream_go_modules", legacy_osbs_test_data)
 def test_get_legacy_osbs_source(mock_koji_session, build_info, upstream_go_modules, monkeypatch):
-     mock_koji_session.listArchives.return_value = []
-     brew = Brew()
-     monkeypatch.setattr(brew, "koji_session", mock_koji_session)
-     result = brew.get_container_build_data(1890187, build_info)
-     assert result["meta"]["upstream_go_modules"] == upstream_go_modules
-
+    mock_koji_session.listArchives.return_value = []
+    brew = Brew()
+    monkeypatch.setattr(brew, "koji_session", mock_koji_session)
+    result = brew.get_container_build_data(1890187, build_info)
+    assert result["meta"]["upstream_go_modules"] == upstream_go_modules
 
 
 nvr_test_data = [
@@ -611,9 +615,33 @@ def test_parsing_bundled_provides():
     assert Brew._extract_bundled_provides(test_provides) == expected_values
 
 
-def test_parse_remote_source_url():
-    url = "https://github.com/quay/config-tool.git"
-    expected = "github.com/quay/config-tool"
+parse_remote_source_url_test_data = [
+    (
+        "https://github.com/quay/config-tool.git",
+        (
+            "quay/config-tool",
+            Component.Type.GITHUB,
+        ),
+    ),
+    # buildId=2067618
+    (
+        "git@github.com:rh-gitops-midstream/argo-cd",
+        (
+            "rh-gitops-midstream/argo-cd",
+            Component.Type.GITHUB,
+        ),
+    ),
+    # from OSBS examples:
+    (
+        "https://git.example.com/team/repo.git",
+        ("git.example.com/team/repo", Component.Type.GENERIC),
+    ),
+    ("git@git.example.com:team/repo.git", ("git.example.com/team/repo", Component.Type.GENERIC)),
+]
+
+
+@pytest.mark.parametrize("url, expected", parse_remote_source_url_test_data)
+def test_parse_remote_source_url(url, expected):
     assert Brew._parse_remote_source_url(url) == expected
 
 

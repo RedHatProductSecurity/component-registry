@@ -108,13 +108,31 @@ class Brew:
         raise BrewBuildSourceNotFound(no_source_msg)
 
     @classmethod
-    def _parse_remote_source_url(cls, url: str) -> str:
+    def _parse_remote_source_url(cls, url: str) -> Tuple[str, Component.Type]:
         """Used to parse remote_source repo from OSBS into purl name for github namespace
         ref https://github.com/containerbuildsystem/osbs-client/blob/
         f719759af18ef9f3bb45ee4411f80a9580723e31/osbs/schemas/container.json#L310"""
         parsed_url = urlparse(url)
         path = parsed_url.path.removesuffix(".git")
-        return f"{parsed_url.netloc}{path}"
+        # handle url like git@github.com:rh-gitops-midstream/argo-cd
+        if path.startswith("git@"):
+            path = path.removeprefix("git@")
+            path = path.replace(":", "/")
+        # look for github.com and set ComponentType with modified path
+        type = Component.Type.GENERIC
+        if parsed_url.netloc == "github.com":
+            type = Component.Type.GITHUB
+            # urlparse keeps the leading / on the path component when netloc was found
+            # the purl spec dictates that we remove it for Github purls
+            path = path.removeprefix("/")
+        # no netloc
+        elif path.startswith("github.com/"):
+            path = path.removeprefix("github.com/")
+            type = Component.Type.GITHUB
+        # non github url with netloc
+        else:
+            return (f"{parsed_url.netloc}{path}", type)
+        return (path, type)
 
     @classmethod
     def _bundled_or_golang(cls, component: str) -> str:
@@ -373,7 +391,9 @@ class Brew:
             # AND handle case when "modules" key is present but value is None
             if go and go.get("modules", []):
                 go_modules = tuple(
-                    module["module"].removeprefix("https://") for module in go["modules"] if module.get("module")
+                    module["module"].removeprefix("https://")
+                    for module in go["modules"]
+                    if module.get("module")
                 )
                 if go_modules:
                     # Tuple above can be empty if .get("module") name is always None / an empty str
@@ -461,11 +481,14 @@ class Brew:
         source_components: list[dict[str, Any]] = []
         for build_loc, coords in remote_sources.items():
             remote_source = self._get_remote_source(coords[0])
+            remote_source_name, remote_source_type = self._parse_remote_source_url(
+                remote_source.repo
+            )
             source_component: dict[str, Any] = {
-                "type": Component.Type.GENERIC,
-                "namespace": Component.Namespace.REDHAT,
+                "type": remote_source_type,
+                "namespace": Component.Namespace.UPSTREAM,
                 "meta": {
-                    "name": self._parse_remote_source_url(remote_source.repo),
+                    "name": remote_source_name,
                     "version": remote_source.ref,
                     "remote_source": coords[0],
                     "remote_source_archive": coords[1],

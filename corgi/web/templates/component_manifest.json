@@ -1,7 +1,7 @@
 {# Component manifest, obj is a Component here #}{% extends "base_manifest.json" %}
 {% block packages %}{% for component in obj.provides_queryset %}{
         "copyrightText": {% if component.copyright_text %}"{{component.copyright_text}}"{% else %}"NOASSERTION"{% endif %},
-        "downloadLocation": {% if component.download_url %}"{{component.download_url}}"{% else %}"NOASSERTION"{% endif %},
+        "downloadLocation": {% if component.download_url %}"{{component.download_url|escapejs}}"{% else %}"NOASSERTION"{% endif %},
         "externalRefs": [
             {
                 "referenceCategory": "PACKAGE_MANAGER",

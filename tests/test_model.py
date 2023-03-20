@@ -1,5 +1,6 @@
 import pytest
 from django.apps import apps
+from django.conf import settings
 from django.db.utils import IntegrityError, ProgrammingError
 from packageurl import PackageURL
 
@@ -445,10 +446,14 @@ def test_get_upstream_container():
     ]
 
 
-def test_purl2url():
+def test_download_url():
     release = "Must_be_removed_from_every_purl_before_building_URL"
     component = ComponentFactory(type=Component.Type.RPM)
-    assert component.download_url == Component.RPM_PACKAGE_BROWSER
+    assert component.download_url == (
+        f"{settings.BREW_DOWNLOAD_ROOT_URL}/packages/"
+        f"{component.name}/{component.version}/{component.release}/{component.arch}/"
+        f"{component.name}-{component.version}-{component.release}.{component.arch}.rpm"
+    )
 
     component = ComponentFactory(type=Component.Type.CONTAINER_IMAGE)
     assert component.download_url == Component.CONTAINER_CATALOG_SEARCH

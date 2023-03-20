@@ -5,6 +5,7 @@ import uuid as uuid
 from abc import abstractmethod
 from typing import Any, Union
 
+from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
@@ -1576,15 +1577,19 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     @property
     def download_url(self) -> str:
         """Report a URL for RPMs and container images that can be used in manifests"""
-        # TODO: Should we eventually make this a stored field on the model
-        #  instead of computing the property each time?
         # RPM ex:
-        # /downloads/content/aspell-devel/0.60.8-8.el9/aarch64/fd431d51/package
-        # We can't build URLs like above because the fd431d51 signing key is required,
-        # but isn't available in the meta_attr / other properties (CORGI-342). Get it with:
-        # rpm -q --qf %{SIGPGP:pgpsig} aspell-devel-0.60.8-8.el9.x86_64 | tail -c8
+        # /brewroot/packages/servicemesh-prometheus/2.14.0/8.el8.1/src/
+        # servicemesh-prometheus-2.14.0-8.el8.1.src.rpm
         if self.type == Component.Type.RPM:
-            return self.RPM_PACKAGE_BROWSER
+            if not self.release:
+                # TODO: Special case that should never happen
+                #  Are there any others we should handle? Or should this fallback just go away?
+                return self.RPM_PACKAGE_BROWSER
+            return (
+                f"{settings.BREW_DOWNLOAD_ROOT_URL}/packages/"
+                f"{self.name}/{self.version}/{self.release}/{self.arch}/"
+                f"{self.name}-{self.version}-{self.release}.{self.arch}.rpm"
+            )
 
         # Image ex:
         # /software/containers/container-native-virtualization/hco-bundle-registry/5ccae1925a13467289f2475b

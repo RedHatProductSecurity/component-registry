@@ -1,7 +1,6 @@
 import json
 import logging
 from datetime import datetime
-from json import JSONDecodeError
 
 import jsonschema
 import pytest
@@ -244,7 +243,7 @@ def test_manifest_backslash():
     component = SrpmComponentFactory(version="2.8.0 \\", software_build=sb)
     component.productstreams.add(stream)
 
-    try:
-        stream.manifest
-    except JSONDecodeError:
-        assert False
+    # Raise the original JSONDecodeError if below fails
+    # Otherwise we can't see what the actual error is
+    manifest = stream.manifest
+    assert manifest

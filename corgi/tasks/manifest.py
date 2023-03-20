@@ -20,7 +20,7 @@ def update_manifests():
     for ps in ProductStream.objects.annotate(num_components=Count("components")).filter(
         num_components__gt=0
     ):
-        cpu_update_ps_manifest.delay(ps.name)
+        slow_update_ps_manifest.delay(ps.name)
 
 
 @app.task(
@@ -28,7 +28,7 @@ def update_manifests():
     autoretry_for=RETRYABLE_ERRORS,
     retry_kwargs=RETRY_KWARGS,
 )
-def cpu_update_ps_manifest(product_stream: str):
+def slow_update_ps_manifest(product_stream: str):
     logger.info("Updating manifest for %s", product_stream)
     ps = ProductStream.objects.get(name=product_stream)
     # TODO figure out a way skip updating files where the content doesnt need updating
@@ -45,5 +45,5 @@ def cpu_update_ps_manifest(product_stream: str):
     autoretry_for=RETRYABLE_ERRORS,
     retry_kwargs=RETRY_KWARGS,
 )
-def collect_static():
+def slow_collect_static():
     call_command("collectstatic", verbosity=0, interactive=False, ignore_patterns=[".gitignore"])

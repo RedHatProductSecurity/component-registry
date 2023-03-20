@@ -34,8 +34,10 @@ logger = logging.getLogger(__name__)
 # TODO remove running_community check once domain is established
 if not utils.running_dev():
     CORGI_API_URL = f"https://{settings.CORGI_DOMAIN}/api/{CORGI_API_VERSION}"
+    CORGI_STATIC_URL = f"https://{settings.CORGI_DOMAIN}{settings.STATIC_URL}"
 else:
     CORGI_API_URL = f"http://localhost:8008/api/{CORGI_API_VERSION}"
+    CORGI_STATIC_URL = f"http://localhost:8008{settings.STATIC_URL}"
 
 
 def get_component_data_list(component_list: Iterable[str]) -> list[dict[str, str]]:
@@ -534,7 +536,9 @@ class ProductModelSerializer(ProductTaxonomySerializer):
 
     @staticmethod
     def get_manifest(instance: ProductStream) -> str:
-        return get_model_id_link("product_streams", instance.uuid, manifest=True)
+        if not instance.components.exists():
+            return ""
+        return f"{CORGI_STATIC_URL}{instance.name}-{instance.pk}.json"
 
     @staticmethod
     def get_relations(instance: ProductModel) -> list[dict[str, str]]:

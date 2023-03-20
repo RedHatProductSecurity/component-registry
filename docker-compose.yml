@@ -72,7 +72,7 @@ services:
       - .env
     environment:
       CORGI_DB_HOST: corgi-db
-    command: gunicorn config.wsgi --config gunicorn_config.py --reload
+    command: ./run_service.sh reload
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8008/api/healthy || exit 1"]
       interval: "60s"

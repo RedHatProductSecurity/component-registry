@@ -627,7 +627,7 @@ class ProductStream(ProductModel):
             .values_list("nevra", flat=True)
         )
         if nevras:
-            # Get the latest NVR using python. This only works for valid RPM NVRs
+            # Get the latest NVR using python. This only works for valid RPM NEVRAs
             return sorted(nevras, key=functools.cmp_to_key(compare_packages))[-1]
         else:
             return ""

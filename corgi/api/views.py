@@ -485,8 +485,8 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         # are not interpreted as part of the request.
         view = request.query_params.get("view")
         purl = request.query_params.get("purl")
-        component_name = self.request.query_params.get("name")
-        component_re_name = self.request.query_params.get("re_name")
+        component_name = self.request.query_params.get("name", "")
+        component_re_name = self.request.query_params.get("re_name", "")
         if not purl:
             # TODO: ?name={}&view=latest this may turn out to be temporary
             if (component_re_name or component_name) and view == "latest":
@@ -543,7 +543,7 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
                             latest_components.append(component)
                 return Response({"results": latest_components})
             if view == "product":
-                component_name = self.request.query_params.get("name")
+                component_name = self.request.query_params.get("name", "")
                 product_streams_arr = []
                 for c in (
                     self.get_queryset()

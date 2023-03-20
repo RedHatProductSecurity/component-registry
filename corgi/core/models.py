@@ -631,7 +631,10 @@ class ProductStream(ProductModel):
             return ""
 
     def get_latest_components(
-        self, component_name=None, strict_search: bool = False, using: str = "read_only"
+        self,
+        component_name: str = "",
+        strict_search: bool = False,
+        using: str = "read_only",
     ) -> QuerySet["Component"]:
         """Return root components from latest builds, using specified DB (read-only by default."""
         if component_name:

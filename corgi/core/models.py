@@ -309,8 +309,6 @@ class SoftwareBuild(TimeStampedModel):
             for cnode in component.cnodes.get_queryset().prefetch_related("obj"):
                 components.add(cnode.obj)
                 for d in cnode.get_descendants():
-                    if not d.obj:
-                        continue
                     components.add(d.obj)
 
         for component in components:
@@ -1728,20 +1726,9 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             sources_set.update(
                 cnode.get_ancestors(include_self=False)
                 .using(using)
-                .values_list("component__pk", flat=True)
+                .values_list("object_id", flat=True)
             )
         return sources_set
-
-    def get_sources_nodes_queryset(
-        self, include_dev: bool = True, using: str = "read_only"
-    ) -> QuerySet[ComponentNode]:
-        """return a QuerySet of descendants with PROVIDES ComponentNode type"""
-        # TODO - leaving this here for now
-        # Used in manifests / taxonomies. Returns whole objects to access their properties
-        type_list: tuple[ComponentNode.ComponentNodeType, ...] = (
-            ComponentNode.ComponentNodeType.PROVIDES,
-        )
-        return self.cnodes.filter(type__in=type_list).get_ancestors(include_self=False).using(using)
 
     def get_upstreams_nodes(self, using: str = "read_only") -> list[ComponentNode]:
         """return upstreams component ancestors in family trees"""

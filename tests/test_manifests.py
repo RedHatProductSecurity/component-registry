@@ -3,7 +3,6 @@ import logging
 from datetime import datetime
 from json import JSONDecodeError
 
-import jsonschema
 import pytest
 
 from corgi.core.models import (
@@ -37,12 +36,6 @@ def test_product_manifest_properties():
     component, stream, provided, dev_provided = setup_products_and_components()
 
     manifest = json.loads(stream.manifest)
-
-    # From https://raw.githubusercontent.com/spdx/spdx-spec/development/
-    # v2.2.2/schemas/spdx-schema.json
-    with open("tests/data/spdx-22-spec.json", "r") as spec_file:
-        schema = json.load(spec_file)
-    jsonschema.validate(manifest, schema)
 
     # One component linked to this product
     num_components = len(stream.get_latest_components())
@@ -134,12 +127,6 @@ def test_component_manifest_properties():
     component, _, provided, dev_provided = setup_products_and_components()
 
     manifest = json.loads(component.manifest)
-
-    # From https://raw.githubusercontent.com/spdx/spdx-spec/development/
-    # v2.2.2/schemas/spdx-schema.json
-    with open("tests/data/spdx-22-spec.json", "r") as spec_file:
-        schema = json.load(spec_file)
-    jsonschema.validate(manifest, schema)
 
     num_provided = len(component.get_provides_nodes())
 

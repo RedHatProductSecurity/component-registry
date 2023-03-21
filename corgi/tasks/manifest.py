@@ -45,5 +45,5 @@ def slow_update_ps_manifest(product_stream: str):
     autoretry_for=RETRYABLE_ERRORS,
     retry_kwargs=RETRY_KWARGS,
 )
-def slow_collect_static():
+def collect_static():
     call_command("collectstatic", verbosity=0, interactive=False, ignore_patterns=[".gitignore"])

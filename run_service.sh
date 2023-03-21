@@ -6,7 +6,6 @@
 # collect static files
 python3 manage.py collectstatic \
     --ignore '.gitignore' \
-    --ignore '*.json' \
     --noinput
 
 # start gunicorn

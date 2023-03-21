@@ -303,14 +303,12 @@ class SoftwareBuild(TimeStampedModel):
         product_details = get_product_details(variant_names, stream_names)
 
         components = set()
-        for component in self.components.get_queryset():
+        for component in self.components.get_queryset().iterator():
             # This is needed for container image builds which pull in components not
             # built at Red Hat, and therefore not assigned a build_id
-            for cnode in component.cnodes.get_queryset().prefetch_related("obj"):
+            for cnode in component.cnodes.get_queryset().prefetch_related("obj").iterator():
                 components.add(cnode.obj)
-                for d in cnode.get_descendants():
-                    if not d.obj:
-                        continue
+                for d in cnode.get_descendants().iterator():
                     components.add(d.obj)
 
         for component in components:
@@ -633,7 +631,10 @@ class ProductStream(ProductModel):
             return ""
 
     def get_latest_components(
-        self, component_name=None, strict_search: bool = False, using: str = "read_only"
+        self,
+        component_name: str = "",
+        strict_search: bool = False,
+        using: str = "read_only",
     ) -> QuerySet["Component"]:
         """Return root components from latest builds, using specified DB (read-only by default."""
         if component_name:
@@ -649,6 +650,7 @@ class ProductStream(ProductModel):
                 .distinct("name")
                 .values_list("name", flat=True)
                 .using(using)
+                .iterator()
             )
             query = Q()
             for name in names:
@@ -666,6 +668,7 @@ class ProductStream(ProductModel):
                 .distinct("name")
                 .values_list("name", flat=True)
                 .using(using)
+                .iterator()
             )
             query = Q()
             for name in names:
@@ -1474,7 +1477,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         # for functions other than get_upstreams we might need to revisit this check
         if not self.software_build:
             return roots
-        for cnode in self.cnodes.get_queryset().using(using):
+        for cnode in self.cnodes.get_queryset().using(using).iterator():
             root = cnode.get_root()
             if root.obj.type == Component.Type.CONTAINER_IMAGE:
                 # TODO if we change the CONTAINER->RPM ComponentNode.type to something besides
@@ -1676,12 +1679,13 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         )
         if include_dev:
             type_list = ComponentNode.PROVIDES_NODE_TYPES
-        for cnode in self.cnodes.get_queryset():
+        for cnode in self.cnodes.get_queryset().iterator():
             provides_set.update(
                 cnode.get_descendants()
                 .filter(type__in=type_list)
                 .using(using)
                 .values_list("object_id", flat=True)
+                .iterator()
             )
         return provides_set
 
@@ -1697,17 +1701,20 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             type_list = ComponentNode.PROVIDES_NODE_TYPES
 
         provides_set = set()
-        for cnode in self.cnodes.get_queryset():
+        for cnode in self.cnodes.get_queryset().iterator():
             provides_set.update(
                 cnode.get_descendants()
                 .filter(type__in=type_list)
                 .using(using)
                 .values_list("pk", flat=True)
+                .iterator()
             )
         return (
             ComponentNode.objects.filter(pk__in=provides_set)
             .using(using)
             .values_list("type", "object_id")
+            # Ensure generated manifests only change when content does
+            .order_by("object_id")
             .iterator()
         )
 
@@ -1722,24 +1729,14 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         # Return ancestors of only PROVIDES nodes for this component
         # Sources should be inverse of provides, so don't consider other nodes
         # Inverting "PROVIDES descendants of all nodes" gives "all ancestors of PROVIDES nodes"
-        for cnode in self.cnodes.filter(type__in=type_list):
+        for cnode in self.cnodes.filter(type__in=type_list).iterator():
             sources_set.update(
                 cnode.get_ancestors(include_self=False)
                 .using(using)
-                .values_list("component__pk", flat=True)
+                .values_list("object_id", flat=True)
+                .iterator()
             )
         return sources_set
-
-    def get_sources_nodes_queryset(
-        self, include_dev: bool = True, using: str = "read_only"
-    ) -> QuerySet[ComponentNode]:
-        """return a QuerySet of descendants with PROVIDES ComponentNode type"""
-        # TODO - leaving this here for now
-        # Used in manifests / taxonomies. Returns whole objects to access their properties
-        type_list: tuple[ComponentNode.ComponentNodeType, ...] = (
-            ComponentNode.ComponentNodeType.PROVIDES,
-        )
-        return self.cnodes.filter(type__in=type_list).get_ancestors(include_self=False).using(using)
 
     def get_upstreams_nodes(self, using: str = "read_only") -> list[ComponentNode]:
         """return upstreams component ancestors in family trees"""
@@ -1773,6 +1770,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
                         component__namespace=Component.Namespace.UPSTREAM,
                     )
                     .using(using)
+                    .iterator()
                 )
             else:
                 upstreams.extend(source_descendants)

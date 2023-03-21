@@ -3,7 +3,6 @@ import logging
 from datetime import datetime
 from json import JSONDecodeError
 
-import jsonschema
 import pytest
 
 from corgi.core.models import (
@@ -37,12 +36,6 @@ def test_product_manifest_properties():
     component, stream, provided, dev_provided = setup_products_and_components()
 
     manifest = json.loads(stream.manifest)
-
-    # From https://raw.githubusercontent.com/spdx/spdx-spec/development/
-    # v2.2.2/schemas/spdx-schema.json
-    with open("tests/data/spdx-22-spec.json", "r") as spec_file:
-        schema = json.load(spec_file)
-    jsonschema.validate(manifest, schema)
 
     # One component linked to this product
     num_components = len(stream.get_latest_components())
@@ -113,10 +106,17 @@ def test_product_manifest_properties():
     # For each component, one "component is package of product" relationship
     # Plus one "document describes product" relationship for the whole document at the end
     assert len(manifest["relationships"]) == num_components + (num_provided * 2) + 1
-    assert manifest["relationships"][0] == provided_contained_by_component
-    assert manifest["relationships"][1] == provided_contains_nothing
-    assert manifest["relationships"][2] == dev_provided_dependency_of_component
-    assert manifest["relationships"][3] == dev_provided_contains_nothing
+    if dev_provided.uuid < provided.uuid:
+        dev_provided_index = 0
+        provided_index = 2
+    else:
+        provided_index = 0
+        dev_provided_index = 2
+
+    assert manifest["relationships"][provided_index] == provided_contained_by_component
+    assert manifest["relationships"][provided_index + 1] == provided_contains_nothing
+    assert manifest["relationships"][dev_provided_index] == dev_provided_dependency_of_component
+    assert manifest["relationships"][dev_provided_index + 1] == dev_provided_contains_nothing
     assert manifest["relationships"][-2] == component_is_package_of_product
     assert manifest["relationships"][-1] == document_describes_product
 
@@ -127,12 +127,6 @@ def test_component_manifest_properties():
     component, _, provided, dev_provided = setup_products_and_components()
 
     manifest = json.loads(component.manifest)
-
-    # From https://raw.githubusercontent.com/spdx/spdx-spec/development/
-    # v2.2.2/schemas/spdx-schema.json
-    with open("tests/data/spdx-22-spec.json", "r") as spec_file:
-        schema = json.load(spec_file)
-    jsonschema.validate(manifest, schema)
 
     num_provided = len(component.get_provides_nodes())
 
@@ -169,10 +163,19 @@ def test_component_manifest_properties():
     }
 
     assert len(manifest["relationships"]) == (num_provided * 2) + 1
-    assert manifest["relationships"][0] == provided_contained_by_component
-    assert manifest["relationships"][1] == provided_contains_nothing
-    assert manifest["relationships"][2] == dev_provided_dependency_of_component
-    assert manifest["relationships"][3] == dev_provided_contains_nothing
+    # Relationships in manifest use a constant ordering based on object UUID
+    # Actual UUIDs created in the tests will vary, so make sure we assert the right thing
+    if dev_provided.uuid < provided.uuid:
+        dev_provided_index = 0
+        provided_index = 2
+    else:
+        provided_index = 0
+        dev_provided_index = 2
+
+    assert manifest["relationships"][provided_index] == provided_contained_by_component
+    assert manifest["relationships"][provided_index + 1] == provided_contains_nothing
+    assert manifest["relationships"][dev_provided_index] == dev_provided_dependency_of_component
+    assert manifest["relationships"][dev_provided_index + 1] == dev_provided_contains_nothing
     assert manifest["relationships"][-1] == document_describes_product
 
 

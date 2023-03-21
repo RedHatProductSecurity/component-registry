@@ -1,8 +1,11 @@
 import json
+import logging
 
 import requests
 from django.conf import settings
 from requests_gssapi import HTTPSPNEGOAuth
+
+logger = logging.getLogger(__name__)
 
 
 class ProdDefs:
@@ -50,7 +53,7 @@ class ProdDefs:
         products = cls.load_products(data)
 
         for product in products:
-            print(f"product {product}")
+            logger.debug(f"Processing product definition: {product}")
             product_versions = []
             for ps_module in product["ps_modules"]:
                 product_version = data["ps_modules"][ps_module]

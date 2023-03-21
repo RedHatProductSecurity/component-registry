@@ -2,8 +2,10 @@ import json
 import logging
 import subprocess  # nosec B404
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any
 
+from django.conf import settings
 from packageurl import PackageURL
 
 from corgi.core.models import Component
@@ -43,7 +45,7 @@ class Syft:
                     "-q",
                     "-o=syft-json",
                     # see motivation for excluding test/fixtures in CORGI-510
-                    # For example skip test/fixtures/0-dns/package.json file in the nodejs
+                    # For example skip test/fixtures/0-dns/package.json file in nodejs
                     "--exclude=**/vendor/**",
                     "--exclude=**/test/fixtures/**",
                     f"{scheme}:{target_file}",
@@ -77,6 +79,27 @@ class Syft:
         )
         parsed_components = cls.parse_components(scan_result)
         return parsed_components
+
+    @classmethod
+    def scan_git_repo(cls, target_url: str, target_ref: str = "") -> list[dict[str, Any]]:
+        """Scan a source Git repository.
+
+        An optional target ref can be specified that represents a valid committish in the Git
+        repo being scanned.
+        """
+        with TemporaryDirectory(dir=settings.SCA_SCRATCH_DIR) as scan_dir:
+            logger.info("Cloning %s to %s", target_url, scan_dir)
+            subprocess.check_call(
+                ["/usr/bin/git", "clone", target_url, scan_dir], stderr=subprocess.DEVNULL
+            )  # nosec B603
+            if target_ref:
+                subprocess.check_call(  # nosec B603
+                    ["/usr/bin/git", "checkout", target_ref],
+                    cwd=scan_dir,
+                    stderr=subprocess.DEVNULL,
+                )
+            scan_results = cls.scan_files(target_files=[Path(scan_dir)])
+        return scan_results
 
     @classmethod
     def parse_components(cls, syft_json: str) -> list[dict[str, Any]]:

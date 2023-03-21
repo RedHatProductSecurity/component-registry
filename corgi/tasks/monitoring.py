@@ -5,6 +5,7 @@ from celery.utils.log import get_task_logger
 from celery_singleton import Singleton, clear_locks
 from django.conf import settings
 from django.core.mail import EmailMessage
+from django.db.models import Count
 from django.utils import timezone
 from django_celery_beat.models import CrontabSchedule, IntervalSchedule, PeriodicTask
 from django_celery_results.models import TaskResult
@@ -83,29 +84,41 @@ def email_failed_tasks():
         return
 
     failed_tasks_threshold = get_last_success_for_task("corgi.tasks.monitoring.email_failed_tasks")
-    failed_tasks = (
-        TaskResult.objects.filter(
-            status__exact="FAILURE",
-            date_done__gte=failed_tasks_threshold,
-        )
-        .order_by("task_name", "date_done")
-        .values_list("task_name", "task_args", "task_kwargs", "result", "traceback")
-        .using("read_only")
-    )
+    failed_tasks = TaskResult.objects.filter(
+        status__exact="FAILURE",
+        date_done__gte=failed_tasks_threshold,
+    ).using("read_only")
 
+    failed_tasks_count = failed_tasks.count()
     subject = (
-        f"Failed Corgi Celery tasks after "
-        f"{failed_tasks_threshold.date()}: {failed_tasks.count()}"
+        f"Failed Corgi Celery tasks after {failed_tasks_threshold.date()}: {failed_tasks_count}"
     )
 
-    failed_tasks = "\n".join(
-        f"{task_name}: args={task_args}, kwargs={task_kwargs}\n"
-        f"result={result}\n"
-        f"{traceback}\n"
-        for (task_name, task_args, task_kwargs, result, traceback) in failed_tasks.iterator(
-            chunk_size=500
+    if failed_tasks_count < 5000:
+        failed_tasks = (
+            failed_tasks.order_by("task_name", "date_done")
+            .values_list("task_name", "task_args", "task_kwargs", "result", "traceback")
+            .iterator(chunk_size=500)
         )
-    )
+
+        failed_tasks = "\n".join(
+            f"{task_name}: args={task_args}, kwargs={task_kwargs}\n"
+            f"result={result}\n"
+            f"{traceback}\n"
+            for (task_name, task_args, task_kwargs, result, traceback) in failed_tasks
+        )
+
+    else:
+        failed_tasks = (
+            failed_tasks.order_by()
+            .values_list("task_name")
+            .annotate(failed_count=Count("task_name"))
+            .iterator(chunk_size=500)
+        )
+
+        failed_tasks = "\n".join(
+            f"{task_name}: {failed_count}\n" for (task_name, failed_count) in failed_tasks
+        )
 
     EmailMessage(
         subject=subject,

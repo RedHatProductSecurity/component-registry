@@ -342,7 +342,7 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
     if not related_url:
         # Handle case when key is present but value is None
         related_url = ""
-    obj, created = Component.objects.get_or_create(
+    obj, created = Component.objects.update_or_create(
         name=build_data["meta"]["name"],
         type=build_data["type"],
         arch="noarch",
@@ -387,7 +387,7 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
 
     if "image_components" in build_data:
         for image in build_data["image_components"]:
-            obj, created = Component.objects.get_or_create(
+            obj, created = Component.objects.update_or_create(
                 name=image["meta"].pop("name"),
                 type=image["type"],
                 arch=image["meta"].pop("arch"),

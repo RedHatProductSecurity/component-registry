@@ -34,6 +34,9 @@ logger = get_task_logger(__name__)
 def find_duplicate_component(meta_name: str, syft_purl: str) -> Component:
     """Find a component with matching purl but different name
     Raise an error if the mismatch isn't a known edge case"""
+    logger.warning(
+        f"Duplicate component {meta_name} detected by Syft, trying to find purl: {syft_purl}"
+    )
     possible_dupe = Component.objects.get(purl=syft_purl)
 
     # Check if the dupe component fits one of our known edge cases

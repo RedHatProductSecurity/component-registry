@@ -799,7 +799,7 @@ def test_fetch_rpm_build(mock_sca, mock_brew):
         "pkg:rpm/redhat/cockpit-system@251-1.el8?arch=noarch",
     )
     assert srpm.provides.filter(purl__in=expected_provides).count() == 4
-    assert srpm.upstreams.values_list("purl", flat=True).get() == "pkg:rpm/cockpit@251"
+    assert srpm.upstreams.values_list("purl", flat=True).get() == "pkg:rpm/cockpit@251?arch=noarch"
     # SRPM has no sources of its own (nor is it embedded in any other component)
     assert not srpm.sources.exists()
     cockpit_system = Component.objects.get(

@@ -73,9 +73,9 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
         build_id=component["build_meta"]["build_info"]["build_id"],
         defaults={
             "build_type": SoftwareBuild.Type.BREW,
+            "meta_attr": build_meta,
             "name": component["meta"]["name"],
             "source": component["build_meta"]["build_info"]["source"],
-            "meta_attr": build_meta,
         },
         completion_time=completion_dt,
     )
@@ -139,16 +139,15 @@ def slow_fetch_modular_build(build_id: str, force_process: bool = False) -> None
         logger.info("No module data fetched for build %s from Brew, exiting...", build_id)
         slow_fetch_brew_build.delay(int(build_id), force_process=force_process)
         return
-    # TODO: Should we use update_or_create here?
-    #  We don't currently handle reprocessing a modular build
     # Note: module builds don't include arch information, only the individual RPMs that make up a
     # module are built for specific architectures.
     meta = rhel_module_data["meta"]
-    obj, created = Component.objects.get_or_create(
-        name=meta.pop("name"),
+    obj, created = Component.objects.update_or_create(
         type=rhel_module_data["type"],
+        name=meta.pop("name"),
         version=meta.pop("version"),
         release=meta.pop("release"),
+        arch="noarch",
         defaults={
             # Any remaining meta keys are recorded in meta_attr
             "meta_attr": meta,
@@ -235,7 +234,7 @@ def save_component(
         name=meta.pop("name", ""),
         version=component_version,
         release=meta.pop("release", ""),
-        arch=meta.pop("arch", ""),
+        arch=meta.pop("arch", "noarch"),
         defaults={
             "description": meta.pop("description", ""),
             "filename": find_package_file_name(meta.pop("source_files", [])),
@@ -279,19 +278,20 @@ def save_srpm(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
     if not related_url:
         # Handle case when key is present but value is None
         related_url = ""
+
     obj, created = Component.objects.update_or_create(
-        name=build_data["meta"].get("name"),
         type=build_data["type"],
-        arch=build_data["meta"].get("arch", ""),
+        name=build_data["meta"].get("name"),
         version=build_data["meta"].get("version", ""),
         release=build_data["meta"].get("release", ""),
+        arch=build_data["meta"].get("arch", "noarch"),
         defaults={
-            "license_declared_raw": build_data["meta"].get("license", ""),
             "description": build_data["meta"].get("description", ""),
-            "related_url": related_url,
-            "software_build": softwarebuild,
+            "license_declared_raw": build_data["meta"].get("license", ""),
             "meta_attr": build_data["meta"],
             "namespace": build_data["namespace"],
+            "related_url": related_url,
+            "software_build": softwarebuild,
         },
     )
     node, _ = ComponentNode.objects.get_or_create(
@@ -306,13 +306,16 @@ def save_srpm(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
     if related_url:
         new_upstream, created = Component.objects.update_or_create(
             type=build_data["type"],
-            namespace=Component.Namespace.UPSTREAM,
             name=build_data["meta"].get("name"),
             version=build_data["meta"].get("version", ""),
+            release="",
+            arch="noarch",
             defaults={
                 "description": build_data["meta"].get("description", ""),
                 "filename": find_package_file_name(build_data["meta"].get("source_files", [])),
                 "license_declared_raw": build_data["meta"].get("license", ""),
+                "meta_attr": build_data["meta"],
+                "namespace": Component.Namespace.UPSTREAM,
                 "related_url": related_url,
             },
         )
@@ -343,16 +346,18 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
         # Handle case when key is present but value is None
         related_url = ""
     obj, created = Component.objects.update_or_create(
-        name=build_data["meta"]["name"],
         type=build_data["type"],
+        name=build_data["meta"].pop("name"),
+        version=build_data["meta"].pop("version"),
+        release=build_data["meta"].pop("release"),
         arch="noarch",
-        version=build_data["meta"]["version"],
-        release=build_data["meta"]["release"],
         defaults={
-            "software_build": softwarebuild,
-            "related_url": related_url,
+            "description": build_data["meta"].pop("description", ""),
+            "filename": find_package_file_name(build_data["meta"].pop("source_files", [])),
             "meta_attr": build_data["meta"],
             "namespace": build_data.get("namespace", ""),
+            "related_url": related_url,
+            "software_build": softwarebuild,
         },
     )
     root_node, _ = ComponentNode.objects.get_or_create(
@@ -373,6 +378,8 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
                 # the upstream commit is included in the dist-git commit history, but is not
                 # exposed anywhere in the brew data that I can find
                 version="",
+                release="",
+                arch="noarch",
                 defaults={"namespace": Component.Namespace.UPSTREAM},
             )
             ComponentNode.objects.get_or_create(
@@ -388,15 +395,15 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
     if "image_components" in build_data:
         for image in build_data["image_components"]:
             obj, created = Component.objects.update_or_create(
-                name=image["meta"].pop("name"),
                 type=image["type"],
-                arch=image["meta"].pop("arch"),
+                name=image["meta"].pop("name"),
                 version=image["meta"].pop("version"),
                 release=image["meta"].pop("release"),
+                arch=image["meta"].pop("arch"),
                 defaults={
-                    "software_build": softwarebuild,
                     "meta_attr": image["meta"],
                     "namespace": image.get("namespace", ""),
+                    "software_build": softwarebuild,
                 },
             )
             image_arch_node, _ = ComponentNode.objects.get_or_create(
@@ -432,10 +439,12 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
                 type=source["type"],
                 name=component_name,
                 version=source["meta"].pop("version"),
+                release="",
+                arch="noarch",
                 defaults={
                     "meta_attr": source["meta"],
-                    "related_url": related_url,
                     "namespace": Component.Namespace.UPSTREAM,
+                    "related_url": related_url,
                 },
             )
             upstream_node, _ = ComponentNode.objects.get_or_create(
@@ -469,17 +478,17 @@ def save_module(softwarebuild, build_data) -> ComponentNode:
     See CORGI-200, and CORGI-163"""
     meta_attr = build_data["meta"]["meta_attr"]
     obj, created = Component.objects.update_or_create(
-        name=build_data["meta"]["name"],
         type=build_data["type"],
-        arch=build_data["meta"].get("arch", ""),
+        name=build_data["meta"]["name"],
         version=build_data["meta"].get("version", ""),
         release=build_data["meta"].get("release", ""),
+        arch=build_data["meta"].get("arch", "noarch"),
         defaults={
-            "license_declared_raw": build_data["meta"].get("license", ""),
             "description": build_data["meta"].get("description", ""),
-            "software_build": softwarebuild,
+            "license_declared_raw": build_data["meta"].get("license", ""),
             "meta_attr": meta_attr,
             "namespace": build_data["namespace"],
+            "software_build": softwarebuild,
         },
     )
     node, _ = ComponentNode.objects.get_or_create(

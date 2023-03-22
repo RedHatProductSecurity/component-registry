@@ -1,5 +1,5 @@
 {# ProductModel manifest, obj is a ProductModel subclass here #}{% extends "base_manifest.json" %}
-{% block packages %}{% for component in latest_components %}{# Below will eventually become component.manifest #}
+{% block packages %}{% for component in latest_components %}
     {
         "copyrightText": {% if component.copyright_text %}"{{component.copyright_text}}"{% else %}"NOASSERTION"{% endif %},
         "downloadLocation": {% if component.download_url %}"{{component.download_url}}"{% else %}"NOASSERTION"{% endif %},
@@ -21,7 +21,7 @@
         "SPDXID": "SPDXRef-{{component.uuid}}",
         "supplier": "Organization: Red Hat",
         "versionInfo": "{{component.nevra|escapejs}}"
-    },{% for provided in component.provides_queryset %}
+    },{% endfor %}{% for provided in distinct_provides %}
     {
         "copyrightText": {% if provided.copyright_text %}"{{provided.copyright_text}}"{% else %}"NOASSERTION"{% endif %},
         "downloadLocation": {% if provided.download_url %}"{{provided.download_url}}"{% else %}"NOASSERTION"{% endif %},
@@ -43,7 +43,7 @@
         "SPDXID": "SPDXRef-{{provided.uuid}}",
         "supplier": "Organization: Red Hat",
         "versionInfo": "{{provided.nevra|escapejs}}"
-    },{% endfor %}{% endfor %}
+    },{% endfor %}
     {
         "copyrightText": "NOASSERTION",
         "downloadLocation": "NOASSERTION",
@@ -70,21 +70,20 @@
         "supplier": "Organization: Red Hat",
         "versionInfo": "{{obj.version}}"
     }
-{% endblock %}{% block relationships %}{% for component in latest_components %}{% for node_type, node_id in component.get_provides_nodes_queryset %}
+{% endblock packages %}{% block relationships %}{% for component in latest_components %}{% for node_type, node_id in component.get_provides_nodes_queryset %}
         {
           "relatedSpdxElement": "SPDXRef-{{component.uuid}}",{# subcomponent is built from, or contained in, component #}
           "relationshipType": {% if node_type == "PROVIDES_DEV" %}"DEV_DEPENDENCY_OF"{% else %}"CONTAINED_BY"{% endif %},
-          "spdxElementId": "SPDXRef-{{node_id}}"
-        },
-        {
-          "relatedSpdxElement": "NONE",{# subcomponent is a leaf node #}
-          "relationshipType": "CONTAINS",
           "spdxElementId": "SPDXRef-{{node_id}}"
         },{% endfor %}
         {
           "relatedSpdxElement": "SPDXRef-{{obj.uuid}}",
           "relationshipType": "PACKAGE_OF",
           "spdxElementId": "SPDXRef-{{component.uuid}}"
-        },
-    {% endfor %}
-{% endblock %}
+        },{% endfor %}{% for provided in distinct_provides %}
+        {
+          "relatedSpdxElement": "NONE",{# subcomponent is a leaf node #}
+          "relationshipType": "CONTAINS",
+          "spdxElementId": "SPDXRef-{{provided.pk}}"
+        },{% endfor %}
+{% endblock relationships %}

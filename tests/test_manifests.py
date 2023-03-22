@@ -14,6 +14,7 @@ from corgi.core.models import (
 
 from .factories import (
     ComponentFactory,
+    ContainerImageComponentFactory,
     ProductComponentRelationFactory,
     ProductFactory,
     ProductStreamFactory,
@@ -30,21 +31,100 @@ pytestmark = [
 ]
 
 
-def test_product_manifest_properties():
-    """Test that all models inheriting from ProductModel have a .manifest property
-    And that it generates valid JSON."""
-    component, container_component, stream, provided, dev_provided = setup_products_and_components()
+def test_latest_components_exclude_source_container():
+    """Test that container sources are excluded packages"""
+    containers, stream, _ = setup_products_and_rpm_in_containers()
+    assert len(containers) == 3
 
-    manifest = json.loads(stream.manifest)
+    components = stream.get_latest_components()
+    assert len(components) == 2
+    assert not components.first().name.endswith("-container-source")
 
-    # One component linked to this product
+
+def test_slim_rpm_in_containers_manifest():
+    containers, stream, rpm_in_container = setup_products_and_rpm_in_containers()
+
+    # Two components linked to this product
     num_components = len(stream.get_latest_components())
     assert num_components == 2
 
-    num_provided = 0
+    provided = set()
+    # Each component has 1 node each
     for latest_component in stream.get_latest_components():
-        num_provided += len(latest_component.get_provides_nodes())
+        component_nodes = latest_component.get_provides_nodes()
+        assert len(component_nodes) == 1
+        provided.update(component_nodes)
 
+    # Here we are checking that the components share a single provided component
+    num_provided = len(provided)
+    assert num_provided == 1
+
+    distinct_provides = stream.provides_queryset
+    assert len(distinct_provides) == num_provided
+
+    stream_manifest = stream.manifest
+    manifest = json.loads(stream_manifest)
+
+    # One package for each component
+    # One (and only one) package for each distinct provided
+    # Plus one package for the stream itself
+    assert len(manifest["packages"]) == num_components + num_provided + 1
+
+    # For each provided in component, one "provided contained by component"
+    # For each provided in component, one "provided contains none" indicating a leaf node
+    # For each component, one "component is package of product" relationship
+    # Plus one "document describes product" relationship for the whole document at the end
+    assert len(manifest["relationships"]) == num_components + ((num_provided * 2) + 1) + 1
+
+    provided_uuid = provided.pop()
+    component = containers[0]
+    if containers[0].uuid > containers[1].uuid:
+        component = containers[1]
+
+    document_describes_product = {
+        "relatedSpdxElement": f"SPDXRef-{stream.uuid}",
+        "relationshipType": "DESCRIBES",
+        "spdxElementId": "SPDXRef-DOCUMENT",
+    }
+
+    component_is_package_of_product = {
+        "relatedSpdxElement": f"SPDXRef-{stream.uuid}",
+        "relationshipType": "PACKAGE_OF",
+        "spdxElementId": f"SPDXRef-{component.uuid}",
+    }
+
+    provided_contained_by_component = {
+        "relatedSpdxElement": f"SPDXRef-{component.uuid}",
+        "relationshipType": "CONTAINED_BY",
+        "spdxElementId": f"SPDXRef-{provided_uuid}",
+    }
+
+    provided_contains_nothing = {
+        "relatedSpdxElement": "NONE",
+        "relationshipType": "CONTAINS",
+        "spdxElementId": f"SPDXRef-{provided_uuid}",
+    }
+
+    assert manifest["relationships"][0] == provided_contained_by_component
+    assert manifest["relationships"][1] == component_is_package_of_product
+    assert manifest["relationships"][-2] == provided_contains_nothing
+    assert manifest["relationships"][-1] == document_describes_product
+
+
+def test_product_manifest_properties():
+    """Test that all models inheriting from ProductModel have a .manifest property
+    And that it generates valid JSON."""
+    component, stream, provided, dev_provided = setup_products_and_components_provides()
+
+    manifest = stream.manifest
+    print(manifest)
+    manifest = json.loads(manifest)
+
+    # One component linked to this product
+    num_components = len(stream.get_latest_components())
+    assert num_components == 1
+
+    num_provided = len(stream.provides_queryset)
     assert num_provided == 2
 
     # Manifest contains info for all components, their provides, and the product itself
@@ -77,12 +157,6 @@ def test_product_manifest_properties():
         "spdxElementId": f"SPDXRef-{component.uuid}",
     }
 
-    container_component_is_package_of_product = {
-        "relatedSpdxElement": f"SPDXRef-{stream.uuid}",
-        "relationshipType": "PACKAGE_OF",
-        "spdxElementId": f"SPDXRef-{container_component.uuid}",
-    }
-
     provided_contained_by_component = {
         "relatedSpdxElement": f"SPDXRef-{component.uuid}",
         "relationshipType": "CONTAINED_BY",
@@ -107,6 +181,13 @@ def test_product_manifest_properties():
         "spdxElementId": f"SPDXRef-{dev_provided.uuid}",
     }
 
+    print(f"stream uuid:{stream.uuid}")
+    print(f"component uuid:{component.uuid}")
+    print(f"provided: {provided.uuid}")
+    print(f"dev_provided: {dev_provided.uuid}")
+
+    print(manifest["relationships"])
+
     # For each provided in component, one "provided contained by component"
     # For each provided in component, one "provided contains none" indicating a leaf node
     # For each component, one "component is package of product" relationship
@@ -114,24 +195,23 @@ def test_product_manifest_properties():
     assert len(manifest["relationships"]) == num_components + (num_provided * 2) + 1
     if dev_provided.uuid < provided.uuid:
         dev_provided_index = 0
-        provided_index = 2
+        provided_index = 1
     else:
         provided_index = 0
-        dev_provided_index = 2
+        dev_provided_index = 1
 
     assert manifest["relationships"][provided_index] == provided_contained_by_component
-    assert manifest["relationships"][provided_index + 1] == provided_contains_nothing
     assert manifest["relationships"][dev_provided_index] == dev_provided_dependency_of_component
-    assert manifest["relationships"][dev_provided_index + 1] == dev_provided_contains_nothing
-    assert manifest["relationships"][-3] == component_is_package_of_product
-    assert manifest["relationships"][-2] == container_component_is_package_of_product
+    assert manifest["relationships"][num_provided] == component_is_package_of_product
+    assert manifest["relationships"][provided_index - 3] == provided_contains_nothing
+    assert manifest["relationships"][dev_provided_index - 3] == dev_provided_contains_nothing
     assert manifest["relationships"][-1] == document_describes_product
 
 
 def test_component_manifest_properties():
     """Test that all Components have a .manifest property
     And that it generates valid JSON."""
-    component, _, _, provided, dev_provided = setup_products_and_components()
+    component, _, provided, dev_provided = setup_products_and_components_provides()
 
     manifest = json.loads(component.manifest)
 
@@ -186,30 +266,11 @@ def test_component_manifest_properties():
     assert manifest["relationships"][-1] == document_describes_product
 
 
-def setup_products_and_components():
-    product = ProductFactory()
-    version = ProductVersionFactory(products=product)
-    stream = ProductStreamFactory(products=product, productversions=version)
-    variant = ProductVariantFactory(
-        name="1", products=product, productversions=version, productstreams=stream
-    )
-
-    # TODO: Factory should probably create nodes for model
-    #  Move these somewhere for reuse - common.py helper method, or fixtures??
-    pnode = ProductNode.objects.create(parent=None, obj=product)
-    pvnode = ProductNode.objects.create(parent=pnode, obj=version)
-    psnode = ProductNode.objects.create(parent=pvnode, obj=stream)
-    ProductNode.objects.create(parent=psnode, obj=variant)
-
-    # This generates and saves the ProductModel properties of stream
-    # AKA we link the ProductModel instances to each other
-    stream.save_product_taxonomy()
-    assert variant in stream.productvariants.get_queryset()
+def setup_products_and_components_provides():
+    stream, variant = setup_product()
     build = SoftwareBuildFactory(
         build_id=1,
-    )
-    build2 = SoftwareBuildFactory(
-        build_id=2,
+        completion_time=datetime.strptime("2017-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z"),
     )
     provided = ComponentFactory(type=Component.Type.RPM, arch="x86_64")
     dev_provided = ComponentFactory(type=Component.Type.NPM)
@@ -218,31 +279,6 @@ def setup_products_and_components():
     )
     cnode = ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=component.purl, obj=component
-    )
-    container_component = ComponentFactory(
-        type=Component.Type.CONTAINER_IMAGE,
-        arch="noarch",
-        software_build=build2,
-        name="some-container",
-    )
-    ComponentNode.objects.create(
-        type=ComponentNode.ComponentNodeType.SOURCE,
-        parent=None,
-        purl=container_component.purl,
-        obj=container_component,
-    )
-    # Excluded by laster filter when component_name is not used
-    source_container = ComponentFactory(
-        type=Component.Type.CONTAINER_IMAGE,
-        arch="noarch",
-        software_build=build2,
-        name="some-container-source",
-    )
-    ComponentNode.objects.create(
-        type=ComponentNode.ComponentNodeType.SOURCE,
-        parent=None,
-        purl=source_container.purl,
-        obj=source_container,
     )
     ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
@@ -266,16 +302,76 @@ def setup_products_and_components():
         product_ref=variant.name,
         type=ProductComponentRelation.Type.ERRATA,
     )
-    ProductComponentRelationFactory(
-        build_id=str(build2.build_id),
-        product_ref=stream.name,
-        type=ProductComponentRelation.Type.BREW_TAG,
-    )
     # Link the components to the ProductModel instances
     build.save_product_taxonomy()
-    build2.save_product_taxonomy()
+    return component, stream, provided, dev_provided
 
-    return component, container_component, stream, provided, dev_provided
+
+def setup_products_and_rpm_in_containers():
+    stream, variant = setup_product()
+    rpm_in_container = ComponentFactory(type=Component.Type.RPM, arch="x86_64")
+    containers = []
+    for name in ["", "", "some-container-source"]:
+        build, container = _build_rpm_in_containers(rpm_in_container, name=name)
+
+        # The product_ref here is a variant name but below we use it's parent stream
+        # to generate the manifest
+        ProductComponentRelationFactory(
+            build_id=str(build.build_id),
+            product_ref=variant.name,
+            type=ProductComponentRelation.Type.ERRATA,
+        )
+        # Link the components to the ProductModel instances
+        build.save_product_taxonomy()
+        containers.append(container)
+    return containers, stream, rpm_in_container
+
+
+def _build_rpm_in_containers(rpm_in_container, name=""):
+    build = SoftwareBuildFactory(
+        completion_time=datetime.strptime("2017-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z"),
+    )
+    if not name:
+        container = ContainerImageComponentFactory(
+            software_build=build,
+        )
+    else:
+        container = ContainerImageComponentFactory(
+            name=name,
+            software_build=build,
+        )
+    cnode = ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=container.purl, obj=container
+    )
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.PROVIDES,
+        parent=cnode,
+        purl=rpm_in_container.purl,
+        obj=rpm_in_container,
+    )
+    # Link the components to each other
+    container.save_component_taxonomy()
+    return build, container
+
+
+def setup_product():
+    product = ProductFactory()
+    version = ProductVersionFactory(products=product)
+    stream = ProductStreamFactory(products=product, productversions=version)
+    variant = ProductVariantFactory(
+        name="1", products=product, productversions=version, productstreams=stream
+    )
+    # TODO: Factory should probably create nodes for model
+    #  Move these somewhere for reuse - common.py helper method, or fixtures??
+    pnode = ProductNode.objects.create(parent=None, obj=product)
+    pvnode = ProductNode.objects.create(parent=pnode, obj=version)
+    psnode = ProductNode.objects.create(parent=pvnode, obj=stream)
+    ProductNode.objects.create(parent=psnode, obj=variant)
+    # This generates and saves the ProductModel properties of stream
+    # AKA we link the ProductModel instances to each other
+    stream.save_product_taxonomy()
+    assert variant in stream.productvariants.get_queryset()
+    return stream, variant
 
 
 def test_manifest_backslash():

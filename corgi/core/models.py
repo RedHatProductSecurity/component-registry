@@ -679,6 +679,19 @@ class ProductStream(ProductModel):
                 return Component.objects.none()
             return Component.objects.filter(Q(ROOT_COMPONENTS_CONDITION & query)).using(using)
 
+    @property
+    def provides_queryset(self, using: str = "read_only") -> QuerySet["Component"]:
+        """Returns unique aggregate "provides" for the latest components in this stream,
+        for use in templates"""
+        unique_provides = (
+            self.get_latest_components()
+            .values_list("provides__pk", flat=True)
+            .distinct()
+            .order_by("provides__pk")
+            .using(using)
+        )
+        return Component.objects.filter(pk__in=unique_provides).using(using)
+
 
 class ProductStreamTag(Tag):
     tagged_model = models.ForeignKey(ProductStream, on_delete=models.CASCADE, related_name="tags")

@@ -90,7 +90,12 @@ def save_component(component: dict[str, Any], parent: ComponentNode) -> bool:
             version=meta.pop("version", ""),
             release="",
             arch="noarch",
-            defaults={"meta_attr": meta},
+            defaults={
+                "meta_attr": meta,
+                "namespace": Component.Namespace.REDHAT
+                if component["type"] == Component.Type.RPM
+                else Component.Namespace.UPSTREAM,
+            },
         )
     except django.db.IntegrityError:
         # "Get the component" fails if the name is different

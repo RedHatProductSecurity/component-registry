@@ -238,7 +238,9 @@ def save_component(
         defaults={
             "description": meta.pop("description", ""),
             "filename": find_package_file_name(meta.pop("source_files", [])),
-            "namespace": component.get("namespace", ""),
+            "namespace": Component.Namespace.REDHAT
+            if component_type == Component.Type.RPM
+            else Component.Namespace.UPSTREAM,
             "related_url": related_url,
             "software_build": softwarebuild,
         },
@@ -289,7 +291,7 @@ def save_srpm(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
             "description": build_data["meta"].get("description", ""),
             "license_declared_raw": build_data["meta"].get("license", ""),
             "meta_attr": build_data["meta"],
-            "namespace": build_data["namespace"],
+            "namespace": Component.Namespace.REDHAT,
             "related_url": related_url,
             "software_build": softwarebuild,
         },
@@ -355,7 +357,7 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
             "description": build_data["meta"].pop("description", ""),
             "filename": find_package_file_name(build_data["meta"].pop("source_files", [])),
             "meta_attr": build_data["meta"],
-            "namespace": build_data.get("namespace", ""),
+            "namespace": Component.Namespace.REDHAT,
             "related_url": related_url,
             "software_build": softwarebuild,
         },
@@ -402,7 +404,7 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
                 arch=image["meta"].pop("arch"),
                 defaults={
                     "meta_attr": image["meta"],
-                    "namespace": image.get("namespace", ""),
+                    "namespace": Component.Namespace.REDHAT,
                     "software_build": softwarebuild,
                 },
             )
@@ -487,7 +489,7 @@ def save_module(softwarebuild, build_data) -> ComponentNode:
             "description": build_data["meta"].get("description", ""),
             "license_declared_raw": build_data["meta"].get("license", ""),
             "meta_attr": meta_attr,
-            "namespace": build_data["namespace"],
+            "namespace": Component.Namespace.REDHAT,
             "software_build": softwarebuild,
         },
     )

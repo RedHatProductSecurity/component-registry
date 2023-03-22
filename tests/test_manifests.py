@@ -33,13 +33,13 @@ pytestmark = [
 def test_product_manifest_properties():
     """Test that all models inheriting from ProductModel have a .manifest property
     And that it generates valid JSON."""
-    component, stream, provided, dev_provided = setup_products_and_components()
+    component, container_component, stream, provided, dev_provided = setup_products_and_components()
 
     manifest = json.loads(stream.manifest)
 
     # One component linked to this product
     num_components = len(stream.get_latest_components())
-    assert num_components == 1
+    assert num_components == 2
 
     num_provided = 0
     for latest_component in stream.get_latest_components():
@@ -75,6 +75,12 @@ def test_product_manifest_properties():
         "relatedSpdxElement": f"SPDXRef-{stream.uuid}",
         "relationshipType": "PACKAGE_OF",
         "spdxElementId": f"SPDXRef-{component.uuid}",
+    }
+
+    container_component_is_package_of_product = {
+        "relatedSpdxElement": f"SPDXRef-{stream.uuid}",
+        "relationshipType": "PACKAGE_OF",
+        "spdxElementId": f"SPDXRef-{container_component.uuid}",
     }
 
     provided_contained_by_component = {
@@ -117,14 +123,15 @@ def test_product_manifest_properties():
     assert manifest["relationships"][provided_index + 1] == provided_contains_nothing
     assert manifest["relationships"][dev_provided_index] == dev_provided_dependency_of_component
     assert manifest["relationships"][dev_provided_index + 1] == dev_provided_contains_nothing
-    assert manifest["relationships"][-2] == component_is_package_of_product
+    assert manifest["relationships"][-3] == component_is_package_of_product
+    assert manifest["relationships"][-2] == container_component_is_package_of_product
     assert manifest["relationships"][-1] == document_describes_product
 
 
 def test_component_manifest_properties():
     """Test that all Components have a .manifest property
     And that it generates valid JSON."""
-    component, _, provided, dev_provided = setup_products_and_components()
+    component, _, _, provided, dev_provided = setup_products_and_components()
 
     manifest = json.loads(component.manifest)
 
@@ -200,7 +207,9 @@ def setup_products_and_components():
     assert variant in stream.productvariants.get_queryset()
     build = SoftwareBuildFactory(
         build_id=1,
-        completion_time=datetime.strptime("2017-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z"),
+    )
+    build2 = SoftwareBuildFactory(
+        build_id=2,
     )
     provided = ComponentFactory(type=Component.Type.RPM, arch="x86_64")
     dev_provided = ComponentFactory(type=Component.Type.NPM)
@@ -209,6 +218,31 @@ def setup_products_and_components():
     )
     cnode = ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=component.purl, obj=component
+    )
+    container_component = ComponentFactory(
+        type=Component.Type.CONTAINER_IMAGE,
+        arch="noarch",
+        software_build=build2,
+        name="some-container",
+    )
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        purl=container_component.purl,
+        obj=container_component,
+    )
+    # Excluded by laster filter when component_name is not used
+    source_container = ComponentFactory(
+        type=Component.Type.CONTAINER_IMAGE,
+        arch="noarch",
+        software_build=build2,
+        name="some-container-source",
+    )
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        purl=source_container.purl,
+        obj=source_container,
     )
     ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
@@ -232,9 +266,16 @@ def setup_products_and_components():
         product_ref=variant.name,
         type=ProductComponentRelation.Type.ERRATA,
     )
+    ProductComponentRelationFactory(
+        build_id=str(build2.build_id),
+        product_ref=stream.name,
+        type=ProductComponentRelation.Type.BREW_TAG,
+    )
     # Link the components to the ProductModel instances
     build.save_product_taxonomy()
-    return component, stream, provided, dev_provided
+    build2.save_product_taxonomy()
+
+    return component, container_component, stream, provided, dev_provided
 
 
 def test_manifest_backslash():

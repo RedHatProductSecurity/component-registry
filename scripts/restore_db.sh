@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 set -e
 
+export PGPASSWORD=test
+
 if [[ -z "$1" ]]; then
-    db_dump_file='./corgi.db'
+    db_dump_dir='./corgi.db'
 else
-    db_dump_file="$1"
+    db_dump_dir="$1"
 fi
 
 if ! podman ps | grep 'corgi-db' &>/dev/null; then
@@ -12,17 +14,10 @@ if ! podman ps | grep 'corgi-db' &>/dev/null; then
     exit 1
 fi
 
-echo "Copying database dump to corgi-db:/tmp/corgi.db"
-podman cp "${db_dump_file}" corgi-db:/tmp/corgi.db
+# ensure there are no extensions in the dump which we can't restore with non-admin permissions
+pg_restore -l "${db_dump_dir}" | grep -v "EXTENSION" > ./restore-elements
 
-echo "Dropping existing corgi database (if one exists)"
-podman exec -it corgi-db /bin/bash -c 'dropdb --if-exists -U corgi-db-user corgi-db'
+# Restore the database re-creating the tables
+pg_restore -h localhost -p 5433 -U corgi-db-user --dbname corgi-db -j 2 -v --no-owner -c -L ./restore-elements "${db_dump_dir}"
 
-echo "Creating new database: corgi"
-podman exec -it corgi-db /bin/bash -c 'createdb -O corgi-db-user corgi-db'
-
-echo "Populating corgi database from ${db_dump_file} backup"
-podman exec -it corgi-db /bin/bash -c 'pg_restore -j 4 --no-owner --role=corgi-db-user -U corgi-db-user -d corgi-db /tmp/corgi.db'
-
-echo "Removing corgi database from corgi-db container"
-podman exec -it corgi-db /bin/bash -c 'rm /tmp/corgi.db'
+rm -rf ./restore-elements

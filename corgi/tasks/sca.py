@@ -83,13 +83,19 @@ def save_component(component: dict[str, Any], parent: ComponentNode) -> bool:
     name = meta.pop("name", "")
     try:
         # Use all fields from Component index and uniqueness constraint
+        # Don't update_or_create since Syft's metadata shouldn't override Brew's
         obj, created = Component.objects.get_or_create(
             type=component["type"],
             name=name,
             version=meta.pop("version", ""),
             release="",
-            arch="",
-            defaults={"meta_attr": meta},
+            arch="noarch",
+            defaults={
+                "meta_attr": meta,
+                "namespace": Component.Namespace.REDHAT
+                if component["type"] == Component.Type.RPM
+                else Component.Namespace.UPSTREAM,
+            },
         )
     except django.db.IntegrityError:
         # "Get the component" fails if the name is different

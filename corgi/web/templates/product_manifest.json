@@ -80,10 +80,5 @@
           "relatedSpdxElement": "SPDXRef-{{obj.uuid}}",
           "relationshipType": "PACKAGE_OF",
           "spdxElementId": "SPDXRef-{{component.uuid}}"
-        },{% endfor %}{% for provided in distinct_provides %}
-        {
-          "relatedSpdxElement": "NONE",{# subcomponent is a leaf node #}
-          "relationshipType": "CONTAINS",
-          "spdxElementId": "SPDXRef-{{provided.pk}}"
         },{% endfor %}
 {% endblock relationships %}

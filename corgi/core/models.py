@@ -689,6 +689,7 @@ class ProductStream(ProductModel):
             .distinct()
             .order_by("provides__pk")
             .using(using)
+            .iterator()
         )
         return Component.objects.filter(pk__in=unique_provides).using(using)
 

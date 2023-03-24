@@ -74,7 +74,7 @@ def test_slim_rpm_in_containers_manifest():
     # For each provided in component, one "provided contains none" indicating a leaf node
     # For each component, one "component is package of product" relationship
     # Plus one "document describes product" relationship for the whole document at the end
-    assert len(manifest["relationships"]) == num_components + ((num_provided * 2) + 1) + 1
+    assert len(manifest["relationships"]) == num_components + (num_provided + 1) + 1
 
     provided_uuid = provided.pop()
     component = containers[0]
@@ -99,15 +99,8 @@ def test_slim_rpm_in_containers_manifest():
         "spdxElementId": f"SPDXRef-{provided_uuid}",
     }
 
-    provided_contains_nothing = {
-        "relatedSpdxElement": "NONE",
-        "relationshipType": "CONTAINS",
-        "spdxElementId": f"SPDXRef-{provided_uuid}",
-    }
-
     assert manifest["relationships"][0] == provided_contained_by_component
     assert manifest["relationships"][1] == component_is_package_of_product
-    assert manifest["relationships"][-2] == provided_contains_nothing
     assert manifest["relationships"][-1] == document_describes_product
 
 
@@ -116,9 +109,7 @@ def test_product_manifest_properties():
     And that it generates valid JSON."""
     component, stream, provided, dev_provided = setup_products_and_components_provides()
 
-    manifest = stream.manifest
-    print(manifest)
-    manifest = json.loads(manifest)
+    manifest = json.loads(stream.manifest)
 
     # One component linked to this product
     num_components = len(stream.get_latest_components())
@@ -163,36 +154,18 @@ def test_product_manifest_properties():
         "spdxElementId": f"SPDXRef-{provided.uuid}",
     }
 
-    provided_contains_nothing = {
-        "relatedSpdxElement": "NONE",
-        "relationshipType": "CONTAINS",
-        "spdxElementId": f"SPDXRef-{provided.uuid}",
-    }
-
     dev_provided_dependency_of_component = {
         "relatedSpdxElement": f"SPDXRef-{component.uuid}",
         "relationshipType": "DEV_DEPENDENCY_OF",
         "spdxElementId": f"SPDXRef-{dev_provided.uuid}",
     }
 
-    dev_provided_contains_nothing = {
-        "relatedSpdxElement": "NONE",
-        "relationshipType": "CONTAINS",
-        "spdxElementId": f"SPDXRef-{dev_provided.uuid}",
-    }
-
-    print(f"stream uuid:{stream.uuid}")
-    print(f"component uuid:{component.uuid}")
-    print(f"provided: {provided.uuid}")
-    print(f"dev_provided: {dev_provided.uuid}")
-
-    print(manifest["relationships"])
-
     # For each provided in component, one "provided contained by component"
     # For each provided in component, one "provided contains none" indicating a leaf node
     # For each component, one "component is package of product" relationship
     # Plus one "document describes product" relationship for the whole document at the end
-    assert len(manifest["relationships"]) == num_components + (num_provided * 2) + 1
+    assert len(manifest["relationships"]) == num_components + num_provided + 1
+
     if dev_provided.uuid < provided.uuid:
         dev_provided_index = 0
         provided_index = 1
@@ -203,8 +176,6 @@ def test_product_manifest_properties():
     assert manifest["relationships"][provided_index] == provided_contained_by_component
     assert manifest["relationships"][dev_provided_index] == dev_provided_dependency_of_component
     assert manifest["relationships"][num_provided] == component_is_package_of_product
-    assert manifest["relationships"][provided_index - 3] == provided_contains_nothing
-    assert manifest["relationships"][dev_provided_index - 3] == dev_provided_contains_nothing
     assert manifest["relationships"][-1] == document_describes_product
 
 
@@ -231,38 +202,24 @@ def test_component_manifest_properties():
         "spdxElementId": f"SPDXRef-{provided.uuid}",
     }
 
-    provided_contains_nothing = {
-        "relatedSpdxElement": "NONE",
-        "relationshipType": "CONTAINS",
-        "spdxElementId": f"SPDXRef-{provided.uuid}",
-    }
-
     dev_provided_dependency_of_component = {
         "relatedSpdxElement": f"SPDXRef-{component.uuid}",
         "relationshipType": "DEV_DEPENDENCY_OF",
         "spdxElementId": f"SPDXRef-{dev_provided.uuid}",
     }
 
-    dev_provided_contains_nothing = {
-        "relatedSpdxElement": "NONE",
-        "relationshipType": "CONTAINS",
-        "spdxElementId": f"SPDXRef-{dev_provided.uuid}",
-    }
-
-    assert len(manifest["relationships"]) == (num_provided * 2) + 1
+    assert len(manifest["relationships"]) == num_provided + 1
     # Relationships in manifest use a constant ordering based on object UUID
     # Actual UUIDs created in the tests will vary, so make sure we assert the right thing
     if dev_provided.uuid < provided.uuid:
         dev_provided_index = 0
-        provided_index = 2
+        provided_index = 1
     else:
         provided_index = 0
-        dev_provided_index = 2
+        dev_provided_index = 1
 
     assert manifest["relationships"][provided_index] == provided_contained_by_component
-    assert manifest["relationships"][provided_index + 1] == provided_contains_nothing
     assert manifest["relationships"][dev_provided_index] == dev_provided_dependency_of_component
-    assert manifest["relationships"][dev_provided_index + 1] == dev_provided_contains_nothing
     assert manifest["relationships"][-1] == document_describes_product
 
 

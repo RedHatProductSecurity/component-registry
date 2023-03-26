@@ -10,7 +10,7 @@ testpaths = "tests"
 # - Ensure pytest config here is valid, and all defined markers are specified below in `markers`
 addopts = """
 -m unit
---cov corgi --cov-report html --cov-report xml:coverage.xml
+--cov corgi --cov-report html --cov-report xml:coverage.xml --cov-config=.coveragerc
 -ra
 --durations=10
 --nomigrations

@@ -1,0 +1,2 @@
+[run]
+omit = output_files/*

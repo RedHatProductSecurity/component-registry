@@ -301,7 +301,6 @@ class SoftwareBuild(TimeStampedModel):
         )
 
         product_details = get_product_details(variant_names, stream_names)
-
         components = set()
         for component in self.components.get_queryset().iterator():
             # This is needed for container image builds which pull in components not
@@ -665,6 +664,7 @@ class ProductStream(ProductModel):
                 Component.objects.filter(
                     ROOT_COMPONENTS_CONDITION, productstreams__ofuri=self.ofuri
                 )
+                .exclude(name__endswith="-container-source")
                 .distinct("name")
                 .values_list("name", flat=True)
                 .using(using)
@@ -678,6 +678,20 @@ class ProductStream(ProductModel):
             if not query:
                 return Component.objects.none()
             return Component.objects.filter(Q(ROOT_COMPONENTS_CONDITION & query)).using(using)
+
+    @property
+    def provides_queryset(self, using: str = "read_only") -> QuerySet["Component"]:
+        """Returns unique aggregate "provides" for the latest components in this stream,
+        for use in templates"""
+        unique_provides = (
+            self.get_latest_components()
+            .values_list("provides__pk", flat=True)
+            .distinct()
+            .order_by("provides__pk")
+            .using(using)
+            .iterator()
+        )
+        return Component.objects.filter(pk__in=unique_provides).using(using)
 
 
 class ProductStreamTag(Tag):
@@ -1466,7 +1480,6 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         self.productstreams.add(*product_pks_dict["productstreams"])
         self.productvariants.add(*product_pks_dict["productvariants"])
         self.channels.add(*product_pks_dict["channels"])
-
         return None
 
     def get_roots(self, using: str = "read_only") -> list[ComponentNode]:

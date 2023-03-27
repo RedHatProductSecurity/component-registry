@@ -120,7 +120,7 @@ class Syft:
                 typed_component: dict[str, Any] = {
                     "type": pkg_type,
                     "meta": {
-                        "name": artifact["name"],
+                        "name": artifact["name"].strip(),
                         "version": artifact["version"],
                         "purl": artifact["purl"],
                         "source": [f"syft-{syft_version}"],

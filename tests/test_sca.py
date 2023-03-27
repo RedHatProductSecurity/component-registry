@@ -421,6 +421,7 @@ def test_slow_software_composition_analysis(
                 "-o=syft-json",
                 "--exclude=**/vendor/**",
                 "--exclude=**/test/fixtures/**",
+                "--exclude=**/src/test/resources/**",
                 f"dir:/tmp/{build_id}",
             ],
             text=True,
@@ -436,6 +437,7 @@ def test_slow_software_composition_analysis(
                     "-o=syft-json",
                     "--exclude=**/vendor/**",
                     "--exclude=**/test/fixtures/**",
+                    "--exclude=**/src/test/resources/**",
                     f"file:/tmp/lookaside/{build_id}/{lookaside_file}",
                 ],
                 text=True,
@@ -500,3 +502,12 @@ def test_save_component_skips_duplicates():
     assert save_component(new_component_with_purl, root_node) is False
     assert Component.objects.filter(name=new_component_with_purl["name"]).first() is None
     assert old_component.cnodes.count() == 1
+
+
+def test_scan_files():
+    """Test that src/test/resources are excluded from syft scans"""
+    test_archive = Path("tests/data/maven-release-2.2.1-source-release.zip")
+    results = Syft.scan_files([test_archive])
+    for result in results:
+        if "subproject1" in result["meta"]["name"]:
+            assert False

@@ -48,6 +48,7 @@ class Syft:
                     # For example skip test/fixtures/0-dns/package.json file in nodejs
                     "--exclude=**/vendor/**",
                     "--exclude=**/test/fixtures/**",
+                    "--exclude=**/src/test/resources/**",
                     f"{scheme}:{target_file}",
                 ],
                 text=True,

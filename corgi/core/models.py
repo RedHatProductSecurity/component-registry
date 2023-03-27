@@ -1791,7 +1791,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
     def get_upstreams_pks(self, using: str = "read_only") -> tuple[str, ...]:
         """Return only the primary keys from the set of all upstream nodes"""
-        linked_pks = set(node.obj.pk for node in self.get_upstreams_nodes(using=using) if node.obj)
+        linked_pks = set(str(node.object_id) for node in self.get_upstreams_nodes(using=using))
         return tuple(linked_pks)
 
     def get_upstreams_purls(self, using: str = "read_only") -> set[str]:

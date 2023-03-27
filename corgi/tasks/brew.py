@@ -141,6 +141,7 @@ def slow_fetch_modular_build(build_id: str, force_process: bool = False) -> None
         return
     # Note: module builds don't include arch information, only the individual RPMs that make up a
     # module are built for specific architectures.
+    # TODO: Merge below with similar logic in save_module() if possible
     meta = rhel_module_data["meta"]
     obj, created = Component.objects.update_or_create(
         type=rhel_module_data["type"],
@@ -151,6 +152,7 @@ def slow_fetch_modular_build(build_id: str, force_process: bool = False) -> None
         defaults={
             # Any remaining meta keys are recorded in meta_attr
             "meta_attr": meta,
+            "namespace": Component.Namespace.REDHAT,
         },
     )
     # This should result in a lookup if slow_fetch_brew_build has already processed this module.

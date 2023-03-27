@@ -786,3 +786,129 @@ def test_product_components(client, api_path):
     response = client.get(f"{api_path}/components?products={rhel_br.name}")
     assert response.status_code == 200
     assert response.json()["count"] == 1
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_component_provides_sources_upstreams(client, api_path):
+
+    # create a top level root source component
+    root_comp = ComponentFactory(
+        name="root_comp",
+        type=Component.Type.GENERIC,
+        namespace=Component.Namespace.REDHAT,
+        related_url="https://example.org/related",
+    )
+    root_node, _ = ComponentNode.objects.get_or_create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        purl=root_comp.purl,
+        defaults={"obj": root_comp},
+    )
+    upstream_comp = ComponentFactory(
+        name="upstream_comp",
+        type=Component.Type.GENERIC,
+        namespace=Component.Namespace.UPSTREAM,
+        related_url="https://example.org/related",
+    )
+    ComponentNode.objects.get_or_create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=root_node,
+        purl=upstream_comp.purl,
+        defaults={"obj": upstream_comp},
+    )
+
+    # create dep component
+    dep_comp = ComponentFactory(
+        name="cool_dep_component", type=Component.Type.NPM, namespace=Component.Namespace.REDHAT
+    )
+    ComponentNode.objects.get_or_create(
+        type=ComponentNode.ComponentNodeType.PROVIDES,
+        parent=root_node,
+        purl=dep_comp.purl,
+        defaults={"obj": dep_comp},
+    )
+    dep_node, _ = ComponentNode.objects.get_or_create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        purl=dep_comp.purl,
+        defaults={"obj": dep_comp},
+    )
+
+    # create 2nd level dep
+    dep2_comp = ComponentFactory(
+        name="cool_dep2_component", type=Component.Type.NPM, namespace=Component.Namespace.REDHAT
+    )
+    # ComponentNode.objects.get_or_create(
+    #     type=ComponentNode.ComponentNodeType.SOURCE,
+    #     parent=None,
+    #     purl=dep2_comp.purl,
+    #     defaults={"obj": dep2_comp},
+    # )
+    ComponentNode.objects.get_or_create(
+        type=ComponentNode.ComponentNodeType.PROVIDES,
+        parent=dep_node,
+        purl=dep2_comp.purl,
+        defaults={"obj": dep2_comp},
+    )
+
+    root_comp.save_component_taxonomy()
+    root_comp.save()
+
+    assert dep_comp.purl in root_comp.provides.values_list("purl", flat=True)
+    assert dep2_comp.purl in root_comp.provides.values_list("purl", flat=True)
+
+    response = client.get(f"{api_path}/components?namespace=REDHAT")
+    assert response.status_code == 200
+    assert response.json()["count"] == 3
+
+    response = client.get(f"{api_path}/components/{root_comp.uuid}")
+    assert response.status_code == 200
+    assert response.json()["name"] == root_comp.name
+    assert response.json()["related_url"] == root_comp.related_url
+    assert len(response.json()["sources"]) == 0
+    assert len(response.json()["provides"]) == 1
+    assert len(response.json()["upstreams"]) == 1
+
+    response = client.get(f"{api_path}/components/{dep_comp.uuid}")
+    assert response.status_code == 200
+    assert len(response.json()["sources"]) == 1
+    assert len(response.json()["provides"]) == 1
+    assert len(response.json()["upstreams"]) == 1
+
+    response = client.get(f"{api_path}/components/{dep2_comp.uuid}")
+    assert response.status_code == 200
+    assert len(response.json()["sources"]) == 1
+    assert len(response.json()["provides"]) == 0
+    assert len(response.json()["upstreams"]) == 0
+
+    # retrieve all sources of dep_comp component
+    response = client.get(f"{api_path}/components?provides={dep_comp.purl}")
+    assert response.status_code == 200
+    assert response.json()["count"] == 1
+
+    # retrieve all sources of dep2_comp component
+    response = client.get(f"{api_path}/components?provides={dep2_comp.purl}")
+    assert response.status_code == 200
+    assert response.json()["count"] == 1
+    response = client.get(f"{api_path}/components?re_provides={dep2_comp.purl}")
+    assert response.status_code == 200
+    assert response.json()["count"] == 1
+
+    # retrieve all provided components
+    response = client.get(f"{api_path}/components?sources={root_comp.purl}")
+    assert response.status_code == 200
+    assert response.json()["count"] == 1
+
+    response = client.get(f"{api_path}/components?re_sources={root_comp.purl}")
+    assert response.status_code == 200
+    assert response.json()["count"] == 1
+
+    # retrieve all components with upstream_comp upstream
+    response = client.get(f"{api_path}/components?upstreams={upstream_comp.purl}")
+    assert response.status_code == 200
+    assert response.json()["count"] == 2
+
+    # assert upstream_comp.purl == ""
+    response = client.get(f"{api_path}/components?re_upstreams={upstream_comp.name}")
+    assert response.status_code == 200
+    assert response.json()["count"] == 2

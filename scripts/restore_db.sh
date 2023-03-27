@@ -9,11 +9,6 @@ else
     db_dump_dir="$1"
 fi
 
-if ! podman ps | grep 'corgi-db' &>/dev/null; then
-    echo 'error: corgi "corgi-db" container does not appear to be running.'
-    exit 1
-fi
-
 # ensure there are no extensions in the dump which we can't restore with non-admin permissions
 pg_restore -l "${db_dump_dir}" | grep -v "EXTENSION" > ./restore-elements
 

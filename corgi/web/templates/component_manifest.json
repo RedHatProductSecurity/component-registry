@@ -1,6 +1,6 @@
 {# Component manifest, obj is a Component here #}{% extends "base_manifest.json" %}
 {% block packages %}{% for component in obj.provides_queryset %}{
-        "copyrightText": {% if component.copyright_text %}"{{component.copyright_text}}"{% else %}"NOASSERTION"{% endif %},
+        "copyrightText": {% if component.copyright_text %}"{{component.copyright_text|escapejs}}"{% else %}"NOASSERTION"{% endif %},
         "downloadLocation": {% if component.download_url %}"{{component.download_url}}"{% else %}"NOASSERTION"{% endif %},
         "externalRefs": [
             {
@@ -22,7 +22,7 @@
         "versionInfo": "{{component.nevra|escapejs}}"
     },{% endfor %}
     {
-        "copyrightText": {% if obj.copyright_text %}"{{obj.copyright_text}}"{% else %}"NOASSERTION"{% endif %},
+        "copyrightText": {% if obj.copyright_text %}"{{obj.copyright_text|escapejs}}"{% else %}"NOASSERTION"{% endif %},
         "downloadLocation": {% if obj.download_url %}"{{obj.download_url}}"{% else %}"NOASSERTION"{% endif %},
         "externalRefs": [
             {
@@ -41,7 +41,7 @@
         "packageFileName": {% if obj.filename %}"{{obj.filename}}"{% else %}"NOASSERTION"{% endif %},
         "SPDXID": "SPDXRef-{{obj.uuid}}",
         "supplier": "Organization: Red Hat",
-        "versionInfo": "{{obj.version}}"
+        "versionInfo": "{{obj.nevra|escapejs}}"
     }
 {% endblock packages %}{% block relationships %}{% for node_type, node_id in obj.get_provides_nodes_queryset %}
     {

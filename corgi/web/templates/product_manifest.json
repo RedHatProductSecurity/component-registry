@@ -1,7 +1,7 @@
 {# ProductModel manifest, obj is a ProductModel subclass here #}{% extends "base_manifest.json" %}
 {% block packages %}{% for component in latest_components %}
     {
-        "copyrightText": {% if component.copyright_text %}"{{component.copyright_text}}"{% else %}"NOASSERTION"{% endif %},
+        "copyrightText": {% if component.copyright_text %}"{{component.copyright_text|escapejs}}"{% else %}"NOASSERTION"{% endif %},
         "downloadLocation": {% if component.download_url %}"{{component.download_url}}"{% else %}"NOASSERTION"{% endif %},
         "externalRefs": [
             {
@@ -23,7 +23,7 @@
         "versionInfo": "{{component.nevra|escapejs}}"
     },{% endfor %}{% for provided in distinct_provides %}
     {
-        "copyrightText": {% if provided.copyright_text %}"{{provided.copyright_text}}"{% else %}"NOASSERTION"{% endif %},
+        "copyrightText": {% if provided.copyright_text %}"{{provided.copyright_text|escapejs}}"{% else %}"NOASSERTION"{% endif %},
         "downloadLocation": {% if provided.download_url %}"{{provided.download_url}}"{% else %}"NOASSERTION"{% endif %},
         "externalRefs": [
             {

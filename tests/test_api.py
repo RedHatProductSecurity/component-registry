@@ -815,7 +815,7 @@ def test_oci_component_provides_sources_upstreams(client, api_path):
     The data model does not impose this constraint eg. provides, sources and upstream property queries enforce
     this behaviour.
 
-    """
+    """  # noqa
 
     # create a top level root source component
     root_comp = ComponentFactory(
@@ -928,35 +928,35 @@ def test_oci_component_provides_sources_upstreams(client, api_path):
     assert len(response.json()["upstreams"]) == 0
 
     # retrieve all sources of root_comp
-    response = client.get(f"{api_path}/components?provides={root_comp.purl}")
+    response = client.get(f"{api_path}/components?provides={quote(root_comp.purl)}")
     assert response.status_code == 200
     assert response.json()["results"] == []
     assert response.json()["count"] == 0
     # retrieve all provides of root_comp
-    response = client.get(f"{api_path}/components?sources={root_comp.purl}")
+    response = client.get(f"{api_path}/components?sources={quote(root_comp.purl)}")
     assert response.status_code == 200
     assert response.json()["count"] == 2
 
     # retrieve all sources of dep_comp component
-    response = client.get(f"{api_path}/components?provides={dep_comp.purl}")
+    response = client.get(f"{api_path}/components?provides={quote(dep_comp.purl)}")
     assert response.status_code == 200
     assert response.json()["count"] == 1
     # retrieve all provides of dep_comp
-    response = client.get(f"{api_path}/components?sources={dep_comp.purl}")
+    response = client.get(f"{api_path}/components?sources={quote(dep_comp.purl)}")
     assert response.status_code == 200
     assert response.json()["count"] == 1
 
     # retrieve all sources of dep2_comp component
-    response = client.get(f"{api_path}/components?provides={dep2_comp.purl}")
+    response = client.get(f"{api_path}/components?provides={quote(dep2_comp.purl)}")
     assert response.status_code == 200
     assert response.json()["count"] == 2
     # retrieve all provides of dep2_comp
-    response = client.get(f"{api_path}/components?sources={dep2_comp.purl}")
+    response = client.get(f"{api_path}/components?sources={quote(dep2_comp.purl)}")
     assert response.status_code == 200
     assert response.json()["count"] == 0
 
     # retrieve all components with upstream_comp upstream
-    response = client.get(f"{api_path}/components?upstreams={upstream_comp.purl}")
+    response = client.get(f"{api_path}/components?upstreams={quote(upstream_comp.purl)}")
     assert response.status_code == 200
     assert response.json()["count"] == 1
 
@@ -977,9 +977,9 @@ def test_srpm_component_provides_sources_upstreams(client, api_path):
     +--------------------+---------+----------+-----------+
     | root_component     | 0       | 1        | 1         |
     +--------------------+---------+----------+-----------+
-    | upstream_component | 0       | 0        | 0        |
+    | upstream_component | 0       | 0        | 3         |
     +--------------------+---------+----------+-----------+
-    | dep1_component     | 1       | 0        | 0         |
+    | dep1_component     | 1       | 0        | 1         |
     +--------------------+---------+----------+-----------+
 
     This behaviour is predicated on the following assumptions:
@@ -989,7 +989,7 @@ def test_srpm_component_provides_sources_upstreams(client, api_path):
     The data model does not impose this constraint eg. provides, sources and upstream property queries enforce
     this behaviour.
 
-    """
+    """  # noqa
 
     # create a top level root source component
     root_comp = ComponentFactory(
@@ -1022,7 +1022,7 @@ def test_srpm_component_provides_sources_upstreams(client, api_path):
     # create dep component
     dep_comp = ComponentFactory(
         name="cool_dep_component",
-        arch="src",
+        arch="s390x",
         type=Component.Type.RPM,
         namespace=Component.Namespace.REDHAT,
     )
@@ -1036,16 +1036,16 @@ def test_srpm_component_provides_sources_upstreams(client, api_path):
 
     # TODO - investigate if invoking any of the following in any order is stable
     # it is intentional to invoke these twice during the test
-    # upstream_comp.save_component_taxonomy()
-    # upstream_comp.save()
-    # dep_comp.save_component_taxonomy()
-    # dep_comp.save()
-    # root_comp.save_component_taxonomy()
-    # root_comp.save()
-    # upstream_comp.save_component_taxonomy()
-    # upstream_comp.save()
-    # # dep_comp.save_component_taxonomy()
-    # dep_comp.save()
+    upstream_comp.save_component_taxonomy()
+    upstream_comp.save()
+    dep_comp.save_component_taxonomy()
+    dep_comp.save()
+    root_comp.save_component_taxonomy()
+    root_comp.save()
+    upstream_comp.save_component_taxonomy()
+    upstream_comp.save()
+    dep_comp.save_component_taxonomy()
+    dep_comp.save()
     root_comp.save_component_taxonomy()
     root_comp.save()
 
@@ -1067,38 +1067,34 @@ def test_srpm_component_provides_sources_upstreams(client, api_path):
     assert response.status_code == 200
     assert len(response.json()["sources"]) == 1
     assert len(response.json()["provides"]) == 0
-    assert len(response.json()["upstreams"]) == 0
+    assert len(response.json()["upstreams"]) == 1
 
     response = client.get(f"{api_path}/components/{upstream_comp.uuid}")
     assert response.status_code == 200
     assert len(response.json()["sources"]) == 0
     assert len(response.json()["provides"]) == 0
-    assert len(response.json()["upstreams"]) == 0
+    assert len(response.json()["upstreams"]) == 1
 
     # retrieve all sources of root_comp
-    response = client.get(f"{api_path}/components?provides={root_comp.purl}")
+    response = client.get(f"{api_path}/components?provides={quote(root_comp.purl)}")
     assert response.status_code == 200
     assert response.json()["results"] == []
     assert response.json()["count"] == 0
     # retrieve all provides of root_comp
-    response = client.get(f"{api_path}/components?sources={root_comp.purl}")
+    response = client.get(f"{api_path}/components?sources={quote(root_comp.purl)}")
     assert response.status_code == 200
     assert response.json()["count"] == 1
 
     # retrieve all sources of dep_comp component
-    response = client.get(f"{api_path}/components?provides={dep_comp.purl}")
+    response = client.get(f"{api_path}/components?provides={quote(dep_comp.purl)}")
     assert response.status_code == 200
     assert response.json()["count"] == 1
     # retrieve all provides of dep_comp
-    response = client.get(f"{api_path}/components?sources={dep_comp.purl}")
+    response = client.get(f"{api_path}/components?sources={quote(dep_comp.purl)}")
     assert response.status_code == 200
     assert response.json()["count"] == 0
 
     # retrieve all components with upstream_comp upstream
-    response = client.get(f"{api_path}/components?upstreams={upstream_comp.purl}")
+    response = client.get(f"{api_path}/components?upstreams={quote(upstream_comp.purl)}")
     assert response.status_code == 200
-    assert response.json()["count"] == 1
-
-
-
-
+    assert response.json()["count"] == 3

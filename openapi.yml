@@ -323,11 +323,19 @@ paths:
         schema:
           type: string
       - in: query
+        name: re_provides
+        schema:
+          type: string
+      - in: query
         name: re_purl
         schema:
           type: string
       - in: query
-        name: re_upstream
+        name: re_sources
+        schema:
+          type: string
+      - in: query
+        name: re_upstreams
         schema:
           type: string
       - in: query

@@ -31,6 +31,38 @@ pytestmark = [
 ]
 
 
+def test_escapejs_on_copyright():
+    # actual copyright_text from snappy rpm
+    c = ComponentFactory(
+        copyright_text="(c) A AEZaO5, (c) ^P&#x27;,AE^UG.2oDS&#x27;x c v KDC(r)xOE@5wZ&#x27;^NyH+c"
+        "@^AP6| bV, (c) /axove+xose/7,-1,0,B/frameset&amp;F axuntanza&amp;1,,3 http"
+        "://biblio.cesga.es:81/search, (c) /axove+xose/7,-1,0,B/frameset&amp;F axun"
+        "tanza&amp;3,,3 http://db.zaq.ne.jp/asp/bbs/jttk_baasc506_1/article/36 http:"
+        "//db.zaq.ne.jp/asp/bbs/jttk_baasc506_1/article/37, (c) Ei El, (c) H2 (c), ("
+        "c) I UuE, (c) OOUA UuUS1a OEviy, Copyright 2005 and onwards Google Inc., Co"
+        "pyright 2005 Google Inc., Copyright 2008 Google Inc., Copyright 2011 Google"
+        " Inc., Copyright 2011, Google Inc., Copyright 2011 Martin Gieseking &lt;mar"
+        "tin.gieseking@uos.de&gt;, Copyright 2013 Steinar H. Gunderson, Copyright 20"
+        "19 Google Inc., copyright by Cornell University, Copyright Depository of El"
+        "ectronic Materials, Copyright Issues Marybeth Peters, (c) ^P u E2OroCIyV ^T"
+        " C.au, (c) UiL (c)"
+    )
+    try:
+        c.manifest
+    except JSONDecodeError as e:
+        assert (
+            False
+        ), f"JSONDecodeError thrown by component with special chars in copyright_text {e}"
+
+    c = ComponentFactory(copyright_text="©, 🄯, ®, ™")
+    try:
+        c.manifest
+    except JSONDecodeError as e:
+        assert (
+            False
+        ), f"JSONDecodeError thrown by component with special chars in copyright_text {e}"
+
+
 def test_latest_components_exclude_source_container():
     """Test that container sources are excluded packages"""
     containers, stream, _ = setup_products_and_rpm_in_containers()
@@ -39,6 +71,22 @@ def test_latest_components_exclude_source_container():
     components = stream.get_latest_components()
     assert len(components) == 2
     assert not components.first().name.endswith("-container-source")
+
+
+def test_manifest_backslash():
+    """Test that a tailing backslash in a purl doesn't break rendering"""
+
+    stream = ProductStreamFactory()
+    sb = SoftwareBuildFactory(
+        completion_time=datetime.strptime("2017-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z")
+    )
+    component = SrpmComponentFactory(version="2.8.0 \\", software_build=sb)
+    component.productstreams.add(stream)
+
+    try:
+        stream.manifest
+    except JSONDecodeError:
+        assert False
 
 
 def test_slim_rpm_in_containers_manifest():
@@ -329,19 +377,3 @@ def setup_product():
     stream.save_product_taxonomy()
     assert variant in stream.productvariants.get_queryset()
     return stream, variant
-
-
-def test_manifest_backslash():
-    """Test that a tailing backslash in a purl doesn't break rendering"""
-
-    stream = ProductStreamFactory()
-    sb = SoftwareBuildFactory(
-        completion_time=datetime.strptime("2017-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z")
-    )
-    component = SrpmComponentFactory(version="2.8.0 \\", software_build=sb)
-    component.productstreams.add(stream)
-
-    try:
-        stream.manifest
-    except JSONDecodeError:
-        assert False

@@ -70,10 +70,14 @@ class ComponentFilter(FilterSet):
     product_variants = CharFilter(field_name="productvariants", method="filter_ofuri_or_name")
     channels = CharFilter(lookup_expr="name")
 
-    sources = CharFilter(lookup_expr="purl__icontains")
-    provides = CharFilter(lookup_expr="purl__icontains")
-    upstreams = CharFilter(lookup_expr="purl__icontains")
-    re_upstream = CharFilter(lookup_expr="purl__regex", field_name="upstreams")
+    # Normally we are interested in retrieving provides,sources or upstreams of a specific component
+    sources = CharFilter(field_name="sources", lookup_expr="purl")
+    provides = CharFilter(field_name="provides", lookup_expr="purl")
+    upstreams = CharFilter(field_name="upstreams", lookup_expr="purl")
+    # otherwise use regex to match provides,sources or upstreams purls
+    re_sources = CharFilter(field_name="sources", lookup_expr="purl__regex")
+    re_provides = CharFilter(field_name="provides", lookup_expr="purl__regex")
+    re_upstreams = CharFilter(field_name="upstreams", lookup_expr="purl__regex")
 
     el_match = CharFilter(label="RHEL version for layered products", lookup_expr="icontains")
 

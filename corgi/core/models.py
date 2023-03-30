@@ -1645,8 +1645,6 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         # repository_url / related_URL is the customer-facing location,
         # so for now we just build a pull URL from that instead.
 
-        # TODO: self.filename, AKA the filename of the image archive a container is included in,
-        #  is always unset. This is not the digest SHA but the config layer SHA.
         elif self.type == Component.Type.CONTAINER_IMAGE:
             if not self.related_url:
                 return self.CONTAINER_CATALOG_SEARCH

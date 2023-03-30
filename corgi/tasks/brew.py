@@ -262,16 +262,7 @@ def save_component(
         },
     )
 
-    if license_declared_raw and license_declared_raw != obj.license_declared_raw:
-        # Any non-empty license here should be reported
-        # We only rely on OpenLCS if we don't know the license_declared
-        # But we can't set license_declared in update_or_create above
-        # If meta["license"] is an empty string and we are reprocessing,
-        # we might erase the license that OpenLCS provided
-        # They cannot erase any licenses we set ourselves (when the field is not empty)
-        # API endpoint blocks this (400 Bad Request)
-        obj.license_declared_raw = license_declared_raw
-        obj.save()
+    set_license_declared_safely(obj, license_declared_raw)
 
     # Usually component_meta is an empty dict by the time we get here, but if it's not, and we have
     # new keys, add them to the existing meta_attr. Only call save if something has been added
@@ -358,11 +349,36 @@ def process_image_components(image):
     return builds_to_fetch
 
 
+def set_license_declared_safely(obj: Component, license_declared_raw: str) -> None:
+    """Save a declared license onto a Component, without erasing any existing value"""
+    if license_declared_raw and license_declared_raw != obj.license_declared_raw:
+        # Any non-empty license here should be reported
+        # We only rely on OpenLCS if we don't know the license_declared
+        # But we can't set license_declared in update_or_create
+        # If the license in the metadata is an empty string and we are reprocessing,
+        # we might erase the license that OpenLCS provided
+        # They cannot erase any licenses we set ourselves (when the field is not empty)
+        # API endpoint blocks this (400 Bad Request)
+        obj.license_declared_raw = license_declared_raw
+        obj.save()
+
+
+def get_labels_from_meta(build_meta: dict) -> dict[str, str]:
+    """Get container image labels from Brew metadata, if available"""
+    config = build_meta.get("docker_config", {}).get("config", {})
+    return config.get("Labels", {})
+
+
 def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
     related_url = build_data["meta"].get("repository_url", "")
     if not related_url:
         # Handle case when key is present but value is None
         related_url = ""
+
+    labels = get_labels_from_meta(build_data["meta"])
+    description = labels.pop("description", "")
+    license_declared_raw = labels.pop("License", "")
+
     obj, created = Component.objects.update_or_create(
         type=build_data["type"],
         name=build_data["meta"].pop("name"),
@@ -370,14 +386,16 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
         release=build_data["meta"].pop("release"),
         arch="noarch",
         defaults={
-            "description": build_data["meta"].pop("description", ""),
-            "filename": find_package_file_name(build_data["meta"].pop("source_files", [])),
+            "description": description,
+            "filename": build_data["meta"].pop("filename", ""),
             "meta_attr": build_data["meta"],
             "namespace": Component.Namespace.REDHAT,
             "related_url": related_url,
             "software_build": softwarebuild,
         },
     )
+
+    set_license_declared_safely(obj, license_declared_raw)
     root_node, _ = ComponentNode.objects.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
@@ -412,6 +430,10 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
 
     if "image_components" in build_data:
         for image in build_data["image_components"]:
+            labels = get_labels_from_meta(image["meta"])
+            description = labels.pop("description", "")
+            license_declared_raw = labels.pop("License", "")
+
             obj, created = Component.objects.update_or_create(
                 type=image["type"],
                 name=image["meta"].pop("name"),
@@ -419,11 +441,15 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
                 release=image["meta"].pop("release"),
                 arch=image["meta"].pop("arch"),
                 defaults={
+                    "description": description,
+                    "filename": image["meta"].pop("filename", ""),
                     "meta_attr": image["meta"],
                     "namespace": Component.Namespace.REDHAT,
                     "software_build": softwarebuild,
                 },
             )
+
+            set_license_declared_safely(obj, license_declared_raw)
             image_arch_node, _ = ComponentNode.objects.get_or_create(
                 type=ComponentNode.ComponentNodeType.PROVIDES,
                 parent=root_node,

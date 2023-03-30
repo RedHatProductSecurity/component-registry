@@ -562,6 +562,7 @@ class Brew:
             build_id, build_nvr, arch=archive["extra"]["image"]["arch"], name_label=name_label
         )
         child_component["meta"]["docker_config"] = docker_config
+        child_component["meta"]["filename"] = archive["filename"]
         child_component["meta"]["brew_archive_id"] = archive["id"]
         child_component["meta"]["digests"] = archive["extra"]["docker"]["digests"]
         child_component["meta"]["source"] = ["koji.listArchives"]

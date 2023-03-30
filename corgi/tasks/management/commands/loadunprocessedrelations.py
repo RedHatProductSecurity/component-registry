@@ -30,7 +30,7 @@ class Command(BaseCommand):
             if not build_id:
                 continue
             if (
-                not SoftwareBuild.objects.filter(build_id=int(build_id), type=b_type)
+                not SoftwareBuild.objects.filter(build_id=build_id, type=b_type)
                 .using("read_only")
                 .exists()
             ):

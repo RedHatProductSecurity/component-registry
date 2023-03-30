@@ -118,5 +118,5 @@ class Migration(migrations.Migration):
     ]
 
     dependencies = [
-        ("core", "0057_add_version_release_arr_fields"),
+        ("core", "0060_enforce_unique_purls"),
     ]

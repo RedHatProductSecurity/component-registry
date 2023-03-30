@@ -2,6 +2,7 @@ from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.conf import settings
 from django.db import transaction
+from django.db.models import QuerySet
 
 from config.celery import app
 from corgi.collectors.errata_tool import ErrataTool
@@ -83,7 +84,7 @@ def slow_load_errata(erratum_name, force_process: bool = False):
             for build_obj in build_objects:
                 for build_id, errata_components in build_obj.items():
                     # Add to relations list as we go, so we can fetch them below
-                    build_ids.add(int(build_id))
+                    build_ids.add(build_id)
                     ProductComponentRelation.objects.update_or_create(
                         external_system_id=erratum_id,
                         product_ref=variant_id,
@@ -129,15 +130,11 @@ def slow_load_errata(erratum_name, force_process: bool = False):
     logger.info("Finished processing %s", erratum_id)
 
 
-def _get_relation_builds(erratum_id: int) -> tuple[tuple[int, str], ...]:
+def _get_relation_builds(erratum_id: int) -> QuerySet:
     # Get all the PCR with errata_id
-    relation_builds = ProductComponentRelation.objects.filter(
+    return ProductComponentRelation.objects.filter(
         type=ProductComponentRelation.Type.ERRATA, external_system_id=erratum_id
     ).values_list("build_id", "build_type")
-    # Convert them to ints for use in queries and tasks
-    # We don't store them as int because another build system not use ints
-    builds = tuple((int(b_id), build_type) for (b_id, build_type) in relation_builds)
-    return builds
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)

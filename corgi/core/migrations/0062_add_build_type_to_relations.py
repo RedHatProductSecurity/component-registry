@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("core", "0058_change_software_build_primary_key"),
+        ("core", "0061_change_software_build_primary_key"),
     ]
 
     operations = [

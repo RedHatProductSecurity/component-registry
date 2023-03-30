@@ -25,7 +25,9 @@ class SoftwareBuildFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = models.SoftwareBuild
 
-    build_id = factory.sequence(lambda n: n + 100)
+    # TODO improve this to generate md5 only for PNC build type
+    # factory.sequence(lambda n: n + 100) for other types
+    build_id = factory.Faker("md5")
     build_type = random.choice(models.SoftwareBuild.Type.values)
     name = factory.Faker("word")
     tag = factory.RelatedFactory(SoftwareBuildTagFactory, factory_related_name="tagged_model")

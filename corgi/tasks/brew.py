@@ -32,7 +32,7 @@ logger = get_task_logger(__name__)
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def slow_fetch_brew_build(
-    build_id: int,
+    build_id: str,
     build_type: str = BUILD_TYPE,
     save_product: bool = True,
     force_process: bool = False,
@@ -56,7 +56,7 @@ def slow_fetch_brew_build(
             logger.info("Fetching brew build with build_id: %s", build_id)
 
     try:
-        component = Brew(build_type).get_component_data(build_id)
+        component = Brew(build_type).get_component_data(int(build_id))
     except BrewBuildTypeNotSupported as exc:
         logger.warning(str(exc))
         return
@@ -151,7 +151,7 @@ def slow_fetch_modular_build(build_id: str, force_process: bool = False) -> None
     # Some compose build_ids in the relations table will be for SRPMs, skip those here
     if not rhel_module_data:
         logger.info("No module data fetched for build %s from Brew, exiting...", build_id)
-        slow_fetch_brew_build.delay(int(build_id), force_process=force_process)
+        slow_fetch_brew_build.delay(build_id, force_process=force_process)
         return
     # Note: module builds don't include arch information, only the individual RPMs that make up a
     # module are built for specific architectures.
@@ -188,7 +188,7 @@ def slow_fetch_modular_build(build_id: str, force_process: bool = False) -> None
         if "brew_build_id" in c:
             slow_fetch_brew_build.delay(c["brew_build_id"])
         save_component(c, node)
-    slow_fetch_brew_build.delay(int(build_id), force_process=force_process)
+    slow_fetch_brew_build.delay(build_id, force_process=force_process)
     logger.info("Finished fetching modular build: %s", build_id)
 
 
@@ -563,7 +563,7 @@ def fetch_unprocessed_relations(
             # build_id defaults to "" and int() will fail in this case
             continue
         if (
-            not SoftwareBuild.objects.filter(build_id=int(build_id), build_type=build_type)
+            not SoftwareBuild.objects.filter(build_id=build_id, build_type=build_type)
             .using("read_only")
             .exists()
         ):

@@ -98,7 +98,7 @@ def test_fetch_compose_build(mock_fetch_brew):
 def test_fetch_rhel_module():
     _set_up_rhel_compose()
     assert not Brew.fetch_rhel_module(2)
-    rhel_module_component = Brew.fetch_rhel_module(int(module_build_id))
+    rhel_module_component = Brew.fetch_rhel_module(module_build_id)
     assert rhel_module_component
     assert len(rhel_module_component["components"]) == 1
     assert len(rhel_module_component["nested_builds"]) == 1
@@ -107,6 +107,8 @@ def test_fetch_rhel_module():
         == "6.module+el8.6.0+14129+983ceada"
     )
     assert rhel_module_component["components"][0]["meta"]["arch"] == "x86_64"
+
+    assert Brew.fetch_rhel_module(module_nvr)
 
 
 def _set_up_rhel_compose() -> CollectorRPM:

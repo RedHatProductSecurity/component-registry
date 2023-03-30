@@ -763,8 +763,10 @@ class Brew:
 
         return module
 
+    # Force clients to call this using an int build_id
     def get_component_data(self, build_id: int) -> dict:
         logger.info("Retrieving Brew build: %s", build_id)
+        # koji api expects a build_id to be an int. If you pass a string it'll look for an NVR
         build = self.koji_session.getBuild(build_id)
         if not build:
             raise BrewBuildNotFound(f"Build {build_id} was not found")

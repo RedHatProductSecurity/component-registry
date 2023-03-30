@@ -2016,7 +2016,7 @@ components:
           type: string
           readOnly: true
         build_id:
-          type: integer
+          type: string
           readOnly: true
         build_type:
           allOf:
@@ -2070,7 +2070,7 @@ components:
           type: string
           readOnly: true
         build_id:
-          type: integer
+          type: string
           readOnly: true
         build_type:
           allOf:

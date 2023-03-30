@@ -67,7 +67,7 @@ def get_builds(
     ):
         if not build_id:
             continue
-        if not SoftwareBuild.objects.filter(build_id=int(build_id), build_type=build_type).exists():
+        if not SoftwareBuild.objects.filter(build_id=build_id, build_type=build_type).exists():
             logger.info("Processing Compose relation build with id: %s", build_id)
             if build_type == SoftwareBuild.Type.CENTOS:
                 # We would have to update collector modules to avoid using build_id as primary key

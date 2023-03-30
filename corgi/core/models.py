@@ -264,7 +264,7 @@ class SoftwareBuild(TimeStampedModel):
         CENTOS = "CENTOS"  # Used by OpenStack RDO
 
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    build_id = models.IntegerField()
+    build_id = models.CharField(max_length=200, default="")
     build_type = models.CharField(choices=Type.choices, max_length=20)
     name = models.TextField()  # Arbitrary identifier for a build
     source = models.TextField()  # Source code reference for build

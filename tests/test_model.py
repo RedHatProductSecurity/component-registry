@@ -339,21 +339,21 @@ def test_product_stream_builds():
         build_id=rhel_7_1_build.build_id,
     )
     # Test we can find product variant builds
-    rhel_8_2_builds = [int(b_id) for b_id, _ in rhel_8_2.builds]
+    rhel_8_2_builds = [b_id for b_id, _ in rhel_8_2.builds]
     assert rhel_8_2_build.build_id in rhel_8_2_builds
     # Test we can find both product variant and product stream builds when they are ancestors
     assert rhel_8_2_base_build.build_id in rhel_8_2_builds
     # Test we can find product stream builds
-    assert rhel_7_1_build.build_id in [int(b_id) for b_id, _ in rhel_7_1.builds]
+    assert rhel_7_1_build.build_id in [b_id for b_id, _ in rhel_7_1.builds]
     # Test we can find builds from product stream children of product version
-    assert rhel_7_1_build.build_id in [int(b_id) for b_id, _ in rhel_7.builds]
+    assert rhel_7_1_build.build_id in [b_id for b_id, _ in rhel_7.builds]
     # Test products have all builds
-    rhel_builds = [int(b_id) for b_id, _ in rhel.builds]
+    rhel_builds = [b_id for b_id, _ in rhel.builds]
     assert rhel_8_2_build.build_id in rhel_builds
     assert rhel_7_1_build.build_id in rhel_builds
     assert rhel_8_2_base_build.build_id in rhel_builds
     # Test that builds from another stream don't get included
-    assert rhel_8_2_build.build_id not in [int(b) for b in rhel_8_1.builds]
+    assert rhel_8_2_build.build_id not in [b for b in rhel_8_1.builds]
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)

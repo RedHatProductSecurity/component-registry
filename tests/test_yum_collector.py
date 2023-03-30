@@ -3,6 +3,7 @@ from unittest.mock import call, patch
 import pytest
 
 from corgi.collectors.yum import DNF_BASE_COMMAND, Yum
+from corgi.tasks.common import BUILD_TYPE
 from tests.test_pulp_collector import TEST_REPO
 
 pytestmark = pytest.mark.unit
@@ -95,7 +96,7 @@ def test_get_modules_from_yum_repos():
         with patch(
             "corgi.collectors.brew.Brew.persist_modules", return_value=module_build_ids
         ) as mock_saver:
-            result_build_ids = Yum().get_modules_from_yum_repos((TEST_REPO,))
+            result_build_ids = Yum(BUILD_TYPE).get_modules_from_yum_repos((TEST_REPO,))
             mock_runner.assert_has_calls(
                 calls=(mock_find_modules_call, mock_get_module_call), any_order=False
             )
@@ -113,7 +114,7 @@ def test_get_srpms_from_yum_repos():
         with patch(
             "corgi.collectors.brew.Brew.lookup_build_ids", return_value=srpm_build_ids
         ) as mock_lookup:
-            result_build_ids = Yum().get_srpms_from_yum_repos(TEST_REPO)
+            result_build_ids = Yum(BUILD_TYPE).get_srpms_from_yum_repos(TEST_REPO)
             mock_runner.assert_called_once()
             mock_lookup.assert_called_once()
     assert result_build_ids == srpm_build_ids

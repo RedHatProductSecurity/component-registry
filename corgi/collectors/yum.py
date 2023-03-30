@@ -18,7 +18,7 @@ class Yum:
     or Red Hat repos which aren't tracked in Pulp.
     """
 
-    def __init__(self, source: str = ""):
+    def __init__(self, source: str):
         self.brew = Brew(source)
 
     @staticmethod

@@ -552,7 +552,7 @@ def fetch_unprocessed_relations(
 ) -> int:
     query = Q(type=relation_type)
     if created_since:
-        query & Q(created_at__gte=created_since)
+        query &= Q(created_at__gte=created_since)
     relations_query = (
         ProductComponentRelation.objects.filter(query)
         .values_list("build_id", "build_type")

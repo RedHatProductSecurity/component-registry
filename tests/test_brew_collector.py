@@ -15,6 +15,7 @@ from corgi.tasks.brew import (
     save_component,
     slow_fetch_brew_build,
 )
+from corgi.tasks.common import BUILD_TYPE
 from tests.data.image_archive_data import (
     KOJI_LIST_RPMS,
     NO_RPMS_IN_SUBCTL_CONTAINER,
@@ -151,7 +152,7 @@ def test_get_component_data(
             mock_func.return_value = pickled_data
             if function == "listRPMs":
                 mock_rpm_infos = pickled_data
-    brew = Brew()
+    brew = Brew(BUILD_TYPE)
     monkeypatch.setattr(brew, "koji_session", mock_koji)
 
     mock_rpm_info_headers = []
@@ -359,7 +360,7 @@ def test_get_container_build_data_remote_sources_in_archives(
                     text=remote_source_data.read(),
                 )
 
-    brew = Brew()
+    brew = Brew(BUILD_TYPE)
     monkeypatch.setattr(brew, "koji_session", mock_koji_session)
     c = brew.get_container_build_data(1475846, build_info)
     assert len(c["sources"]) == len(remote_sources_names)
@@ -396,7 +397,7 @@ def test_extract_remote_sources(requests_mock):
     remote_sources = {"28637": (json_url, "tar.gz")}
     with open("tests/data/remote-source-quay-clair-container.json") as remote_source_data:
         requests_mock.get(json_url, text=remote_source_data.read())
-    source_components = Brew()._extract_remote_sources("", remote_sources)
+    source_components = Brew(BUILD_TYPE)._extract_remote_sources("", remote_sources)
     assert len(source_components) == 1
     assert source_components[0]["meta"]["name"] == "thomasmckay/clair"
     assert source_components[0]["type"] == Component.Type.GITHUB
@@ -431,7 +432,7 @@ def test_extract_multiple_remote_sources(requests_mock):
                 text=remote_source_data.read(),
             )
     go_version = "v1.16.0"
-    source_components = Brew()._extract_remote_sources(go_version, remote_sources)
+    source_components = Brew(BUILD_TYPE)._extract_remote_sources(go_version, remote_sources)
     assert len(source_components) == 4
     components = [len(s["components"]) for s in source_components]
     # TODO FAIL: what do these numbers mean?!?
@@ -507,7 +508,7 @@ legacy_osbs_test_data = [
 @pytest.mark.parametrize("build_info, upstream_go_modules", legacy_osbs_test_data)
 def test_get_legacy_osbs_source(mock_koji_session, build_info, upstream_go_modules, monkeypatch):
     mock_koji_session.listArchives.return_value = []
-    brew = Brew()
+    brew = Brew(BUILD_TYPE)
     monkeypatch.setattr(brew, "koji_session", mock_koji_session)
     result = brew.get_container_build_data(1890187, build_info)
     assert result["meta"]["upstream_go_modules"] == upstream_go_modules
@@ -676,7 +677,7 @@ extract_golang_test_data = [
 
 @pytest.mark.parametrize("test_data_file,expected_component", extract_golang_test_data)
 def test_extract_golang(test_data_file, expected_component):
-    brew = Brew()
+    brew = Brew(BUILD_TYPE)
     with open(test_data_file) as testdata:
         testdata = testdata.read()
         testdata = json.loads(testdata, object_hook=lambda d: SimpleNamespace(**d))
@@ -761,7 +762,7 @@ def test_save_component_skips_duplicates():
 @patch("koji.ClientSession")
 def test_extract_image_components(mock_koji_session, monkeypatch):
     mock_koji_session.listRPMs.return_value = KOJI_LIST_RPMS
-    brew = Brew()
+    brew = Brew(BUILD_TYPE)
     monkeypatch.setattr(brew, "koji_session", mock_koji_session)
     noarch_rpms_by_id = {}
     rpm_build_ids = set()

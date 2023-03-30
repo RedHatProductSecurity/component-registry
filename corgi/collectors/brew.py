@@ -79,15 +79,15 @@ class Brew:
 
     def __init__(self, source: Optional[str] = ""):
         if source == SoftwareBuild.Type.CENTOS:
-            self.koji_session = self.get_koji_session(settings.CENTOS_URL)
-        elif source and source not in (SoftwareBuild.Type.BREW, SoftwareBuild.Type.KOJI):
-            raise ValueError(f"Tried to create Brew collector with invalid type: {source}")
+            self.koji_session = koji.ClientSession(settings.CENTOS_URL)
+        elif source == SoftwareBuild.Type.KOJI:
+            self.koji_session = koji.ClientSession(settings.BREW_URL)
+        elif source == SoftwareBuild.Type.BREW:
+            self.koji_session = koji.ClientSession(
+                settings.BREW_URL, opts={"serverca": settings.CA_CERT}
+            )
         else:
-            self.koji_session = self.get_koji_session()
-
-    @staticmethod
-    def get_koji_session(url: Optional[str] = settings.BREW_URL):
-        return koji.ClientSession(url, opts={"serverca": settings.CA_CERT})
+            raise ValueError(f"Tried to create Brew collector with invalid type: {source}")
 
     def get_source_of_build(self, build_info: dict) -> str:
         """Find the source used to build the Koji build."""

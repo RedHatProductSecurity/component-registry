@@ -7,6 +7,7 @@ from typing import Generator, Tuple
 import requests
 
 from corgi.collectors.brew import Brew
+from corgi.tasks.common import BUILD_TYPE
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +59,7 @@ class RhelCompose:
     def _fetch_module_data(cls, compose_url, variants):
         # Fetch a list of RHEL modules.
         response = requests.get(compose_url + "modules.json")
-        brew = Brew()
+        brew = Brew(BUILD_TYPE)
         rhel_modules = {}
         if response.ok:
             for variant, variant_modules in response.json()["payload"]["modules"].items():
@@ -74,7 +75,7 @@ class RhelCompose:
     def _fetch_rpm_data(cls, compose_url: str, variants: list[str]) -> Generator[str, None, None]:
         # Fetch list of SRPMs. These include epoch! We don't bother indexing this by arch since
         # we can look up the SRPM from our component data and get the information from there.
-        brew = Brew()
+        brew = Brew(BUILD_TYPE)
         response = requests.get(compose_url + "rpms.json")
         if response.ok:
             rpm_filenames_by_srpm = defaultdict(list)

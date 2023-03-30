@@ -15,7 +15,7 @@ from django.conf import settings
 
 from corgi.collectors.models import CollectorRhelModule, CollectorRPM, CollectorSRPM
 from corgi.core.constants import CONTAINER_REPOSITORY
-from corgi.core.models import Component
+from corgi.core.models import Component, SoftwareBuild
 
 logger = logging.getLogger(__name__)
 
@@ -77,12 +77,17 @@ class Brew:
     # A list of component names, for which build analysis will be skipped.
     COMPONENT_EXCLUDES = json.loads(os.getenv("CORGI_COMPONENT_EXCLUDES", "[]"))
 
-    def __init__(self):
-        self.koji_session = self.get_koji_session()
-
-    @staticmethod
-    def get_koji_session():
-        return koji.ClientSession(settings.BREW_URL, opts={"serverca": settings.CA_CERT})
+    def __init__(self, source: Optional[str] = ""):
+        if source == SoftwareBuild.Type.CENTOS:
+            self.koji_session = koji.ClientSession(settings.CENTOS_URL)
+        elif source == SoftwareBuild.Type.KOJI:
+            self.koji_session = koji.ClientSession(settings.BREW_URL)
+        elif source == SoftwareBuild.Type.BREW:
+            self.koji_session = koji.ClientSession(
+                settings.BREW_URL, opts={"serverca": settings.CA_CERT}
+            )
+        else:
+            raise ValueError(f"Tried to create Brew collector with invalid type: {source}")
 
     def get_source_of_build(self, build_info: dict) -> str:
         """Find the source used to build the Koji build."""
@@ -758,8 +763,10 @@ class Brew:
 
         return module
 
+    # Force clients to call this using an int build_id
     def get_component_data(self, build_id: int) -> dict:
         logger.info("Retrieving Brew build: %s", build_id)
+        # koji api expects a build_id to be an int. If you pass a string it'll look for an NVR
         build = self.koji_session.getBuild(build_id)
         if not build:
             raise BrewBuildNotFound(f"Build {build_id} was not found")

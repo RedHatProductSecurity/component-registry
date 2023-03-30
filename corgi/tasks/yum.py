@@ -9,9 +9,10 @@ from config.celery import app
 from corgi.collectors.yum import Yum
 from corgi.core.models import Channel, ProductComponentRelation, ProductStream
 from corgi.tasks.common import (
+    BUILD_TYPE,
     RETRY_KWARGS,
     RETRYABLE_ERRORS,
-    _create_relations,
+    create_relations,
     get_last_success_for_task,
 )
 from corgi.tasks.pulp import fetch_unprocessed_relations
@@ -74,21 +75,21 @@ def slow_load_yum_repositories_for_stream(stream: str, repo: str) -> None:
         logger.info(f"Found existing Channel for {repo} with name {channel.name}")
 
     logger.info(f"Querying Yum repository {repo} for SRPMs")
-    yum = Yum()
+    yum = Yum(BUILD_TYPE)
     srpm_build_ids = yum.get_srpms_from_yum_repos((repo,))
     # Save the Brew build IDs for all SRPMs in the repo into the ProductComponentRelation table
     # The daily "fetch_unprocessed_yum_relations" Celery task will look up these IDs
     # then create Components and SoftwareBuilds for each (including both RPMs and modules)
-    srpm_relations = _create_relations(
-        srpm_build_ids, channel.name, stream, ProductComponentRelation.Type.YUM_REPO
+    srpm_relations = create_relations(
+        srpm_build_ids, BUILD_TYPE, channel.name, stream, ProductComponentRelation.Type.YUM_REPO
     )
     if srpm_relations > 0:
         logger.info(f"Created {srpm_relations} new relations for SRPMs in {channel.name}")
 
     logger.info(f"Querying Yum repository {repo} for modules")
     module_build_ids = yum.get_modules_from_yum_repos((repo,))
-    module_relations = _create_relations(
-        module_build_ids, channel.name, stream, ProductComponentRelation.Type.YUM_REPO
+    module_relations = create_relations(
+        module_build_ids, BUILD_TYPE, channel.name, stream, ProductComponentRelation.Type.YUM_REPO
     )
     if module_relations > 0:
         logger.info(f"Created {module_relations} new relations for modules in {channel.name}")

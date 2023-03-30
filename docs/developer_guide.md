@@ -20,7 +20,7 @@ Next, define the database password and custom PostgreSQL port to be used:
 
 ```bash
 export CORGI_DB_USER=postgres  # This is the RHSCL PostgreSQL image default admin username
-export CORGI_DB_PASSWORD=secret  # This is the admin password used in docker-compose.yml
+export CORGI_DB_PASSWORD=test  # This is the admin password used in docker-compose.yml
 export CORGI_DB_PORT=5433  # This is the port used in docker-compose.yml
 export DJANGO_SETTINGS_MODULE=config.settings.dev
 export CORGI_COMMUNITY_MODE_ENABLED=true
@@ -43,6 +43,8 @@ export CORGI_PULP_URL=https://rhsm-pulp.example.com/pulp
 # Not used in tests directly, but needed for tests to pass
 export CORGI_BREW_URL=https://koji.fedoraproject.org/kojihub
 export CORGI_BREW_DOWNLOAD_ROOT_URL=https://koji.fedoraproject.org
+export CORGI_CENTOS_URL=https://cbs.centos.org/kojihub
+export CORGI_CENTOS_DOWNLOAD_ROOT_URL=https://cbs.centos.org
 export CORGI_LOOKASIDE_CACHE_URL=https://src.fedoraproject.org/repo/pkgs
 export CORGI_APP_STREAMS_LIFE_CYCLE_URL=https://appstream.example.com/lifecycle-defs/application_streams.yaml
 export CORGI_ERRATA_TOOL_URL=https://errata.example.com
@@ -82,7 +84,7 @@ CORGI_BREW_DOWNLOAD_ROOT_URL=https://kojipkgs.fedoraproject.org
 CORGI_BREW_URL=https://koji.fedoraproject.org/kojihub
 CORGI_LOOKASIDE_CACHE_URL=https://src.fedoraproject.org/repo/pkgs
 CORGI_COMMUNITY_MODE_ENABLED=true
-CORGI_COMMUNITY_MODE_ENABLED=false
+CORGI_UMB_BREW_MONITOR_ENABLED=false
 ```
 
 
@@ -90,8 +92,9 @@ If doing enterprise development, be sure to set this to relevant value from CI e
 If it's not set the local product-definitions.json file in the config directory will be used.
 ```bash
 CORGI_COMMUNITY_MODE_ENABLED=false
-CORGI_COMMUNITY_MODE_ENABLED=true
+CORGI_UMB_BREW_MONITOR_ENABLED=true
 CORGI_PRODSEC_DASHBOARD_URL=<value>
+CORGI_BREW_WEB_URL=<value>
 ```
 
 It is recommended to add all the aforementioned environment variables to a `.env` file in the project root directory.

@@ -2,6 +2,7 @@ from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.conf import settings
 from django.db import transaction
+from django.db.models import QuerySet
 
 from config.celery import app
 from corgi.collectors.errata_tool import ErrataTool
@@ -13,7 +14,7 @@ from corgi.core.models import (
     ProductVariant,
     SoftwareBuild,
 )
-from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
+from corgi.tasks.common import BUILD_TYPE, RETRY_KWARGS, RETRYABLE_ERRORS
 
 logger = get_task_logger(__name__)
 
@@ -37,11 +38,11 @@ def save_variant_cdn_repo_mapping() -> None:
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def slow_save_errata_product_taxonomy(erratum_id: int):
     logger.info(f"slow_save_errata_product_taxonomy called for {erratum_id}")
-    relation_build_ids = _get_relation_build_ids(erratum_id)
-    for b in relation_build_ids:
-        logger.info("Saving product taxonomy for build %s", b)
+    relation_builds = _get_relation_builds(erratum_id)
+    for build_id, build_type in relation_builds:
+        logger.info("Saving product taxonomy for build (%s, %s)", build_id, build_type)
         # once all build's components are ingested we must save product taxonomy
-        sb = SoftwareBuild.objects.get(build_id=b)
+        sb = SoftwareBuild.objects.get(build_id=build_id, build_type=build_type)
         sb.save_product_taxonomy()
 
 
@@ -52,15 +53,30 @@ def slow_load_errata(erratum_name, force_process: bool = False):
         erratum_id = et.normalize_erratum_id(erratum_name)
     else:
         erratum_id = int(erratum_name)
-    relation_build_ids = _get_relation_build_ids(erratum_id)
+    relation_builds = _get_relation_builds(erratum_id)
+
+    build_types = set()
+    build_ids = set()
+    for build_id, build_type in relation_builds:
+        build_ids.add(build_id)
+        build_types.add(build_type)
+
+    # Errata are not used in community products, and we are not yet attaching other builds types
+    # like HACBS to errata. If that changes, we should review this task for correctness
+    if len(build_types) > 1:
+        raise ValueError("Multiple build types found for errata %s", erratum_name)
+    elif len(build_types) == 0:
+        build_type = BUILD_TYPE
 
     # Check is we have software builds for all of them.
     # Most of the time will not have all the builds
     # so we don't load all the software builds at this point
-    no_of_processed_builds = SoftwareBuild.objects.filter(build_id__in=relation_build_ids).count()
+    no_of_processed_builds = SoftwareBuild.objects.filter(
+        build_id__in=build_ids, build_type=build_type
+    ).count()
 
     # If we have no relations at all, or we want to update them
-    if len(relation_build_ids) == 0 or force_process:
+    if len(build_ids) == 0 or force_process:
         # Save PCR
         logger.info("Saving product components for errata %s", erratum_id)
         variant_to_component_map = et.get_erratum_components(str(erratum_id))
@@ -68,29 +84,31 @@ def slow_load_errata(erratum_name, force_process: bool = False):
             for build_obj in build_objects:
                 for build_id, errata_components in build_obj.items():
                     # Add to relations list as we go, so we can fetch them below
-                    relation_build_ids.add(int(build_id))
+                    build_ids.add(build_id)
                     ProductComponentRelation.objects.update_or_create(
                         external_system_id=erratum_id,
                         product_ref=variant_id,
                         build_id=build_id,
+                        build_type=build_type,
                         defaults={
                             "type": ProductComponentRelation.Type.ERRATA,
                             "meta_attr": {"components": errata_components},
                         },
                     )
+
     # If the number of relations was more than 0 check if we've processed all the builds
     # in the errata
-    elif len(relation_build_ids) == no_of_processed_builds:
+    elif len(build_ids) == no_of_processed_builds:
         logger.info(f"Calling slow_save_errata_product_taxonomy for {erratum_id}")
         slow_save_errata_product_taxonomy.delay(erratum_id)
 
     # Check if we are only part way through loading the errata
-    if no_of_processed_builds < len(relation_build_ids) or force_process:
+    if no_of_processed_builds < len(build_ids) or force_process:
         # Calculate and print the percentage of builds for the errata
-        if len(relation_build_ids) > 0:
-            percentage_complete = int(no_of_processed_builds / len(relation_build_ids) * 100)
+        if len(build_ids) > 0:
+            percentage_complete = int(no_of_processed_builds / len(build_ids) * 100)
             logger.info("Processed %i%% of builds in %s", percentage_complete, erratum_name)
-        for build_id in relation_build_ids:
+        for build_id in build_ids:
             # We set save_product argument to False because it reads from the
             # ProductComponentRelations table which this function writes to. We've seen contention
             # on this database table causes by recursive looping of this task, and the
@@ -99,7 +117,7 @@ def slow_load_errata(erratum_name, force_process: bool = False):
             logger.info("Calling slow_fetch_brew_build for %s", build_id)
             app.send_task(
                 "corgi.tasks.brew.slow_fetch_brew_build",
-                args=(build_id,),
+                args=(build_id, build_type),
                 # Do not pass force_process through to child tasks
                 # Or Celery will get stuck in an infinite loop
                 # processing the same Brew builds / errata repeatedly
@@ -112,18 +130,11 @@ def slow_load_errata(erratum_name, force_process: bool = False):
     logger.info("Finished processing %s", erratum_id)
 
 
-def _get_relation_build_ids(erratum_id: int) -> set[int]:
+def _get_relation_builds(erratum_id: int) -> QuerySet:
     # Get all the PCR with errata_id
-    relation_build_ids = (
-        ProductComponentRelation.objects.filter(
-            type=ProductComponentRelation.Type.ERRATA, external_system_id=erratum_id
-        )
-        .values_list("build_id", flat=True)
-        .distinct()
-    )
-    # Convert them to ints for use in queries and tasks
-    # We don't store them as int because another build system not use ints
-    return set(int(b_id) for b_id in relation_build_ids if b_id is not None)
+    return ProductComponentRelation.objects.filter(
+        type=ProductComponentRelation.Type.ERRATA, external_system_id=erratum_id
+    ).values_list("build_id", "build_type")
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)

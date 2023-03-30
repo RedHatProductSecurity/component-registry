@@ -4,7 +4,7 @@ from typing import Optional
 from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.conf import settings
-from django.db.models import QuerySet
+from django.db.models import Q, QuerySet
 from django.utils import dateformat, dateparse, timezone
 from django.utils.timezone import make_aware
 
@@ -17,7 +17,13 @@ from corgi.core.models import (
     ProductStream,
     SoftwareBuild,
 )
-from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS, get_last_success_for_task
+from corgi.tasks.common import (
+    BUILD_TYPE,
+    RETRY_KWARGS,
+    RETRYABLE_ERRORS,
+    create_relations,
+    get_last_success_for_task,
+)
 from corgi.tasks.errata_tool import slow_load_errata
 from corgi.tasks.sca import cpu_software_composition_analysis
 
@@ -25,10 +31,16 @@ logger = get_task_logger(__name__)
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_process: bool = False):
+def slow_fetch_brew_build(
+    build_id: str,
+    build_type: str = BUILD_TYPE,
+    save_product: bool = True,
+    force_process: bool = False,
+):
     logger.info("Fetch brew build called with build id: %s", build_id)
+
     try:
-        softwarebuild = SoftwareBuild.objects.get(build_id=build_id)
+        softwarebuild = SoftwareBuild.objects.get(build_id=build_id, build_type=build_type)
     except SoftwareBuild.DoesNotExist:
         pass
     else:
@@ -44,7 +56,7 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
             logger.info("Fetching brew build with build_id: %s", build_id)
 
     try:
-        component = Brew().get_component_data(build_id)
+        component = Brew(build_type).get_component_data(int(build_id))
     except BrewBuildTypeNotSupported as exc:
         logger.warning(str(exc))
         return
@@ -70,9 +82,9 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
         return
 
     softwarebuild, created = SoftwareBuild.objects.get_or_create(
-        build_id=component["build_meta"]["build_info"]["build_id"],
+        build_id=build_id,
+        build_type=build_type,
         defaults={
-            "build_type": SoftwareBuild.Type.BREW,
             "meta_attr": build_meta,
             "name": component["meta"]["name"],
             "source": component["build_meta"]["build_info"]["source"],
@@ -118,16 +130,18 @@ def slow_fetch_brew_build(build_id: int, save_product: bool = True, force_proces
                 slow_load_errata.delay(e, force_process=force_process)
 
     build_ids = component.get("nested_builds", ())
-    logger.info("Fetching brew builds for %s", build_ids)
+    logger.info("Fetching brew builds for (%s, %s)", build_ids, build_type)
     for b_id in build_ids:
-        logger.info("Requesting fetch of nested build: %s", b_id)
-        slow_fetch_brew_build.delay(b_id, save_product=save_product, force_process=force_process)
+        logger.info("Requesting fetch of nested build: (%s, %s)", b_id, build_type)
+        slow_fetch_brew_build.delay(
+            b_id, build_type, save_product=save_product, force_process=force_process
+        )
 
-    logger.info("Requesting software composition analysis for %s", build_id)
+    logger.info("Requesting software composition analysis for %s", softwarebuild.pk)
     if settings.SCA_ENABLED:
-        cpu_software_composition_analysis.delay(build_id, force_process=force_process)
+        cpu_software_composition_analysis.delay(str(softwarebuild.pk), force_process=force_process)
 
-    logger.info("Finished fetching brew build: %s", build_id)
+    logger.info("Finished fetching brew build: (%s, %s)", build_id, build_type)
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
@@ -137,7 +151,7 @@ def slow_fetch_modular_build(build_id: str, force_process: bool = False) -> None
     # Some compose build_ids in the relations table will be for SRPMs, skip those here
     if not rhel_module_data:
         logger.info("No module data fetched for build %s from Brew, exiting...", build_id)
-        slow_fetch_brew_build.delay(int(build_id), force_process=force_process)
+        slow_fetch_brew_build.delay(build_id, force_process=force_process)
         return
     # Note: module builds don't include arch information, only the individual RPMs that make up a
     # module are built for specific architectures.
@@ -174,7 +188,7 @@ def slow_fetch_modular_build(build_id: str, force_process: bool = False) -> None
         if "brew_build_id" in c:
             slow_fetch_brew_build.delay(c["brew_build_id"])
         save_component(c, node)
-    slow_fetch_brew_build.delay(int(build_id), force_process=force_process)
+    slow_fetch_brew_build.delay(build_id, force_process=force_process)
     logger.info("Finished fetching modular build: %s", build_id)
 
 
@@ -511,21 +525,18 @@ def save_module(softwarebuild, build_data) -> ComponentNode:
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def load_brew_tags() -> None:
     for ps in ProductStream.objects.get_queryset():
-        brew = Brew()
+        build_type = BUILD_TYPE
+        brew = Brew(BUILD_TYPE)
+        # This should really be a property in Product Definitions
+        if settings.COMMUNITY_MODE_ENABLED and ps.name == "openstack-rdo":
+            brew = Brew(SoftwareBuild.Type.CENTOS)
+            build_type = SoftwareBuild.Type.CENTOS
         for brew_tag, inherit in ps.brew_tags.items():
             # Always load all builds in tag when saving relations
-            # TODO: Use _create_relations here and in other places
             builds = brew.get_builds_with_tag(brew_tag, inherit=inherit, latest=False)
-            no_of_created = 0
-            for build in builds:
-                _, created = ProductComponentRelation.objects.get_or_create(
-                    external_system_id=brew_tag,
-                    product_ref=ps.name,
-                    build_id=build,
-                    defaults={"type": ProductComponentRelation.Type.BREW_TAG},
-                )
-                if created:
-                    no_of_created += 1
+            no_of_created = create_relations(
+                builds, build_type, brew_tag, ps.name, ProductComponentRelation.Type.BREW_TAG
+            )
             logger.info("Saving %s new builds for %s", no_of_created, brew_tag)
 
 
@@ -536,23 +547,40 @@ def fetch_modular_builds(relations_query: QuerySet, force_process: bool = False)
 
 def fetch_unprocessed_relations(
     relation_type: ProductComponentRelation.Type,
-    created_since: timezone.datetime,
+    created_since: Optional[timezone.datetime] = None,
     force_process: bool = False,
 ) -> int:
+    query = Q(type=relation_type)
+    if created_since:
+        query &= Q(created_at__gte=created_since)
     relations_query = (
-        ProductComponentRelation.objects.filter(type=relation_type, created_at__gte=created_since)
-        .values_list("build_id", flat=True)
+        ProductComponentRelation.objects.filter(query)
+        .values_list("build_id", "build_type")
         .distinct()
         .using("read_only")
     )
     logger.info(f"Processing relations of type {relation_type}")
     processed_builds = 0
-    for build_id in relations_query.iterator():
+    for build_id, build_type in relations_query.iterator():
         if not build_id:
             # build_id defaults to "" and int() will fail in this case
             continue
-        if not SoftwareBuild.objects.filter(build_id=int(build_id)).using("read_only").exists():
-            logger.info("Processing CDN relation build with id: %s", build_id)
+        if (
+            not SoftwareBuild.objects.filter(build_id=build_id, build_type=build_type)
+            .using("read_only")
+            .exists()
+        ):
+            logger.info("Processing %s relation build with id: %s", relation_type, build_id)
+            if build_type == SoftwareBuild.Type.CENTOS:
+                # This skips use of the Collector models for builds in the CENTOS koji instance
+                # It was done to avoid updating the collector models not to use build_id as
+                # a primary key. It's possible because the only product stream (openstack-rdo)
+                # stored in CENTOS koji doesn't use modules
+                slow_fetch_brew_build.delay(
+                    build_id, SoftwareBuild.Type.CENTOS, force_process=force_process
+                )
+                processed_builds += 1
+                continue
             slow_fetch_modular_build.delay(build_id, force_process=force_process)
             processed_builds += 1
     return processed_builds

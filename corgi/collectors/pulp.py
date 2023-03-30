@@ -8,6 +8,7 @@ from django.conf import settings
 
 from corgi.collectors.brew import Brew
 from corgi.collectors.models import CollectorRPMRepository
+from corgi.core.models import SoftwareBuild
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +64,8 @@ class Pulp:
 
     def get_module_data(self, repo: str) -> Generator[str, None, None]:
         module_data = self._get_module_data(repo)
-        yield from Brew().persist_modules(module_data)
+        # Pulp collector only handles builds of type Brew
+        yield from Brew(SoftwareBuild.Type.BREW).persist_modules(module_data)
 
     def _get_module_data(self, repo) -> dict[str, list[str]]:
         module_data = self._get_unit_data(repo, MODULE_CRITERIA)
@@ -85,7 +87,8 @@ class Pulp:
 
     def get_rpm_data(self, repo: str) -> Generator[str, None, None]:
         rpms_by_srpm = self._get_rpm_data(repo)
-        yield from Brew().lookup_build_ids(rpms_by_srpm)
+        # Pulp collector only handles builds of type Brew
+        yield from Brew(SoftwareBuild.Type.BREW).lookup_build_ids(rpms_by_srpm)
 
     def _get_rpm_data(self, repo) -> defaultdict:
         rpms_by_srpm = defaultdict(list)

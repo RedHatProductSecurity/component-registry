@@ -9,12 +9,13 @@ from django.db import IntegrityError
 from yaml import safe_load
 
 from corgi.collectors.brew import Brew, BrewBuildTypeNotSupported
-from corgi.core.models import Component, ComponentNode
+from corgi.core.models import Component, ComponentNode, SoftwareBuild
 from corgi.tasks.brew import (
     find_package_file_name,
     save_component,
     slow_fetch_brew_build,
 )
+from corgi.tasks.common import BUILD_TYPE
 from tests.data.image_archive_data import (
     KOJI_LIST_RPMS,
     NO_RPMS_IN_SUBCTL_CONTAINER,
@@ -151,7 +152,7 @@ def test_get_component_data(
             mock_func.return_value = pickled_data
             if function == "listRPMs":
                 mock_rpm_infos = pickled_data
-    brew = Brew()
+    brew = Brew(BUILD_TYPE)
     monkeypatch.setattr(brew, "koji_session", mock_koji)
 
     mock_rpm_info_headers = []
@@ -359,7 +360,7 @@ def test_get_container_build_data_remote_sources_in_archives(
                     text=remote_source_data.read(),
                 )
 
-    brew = Brew()
+    brew = Brew(BUILD_TYPE)
     monkeypatch.setattr(brew, "koji_session", mock_koji_session)
     c = brew.get_container_build_data(1475846, build_info)
     assert len(c["sources"]) == len(remote_sources_names)
@@ -396,7 +397,7 @@ def test_extract_remote_sources(requests_mock):
     remote_sources = {"28637": (json_url, "tar.gz")}
     with open("tests/data/remote-source-quay-clair-container.json") as remote_source_data:
         requests_mock.get(json_url, text=remote_source_data.read())
-    source_components = Brew()._extract_remote_sources("", remote_sources)
+    source_components = Brew(BUILD_TYPE)._extract_remote_sources("", remote_sources)
     assert len(source_components) == 1
     assert source_components[0]["meta"]["name"] == "thomasmckay/clair"
     assert source_components[0]["type"] == Component.Type.GITHUB
@@ -431,7 +432,7 @@ def test_extract_multiple_remote_sources(requests_mock):
                 text=remote_source_data.read(),
             )
     go_version = "v1.16.0"
-    source_components = Brew()._extract_remote_sources(go_version, remote_sources)
+    source_components = Brew(BUILD_TYPE)._extract_remote_sources(go_version, remote_sources)
     assert len(source_components) == 4
     components = [len(s["components"]) for s in source_components]
     # TODO FAIL: what do these numbers mean?!?
@@ -507,7 +508,7 @@ legacy_osbs_test_data = [
 @pytest.mark.parametrize("build_info, upstream_go_modules", legacy_osbs_test_data)
 def test_get_legacy_osbs_source(mock_koji_session, build_info, upstream_go_modules, monkeypatch):
     mock_koji_session.listArchives.return_value = []
-    brew = Brew()
+    brew = Brew(BUILD_TYPE)
     monkeypatch.setattr(brew, "koji_session", mock_koji_session)
     result = brew.get_container_build_data(1890187, build_info)
     assert result["meta"]["upstream_go_modules"] == upstream_go_modules
@@ -676,7 +677,7 @@ extract_golang_test_data = [
 
 @pytest.mark.parametrize("test_data_file,expected_component", extract_golang_test_data)
 def test_extract_golang(test_data_file, expected_component):
-    brew = Brew()
+    brew = Brew(BUILD_TYPE)
     with open(test_data_file) as testdata:
         testdata = testdata.read()
         testdata = json.loads(testdata, object_hook=lambda d: SimpleNamespace(**d))
@@ -761,7 +762,7 @@ def test_save_component_skips_duplicates():
 @patch("koji.ClientSession")
 def test_extract_image_components(mock_koji_session, monkeypatch):
     mock_koji_session.listRPMs.return_value = KOJI_LIST_RPMS
-    brew = Brew()
+    brew = Brew(BUILD_TYPE)
     monkeypatch.setattr(brew, "koji_session", mock_koji_session)
     noarch_rpms_by_id = {}
     rpm_build_ids = set()
@@ -846,10 +847,11 @@ def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, moc
     with open("tests/data/brew/1781353/component_data.json", "r") as component_data_file:
         mock_brew.return_value.get_component_data.return_value = json.load(component_data_file)
 
-    slow_fetch_brew_build(1781353)
+    slow_fetch_brew_build(1781353, SoftwareBuild.Type.BREW)
     image_index = Component.objects.get(
         name="subctl-container", type=Component.Type.CONTAINER_IMAGE, arch="noarch"
     )
+    softwarebuild = SoftwareBuild.objects.get(build_id=1781353, build_type=SoftwareBuild.Type.BREW)
 
     noarch_rpms = []
     for node in image_index.cnodes.all():
@@ -874,16 +876,19 @@ def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, moc
     # Verify calls were made to slow_fetch_brew_build.delay for rpm builds
     assert len(mock_fetch_brew_build.call_args_list) == len(RPM_BUILD_IDS)
     mock_fetch_brew_build.assert_has_calls(
-        tuple(call(build_id, save_product=True, force_process=False) for build_id in RPM_BUILD_IDS),
+        tuple(
+            call(build_id, SoftwareBuild.Type.BREW, save_product=True, force_process=False)
+            for build_id in RPM_BUILD_IDS
+        ),
         any_order=True,
     )
     mock_load_errata.assert_called_with("RHEA-2021:4610", force_process=False)
-    mock_sca.assert_called_with(1781353, force_process=False)
+    mock_sca.assert_called_with(str(softwarebuild.pk), force_process=False)
 
 
 @pytest.mark.django_db
 @patch("corgi.core.models.SoftwareBuild.save_product_taxonomy")
 def test_new_software_build_relation(mock_save_prod_tax):
     sb = SoftwareBuildFactory()
-    slow_fetch_brew_build(sb.build_id)
+    slow_fetch_brew_build(sb.build_id, sb.build_type)
     assert mock_save_prod_tax.called

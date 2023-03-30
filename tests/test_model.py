@@ -207,7 +207,7 @@ def test_software_build_model():
         build_type=SoftwareBuild.Type.BREW,
         meta_attr={"build_id": 9999, "a": 1, "b": 2, "brew_tags": ["RHSA-123-123"]},
     )
-    assert SoftwareBuild.objects.get(build_id=sb1.build_id) == sb1
+    assert SoftwareBuild.objects.get(build_id=sb1.build_id, build_type=sb1.build_type) == sb1
     c1 = ComponentFactory(type=Component.Type.RPM, name="curl", software_build=sb1)
     assert Component.objects.get(name="curl") == c1
 
@@ -281,7 +281,10 @@ def test_product_component_relations():
     sb = SoftwareBuildFactory(build_id=build_id)
     _, _, rhel_7_1, _, _, _, _ = create_product_hierarchy()
     ProductComponentRelation.objects.create(
-        type=ProductComponentRelation.Type.COMPOSE, product_ref=rhel_7_1.name, build_id=build_id
+        type=ProductComponentRelation.Type.COMPOSE,
+        product_ref=rhel_7_1.name,
+        build_id=build_id,
+        build_type=sb.build_type,
     )
     srpm = SrpmComponentFactory(software_build=sb)
     ComponentNode.objects.create(
@@ -297,7 +300,10 @@ def test_product_component_relations_errata():
     sb = SoftwareBuildFactory(build_id=build_id)
     _, _, _, _, _, rhel_8_2, rhel_8_2_base = create_product_hierarchy()
     ProductComponentRelation.objects.create(
-        type=ProductComponentRelation.Type.ERRATA, product_ref=rhel_8_2_base.name, build_id=build_id
+        type=ProductComponentRelation.Type.ERRATA,
+        product_ref=rhel_8_2_base.name,
+        build_id=build_id,
+        build_type=sb.build_type,
     )
     srpm = SrpmComponentFactory(software_build=sb)
     ComponentNode.objects.create(
@@ -333,21 +339,21 @@ def test_product_stream_builds():
         build_id=rhel_7_1_build.build_id,
     )
     # Test we can find product variant builds
-    rhel_8_2_builds = [int(b) for b in rhel_8_2.builds]
+    rhel_8_2_builds = [b_id for b_id, _ in rhel_8_2.builds]
     assert rhel_8_2_build.build_id in rhel_8_2_builds
     # Test we can find both product variant and product stream builds when they are ancestors
     assert rhel_8_2_base_build.build_id in rhel_8_2_builds
     # Test we can find product stream builds
-    assert rhel_7_1_build.build_id in [int(b) for b in rhel_7_1.builds]
+    assert rhel_7_1_build.build_id in [b_id for b_id, _ in rhel_7_1.builds]
     # Test we can find builds from product stream children of product version
-    assert rhel_7_1_build.build_id in [int(b) for b in rhel_7.builds]
+    assert rhel_7_1_build.build_id in [b_id for b_id, _ in rhel_7.builds]
     # Test products have all builds
-    rhel_builds = [int(b) for b in rhel.builds]
+    rhel_builds = [b_id for b_id, _ in rhel.builds]
     assert rhel_8_2_build.build_id in rhel_builds
     assert rhel_7_1_build.build_id in rhel_builds
     assert rhel_8_2_base_build.build_id in rhel_builds
     # Test that builds from another stream don't get included
-    assert rhel_8_2_build.build_id not in [int(b) for b in rhel_8_1.builds]
+    assert rhel_8_2_build.build_id not in [b for b in rhel_8_1.builds]
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
@@ -355,7 +361,10 @@ def test_component_errata():
     sb = SoftwareBuildFactory()
     c = ComponentFactory(software_build=sb)
     ProductComponentRelationFactory(
-        build_id=sb.build_id, external_system_id="RHSA-1", type=ProductComponentRelation.Type.ERRATA
+        build_id=sb.build_id,
+        build_type=sb.build_type,
+        external_system_id="RHSA-1",
+        type=ProductComponentRelation.Type.ERRATA,
     )
     assert "RHSA-1" in c.errata
 

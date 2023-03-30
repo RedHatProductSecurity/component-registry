@@ -18,8 +18,8 @@ class Yum:
     or Red Hat repos which aren't tracked in Pulp.
     """
 
-    def __init__(self):
-        self.brew = Brew()
+    def __init__(self, source: str):
+        self.brew = Brew(source)
 
     @staticmethod
     def filter_by_repos(command: list[str], repos: tuple[str, ...]) -> list[str]:

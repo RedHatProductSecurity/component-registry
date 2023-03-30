@@ -130,11 +130,11 @@ def save_component(component: dict[str, Any], parent: ComponentNode) -> bool:
     retry_kwargs=RETRY_KWARGS,
     soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
 )
-def cpu_software_composition_analysis(build_id: int, force_process: bool = False):
-    logger.info("Started software composition analysis for %s", build_id)
-    software_build = SoftwareBuild.objects.get(build_id=build_id)
+def cpu_software_composition_analysis(build_uuid, force_process: bool = False):
+    logger.info("Started software composition analysis for %s", build_uuid)
+    software_build = SoftwareBuild.objects.get(pk=build_uuid)
 
-    component_qs = Component.objects.filter(software_build_id=build_id)
+    component_qs = Component.objects.filter(software_build=software_build)
     try:
         # Get root component for this build.
         root_component = component_qs.root_components().get()
@@ -142,7 +142,7 @@ def cpu_software_composition_analysis(build_id: int, force_process: bool = False
         # None of the components were root components
         module_qs = component_qs.filter(type=Component.Type.RPMMOD)
         if len(module_qs) != 1:
-            logger.error(f"Build {build_id} had wrong number of modules: {len(module_qs)}")
+            logger.error(f"Build {build_uuid} had wrong number of modules: {len(module_qs)}")
             # We have more than one module, or don't have any modules at all
             # so we don't know which component / don't have any component to do SCA on
             # we only do SCA on root components, so just fail the task
@@ -151,7 +151,9 @@ def cpu_software_composition_analysis(build_id: int, force_process: bool = False
         # Else we have exactly one module component
         # which is no longer considered a "root" component
         # so now we skip doing SCA on the module instead of failing
-        logger.info(f"Build {build_id} had only one module, no other root components. Skipping SCA")
+        logger.info(
+            f"Build {build_uuid} had only one module, no other root components. Skipping SCA"
+        )
         return
 
     if root_component.name == "kernel":
@@ -162,13 +164,13 @@ def cpu_software_composition_analysis(build_id: int, force_process: bool = False
     if not root_node:
         raise ValueError(f"Didn't find root component node for {root_component.purl}")
 
-    distgit_sources = _get_distgit_sources(software_build.source, build_id)
+    distgit_sources = _get_distgit_sources(software_build.source, build_uuid)
 
     no_of_new_components = _scan_files(root_node, distgit_sources)
     if no_of_new_components > 0 or force_process:
         if no_of_new_components > 0:
             logger.warning(
-                f"Root component {root_component.purl} for build {build_id}"
+                f"Root component {root_component.purl} for build {build_uuid}"
                 "had child components that were not found in remote-sources.json!"
             )
         software_build.save_product_taxonomy()
@@ -184,7 +186,7 @@ def cpu_software_composition_analysis(build_id: int, force_process: bool = False
         # being in the same directory
         shutil.rmtree(rm_target, ignore_errors=True)
 
-    logger.info("Finished software composition analysis for %s", build_id)
+    logger.info("Finished software composition analysis for %s", build_uuid)
     return no_of_new_components
 
 
@@ -217,24 +219,26 @@ def _assign_go_stdlib_version(anchor_obj, go_packages):
             go_package["meta"]["version"] = anchor_obj.meta_attr["go_stdlib_version"]
 
 
-def _get_distgit_sources(source_url: str, build_id: int) -> list[Path]:
+def _get_distgit_sources(source_url: str, build_uuid: str) -> list[Path]:
     distgit_sources: list[Path] = []
-    raw_source, package_type, package_name = _clone_source(source_url, build_id)
+    raw_source, package_type, package_name = _clone_source(source_url, build_uuid)
     if not raw_source:
         return []
     distgit_sources.append(raw_source)
-    sources = _download_lookaside_sources(raw_source, build_id, package_type, package_name)
+    sources = _download_lookaside_sources(raw_source, build_uuid, package_type, package_name)
     distgit_sources.extend(sources)
     return distgit_sources
 
 
-def _clone_source(source_url: str, build_id: int) -> Tuple[Path, str, str]:
+def _clone_source(source_url: str, build_uuid: str) -> Tuple[Path, str, str]:
     # (scheme, netloc, path, parameters, query, fragment)
     url = urlparse(source_url)
 
     # We only support git, git+https, git+ssh
     if not url.scheme.startswith("git"):
-        raise ValueError(f"Build {build_id} had a source_url with a non-git protocol: {source_url}")
+        raise ValueError(
+            f"Build {build_uuid} had a source_url with a non-git protocol: {source_url}"
+        )
 
     protocol = url.scheme
     if protocol.startswith("git+"):
@@ -242,12 +246,12 @@ def _clone_source(source_url: str, build_id: int) -> Tuple[Path, str, str]:
     git_remote = f"{protocol}://{url.netloc}{url.path}"
     path_parts = url.path.rsplit("/", 2)
     if len(path_parts) != 3:
-        raise ValueError(f"Build {build_id} had a source_url with a too-short path: {source_url}")
+        raise ValueError(f"Build {build_uuid} had a source_url with a too-short path: {source_url}")
     package_type = path_parts[1]
     package_name = path_parts[2]
     commit = url.fragment
 
-    target_path = Path(f"{settings.SCA_SCRATCH_DIR}/{build_id}/")
+    target_path = Path(f"{settings.SCA_SCRATCH_DIR}/{build_uuid}/")
 
     # Allow existing directory error to cause parent task to fail
     target_path.mkdir()
@@ -261,7 +265,7 @@ def _clone_source(source_url: str, build_id: int) -> Tuple[Path, str, str]:
 
 
 def _download_lookaside_sources(
-    distgit_sources: Path, build_id: int, package_type: str, package_name: str
+    distgit_sources: Path, build_uuid: str, package_type: str, package_name: str
 ) -> list[Path]:
     lookaside_source = distgit_sources / "sources"
     if not lookaside_source.exists():
@@ -296,9 +300,9 @@ def _download_lookaside_sources(
         lookaside_download_url = (
             f"{settings.LOOKASIDE_CACHE_BASE_URL}/{package_type}/{package_name}/{lookaside_path}"
         )
-        # eg. /tmp/lookaside/<build_id>/85eddf-v0.8.6.tar.gz
+        # eg. /tmp/lookaside/<build_uuid>/85eddf-v0.8.6.tar.gz
         target_filepath = Path(
-            f"{settings.SCA_SCRATCH_DIR}/{LOOKASIDE_SCRATCH_SUBDIR}/{build_id}/"  # joined below
+            f"{settings.SCA_SCRATCH_DIR}/{LOOKASIDE_SCRATCH_SUBDIR}/{build_uuid}/"  # joined below
             f"{lookaside_source_checksum[:6]}-{lookaside_path_base}"
         )
         _download_source(lookaside_download_url, target_filepath)

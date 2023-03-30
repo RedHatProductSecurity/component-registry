@@ -2,6 +2,7 @@ import logging
 import subprocess
 from datetime import timedelta
 
+from django.conf import settings
 from django.db.utils import InterfaceError as DjangoInterfaceError
 from django.utils import timezone
 from django_celery_results.models import TaskResult
@@ -9,7 +10,7 @@ from psycopg2.errors import InterfaceError as Psycopg2InterfaceError
 from redis.exceptions import ConnectionError as RedisConnectionError
 from requests.exceptions import RequestException
 
-from corgi.core.models import ProductComponentRelation
+from corgi.core.models import ProductComponentRelation, SoftwareBuild
 
 BACKOFF_KWARGS = {"max_tries": 5, "jitter": None}
 
@@ -29,6 +30,8 @@ RETRY_KWARGS = {
     "retry_backoff": 300,
     "retry_jitter": False,
 }
+
+BUILD_TYPE = SoftwareBuild.Type.KOJI if settings.COMMUNITY_MODE_ENABLED else SoftwareBuild.Type.BREW
 
 logger = logging.getLogger(__name__)
 
@@ -65,13 +68,14 @@ def get_last_success_for_task(task_name: str) -> timezone.datetime:
     )
 
 
-def _create_relations(build_ids, external_system_id, product_ref, relation_type) -> int:
+def create_relations(build_ids, build_type, external_system_id, product_ref, relation_type) -> int:
     no_of_relations = 0
     for build_id in build_ids:
         _, created = ProductComponentRelation.objects.get_or_create(
             external_system_id=external_system_id,
             product_ref=product_ref,
             build_id=build_id,
+            build_type=build_type,
             defaults={"type": relation_type},
         )
         if created:

@@ -261,8 +261,10 @@ class SoftwareBuild(TimeStampedModel):
     class Type(models.TextChoices):
         BREW = "BREW"  # Red Hat Brew build system
         KOJI = "KOJI"  # Fedora's Koji build system, the upstream equivalent of Red Hat's Brew
+        CENTOS = "CENTOS"  # Used by OpenStack RDO
 
-    build_id = models.IntegerField(primary_key=True)
+    uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    build_id = models.CharField(max_length=200, default="")
     build_type = models.CharField(choices=Type.choices, max_length=20)
     name = models.TextField()  # Arbitrary identifier for a build
     source = models.TextField()  # Source code reference for build
@@ -274,6 +276,11 @@ class SoftwareBuild(TimeStampedModel):
 
     class Meta:
         indexes = (models.Index(fields=("completion_time",)),)
+        constraints = [
+            models.UniqueConstraint(
+                fields=["build_id", "build_type"], name="unique_build_id_by_type"
+            ),
+        ]
 
     def save_product_taxonomy(self):
         """update ('materialize') product taxonomy on all build components
@@ -285,6 +292,7 @@ class SoftwareBuild(TimeStampedModel):
         variant_names = tuple(
             ProductComponentRelation.objects.filter(
                 build_id=self.build_id,
+                build_type=self.build_type,
                 type__in=ProductComponentRelation.VARIANT_TYPES,
             )
             .values_list("product_ref", flat=True)
@@ -294,6 +302,7 @@ class SoftwareBuild(TimeStampedModel):
         stream_names = list(
             ProductComponentRelation.objects.filter(
                 build_id=self.build_id,
+                build_type=self.build_type,
                 type__in=ProductComponentRelation.STREAM_TYPES,
             )
             .values_list("product_ref", flat=True)
@@ -317,7 +326,9 @@ class SoftwareBuild(TimeStampedModel):
 
 
 class SoftwareBuildTag(Tag):
-    tagged_model = models.ForeignKey(SoftwareBuild, on_delete=models.CASCADE, related_name="tags")
+    tagged_model = models.ForeignKey(
+        SoftwareBuild, on_delete=models.CASCADE, related_name="tags", db_column="tagged_model_uuid"
+    )
 
 
 class ProductModel(TimeStampedModel):
@@ -395,7 +406,7 @@ class ProductModel(TimeStampedModel):
         if product_refs:
             return (
                 ProductComponentRelation.objects.filter(product_ref__in=product_refs)
-                .values_list("build_id", flat=True)
+                .values_list("build_id", "build_type")
                 .distinct()
                 .using("read_only")
             )
@@ -827,18 +838,37 @@ class ProductComponentRelation(TimeStampedModel):
     # E.g. product variant for ERRATA, or product stream for COMPOSE
     product_ref = models.CharField(max_length=200, default="")
     build_id = models.CharField(max_length=200, default="")
+    build_type = models.CharField(choices=SoftwareBuild.Type.choices, max_length=20)
 
     class Meta:
         constraints = (
             models.UniqueConstraint(
                 name="unique_productcomponentrelation",
-                fields=("external_system_id", "product_ref", "build_id"),
+                fields=("external_system_id", "product_ref", "build_id", "build_type"),
             ),
         )
         indexes = (
-            models.Index(fields=("external_system_id", "product_ref", "build_id")),
-            models.Index(fields=("type", "build_id")),
-            models.Index(fields=("build_id",)),
+            models.Index(
+                fields=(
+                    "external_system_id",
+                    "product_ref",
+                    "build_id",
+                    "build_type",
+                )
+            ),
+            models.Index(
+                fields=(
+                    "type",
+                    "build_id",
+                    "build_type",
+                )
+            ),
+            models.Index(
+                fields=(
+                    "build_id",
+                    "build_type",
+                )
+            ),
             models.Index(fields=("product_ref", "type")),
         )
 
@@ -959,7 +989,11 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     # TODO: Or just switch from GenericForeignKey to regular ForeignKey?
     cnodes = GenericRelation(ComponentNode, related_query_name="%(class)s")
     software_build = models.ForeignKey(
-        SoftwareBuild, on_delete=models.CASCADE, null=True, related_name="components"
+        SoftwareBuild,
+        on_delete=models.CASCADE,
+        null=True,
+        related_name="components",
+        db_column="software_build_uuid",
     )
 
     # Copyright text as it appears in the component source code, from an OpenLCS scan
@@ -1628,12 +1662,13 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     @property
     def errata(self) -> list[str]:
         """Return errata that contain component."""
-        if not self.software_build_id:
+        if not self.software_build:
             return []
         errata_qs = (
             ProductComponentRelation.objects.filter(
                 type=ProductComponentRelation.Type.ERRATA,
-                build_id=self.software_build_id,
+                build_id=self.software_build.build_id,
+                build_type=self.software_build.build_type,
             )
             .values_list("external_system_id", flat=True)
             .distinct()

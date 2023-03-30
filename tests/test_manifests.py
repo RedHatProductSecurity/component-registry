@@ -304,6 +304,7 @@ def setup_products_and_components_provides():
     # to generate the manifest
     ProductComponentRelationFactory(
         build_id=str(build.build_id),
+        build_type=build.build_type,
         product_ref=variant.name,
         type=ProductComponentRelation.Type.ERRATA,
     )
@@ -323,6 +324,7 @@ def setup_products_and_rpm_in_containers():
         # to generate the manifest
         ProductComponentRelationFactory(
             build_id=str(build.build_id),
+            build_type=build.build_type,
             product_ref=variant.name,
             type=ProductComponentRelation.Type.ERRATA,
         )

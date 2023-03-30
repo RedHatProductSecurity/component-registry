@@ -9,20 +9,20 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser: CommandParser) -> None:
         parser.add_argument(
-            "build_ids",
+            "build_uuids",
             nargs="*",
-            type=int,
-            help="Specific build IDs to update.",
+            type=str,
+            help="Specific build UUIDs to update.",
         )
 
     def handle(self, *args, **options):
-        if options["build_ids"]:
+        if options["build_uuids"]:
             self.stdout.write(
                 self.style.SUCCESS(
-                    f"updating {options['build_ids']} component taxonomies",
+                    f"updating {options['build_uuids']} component taxonomies",
                 )
             )
-            builds = SoftwareBuild.objects.filter(build_id__in=options["build_ids"])
+            builds = SoftwareBuild.objects.filter(pk__in=options["build_uuids"])
         else:
             self.stdout.write(
                 self.style.SUCCESS(

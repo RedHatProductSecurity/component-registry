@@ -4,7 +4,7 @@ from typing import Optional
 from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.conf import settings
-from django.db.models import QuerySet
+from django.db.models import Q, QuerySet
 from django.utils import dateformat, dateparse, timezone
 from django.utils.timezone import make_aware
 
@@ -547,11 +547,14 @@ def fetch_modular_builds(relations_query: QuerySet, force_process: bool = False)
 
 def fetch_unprocessed_relations(
     relation_type: ProductComponentRelation.Type,
-    created_since: timezone.datetime,
+    created_since: Optional[timezone.datetime] = None,
     force_process: bool = False,
 ) -> int:
+    query = Q(type=relation_type)
+    if created_since:
+        query & Q(created_at__gte=created_since)
     relations_query = (
-        ProductComponentRelation.objects.filter(type=relation_type, created_at__gte=created_since)
+        ProductComponentRelation.objects.filter(query)
         .values_list("build_id", "build_type")
         .distinct()
         .using("read_only")

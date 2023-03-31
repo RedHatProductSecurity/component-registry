@@ -466,14 +466,15 @@ class Brew:
         component["components"] = list(noarch_rpms_by_id.values())
 
         # During collection we are only able to inspect docker config labels on
-        # attached arch specific archives. We do this loop here to save the
+        # attached arch specific archives. We do this loop here to save the description, license,
         # name label, and repository url also on the index container object at the root of the tree.
-        for attr in ("name_from_label", "repository_url"):
+        for attr in ("description", "license", "name_from_label", "repository_url"):
             self._get_child_meta(component, attr)
 
         return component
 
-    def _get_child_meta(self, component, meta_attr):
+    @staticmethod
+    def _get_child_meta(component: dict, meta_attr: str) -> None:
         for image in component["image_components"]:
             meta_attr_value = image["meta"].get(meta_attr)
             if meta_attr_value:
@@ -557,11 +558,15 @@ class Brew:
     ) -> Tuple[dict[int, dict[str, Any]], dict[str, Any]]:
         logger.info("Processing image archive %s", archive["filename"])
         docker_config = archive["extra"]["docker"]["config"]
-        name_label = self._get_name_label(docker_config)
+        labels = self._get_labels(docker_config)
+        name_label = labels.get("name", "")
         child_component = self._create_image_component(
             build_id, build_nvr, arch=archive["extra"]["image"]["arch"], name_label=name_label
         )
+        child_component["meta"]["description"] = labels.get("description", "")
         child_component["meta"]["docker_config"] = docker_config
+        child_component["meta"]["filename"] = archive["filename"]
+        child_component["meta"]["license"] = labels.get("License", "")
         child_component["meta"]["brew_archive_id"] = archive["id"]
         child_component["meta"]["digests"] = archive["extra"]["docker"]["digests"]
         child_component["meta"]["source"] = ["koji.listArchives"]
@@ -590,10 +595,10 @@ class Brew:
         child_component["rpm_components"] = arch_specific_rpms
         return noarch_rpms_by_id, child_component
 
-    def _get_name_label(self, docker_config):
+    @staticmethod
+    def _get_labels(docker_config: dict) -> dict[str, str]:
         config = docker_config.get("config", {})
-        labels = config.get("Labels", {})
-        return labels.get("name", "")
+        return config.get("Labels", {})
 
     def _extract_provides(
         self, packages: list[SimpleNamespace], pkg_type: str

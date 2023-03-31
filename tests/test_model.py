@@ -461,11 +461,12 @@ def test_purl2url():
 
     component = ComponentFactory(type=Component.Type.CONTAINER_IMAGE)
     assert component.download_url == Component.CONTAINER_CATALOG_SEARCH
-    assert "pull" not in component.meta_attr
-    component.meta_attr["pull"] = ["registry.redhat.io/openshift3/grafana"]
-    assert component.download_url == component.meta_attr["pull"][0]
-    component.meta_attr["pull"] = []
-    assert component.download_url == Component.CONTAINER_CATALOG_SEARCH
+    assert not component.related_url
+    component.related_url = "registry.redhat.io/openshift3/grafana"
+    component.save()
+    assert (
+        component.download_url == f"{component.related_url}:{component.version}-{component.release}"
+    )
 
     component = ComponentFactory(
         namespace=Component.Namespace.REDHAT, type=Component.Type.GEM, release=release

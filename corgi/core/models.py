@@ -1640,19 +1640,18 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         # /software/containers/container-native-virtualization/hco-bundle-registry/5ccae1925a13467289f2475b
         # /software/containers/openshift/ose-local-storage-diskmaker/
         # 5d9347b8dd19c70159f2f6e4?architecture=s390x&tag=v4.4.0-202007171809.p0
-        # We can't build URLs like above because the hash is required,
+        # We can't build Container Catalog URLs like above because the hash is required,
         # but doesn't match any hash in the meta_attr / other properties.
-        # repository_url is the customer-facing download location, but per OpenLCS
-        # they want to see the internal registry-proxy URL from Brew.
+        # repository_url / related_URL is the customer-facing location,
+        # so for now we just build a pull URL from that instead.
 
-        # TODO: self.filename, AKA the filename of the image archive a container is included in,
-        #  is always unset. This is not the digest SHA but the config layer SHA.
         elif self.type == Component.Type.CONTAINER_IMAGE:
-            pull_url = self.meta_attr.get("pull", [])
-            # First pull URL is based on hash, others are based on tags
-            # if we have an empty list, just return a generic URL
-            pull_url = pull_url[0] if pull_url else self.CONTAINER_CATALOG_SEARCH
-            return pull_url
+            if not self.related_url:
+                return self.CONTAINER_CATALOG_SEARCH
+
+            # registry.redhat.io/repo/name:version-release
+            release = f"-{self.release}" if self.release else ""
+            return f"{self.related_url}:{self.version}{release}"
 
         else:
             # Usually a remote-source component

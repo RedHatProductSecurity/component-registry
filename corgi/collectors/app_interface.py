@@ -60,7 +60,7 @@ class AppInterface:
                     # Ignore container images in other registries since we assume all images are
                     # in Quay.io.
                     if org_repos["org"]["instance"]["url"] != "quay.io":
-                        logger.info(
+                        logger.warning(
                             f"Found non-quay.io container images for {component_name} in "
                             f"app-interface: {org_repos['org']['instance']}"
                         )

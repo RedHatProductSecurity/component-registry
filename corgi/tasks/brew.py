@@ -363,21 +363,12 @@ def set_license_declared_safely(obj: Component, license_declared_raw: str) -> No
         obj.save()
 
 
-def get_labels_from_meta(build_meta: dict) -> dict[str, str]:
-    """Get container image labels from Brew metadata, if available"""
-    config = build_meta.get("docker_config", {}).get("config", {})
-    return config.get("Labels", {})
-
-
 def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
+    license_declared_raw = build_data["meta"].pop("license", "")
     related_url = build_data["meta"].get("repository_url", "")
     if not related_url:
         # Handle case when key is present but value is None
         related_url = ""
-
-    labels = get_labels_from_meta(build_data["meta"])
-    description = labels.pop("description", "")
-    license_declared_raw = labels.pop("License", "")
 
     obj, created = Component.objects.update_or_create(
         type=build_data["type"],
@@ -386,7 +377,7 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
         release=build_data["meta"].pop("release"),
         arch="noarch",
         defaults={
-            "description": description,
+            "description": build_data["meta"].pop("description", ""),
             "filename": build_data["meta"].pop("filename", ""),
             "meta_attr": build_data["meta"],
             "namespace": Component.Namespace.REDHAT,
@@ -430,9 +421,7 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
 
     if "image_components" in build_data:
         for image in build_data["image_components"]:
-            labels = get_labels_from_meta(image["meta"])
-            description = labels.pop("description", "")
-            license_declared_raw = labels.pop("License", "")
+            license_declared_raw = image["meta"].pop("license", "")
 
             obj, created = Component.objects.update_or_create(
                 type=image["type"],
@@ -441,7 +430,7 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
                 release=image["meta"].pop("release"),
                 arch=image["meta"].pop("arch"),
                 defaults={
-                    "description": description,
+                    "description": image["meta"].pop("description", ""),
                     "filename": image["meta"].pop("filename", ""),
                     "meta_attr": image["meta"],
                     "namespace": Component.Namespace.REDHAT,

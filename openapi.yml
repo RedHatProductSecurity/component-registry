@@ -266,6 +266,11 @@ paths:
           type: boolean
         description: Show only unscanned components (where license concluded is empty)
       - in: query
+        name: missing_scan_url
+        schema:
+          type: boolean
+        description: Show only unscanned components (where OpenLCS scan URL is empty)
+      - in: query
         name: name
         schema:
           type: string

@@ -90,6 +90,11 @@ class ComponentFilter(FilterSet):
         label="Show only unscanned components (where license concluded is empty)",
     )
 
+    missing_scan_url = EmptyStringFilter(
+        field_name="openlcs_scan_url",
+        label="Show only unscanned components (where OpenLCS scan URL is empty)",
+    )
+
     @staticmethod
     def filter_ofuri_or_name(
         queryset: QuerySet[Component], name: str, value: str

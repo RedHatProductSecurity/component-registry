@@ -242,6 +242,11 @@ paths:
         description: 'Exclude only specified fields in the response. Multiple values
           may be separated by commas. Example: `exclude_fields=software_build.build_id,name`'
       - in: query
+        name: gomod_components
+        schema:
+          type: boolean
+        description: Show only gomod components, hide go-packages
+      - in: query
         name: include_fields
         schema:
           type: array

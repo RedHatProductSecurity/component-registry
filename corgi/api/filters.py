@@ -95,6 +95,30 @@ class ComponentFilter(FilterSet):
         label="Show only unscanned components (where OpenLCS scan URL is empty)",
     )
 
+    gomod_components = BooleanFilter(
+        label="Show only gomod components, hide go-packages",
+        method="filter_gomod_components",
+    )
+
+    @staticmethod
+    def filter_gomod_components(
+        qs: QuerySet[Component], _name: str, value: bool
+    ) -> QuerySet[Component]:
+        """Show only GOLANG components that are Go modules, and hide Go packages"""
+        if value in EMPTY_VALUES:
+            # User gave an empty ?param= so return the unfiltered queryset
+            return qs
+
+        # Below check only works / keys in meta_attr only exist for GOLANG type
+        qs = qs.filter(type=Component.Type.GOLANG)
+
+        # Use .exclude() if the user choose BooleanFilter's "NO" option in the UI
+        # e.g. "show gomod components" -> NO means show only go-packages
+        # Otherwise use .filter()
+        method = qs.exclude if value is False else qs.filter
+
+        return method(**{"meta_attr__go_component_type": "gomod"})
+
     @staticmethod
     def filter_ofuri_or_name(
         queryset: QuerySet[Component], name: str, value: str

@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class EmptyStringFilter(BooleanFilter):
     """Filter or exclude an arbitrary field against an empty string value"""
 
-    def filter(self, qs, value):
+    def filter(self, qs: QuerySet[Component], value: bool) -> QuerySet[Component]:
         if value in EMPTY_VALUES:
             # User gave an empty ?param= so return the unfiltered queryset
             return qs
@@ -28,7 +28,7 @@ class EmptyStringFilter(BooleanFilter):
 
 
 class TagFilter(Filter):
-    def filter(self, queryset, value):
+    def filter(self, queryset: QuerySet, value: str) -> QuerySet:
         # TODO: currently defaults to AND condition, we should make this configurable for both
         # OR and AND conditions.
         if not value:
@@ -52,10 +52,9 @@ class ComponentFilter(FilterSet):
         model = Component
         # Fields that are matched to a filter using their Django model field type and default
         # __exact lookups.
-        fields = ("type", "namespace", "version", "release", "arch", "nvr", "nevra")
+        fields = ("type", "namespace", "name", "version", "release", "arch", "nvr", "nevra")
 
     # Custom filters
-    name = CharFilter()
     re_name = CharFilter(lookup_expr="regex", field_name="name")
     re_purl = CharFilter(lookup_expr="regex", field_name="purl")
     description = CharFilter(lookup_expr="icontains")
@@ -71,9 +70,9 @@ class ComponentFilter(FilterSet):
     channels = CharFilter(lookup_expr="name")
 
     # Normally we are interested in retrieving provides,sources or upstreams of a specific component
-    sources = CharFilter(field_name="sources", lookup_expr="purl")
-    provides = CharFilter(field_name="provides", lookup_expr="purl")
-    upstreams = CharFilter(field_name="upstreams", lookup_expr="purl")
+    sources = CharFilter(lookup_expr="purl")
+    provides = CharFilter(lookup_expr="purl")
+    upstreams = CharFilter(lookup_expr="purl")
     # otherwise use regex to match provides,sources or upstreams purls
     re_sources = CharFilter(field_name="sources", lookup_expr="purl__regex")
     re_provides = CharFilter(field_name="provides", lookup_expr="purl__regex")
@@ -93,8 +92,8 @@ class ComponentFilter(FilterSet):
 
     @staticmethod
     def filter_ofuri_or_name(
-        queryset: QuerySet["Component"], name: str, value: str
-    ) -> QuerySet["Component"]:
+        queryset: QuerySet[Component], name: str, value: str
+    ) -> QuerySet[Component]:
         """Filter some field by a ProductModel subclass's ofuri
         Or else by a name, depending on the user's input"""
         if value.startswith("o:redhat:"):

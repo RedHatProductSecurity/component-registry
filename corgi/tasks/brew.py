@@ -407,7 +407,10 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
                 version="",
                 release="",
                 arch="noarch",
-                defaults={"namespace": Component.Namespace.UPSTREAM},
+                defaults={
+                    "mets_attr": {"go_component_type": "gomod"},
+                    "namespace": Component.Namespace.UPSTREAM,
+                },
             )
             ComponentNode.objects.get_or_create(
                 type=ComponentNode.ComponentNodeType.SOURCE,
@@ -468,6 +471,9 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
                 # The public repo we want is just github.com/openshift/cluster-api
                 related_url = related_url.replace("openshift-priv", "openshift")
 
+            if source["type"] == Component.Type.GOLANG:
+                # Assume upstream container sources are always go modules, never go-packages
+                source["meta"]["go_component_type"] = "gomod"
             new_upstream, created = Component.objects.update_or_create(
                 type=source["type"],
                 name=component_name,

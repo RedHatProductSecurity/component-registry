@@ -71,7 +71,9 @@ def find_duplicate_component(meta_name: str, syft_purl: str) -> Component:
         raise ValueError(f"New edge case for duplicate component: {syft_purl}")
 
 
-def save_component(component: dict[str, Any], parent: ComponentNode) -> bool:
+def save_component(
+    component: dict[str, Any], parent: ComponentNode, is_go_package: bool = False
+) -> bool:
     meta = component.get("meta", {})
     if component["type"] not in Component.Type:
         logger.warning("Tried to save component with unknown type: %s", component["type"])
@@ -86,6 +88,10 @@ def save_component(component: dict[str, Any], parent: ComponentNode) -> bool:
     created = False
     name = meta.pop("name", "")
     try:
+        if component["type"] == Component.Type.GOLANG:
+            # Syft doesn't support go-package detection
+            # "go list" does, so we need to know which called this function
+            meta["go_component_type"] = "go-package" if is_go_package else "gomod"
         # Use all fields from Component index and uniqueness constraint
         # Don't update_or_create since Syft's metadata shouldn't override Brew's
         obj, created = Component.objects.get_or_create(
@@ -199,10 +205,12 @@ def _scan_files(anchor_node, sources) -> int:
     # get go version from container meta_attr
     go_packages = GoList.scan_files(sources)
     _assign_go_stdlib_version(anchor_node.obj, go_packages)
-    detected_components.extend(go_packages)
 
     for component in detected_components:
         if save_component(component, anchor_node):
+            new_components += 1
+    for package in go_packages:
+        if save_component(package, anchor_node, True):
             new_components += 1
     logger.info("Detected %s new components using Syft scan", new_components)
     return new_components

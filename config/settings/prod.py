@@ -10,6 +10,7 @@ ALLOWED_HOSTS = [
     socket.gethostname(),
     socket.gethostbyname(socket.gethostname()),
     ".redhat.com",
+    ".fedoraproject.org",
 ]
 
 CSP_UPGRADE_INSECURE_REQUESTS = True

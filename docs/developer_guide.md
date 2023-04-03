@@ -46,6 +46,7 @@ export CORGI_BREW_DOWNLOAD_ROOT_URL=https://koji.fedoraproject.org
 export CORGI_CENTOS_URL=https://cbs.centos.org/kojihub
 export CORGI_CENTOS_DOWNLOAD_ROOT_URL=https://cbs.centos.org
 export CORGI_LOOKASIDE_CACHE_URL=https://src.fedoraproject.org/repo/pkgs
+export CORGI_APP_INTERFACE_URL="https://app-interface.example.com"
 export CORGI_APP_STREAMS_LIFE_CYCLE_URL=https://appstream.example.com/lifecycle-defs/application_streams.yaml
 export CORGI_ERRATA_TOOL_URL=https://errata.example.com
 export CORGI_MANIFEST_HINTS_URL=https://manifesthints.example.com/manifest-hints.txt

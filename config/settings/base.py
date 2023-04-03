@@ -405,6 +405,9 @@ PULP_URL = os.getenv("CORGI_PULP_URL")
 PULP_USERNAME = os.getenv("CORGI_PULP_USERNAME")
 PULP_PASSWORD = os.getenv("CORGI_PULP_PASSWORD")
 
+# App-Interface
+APP_INTERFACE_URL = os.getenv("CORGI_APP_INTERFACE_URL", "")
+
 # Settings for the drf-spectacular package
 SPECTACULAR_SETTINGS = {
     "SWAGGER_UI_DIST": "SIDECAR",  # shorthand to use the sidecar instead

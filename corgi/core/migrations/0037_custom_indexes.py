@@ -12,19 +12,19 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RunSQL(
-            "CREATE INDEX core_componentnode_tree_parent_lft_idx ON public.core_componentnode \
+            "CREATE INDEX core_componentnode_tree_parent_lft_idx ON core_componentnode \
              USING btree(tree_id, parent_id, lft)"
         ),
         migrations.RunSQL(
-            "CREATE INDEX core_cn_tree_lft_purl_parent_idx ON public.core_componentnode \
+            "CREATE INDEX core_cn_tree_lft_purl_parent_idx ON core_componentnode \
              USING btree (tree_id, lft, purl, parent_id) WHERE (parent_id IS NULL)"
         ),
         migrations.RunSQL(
-            "CREATE INDEX core_cn_lft_tree_idx ON public.core_componentnode \
+            "CREATE INDEX core_cn_lft_tree_idx ON core_componentnode \
              USING btree (lft, tree_id)"
         ),
         migrations.RunSQL(
-            "CREATE INDEX core_cn_lft_rght_tree_idx ON public.core_componentnode \
+            "CREATE INDEX core_cn_lft_rght_tree_idx ON core_componentnode \
              USING btree (lft, rght, tree_id)"
         ),
     ]

@@ -11,9 +11,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RunSQL(
-            "ALTER TABLE public.core_componentnode SET (autovacuum_vacuum_scale_factor=0.001);"
+            "ALTER TABLE core_componentnode SET (autovacuum_vacuum_scale_factor=0.001);"
         ),
-        migrations.RunSQL(
-            "ALTER TABLE public.core_component SET (autovacuum_vacuum_scale_factor=0.001);"
-        ),
+        migrations.RunSQL("ALTER TABLE core_component SET (autovacuum_vacuum_scale_factor=0.001);"),
     ]

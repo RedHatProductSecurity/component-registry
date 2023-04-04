@@ -351,21 +351,11 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
     root_node = save_node(ComponentNode.ComponentNodeType.SOURCE, None, obj)
 
     if "upstream_go_modules" in build_data["meta"]:
+        meta_attr = {"go_component_type": "gomod"}
         for module in build_data["meta"]["upstream_go_modules"]:
-            new_upstream, created = Component.objects.get_or_create(
-                type=Component.Type.GOLANG,
-                name=module,
-                # the upstream commit is included in the dist-git commit history, but is not
-                # exposed anywhere in the brew data that I can find
-                version="",
-                release="",
-                arch="noarch",
-                defaults={
-                    "mets_attr": {"go_component_type": "gomod"},
-                    "namespace": Component.Namespace.UPSTREAM,
-                },
-            )
-            save_node(ComponentNode.ComponentNodeType.SOURCE, root_node, new_upstream)
+            # the upstream commit is included in the dist-git commit history, but is not
+            # exposed anywhere in the brew data that I can find, so can't set version
+            save_upstream(Component.Type.GOLANG, module, "", meta_attr, {}, root_node)
 
     if "image_components" in build_data:
         for image in build_data["image_components"]:
@@ -404,6 +394,7 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
     if "sources" in build_data:
         for source in build_data["sources"]:
             component_name = source["meta"].pop("name")
+            component_version = source["meta"].pop("version")
             related_url = source["meta"].pop("url", "")
             if not related_url:
                 # Handle case when key is present but value is None
@@ -418,20 +409,10 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
             if source["type"] == Component.Type.GOLANG:
                 # Assume upstream container sources are always go modules, never go-packages
                 source["meta"]["go_component_type"] = "gomod"
-            new_upstream, created = Component.objects.update_or_create(
-                type=source["type"],
-                name=component_name,
-                version=source["meta"].pop("version"),
-                release="",
-                arch="noarch",
-                defaults={
-                    "meta_attr": source["meta"],
-                    "namespace": Component.Namespace.UPSTREAM,
-                    "related_url": related_url,
-                },
-            )
-            upstream_node = save_node(
-                ComponentNode.ComponentNodeType.SOURCE, root_node, new_upstream
+
+            extra = {"related_url": related_url}
+            _, upstream_node = save_upstream(
+                source["type"], component_name, component_version, source["meta"], extra, root_node
             )
 
             # Collect the Cachito dependencies

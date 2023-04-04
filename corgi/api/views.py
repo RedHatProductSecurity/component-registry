@@ -3,6 +3,7 @@ import logging
 from typing import Type, Union
 
 import django_filters.rest_framework
+from django.conf import settings
 from django.db import connections
 from django.db.models import QuerySet, Value
 from django.http import Http404
@@ -596,7 +597,7 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         """Allow OpenLCS to upload copyright text / license scan results for a component"""
         # In the future these could be separate endpoints
         # For testing we'll just keep it under one endpoint
-        if utils.running_prod():
+        if utils.running_prod() or settings.COMMUNITY_MODE_ENABLED:
             # This is only temporary for OpenLCS testing
             # Do not enable in production until we add OIDC authentication
             return Response(status=status.HTTP_403_FORBIDDEN)

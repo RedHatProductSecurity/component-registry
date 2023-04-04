@@ -172,15 +172,8 @@ def slow_fetch_modular_build(build_id: str, force_process: bool = False) -> None
     # This should result in a lookup if slow_fetch_brew_build has already processed this module.
     # Likewise if slow_fetch_brew_build processes the module subsequently we should not create
     # a new ComponentNode, instead the same one will be looked up and used as the root node
-    node, _ = ComponentNode.objects.get_or_create(
-        type=ComponentNode.ComponentNodeType.SOURCE,
-        parent=None,
-        purl=obj.purl,
-        defaults={
-            "object_id": obj.pk,
-            "obj": obj,
-        },
-    )
+    node = save_node(ComponentNode.ComponentNodeType.SOURCE, None, obj)
+
     for c in rhel_module_data.get("components", []):
         # Request fetch of the SRPM build_ids here to ensure software_builds are created and linked
         # to the RPM components. We don't link the SRPM into the tree because some of it's RPMs
@@ -270,15 +263,7 @@ def save_component(
         obj.meta_attr = obj.meta_attr | meta
         obj.save()
 
-    node, _ = ComponentNode.objects.get_or_create(
-        type=node_type,
-        parent=parent,
-        purl=obj.purl,
-        defaults={
-            "object_id": obj.pk,
-            "obj": obj,
-        },
-    )
+    node = save_node(node_type, parent, obj)
     recurse_components(component, node)
 
 
@@ -303,15 +288,7 @@ def save_srpm(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
             "software_build": softwarebuild,
         },
     )
-    node, _ = ComponentNode.objects.get_or_create(
-        type=ComponentNode.ComponentNodeType.SOURCE,
-        parent=None,
-        purl=obj.purl,
-        defaults={
-            "object_id": obj.pk,
-            "obj": obj,
-        },
-    )
+    node = save_node(ComponentNode.ComponentNodeType.SOURCE, None, obj)
     if related_url:
         new_upstream, created = Component.objects.update_or_create(
             type=build_data["type"],
@@ -328,15 +305,7 @@ def save_srpm(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
                 "related_url": related_url,
             },
         )
-        ComponentNode.objects.get_or_create(
-            type=ComponentNode.ComponentNodeType.SOURCE,
-            parent=node,
-            purl=new_upstream.purl,
-            defaults={
-                "object_id": new_upstream.pk,
-                "obj": new_upstream,
-            },
-        )
+        save_node(ComponentNode.ComponentNodeType.SOURCE, node, new_upstream)
     return node
 
 
@@ -387,15 +356,7 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
     )
 
     set_license_declared_safely(obj, license_declared_raw)
-    root_node, _ = ComponentNode.objects.get_or_create(
-        type=ComponentNode.ComponentNodeType.SOURCE,
-        parent=None,
-        purl=obj.purl,
-        defaults={
-            "object_id": obj.pk,
-            "obj": obj,
-        },
-    )
+    root_node = save_node(ComponentNode.ComponentNodeType.SOURCE, None, obj)
 
     if "upstream_go_modules" in build_data["meta"]:
         for module in build_data["meta"]["upstream_go_modules"]:
@@ -412,15 +373,7 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
                     "namespace": Component.Namespace.UPSTREAM,
                 },
             )
-            ComponentNode.objects.get_or_create(
-                type=ComponentNode.ComponentNodeType.SOURCE,
-                parent=root_node,
-                purl=new_upstream.purl,
-                defaults={
-                    "object_id": new_upstream.pk,
-                    "obj": new_upstream,
-                },
-            )
+            save_node(ComponentNode.ComponentNodeType.SOURCE, root_node, new_upstream)
 
     if "image_components" in build_data:
         for image in build_data["image_components"]:
@@ -442,15 +395,14 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
             )
 
             set_license_declared_safely(obj, license_declared_raw)
-            image_arch_node, _ = ComponentNode.objects.get_or_create(
-                type=ComponentNode.ComponentNodeType.PROVIDES,
-                parent=root_node,
-                purl=obj.purl,
-                defaults={
-                    "object_id": obj.pk,
-                    "obj": obj,
-                },
-            )
+            # Based on a conversation with the container factory team,
+            # almost all image components are build-time dependencies in a multi-stage build
+            # and are discarded / do not end up in the final image.
+            # The only exceptions are image components from the base layer (ie UBI)
+            # So we should probably still use PROVIDES here, and not PROVIDES_DEV
+            # Unless we can distinguish between these two types of components
+            # using some other Brew metadata
+            image_arch_node = save_node(ComponentNode.ComponentNodeType.PROVIDES, root_node, obj)
 
             if "rpm_components" in image:
                 for rpm in image["rpm_components"]:
@@ -486,15 +438,10 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
                     "related_url": related_url,
                 },
             )
-            upstream_node, _ = ComponentNode.objects.get_or_create(
-                type=ComponentNode.ComponentNodeType.SOURCE,
-                parent=root_node,
-                purl=new_upstream.purl,
-                defaults={
-                    "object_id": new_upstream.pk,
-                    "obj": new_upstream,
-                },
+            upstream_node = save_node(
+                ComponentNode.ComponentNodeType.SOURCE, root_node, new_upstream
             )
+
             # Collect the Cachito dependencies
             recurse_components(source, upstream_node)
     return root_node
@@ -530,16 +477,21 @@ def save_module(softwarebuild, build_data) -> ComponentNode:
             "software_build": softwarebuild,
         },
     )
-    node, _ = ComponentNode.objects.get_or_create(
-        type=ComponentNode.ComponentNodeType.SOURCE,
-        parent=None,
-        purl=obj.purl,
-        defaults={
-            "object_id": obj.pk,
-            "obj": obj,
-        },
-    )
+    node = save_node(ComponentNode.ComponentNodeType.SOURCE, None, obj)
 
+    return node
+
+
+def save_node(
+    node_type: str, parent: Optional[ComponentNode], related_component: Component
+) -> ComponentNode:
+    """Helper function that wraps ComponentNode creation"""
+    node, _ = ComponentNode.objects.get_or_create(
+        type=node_type,
+        parent=parent,
+        purl=related_component.purl,
+        defaults={"obj": related_component},
+    )
     return node
 
 

@@ -268,44 +268,36 @@ def save_component(
 
 
 def save_srpm(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
+    name = build_data["meta"].pop("name")
+    version = build_data["meta"].pop("version")
     related_url = build_data["meta"].pop("url", "")
     if not related_url:
         # Handle case when key is present but value is None
         related_url = ""
 
+    extra = {
+        "description": build_data["meta"].pop("description", ""),
+        "filename": find_package_file_name(build_data["meta"].pop("source_files", [])),
+        "license_declared_raw": build_data["meta"].pop("license", ""),
+        "related_url": related_url,
+    }
+
     obj, created = Component.objects.update_or_create(
         type=build_data["type"],
-        name=build_data["meta"].get("name"),
-        version=build_data["meta"].get("version", ""),
-        release=build_data["meta"].get("release", ""),
-        arch=build_data["meta"].get("arch", "noarch"),
+        name=name,
+        version=version,
+        release=build_data["meta"].pop("release", ""),
+        arch=build_data["meta"].pop("arch", "noarch"),
         defaults={
-            "description": build_data["meta"].get("description", ""),
-            "license_declared_raw": build_data["meta"].get("license", ""),
+            **extra,
             "meta_attr": build_data["meta"],
             "namespace": Component.Namespace.REDHAT,
-            "related_url": related_url,
             "software_build": softwarebuild,
         },
     )
     node = save_node(ComponentNode.ComponentNodeType.SOURCE, None, obj)
     if related_url:
-        new_upstream, created = Component.objects.update_or_create(
-            type=build_data["type"],
-            name=build_data["meta"].get("name"),
-            version=build_data["meta"].get("version", ""),
-            release="",
-            arch="noarch",
-            defaults={
-                "description": build_data["meta"].get("description", ""),
-                "filename": find_package_file_name(build_data["meta"].get("source_files", [])),
-                "license_declared_raw": build_data["meta"].get("license", ""),
-                "meta_attr": build_data["meta"],
-                "namespace": Component.Namespace.UPSTREAM,
-                "related_url": related_url,
-            },
-        )
-        save_node(ComponentNode.ComponentNodeType.SOURCE, node, new_upstream)
+        save_upstream(build_data["type"], name, version, build_data["meta"], extra, node)
     return node
 
 
@@ -480,6 +472,27 @@ def save_module(softwarebuild, build_data) -> ComponentNode:
     node = save_node(ComponentNode.ComponentNodeType.SOURCE, None, obj)
 
     return node
+
+
+def save_upstream(
+    component_type: str, name: str, version: str, meta_attr: dict, extra: dict, node: ComponentNode
+) -> tuple[Component, ComponentNode]:
+    """Helper function to save an upstream component and create a node for it"""
+    upstream_component, _ = Component.objects.update_or_create(
+        type=component_type,
+        name=name,
+        version=version,
+        release="",
+        arch="noarch",
+        defaults={
+            **extra,
+            "meta_attr": meta_attr,
+            "namespace": Component.Namespace.UPSTREAM,
+        },
+    )
+    upstream_node = save_node(ComponentNode.ComponentNodeType.SOURCE, node, upstream_component)
+
+    return upstream_component, upstream_node
 
 
 def save_node(

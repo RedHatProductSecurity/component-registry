@@ -172,15 +172,8 @@ def slow_fetch_modular_build(build_id: str, force_process: bool = False) -> None
     # This should result in a lookup if slow_fetch_brew_build has already processed this module.
     # Likewise if slow_fetch_brew_build processes the module subsequently we should not create
     # a new ComponentNode, instead the same one will be looked up and used as the root node
-    node, _ = ComponentNode.objects.get_or_create(
-        type=ComponentNode.ComponentNodeType.SOURCE,
-        parent=None,
-        purl=obj.purl,
-        defaults={
-            "object_id": obj.pk,
-            "obj": obj,
-        },
-    )
+    node = save_node(ComponentNode.ComponentNodeType.SOURCE, None, obj)
+
     for c in rhel_module_data.get("components", []):
         # Request fetch of the SRPM build_ids here to ensure software_builds are created and linked
         # to the RPM components. We don't link the SRPM into the tree because some of it's RPMs
@@ -270,73 +263,41 @@ def save_component(
         obj.meta_attr = obj.meta_attr | meta
         obj.save()
 
-    node, _ = ComponentNode.objects.get_or_create(
-        type=node_type,
-        parent=parent,
-        purl=obj.purl,
-        defaults={
-            "object_id": obj.pk,
-            "obj": obj,
-        },
-    )
+    node = save_node(node_type, parent, obj)
     recurse_components(component, node)
 
 
 def save_srpm(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
+    name = build_data["meta"].pop("name")
+    version = build_data["meta"].pop("version")
     related_url = build_data["meta"].pop("url", "")
     if not related_url:
         # Handle case when key is present but value is None
         related_url = ""
 
+    extra = {
+        "description": build_data["meta"].pop("description", ""),
+        "filename": find_package_file_name(build_data["meta"].pop("source_files", [])),
+        "license_declared_raw": build_data["meta"].pop("license", ""),
+        "related_url": related_url,
+    }
+
     obj, created = Component.objects.update_or_create(
         type=build_data["type"],
-        name=build_data["meta"].get("name"),
-        version=build_data["meta"].get("version", ""),
-        release=build_data["meta"].get("release", ""),
-        arch=build_data["meta"].get("arch", "noarch"),
+        name=name,
+        version=version,
+        release=build_data["meta"].pop("release", ""),
+        arch=build_data["meta"].pop("arch", "noarch"),
         defaults={
-            "description": build_data["meta"].get("description", ""),
-            "license_declared_raw": build_data["meta"].get("license", ""),
+            **extra,
             "meta_attr": build_data["meta"],
             "namespace": Component.Namespace.REDHAT,
-            "related_url": related_url,
             "software_build": softwarebuild,
         },
     )
-    node, _ = ComponentNode.objects.get_or_create(
-        type=ComponentNode.ComponentNodeType.SOURCE,
-        parent=None,
-        purl=obj.purl,
-        defaults={
-            "object_id": obj.pk,
-            "obj": obj,
-        },
-    )
+    node = save_node(ComponentNode.ComponentNodeType.SOURCE, None, obj)
     if related_url:
-        new_upstream, created = Component.objects.update_or_create(
-            type=build_data["type"],
-            name=build_data["meta"].get("name"),
-            version=build_data["meta"].get("version", ""),
-            release="",
-            arch="noarch",
-            defaults={
-                "description": build_data["meta"].get("description", ""),
-                "filename": find_package_file_name(build_data["meta"].get("source_files", [])),
-                "license_declared_raw": build_data["meta"].get("license", ""),
-                "meta_attr": build_data["meta"],
-                "namespace": Component.Namespace.UPSTREAM,
-                "related_url": related_url,
-            },
-        )
-        ComponentNode.objects.get_or_create(
-            type=ComponentNode.ComponentNodeType.SOURCE,
-            parent=node,
-            purl=new_upstream.purl,
-            defaults={
-                "object_id": new_upstream.pk,
-                "obj": new_upstream,
-            },
-        )
+        save_upstream(build_data["type"], name, version, build_data["meta"], extra, node)
     return node
 
 
@@ -387,40 +348,14 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
     )
 
     set_license_declared_safely(obj, license_declared_raw)
-    root_node, _ = ComponentNode.objects.get_or_create(
-        type=ComponentNode.ComponentNodeType.SOURCE,
-        parent=None,
-        purl=obj.purl,
-        defaults={
-            "object_id": obj.pk,
-            "obj": obj,
-        },
-    )
+    root_node = save_node(ComponentNode.ComponentNodeType.SOURCE, None, obj)
 
     if "upstream_go_modules" in build_data["meta"]:
+        meta_attr = {"go_component_type": "gomod"}
         for module in build_data["meta"]["upstream_go_modules"]:
-            new_upstream, created = Component.objects.get_or_create(
-                type=Component.Type.GOLANG,
-                name=module,
-                # the upstream commit is included in the dist-git commit history, but is not
-                # exposed anywhere in the brew data that I can find
-                version="",
-                release="",
-                arch="noarch",
-                defaults={
-                    "mets_attr": {"go_component_type": "gomod"},
-                    "namespace": Component.Namespace.UPSTREAM,
-                },
-            )
-            ComponentNode.objects.get_or_create(
-                type=ComponentNode.ComponentNodeType.SOURCE,
-                parent=root_node,
-                purl=new_upstream.purl,
-                defaults={
-                    "object_id": new_upstream.pk,
-                    "obj": new_upstream,
-                },
-            )
+            # the upstream commit is included in the dist-git commit history, but is not
+            # exposed anywhere in the brew data that I can find, so can't set version
+            save_upstream(Component.Type.GOLANG, module, "", meta_attr, {}, root_node)
 
     if "image_components" in build_data:
         for image in build_data["image_components"]:
@@ -442,15 +377,14 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
             )
 
             set_license_declared_safely(obj, license_declared_raw)
-            image_arch_node, _ = ComponentNode.objects.get_or_create(
-                type=ComponentNode.ComponentNodeType.PROVIDES,
-                parent=root_node,
-                purl=obj.purl,
-                defaults={
-                    "object_id": obj.pk,
-                    "obj": obj,
-                },
-            )
+            # Based on a conversation with the container factory team,
+            # almost all image components are build-time dependencies in a multi-stage build
+            # and are discarded / do not end up in the final image.
+            # The only exceptions are image components from the base layer (ie UBI)
+            # So we should probably still use PROVIDES here, and not PROVIDES_DEV
+            # Unless we can distinguish between these two types of components
+            # using some other Brew metadata
+            image_arch_node = save_node(ComponentNode.ComponentNodeType.PROVIDES, root_node, obj)
 
             if "rpm_components" in image:
                 for rpm in image["rpm_components"]:
@@ -460,6 +394,7 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
     if "sources" in build_data:
         for source in build_data["sources"]:
             component_name = source["meta"].pop("name")
+            component_version = source["meta"].pop("version")
             related_url = source["meta"].pop("url", "")
             if not related_url:
                 # Handle case when key is present but value is None
@@ -474,27 +409,12 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
             if source["type"] == Component.Type.GOLANG:
                 # Assume upstream container sources are always go modules, never go-packages
                 source["meta"]["go_component_type"] = "gomod"
-            new_upstream, created = Component.objects.update_or_create(
-                type=source["type"],
-                name=component_name,
-                version=source["meta"].pop("version"),
-                release="",
-                arch="noarch",
-                defaults={
-                    "meta_attr": source["meta"],
-                    "namespace": Component.Namespace.UPSTREAM,
-                    "related_url": related_url,
-                },
+
+            extra = {"related_url": related_url}
+            _, upstream_node = save_upstream(
+                source["type"], component_name, component_version, source["meta"], extra, root_node
             )
-            upstream_node, _ = ComponentNode.objects.get_or_create(
-                type=ComponentNode.ComponentNodeType.SOURCE,
-                parent=root_node,
-                purl=new_upstream.purl,
-                defaults={
-                    "object_id": new_upstream.pk,
-                    "obj": new_upstream,
-                },
-            )
+
             # Collect the Cachito dependencies
             recurse_components(source, upstream_node)
     return root_node
@@ -530,16 +450,42 @@ def save_module(softwarebuild, build_data) -> ComponentNode:
             "software_build": softwarebuild,
         },
     )
-    node, _ = ComponentNode.objects.get_or_create(
-        type=ComponentNode.ComponentNodeType.SOURCE,
-        parent=None,
-        purl=obj.purl,
+    node = save_node(ComponentNode.ComponentNodeType.SOURCE, None, obj)
+
+    return node
+
+
+def save_upstream(
+    component_type: str, name: str, version: str, meta_attr: dict, extra: dict, node: ComponentNode
+) -> tuple[Component, ComponentNode]:
+    """Helper function to save an upstream component and create a node for it"""
+    upstream_component, _ = Component.objects.update_or_create(
+        type=component_type,
+        name=name,
+        version=version,
+        release="",
+        arch="noarch",
         defaults={
-            "object_id": obj.pk,
-            "obj": obj,
+            **extra,
+            "meta_attr": meta_attr,
+            "namespace": Component.Namespace.UPSTREAM,
         },
     )
+    upstream_node = save_node(ComponentNode.ComponentNodeType.SOURCE, node, upstream_component)
 
+    return upstream_component, upstream_node
+
+
+def save_node(
+    node_type: str, parent: Optional[ComponentNode], related_component: Component
+) -> ComponentNode:
+    """Helper function that wraps ComponentNode creation"""
+    node, _ = ComponentNode.objects.get_or_create(
+        type=node_type,
+        parent=parent,
+        purl=related_component.purl,
+        defaults={"obj": related_component},
+    )
     return node
 
 

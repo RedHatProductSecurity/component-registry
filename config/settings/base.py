@@ -28,7 +28,7 @@ DOCS_URL = os.getenv("CORGI_DOCS_URL")
 OPENSHIFT_BUILD_COMMIT = os.getenv("OPENSHIFT_BUILD_COMMIT")
 PRODSEC_EMAIL = os.getenv("PRODSEC_EMAIL", "dev@example.com")
 
-CORGI_DOMAIN = os.getenv("CORGI_DOMAIN")
+CORGI_DOMAIN = os.getenv("CORGI_DOMAIN", "")
 if CORGI_DOMAIN:
     CSRF_COOKIE_DOMAIN = CORGI_DOMAIN
     LANGUAGE_COOKIE_DOMAIN = CORGI_DOMAIN
@@ -383,8 +383,12 @@ UMB_BROKER_URL = os.getenv("CORGI_UMB_BROKER_URL")
 # https://docs.python.org/3/distutils/apiref.html#distutils.util.strtobool
 UMB_BREW_MONITOR_ENABLED = strtobool(os.getenv("CORGI_UMB_BREW_MONITOR_ENABLED", "true"))
 
-# Set to True to turn on loading of community products from product-definitions.
 COMMUNITY_MODE_ENABLED = strtobool(os.getenv("CORGI_COMMUNITY_MODE_ENABLED", "false"))
+
+if CORGI_DOMAIN.endswith(".fedoraproject.org"):
+    CORGI_DOMAIN_BASE = ".fedoraproject.org"
+else:
+    CORGI_DOMAIN_BASE = ".prodsec.redhat.com"
 
 # Brew
 BREW_URL = os.getenv("CORGI_BREW_URL")

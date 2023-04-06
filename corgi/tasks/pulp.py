@@ -34,7 +34,7 @@ def fetch_unprocessed_cdn_relations(
     else:
         created_dt = get_last_success_for_task("corgi.tasks.pulp.fetch_unprocessed_cdn_relations")
     return fetch_unprocessed_relations(
-        ProductComponentRelation.Type.CDN_REPO,
+        relation_type=ProductComponentRelation.Type.CDN_REPO,
         force_process=force_process,
         created_since=created_dt,
     )

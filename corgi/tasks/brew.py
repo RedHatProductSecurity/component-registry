@@ -514,11 +514,21 @@ def fetch_modular_builds(relations_query: QuerySet, force_process: bool = False)
 
 
 def fetch_unprocessed_relations(
-    relation_type: ProductComponentRelation.Type,
     created_since: Optional[datetime] = None,
+    product_ref: Optional[str] = "",
+    relation_type: Optional[ProductComponentRelation.Type] = None,
     force_process: bool = False,
 ) -> int:
-    query = Q(type=relation_type)
+    """Load Brew builds for relations which don't have an associated SoftwareBuild.
+    Accepts optional arguments product_ref and relation_type which add query filters"""
+    query = Q()
+    if relation_type:
+        query &= Q(type=relation_type)
+        logger.info(f"Processing relations of type {relation_type}")
+    if product_ref:
+        query &= Q(product_ref=product_ref)
+        logger.info(f"Processing relations with product reference {product_ref}")
+
     if created_since:
         query &= Q(created_at__gte=created_since)
     relations_query = (
@@ -527,7 +537,7 @@ def fetch_unprocessed_relations(
         .distinct()
         .using("read_only")
     )
-    logger.info(f"Processing relations of type {relation_type}")
+
     processed_builds = 0
     for build_id, build_type in relations_query.iterator():
         if not build_id:
@@ -570,7 +580,7 @@ def fetch_unprocessed_brew_tag_relations(
             "corgi.tasks.brew.fetch_unprocessed_brew_tag_relations"
         )
     return fetch_unprocessed_relations(
-        ProductComponentRelation.Type.BREW_TAG,
+        relation_type=ProductComponentRelation.Type.BREW_TAG,
         force_process=force_process,
         created_since=created_dt,
     )

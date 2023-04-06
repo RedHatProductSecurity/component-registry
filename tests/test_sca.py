@@ -74,11 +74,11 @@ go_sources = [
 
 @pytest.mark.parametrize("go_source", go_sources)
 def test_golist_scan_files(go_source):
-    scan_file = Path("Dockerfile")
-    assert not scan_file.is_dir()
-    assert not GoList.scan_files([scan_file])
-    archive = Path(go_source)
-    assert GoList.scan_files([archive])
+    with Path("Dockerfile") as scan_file:
+        assert not scan_file.is_dir()
+        assert not GoList.scan_files([scan_file])
+    with Path(go_source) as archive:
+        assert GoList.scan_files([archive])
 
 
 @pytest.mark.django_db

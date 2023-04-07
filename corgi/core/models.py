@@ -5,6 +5,7 @@ import uuid as uuid
 from abc import abstractmethod
 from typing import Any, Union
 
+from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
@@ -944,8 +945,16 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         UPSTREAM = "UPSTREAM"
         REDHAT = "REDHAT"
 
-    RPM_PACKAGE_BROWSER = "https://access.redhat.com/downloads/content/package-browser"
-    CONTAINER_CATALOG_SEARCH = "https://catalog.redhat.com/software/containers/search"
+    RPM_PACKAGE_BROWSER = (
+        "https://packages.fedoraproject.org/pkgs/rpm/rpm/"
+        if settings.COMMUNITY_MODE_ENABLED
+        else "https://access.redhat.com/downloads/content/package-browser"
+    )
+    CONTAINER_CATALOG_SEARCH = (
+        "https://registry.fedoraproject.org/"
+        if settings.COMMUNITY_MODE_ENABLED
+        else "https://catalog.redhat.com/software/containers/search"
+    )
 
     REMOTE_SOURCE_COMPONENT_TYPES = (
         Type.CARGO,

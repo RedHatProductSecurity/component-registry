@@ -39,6 +39,9 @@ template_extensions = "html, json"
 
 [tool.coverage.report]
 include_namespace_packages = true
+# Default report procision is 0, but --cov-fail-under fails at 69.66% / 70% anyway
+# Make report match to avoid confusion
+precision = 2
 show_missing = true
 skip_covered = true
 skip_empty = true

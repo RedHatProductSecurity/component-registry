@@ -4,7 +4,7 @@ import pytest
 from django.conf import settings
 
 from corgi.collectors.appstream_lifecycle import AppStreamLifeCycleCollector
-from corgi.core.models import Component, ComponentNode
+from corgi.core.models import Component, ComponentNode, SoftwareBuild
 
 from .factories import (
     ChannelFactory,
@@ -26,12 +26,13 @@ def extract_tag_tuples(tags: list[dict]) -> set[tuple]:
     return {(t["name"], t["value"]) for t in tags}
 
 
+@pytest.mark.parametrize("build_type", SoftwareBuild.Type.values)
 # Different DB names which really point to the same DB run in different transactions by default
 # so writes to "default" don't appear in "read_only" without workarounds
 # https://code.djangoproject.com/ticket/23718#comment:6
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
-def test_software_build_details(client, api_path):
-    build = SoftwareBuildFactory(tag__name="t0", tag__value="v0")
+def test_software_build_details(client, api_path, build_type):
+    build = SoftwareBuildFactory(build_type=build_type, tag__name="t0", tag__value="v0")
 
     response = client.get(f"{api_path}/builds/{build.uuid}")
     assert response.status_code == 200

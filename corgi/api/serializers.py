@@ -11,8 +11,7 @@ from django.db.models.manager import Manager
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-from config import utils
-from corgi.api.constants import CORGI_API_VERSION
+from corgi.api.constants import CORGI_API_URL, CORGI_STATIC_URL
 from corgi.core.constants import MODEL_FILTER_NAME_MAPPING
 from corgi.core.models import (
     AppStreamLifeCycle,
@@ -29,14 +28,6 @@ from corgi.core.models import (
 )
 
 logger = logging.getLogger(__name__)
-
-# Generic URL prefix
-if not utils.running_dev():
-    CORGI_API_URL = f"https://{settings.CORGI_DOMAIN}/api/{CORGI_API_VERSION}"
-    CORGI_STATIC_URL = f"https://{settings.CORGI_DOMAIN}{settings.STATIC_URL}"
-else:
-    CORGI_API_URL = f"http://localhost:8008/api/{CORGI_API_VERSION}"
-    CORGI_STATIC_URL = f"http://localhost:8008{settings.STATIC_URL}"
 
 
 def get_component_data_list(component_list: Iterable[str]) -> list[dict[str, str]]:

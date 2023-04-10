@@ -18,8 +18,9 @@ addopts = """
 """
 markers = [
     "django_db",
-    "unit",
     "integration",
+    "performance",
+    "unit",
 ]
 filterwarnings = [
     "error",

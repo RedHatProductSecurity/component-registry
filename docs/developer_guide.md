@@ -134,14 +134,12 @@ tox
 
 This target should be run before making any commits.
 
-Tox accepts additional arguments, for example to select to run just unit tests:
+Tox accepts additional arguments, for example to select to run just performance tests:
 ```bash
-tox -e corgi -- -m "unit"
+tox -e corgi -- -m performance
 ```
 
 Alternatively, you can always run individual tests:
 ```bash
 tox -e corgi -- tests/test_model.py::test_product_model
 ```
-
-Remember to commit and push if there is a newly generated cassette file.

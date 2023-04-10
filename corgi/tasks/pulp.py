@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.conf import settings
@@ -28,7 +30,7 @@ def fetch_unprocessed_cdn_relations(
     force_process: bool = False, days_created_since: int = 0
 ) -> int:
     if days_created_since:
-        created_dt = timezone.now() - timezone.timedelta(days=days_created_since)
+        created_dt = timezone.now() - timedelta(days=days_created_since)
     else:
         created_dt = get_last_success_for_task("corgi.tasks.pulp.fetch_unprocessed_cdn_relations")
     return fetch_unprocessed_relations(

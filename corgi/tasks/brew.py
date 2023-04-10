@@ -1,4 +1,5 @@
 import re
+from datetime import datetime, timedelta
 from typing import Optional
 
 from celery.utils.log import get_task_logger
@@ -514,7 +515,7 @@ def fetch_modular_builds(relations_query: QuerySet, force_process: bool = False)
 
 def fetch_unprocessed_relations(
     relation_type: ProductComponentRelation.Type,
-    created_since: Optional[timezone.datetime] = None,
+    created_since: Optional[datetime] = None,
     force_process: bool = False,
 ) -> int:
     query = Q(type=relation_type)
@@ -563,7 +564,7 @@ def fetch_unprocessed_brew_tag_relations(
     force_process: bool = False, days_created_since: int = 0
 ) -> int:
     if days_created_since:
-        created_dt = timezone.now() - timezone.timedelta(days=days_created_since)
+        created_dt = timezone.now() - timedelta(days=days_created_since)
     else:
         created_dt = get_last_success_for_task(
             "corgi.tasks.brew.fetch_unprocessed_brew_tag_relations"

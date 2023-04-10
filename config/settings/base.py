@@ -2,14 +2,15 @@ import os
 from distutils.util import strtobool
 from pathlib import Path
 
-# noinspection PyPep8Naming
 from config.utils import get_env
+
+# noinspection PyPep8Naming
 from corgi import __version__ as CORGI_VERSION
 
 # Build paths inside the project like this: BASE_DIR / "subdir".
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-OUTPUT_FILES_DIR = os.getenv("CORGI_OUTPUT_FILES_DIR", str(BASE_DIR / "corgi/output_files"))
+OUTPUT_FILES_DIR = os.getenv("CORGI_OUTPUT_FILES_DIR", str(BASE_DIR / "outputfiles"))
 
 # Added
 CA_CERT = os.getenv("REQUESTS_CA_BUNDLE")

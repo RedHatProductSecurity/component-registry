@@ -73,7 +73,7 @@ def test_latest_components_exclude_source_container():
     assert not components.first().name.endswith("-container-source")
 
 
-def test_manifest_backslash():
+def test_stream_manifest_backslash():
     """Test that a tailing backslash in a purl doesn't break rendering"""
 
     stream = ProductStreamFactory()
@@ -85,6 +85,20 @@ def test_manifest_backslash():
 
     try:
         stream.manifest
+    except JSONDecodeError:
+        assert False
+
+
+def test_component_manifest_backslash():
+    """Test that a backslash in a version doesn't break rendering via download_url or related_url"""
+    component = ComponentFactory(
+        version="\\9.0.6.v20130930",
+        type=Component.Type.MAVEN,
+        name="org.eclipse.jetty/jetty-webapp",
+    )
+    assert component.download_url
+    try:
+        component.manifest
     except JSONDecodeError:
         assert False
 

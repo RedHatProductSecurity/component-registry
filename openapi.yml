@@ -24,6 +24,7 @@ paths:
         schema:
           type: string
           enum:
+          - APP_INTERFACE
           - BREW
           - CENTOS
           - KOJI
@@ -1191,6 +1192,7 @@ components:
       - BREW
       - KOJI
       - CENTOS
+      - APP_INTERFACE
       type: string
     Channel:
       type: object

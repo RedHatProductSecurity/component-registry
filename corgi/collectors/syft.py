@@ -53,11 +53,12 @@ class Syft:
                 ],
                 text=True,
             )
-            scan_results.extend(cls.parse_components(scan_result))
+            components, _ = cls.parse_components(scan_result)
+            scan_results.extend(components)
         return scan_results
 
     @classmethod
-    def scan_repo_image(cls, target_image: str) -> list[dict[str, Any]]:
+    def scan_repo_image(cls, target_image: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         """Scan a remote container image
 
         `target_image` can point to a specific tag or a digest, e.g.:
@@ -78,11 +79,13 @@ class Syft:
             ],
             text=True,
         )
-        parsed_components = cls.parse_components(scan_result)
-        return parsed_components
+        parsed_components, source_data = cls.parse_components(scan_result)
+        return parsed_components, source_data
 
     @classmethod
-    def scan_git_repo(cls, target_url: str, target_ref: str = "") -> list[dict[str, Any]]:
+    def scan_git_repo(
+        cls, target_url: str, target_ref: str = ""
+    ) -> tuple[list[dict[str, Any]], str]:
         """Scan a source Git repository.
 
         An optional target ref can be specified that represents a valid committish in the Git
@@ -99,11 +102,16 @@ class Syft:
                     cwd=scan_dir,
                     stderr=subprocess.DEVNULL,
                 )
+                source_ref = target_ref
+            else:
+                source_ref = subprocess.check_output(
+                    ["/usr/bin/git", "rev-parse", "HEAD"], text=True
+                ).strip()  # nosec B603
             scan_results = cls.scan_files(target_files=[Path(scan_dir)])
-        return scan_results
+        return scan_results, source_ref
 
     @classmethod
-    def parse_components(cls, syft_json: str) -> list[dict[str, Any]]:
+    def parse_components(cls, syft_json: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         raw_result = json.loads(syft_json)
         components: list[dict[str, Any]] = []
         syft_version = ""
@@ -134,4 +142,4 @@ class Syft:
                     typed_component["meta"]["go_component_type"] = "gomod"
 
                 components.append(typed_component)
-        return components
+        return components, raw_result["source"]

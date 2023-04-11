@@ -1,7 +1,7 @@
 {# Component manifest, obj is a Component here #}{% extends "base_manifest.json" %}
 {% block packages %}{% for component in obj.provides_queryset %}{
         "copyrightText": {% if component.copyright_text %}"{{component.copyright_text|escapejs}}"{% else %}"NOASSERTION"{% endif %},
-        "downloadLocation": {% if component.download_url %}"{{component.download_url}}"{% else %}"NOASSERTION"{% endif %},
+        "downloadLocation": {% if component.download_url %}"{{component.download_url|escapejs}}"{% else %}"NOASSERTION"{% endif %},
         "externalRefs": [
             {
                 "referenceCategory": "PACKAGE_MANAGER",
@@ -10,7 +10,7 @@
             }
         ],
         "filesAnalyzed": false,
-        "homepage": {% if component.related_url %}"{{component.related_url}}"{% else %}"NOASSERTION"{% endif %},
+        "homepage": {% if component.related_url %}"{{component.related_url|escapejs}}"{% else %}"NOASSERTION"{% endif %},
         "licenseComments": "Licensing information is automatically generated and may be incomplete or incorrect.",
         "licenseConcluded": {% if component.license_concluded %}"{{component.license_concluded}}"{% else %}"NOASSERTION"{% endif %},
         "licenseDeclared": {% if component.license_declared %}"{{component.license_declared}}"{% else %}"NOASSERTION"{% endif %},
@@ -23,7 +23,7 @@
     },{% endfor %}
     {
         "copyrightText": {% if obj.copyright_text %}"{{obj.copyright_text|escapejs}}"{% else %}"NOASSERTION"{% endif %},
-        "downloadLocation": {% if obj.download_url %}"{{obj.download_url}}"{% else %}"NOASSERTION"{% endif %},
+        "downloadLocation": {% if obj.download_url %}"{{obj.download_url|escapejs}}"{% else %}"NOASSERTION"{% endif %},
         "externalRefs": [
             {
                 "referenceCategory": "PACKAGE_MANAGER",
@@ -32,7 +32,7 @@
             }
         ],
         "filesAnalyzed": false,
-        "homepage": {% if obj.related_url %}"{{obj.related_url}}"{% else %}"NOASSERTION"{% endif %},
+        "homepage": {% if obj.related_url %}"{{obj.related_url|escapejs}}"{% else %}"NOASSERTION"{% endif %},
         "licenseComments": "Licensing information is automatically generated and may be incomplete or incorrect.",
         "licenseConcluded": {% if obj.license_concluded %}"{{obj.license_concluded}}"{% else %}"NOASSERTION"{% endif %},
         "licenseDeclared": {% if obj.license_declared %}"{{obj.license_declared}}"{% else %}"NOASSERTION"{% endif %},

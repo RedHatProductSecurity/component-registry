@@ -36,7 +36,7 @@ pytestmark = pytest.mark.unit
 
 def test_parse_components():
     with open("tests/data/crio-syft.json", "r") as crio_test_data:
-        results = Syft.parse_components(crio_test_data.read())
+        results, _ = Syft.parse_components(crio_test_data.read())
     assert len(results) > 0
     names = [r["meta"]["name"] for r in results]
     # When vendor directories are included we get entries like this because of relative replace
@@ -48,7 +48,7 @@ def test_parse_components():
 
 def test_parse_maven_components():
     with open("tests/data/hawkular-metrics-schema-installer-syft.json", "r") as maven_test_data:
-        results = Syft.parse_components(maven_test_data.read())
+        results, _ = Syft.parse_components(maven_test_data.read())
     assert len(results) > 0
     group_ids = [r["meta"].get("group_id") for r in results if r["type"] == Component.Type.MAVEN]
     assert None not in group_ids

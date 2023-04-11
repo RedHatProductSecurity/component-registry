@@ -70,7 +70,7 @@ def test_latest_components_exclude_source_container():
 
     components = stream.get_latest_components()
     assert len(components) == 2
-    assert not components.first().name.endswith("-container-source")
+    assert not components.filter(name__endswith="-container-source").exists()
 
 
 def test_manifest_backslash():

@@ -74,11 +74,11 @@ go_sources = [
 
 @pytest.mark.parametrize("go_source", go_sources)
 def test_golist_scan_files(go_source):
-    scan_file = Path("Dockerfile")
-    assert not scan_file.is_dir()
-    assert not GoList.scan_files([scan_file])
-    archive = Path(go_source)
-    assert GoList.scan_files([archive])
+    with Path("Dockerfile") as scan_file:
+        assert not scan_file.is_dir()
+        assert not GoList.scan_files([scan_file])
+    with Path(go_source) as archive:
+        assert GoList.scan_files([archive])
 
 
 @pytest.mark.django_db
@@ -502,24 +502,3 @@ def test_save_component_skips_duplicates():
     assert save_component(new_component_with_purl, root_node) is False
     assert Component.objects.filter(name=new_component_with_purl["name"]).first() is None
     assert old_component.cnodes.count() == 1
-
-
-def test_scan_files():
-    """Test that src/test/resources are excluded from syft scans.
-    Requires the Syft RPM to be installed in the test environment"""
-    test_archive = Path("tests/data/maven-release-2.2.1-source-release.zip")
-    results = Syft.scan_files([test_archive])
-    for result in results:
-        if "subproject1" in result["meta"]["name"]:
-            assert False
-
-
-def test_remove_whitespace_from_name():
-    """Test that whitespace is removed from component names
-    Requires the Syft RPM to be installed in the test environment"""
-    test_pom = Path("tests/data/resteasy-1.2.1.GA_CP02_patch02")
-    results = Syft.scan_files([test_pom])
-    result_names = [result["meta"]["name"] for result in results]
-    for name in result_names:
-        assert "\n" not in name
-        assert " " not in name

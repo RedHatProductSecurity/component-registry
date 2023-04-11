@@ -1,3 +1,4 @@
+from datetime import timedelta
 from urllib.parse import urlparse
 
 from celery.utils.log import get_task_logger
@@ -30,7 +31,7 @@ def fetch_unprocessed_yum_relations(
     force_process: bool = False, days_created_since: int = 0
 ) -> int:
     if days_created_since:
-        created_dt = timezone.now() - timezone.timedelta(days=days_created_since)
+        created_dt = timezone.now() - timedelta(days=days_created_since)
     else:
         created_dt = get_last_success_for_task("corgi.tasks.yum.fetch_unprocessed_yum_relations")
     return fetch_unprocessed_relations(

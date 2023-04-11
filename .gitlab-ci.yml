@@ -86,7 +86,7 @@ test:
   script:
     - $DNF_WITH_OPTIONS install $RPM_REQUIREMENTS
     - python3.9 -m pip install tox
-    - tox -e corgi -- --cov-report term --junitxml=junit.xml
+    - tox -e corgi -- --cov-fail-under=70 --cov-report xml --junitxml=junit.xml
   except:
     refs:
       - schedules

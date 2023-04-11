@@ -891,4 +891,4 @@ def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, moc
 def test_new_software_build_relation(mock_save_prod_tax):
     sb = SoftwareBuildFactory()
     slow_fetch_brew_build(sb.build_id, sb.build_type)
-    assert mock_save_prod_tax.called
+    mock_save_prod_tax.assert_called_once_with()

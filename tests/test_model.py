@@ -202,12 +202,13 @@ def test_component_provides():
     assert upstream.provides.filter(purl=dev_comp.purl).exists()
 
 
-def test_software_build_model():
+@pytest.mark.parametrize("build_type", SoftwareBuild.Type.values)
+def test_software_build_model(build_type):
     sb1 = SoftwareBuildFactory(
-        build_type=SoftwareBuild.Type.BREW,
+        build_type=build_type,
         meta_attr={"build_id": 9999, "a": 1, "b": 2, "brew_tags": ["RHSA-123-123"]},
     )
-    assert SoftwareBuild.objects.get(build_id=sb1.build_id, build_type=sb1.build_type) == sb1
+    assert SoftwareBuild.objects.get(build_id=sb1.build_id, build_type=build_type) == sb1
     c1 = ComponentFactory(type=Component.Type.RPM, name="curl", software_build=sb1)
     assert Component.objects.get(name="curl") == c1
 

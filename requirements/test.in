@@ -10,7 +10,7 @@ pytest-cov
 pytest-django
 pytest-sugar
 requests-mock
-types-Markdown
 types-redis
 types-requests
+types-setuptools
 types-six

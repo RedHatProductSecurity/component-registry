@@ -64,11 +64,13 @@ class GoList:
     ) -> Generator[dict[str, Any], None, None]:
         """runs subprocess with Popen/poll until the subprocess exits"""
         # Let any exceptions propagate to the celery task
-        process = subprocess.Popen(shlex.split(command), stdout=subprocess.PIPE, cwd=target_path)
-        while True:
-            yield from cls.parse_components(process.stdout)
-            if process.poll() is not None:
-                break
+        with subprocess.Popen(
+            shlex.split(command), stdout=subprocess.PIPE, cwd=target_path
+        ) as process:
+            while True:
+                yield from cls.parse_components(process.stdout)
+                if process.poll() is not None:
+                    break
 
     @classmethod
     def parse_components(

@@ -139,3 +139,6 @@ Makefile
 
 # SonarQube
 .scannerwork/
+
+# Pre-generated manifests
+outputfiles/

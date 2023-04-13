@@ -10,16 +10,25 @@ from django.http import Http404
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
+from mozilla_django_oidc.contrib.drf import OIDCAuthentication
 from mptt.templatetags.mptt_tags import cache_tree_children
 from packageurl import PackageURL
 from rest_framework import filters, status
-from rest_framework.decorators import action, api_view
+from rest_framework.decorators import (
+    action,
+    api_view,
+    authentication_classes,
+    permission_classes,
+)
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet
 
 from config import utils
 from corgi import __version__
+from corgi.core.authentication import RedHatRolePermission
 from corgi.core.models import (
     AppStreamLifeCycle,
     Channel,
@@ -205,6 +214,36 @@ class StatusViewSet(GenericViewSet):
                 },
             }
         )
+
+
+@api_view(["GET"])
+@authentication_classes([OIDCAuthentication])
+@permission_classes([IsAuthenticated])
+def authentication_status(request: Request) -> Response:
+    """
+    View to determine whether you are currently authenticated and, if so, as whom.
+    """
+    content = {
+        "oidc_enabled": str(settings.OIDC_AUTH_ENABLED),
+        "user": str(request.user),
+        "auth": str(request.auth),
+    }
+    return Response(content)
+
+
+class ControlledAccessTestView(APIView):
+    """
+    View to determine whether you are authenticated with an account that has a specific
+    role.
+    """
+
+    authentication_classes = [OIDCAuthentication]
+    permission_classes = [RedHatRolePermission]
+    roles_permitted = ["prodsec-dev"]
+
+    def get(self, request, format=None):
+        content = {"user": str(request.user)}
+        return Response(content)
 
 
 # A dict with string keys and string or tuple values

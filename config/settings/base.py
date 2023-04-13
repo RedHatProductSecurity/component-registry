@@ -165,6 +165,7 @@ INSTALLED_APPS = [
     "mptt",
     "rest_framework",
     "django_filters",
+    "mozilla_django_oidc",
     "corgi.api",
     "corgi.core",
     "corgi.collectors",
@@ -184,6 +185,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django.middleware.gzip.GZipMiddleware",
     "csp.middleware.CSPMiddleware",
+    "mozilla_django_oidc.middleware.SessionRefresh",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -249,6 +251,7 @@ LOGGING = {
         "django": {"handlers": ["console"], "level": "WARNING"},
         # Mail errors only, but set level=WARNING here to pass warnings up to parent loggers
         "django.request": {"handlers": ["mail_admins"], "level": "WARNING"},
+        "mozilla_django_oidc": {"handlers": ["console"], "level": "WARNING", "propagate": False},
         "corgi": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }
@@ -353,6 +356,7 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         # "rest_framework.authentication.BasicAuthentication",
         # "rest_framework.authentication.SessionAuthentication",
+        # OIDC Authentication only on a per-view basis
     ),
     "DEFAULT_PERMISSION_CLASSES": [
         # "rest_framework.permissions.IsAuthenticated",
@@ -366,6 +370,18 @@ REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "EXCEPTION_HANDLER": "corgi.api.exception_handlers.exception_handler",
 }
+
+
+# OIDC Authentication
+# https://mozilla-django-oidc.readthedocs.io/
+OIDC_AUTH_ENABLED = strtobool(os.getenv("CORGI_OIDC_AUTH_ENABLED", "false"))
+OIDC_OP_JWKS_ENDPOINT = os.getenv("CORGI_OIDC_OP_JWKS_ENDPOINT", "")
+OIDC_OP_AUTHORIZATION_ENDPOINT = os.getenv("CORGI_OIDC_OP_AUTHORIZATION_ENDPOINT", "")
+OIDC_OP_TOKEN_ENDPOINT = os.getenv("CORGI_OIDC_OP_TOKEN_ENDPOINT", "")
+OIDC_OP_USER_ENDPOINT = os.getenv("CORGI_OIDC_OP_USER_ENDPOINT", "")
+OIDC_RP_CLIENT_ID = os.getenv("CORGI_OIDC_RP_CLIENT_ID", "")
+OIDC_RP_CLIENT_SECRET = os.getenv("CORGI_OIDC_RP_CLIENT_SECRET", "")
+OIDC_DRF_AUTH_BACKEND = "corgi.core.authentication.CorgiOIDCBackend"
 
 
 # UMB -- Unified Message Bus

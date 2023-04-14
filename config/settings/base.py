@@ -251,7 +251,7 @@ LOGGING = {
         "django": {"handlers": ["console"], "level": "WARNING"},
         # Mail errors only, but set level=WARNING here to pass warnings up to parent loggers
         "django.request": {"handlers": ["mail_admins"], "level": "WARNING"},
-        "mozilla_django_oidc": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+        "mozilla_django_oidc": {"handlers": ["mail_admins"], "level": "WARNING"},
         "corgi": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }

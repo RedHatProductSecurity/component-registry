@@ -1918,7 +1918,7 @@ class AppStreamLifeCycle(TimeStampedModel):
         )
 
 
-class RedHatUser(models.Model):
+class RedHatProfile(models.Model):
     """Additional information provided by Red Hat SSO, used for access controls"""
 
     rhat_uuid = models.UUIDField(primary_key=True, default=uuid.uuid4)
@@ -1926,7 +1926,7 @@ class RedHatUser(models.Model):
     rhat_roles = models.TextField(default="")
     # Storing CN instead of trying to split it into Django's given/first/family/last
     # bc https://www.kalzumeus.com/2010/06/17/falsehoods-programmers-believe-about-names/
-    cn = models.CharField(max_length=256, default="")
+    full_name = models.CharField(max_length=256, default="")
 
     def __str__(self) -> str:
-        return f"{self.cn} <{self.user.email}>"
+        return f"{self.full_name} <{self.user.email}>"

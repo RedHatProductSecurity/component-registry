@@ -2,15 +2,15 @@
 django_debug_mode = true
 testpaths = "tests"
 # Options used for every pytest command:
-# - Run tests marked with the "unit" marker (run "integration" tests with `-m integration`)
-# - Generate coverage report for the "corgi/" directory in the terminal
+# - Run tests marked with the "unit" marker (run performance tests with `-m performance`)
+# - Generate branch coverage report for the "corgi/" directory in the terminal
 # - Show extra test summary info ("a" == (a)ll)
 # - Report on the ten slowest tests
 # - Skip applying migrations to save on DB-setup time
 # - Ensure pytest config here is valid, and all defined markers are specified below in `markers`
 addopts = """
 -m unit
---cov corgi --cov-report html --cov-report xml:coverage.xml --cov-config=.coveragerc
+--cov corgi --cov-branch --cov-report term-missing:skip-covered
 -ra
 --durations=10
 --nomigrations
@@ -23,21 +23,29 @@ markers = [
     "unit",
 ]
 filterwarnings = [
+    # make warnings into errors that fail tests
     "error",
-    "ignore::UserWarning",
-    "ignore::DeprecationWarning",
-    "ignore::PendingDeprecationWarning",
 ]
 
 [tool.black]
 line-length = 100
 
 [tool.coverage.run]
-omit = ["corgi/**/migrations/*"]
+omit = ["corgi/**/migrations/*", "corgi/web/static/*.json", "corgi/web/templates/*.html"]
 plugins = ["django_coverage_plugin"]
 
 [tool.coverage.django_coverage_plugin]
 template_extensions = "html, json"
+
+[tool.coverage.report]
+include_namespace_packages = true
+# Default report procision is 0, but --cov-fail-under fails at 69.66% / 70% anyway
+# Make report match to avoid confusion
+precision = 2
+show_missing = true
+skip_covered = true
+skip_empty = true
+sort = "Cover"
 
 [tool.isort]
 profile = "black"

@@ -46,4 +46,4 @@ def cpu_update_ps_manifest(product_stream: str):
     retry_kwargs=RETRY_KWARGS,
 )
 def collect_static():
-    call_command("collectstatic", verbosity=0, interactive=False, ignore_patterns=[".gitignore"])
+    call_command("collectstatic", verbosity=1, interactive=False)

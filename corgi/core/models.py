@@ -263,6 +263,7 @@ class SoftwareBuild(TimeStampedModel):
         BREW = "BREW"  # Red Hat Brew build system
         KOJI = "KOJI"  # Fedora's Koji build system, the upstream equivalent of Red Hat's Brew
         CENTOS = "CENTOS"  # Used by OpenStack RDO
+        APP_INTERFACE = "APP_INTERFACE"  # Managed Services
 
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     build_id = models.CharField(max_length=200, default="")
@@ -539,7 +540,6 @@ class ProductTag(Tag):
 
 
 class ProductVersion(ProductModel):
-
     products = models.ForeignKey(
         "Product", on_delete=models.CASCADE, related_name="productversions"
     )
@@ -578,7 +578,6 @@ class ProductVersionTag(Tag):
 
 
 class ProductStream(ProductModel):
-
     cpe = models.CharField(max_length=1000, default="")
 
     # NOTE brew_tags and yum_repositories values shouldn't be exposed outside of Red Hat
@@ -822,10 +821,11 @@ class ProductComponentRelation(TimeStampedModel):
         BREW_TAG = "BREW_TAG"
         CDN_REPO = "CDN_REPO"
         YUM_REPO = "YUM_REPO"
+        APP_INTERFACE = "APP_INTERFACE"
 
     # Below not defined in constants to avoid circular imports
     # ProductComponentRelation types which refer to ProductStreams
-    STREAM_TYPES = (Type.BREW_TAG, Type.COMPOSE, Type.YUM_REPO)
+    STREAM_TYPES = (Type.BREW_TAG, Type.COMPOSE, Type.YUM_REPO, Type.APP_INTERFACE)
 
     # ProductComponentRelation types which refer to ProductVariants
     VARIANT_TYPES = (Type.CDN_REPO, Type.ERRATA)

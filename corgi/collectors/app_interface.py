@@ -11,7 +11,9 @@ logger = logging.getLogger(__name__)
 
 class AppInterface:
     @classmethod
-    def fetch_service_metadata(cls) -> dict[ProductStream, list[dict]]:
+    def fetch_service_metadata(
+        cls, services: list[ProductStream]
+    ) -> dict[ProductStream, list[dict]]:
         repo_query = """
         {
             apps_v1 {
@@ -38,10 +40,6 @@ class AppInterface:
             }
         }
         """
-        # TODO: move this query to the periodic Celery task that will initial a refresh of
-        #  manifests for all ProductStreams, fetch the manifests using Syft, and store them.
-        services = ProductStream.objects.filter(meta_attr__managed_service_components__isnull=False)
-
         response = requests.post(
             f"{settings.APP_INTERFACE_URL}/graphql",
             json={"query": repo_query},

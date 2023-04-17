@@ -518,6 +518,7 @@ def fetch_unprocessed_relations(
     product_ref: Optional[str] = "",
     relation_type: Optional[ProductComponentRelation.Type] = None,
     force_process: bool = False,
+    save_only: bool = False,
 ) -> int:
     """Load Brew builds for relations which don't have an associated SoftwareBuild.
     Accepts optional arguments product_ref and relation_type which add query filters"""
@@ -544,7 +545,8 @@ def fetch_unprocessed_relations(
             # build_id defaults to "" and int() will fail in this case
             continue
         if (
-            not SoftwareBuild.objects.filter(build_id=build_id, build_type=build_type)
+            save_only
+            or not SoftwareBuild.objects.filter(build_id=build_id, build_type=build_type)
             .using("read_only")
             .exists()
         ):

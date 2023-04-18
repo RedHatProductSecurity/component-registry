@@ -35,7 +35,7 @@ def fetch_unprocessed_yum_relations(
     else:
         created_dt = get_last_success_for_task("corgi.tasks.yum.fetch_unprocessed_yum_relations")
     return fetch_unprocessed_relations(
-        ProductComponentRelation.Type.YUM_REPO,
+        relation_type=ProductComponentRelation.Type.YUM_REPO,
         force_process=force_process,
         created_since=created_dt,
     )

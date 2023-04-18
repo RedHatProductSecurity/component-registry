@@ -130,8 +130,11 @@ def update_products() -> None:
                             "obj": product_stream,
                         },
                     )
-
-                    if len(brew_tags) > 0:
+                    # quay-3 Errata Tool product version Quay-3-RHEL-8 list too many brew tags
+                    # Linking quay streams to the 8Base-Quay-3 variant here via brew tags leads
+                    # to builds from later streams being included in earlier ones,
+                    # see PROJQUAY-5312.
+                    if len(brew_tags) > 0 and product_version.name != "quay-3":
                         logger.debug(
                             "Found brew tags (%s) in product stream: %s",
                             brew_tags,

@@ -9,8 +9,14 @@ from django.db import IntegrityError
 from yaml import safe_load
 
 from corgi.collectors.brew import Brew, BrewBuildTypeNotSupported
-from corgi.core.models import Component, ComponentNode, SoftwareBuild
+from corgi.core.models import (
+    Component,
+    ComponentNode,
+    ProductComponentRelation,
+    SoftwareBuild,
+)
 from corgi.tasks.brew import (
+    fetch_unprocessed_relations,
     find_package_file_name,
     save_component,
     slow_fetch_brew_build,
@@ -25,6 +31,7 @@ from tests.data.image_archive_data import (
 )
 from tests.factories import (
     ContainerImageComponentFactory,
+    ProductComponentRelationFactory,
     SoftwareBuildFactory,
     SrpmComponentFactory,
 )
@@ -892,3 +899,62 @@ def test_new_software_build_relation(mock_save_prod_tax):
     sb = SoftwareBuildFactory()
     slow_fetch_brew_build(sb.build_id, sb.build_type)
     mock_save_prod_tax.assert_called_once_with()
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+@patch("corgi.tasks.brew.slow_fetch_modular_build.delay")
+@patch("corgi.tasks.brew.slow_fetch_brew_build.delay")
+def test_load_unprocessed_relations(mock_fetch_brew_task, mock_fetch_modular_task):
+    # We don't attempt to fetch non brew builds
+    relation = ProductComponentRelationFactory()
+    assert not relation.build_id
+    assert not fetch_unprocessed_relations()
+
+    # We call the correct task based on the build_type
+    ProductComponentRelationFactory(
+        build_type=SoftwareBuild.Type.CENTOS,
+        build_id=1,
+        type=ProductComponentRelation.Type.BREW_TAG,
+    )
+    no_processed = fetch_unprocessed_relations()
+    assert no_processed == 1
+    mock_fetch_brew_task.assert_called_once()
+
+    # If the build already exists we don't try to fetch it
+    SoftwareBuildFactory(build_type=SoftwareBuild.Type.CENTOS, build_id=1)
+    assert not fetch_unprocessed_relations()
+
+    # test fetch by relation_type
+    ProductComponentRelationFactory(
+        build_type=SoftwareBuild.Type.BREW, build_id=2, type=ProductComponentRelation.Type.COMPOSE
+    )
+    assert fetch_unprocessed_relations(relation_type=ProductComponentRelation.Type.COMPOSE) == 1
+    mock_fetch_modular_task.assert_called_once()
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+@patch("corgi.tasks.brew.slow_fetch_modular_build.delay")
+def test_load_unprocessed_relations_filters(mock_fetch_modular_task):
+    ProductComponentRelationFactory(
+        type=ProductComponentRelation.Type.BREW_TAG,
+        build_type=SoftwareBuild.Type.BREW,
+        build_id=1,
+        product_ref="a",
+    )
+    ProductComponentRelationFactory(
+        type=ProductComponentRelation.Type.COMPOSE,
+        build_type=SoftwareBuild.Type.BREW,
+        build_id=2,
+        product_ref="b",
+    )
+
+    assert fetch_unprocessed_relations(relation_type=ProductComponentRelation.Type.BREW_TAG) == 1
+    assert mock_fetch_modular_task.called_with(1)
+    assert fetch_unprocessed_relations(product_ref="a") == 1
+    assert mock_fetch_modular_task.called_with(2)
+    assert (
+        fetch_unprocessed_relations(
+            product_ref="a", relation_type=ProductComponentRelation.Type.COMPOSE
+        )
+        == 0
+    )

@@ -21,7 +21,27 @@
         "SPDXID": "SPDXRef-{{component.uuid}}",
         "supplier": "Organization: Red Hat",
         "versionInfo": "{{component.nevra|escapejs}}"
-    },{% endfor %}{% for provided in distinct_provides %}
+    },{% if component.type != component.Type.RPM %}{% for upstream in component.upstreams.get_queryset.iterator %}{# RPM upstream data is human-generated and unreliable #}{
+        "copyrightText": {% if upstream.copyright_text %}"{{upstream.copyright_text|escapejs}}"{% else %}"NOASSERTION"{% endif %},
+        "downloadLocation": {% if upstream.download_url %}"{{upstream.download_url|escapejs}}"{% else %}"NOASSERTION"{% endif %},
+        "externalRefs": [
+            {
+                "referenceCategory": "PACKAGE_MANAGER",
+                "referenceLocator": "{{upstream.purl|safe}}",
+                "referenceType": "purl"
+            }
+        ],
+        "filesAnalyzed": false,
+        "homepage": {% if upstream.related_url and upstream.type != upstream.Type.RPM %}"{{upstream.related_url|escapejs}}"{% else %}"NOASSERTION"{% endif %},
+        "licenseComments": "Licensing information is automatically generated and may be incomplete or incorrect.",
+        "licenseConcluded": {% if upstream.license_concluded %}"{{upstream.license_concluded}}"{% else %}"NOASSERTION"{% endif %},
+        "licenseDeclared": {% if upstream.license_declared %}"{{upstream.license_declared}}"{% else %}"NOASSERTION"{% endif %},
+        "name": "{{upstream.name|escapejs}}",
+        "packageFileName": {% if upstream.filename %}"{{upstream.filename}}"{% else %}"NOASSERTION"{% endif %},
+        "SPDXID": "SPDXRef-{{upstream.uuid}}",
+        "supplier": "NOASSERTION",
+        "versionInfo": "{{upstream.nevra|escapejs}}"
+    },{% endfor %}{% endif %}{% endfor %}{% for provided in distinct_provides %}
     {
         "copyrightText": {% if provided.copyright_text %}"{{provided.copyright_text|escapejs}}"{% else %}"NOASSERTION"{% endif %},
         "downloadLocation": {% if provided.download_url %}"{{provided.download_url|escapejs}}"{% else %}"NOASSERTION"{% endif %},
@@ -75,7 +95,12 @@
           "relatedSpdxElement": "SPDXRef-{{component.uuid}}",{# subcomponent is built from, or contained in, component #}
           "relationshipType": {% if node_type == "PROVIDES_DEV" %}"DEV_DEPENDENCY_OF"{% else %}"CONTAINED_BY"{% endif %},
           "spdxElementId": "SPDXRef-{{node_id}}"
-        },{% endfor %}
+        },{% endfor %}{% if component.type != component.Type.RPM %}{% for node_id in component.get_upstreams_pks %}{# RPM upstream data is human-generated and unreliable #}
+        {{# Upstreams of the root index container. Arch-specific containers have the same upstreams, so no need to report these separately #}
+          "relatedSpdxElement": "SPDXRef-{{component.uuid}}",
+          "relationshipType": "ANCESTOR_OF",
+          "spdxElementId": "SPDXRef-{{node_id}}"
+        },{% endfor %}{% endif %}
         {
           "relatedSpdxElement": "SPDXRef-{{obj.uuid}}",
           "relationshipType": "PACKAGE_OF",

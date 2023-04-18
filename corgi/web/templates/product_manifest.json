@@ -61,7 +61,7 @@
         ],
         "filesAnalyzed": false,
         "homepage": {% if obj.lifecycle_url %}"{{obj.lifecycle_url}}"{% else %}"https://www.redhat.com/"{% endif %},
-        "licenseComments": "Red Hat cannot providing licensing information for products in our manifests at this time.",
+        "licenseComments": "Licensing information is provided for individual components only at this time.",
         "licenseConcluded": "NOASSERTION",
         "licenseDeclared": "NOASSERTION",
         "name": "{{obj.name|escapejs}}",

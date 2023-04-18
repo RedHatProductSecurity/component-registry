@@ -920,11 +920,23 @@ def get_product_details(variant_names: tuple[str], stream_names: list[str]) -> d
 
 
 class ComponentQuerySet(models.QuerySet):
-    def srpms(self) -> models.QuerySet["Component"]:
-        return self.filter(SRPM_CONDITION)
+    """Helper methods to filter QuerySets of Components"""
 
-    def root_components(self) -> models.QuerySet["Component"]:
-        return self.filter(ROOT_COMPONENTS_CONDITION)
+    def root_components(self, include: bool = True) -> models.QuerySet["Component"]:
+        """Show only root components by default, or only non-root components if include=False"""
+        if include:
+            # Truthy values return the filtered queryset (only root components)
+            return self.filter(ROOT_COMPONENTS_CONDITION)
+        # Falsey values return the excluded queryset (only non-root components)
+        return self.exclude(ROOT_COMPONENTS_CONDITION)
+
+    def srpms(self, include: bool = True) -> models.QuerySet["Component"]:
+        """Show only source RPMs by default, or only non-SRPMs if include=False"""
+        if include:
+            # Truthy values return the filtered queryset (only SRPM components)
+            return self.filter(SRPM_CONDITION)
+        # Falsey values return the excluded queryset (only non-SRPM components)
+        return self.exclude(SRPM_CONDITION)
 
 
 class Component(TimeStampedModel, ProductTaxonomyMixin):

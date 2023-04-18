@@ -181,6 +181,28 @@ def test_component_detail(client, api_path):
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_root_components_filter(client, api_path):
+    ComponentFactory(name="srpm", type="RPM", arch="src")
+    ComponentFactory(name="binary_rpm", type="RPM", arch="x86_64")
+
+    response = client.get(f"{api_path}/components")
+    assert response.status_code == 200
+    assert response.json()["count"] == 2
+
+    response = client.get(f"{api_path}/components?root_components=True")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 1
+    assert response["results"][0]["name"] == "srpm"
+
+    response = client.get(f"{api_path}/components?root_components=False")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 1
+    assert response["results"][0]["name"] == "binary_rpm"
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_component_detail_unscanned_filter(client, api_path):
     ComponentFactory(name="copyright", copyright_text="test")
     ComponentFactory(name="license", license_concluded_raw="test")

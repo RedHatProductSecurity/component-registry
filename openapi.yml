@@ -378,6 +378,11 @@ paths:
         name: release
         schema:
           type: string
+      - in: query
+        name: root_components
+        schema:
+          type: boolean
+        description: Show only root components (source RPMs, index container images)
       - name: search
         required: false
         in: query

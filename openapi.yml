@@ -379,6 +379,11 @@ paths:
         schema:
           type: string
       - in: query
+        name: released_components
+        schema:
+          type: boolean
+        description: Show only released components
+      - in: query
         name: root_components
         schema:
           type: boolean

@@ -922,6 +922,18 @@ def get_product_details(variant_names: tuple[str], stream_names: list[str]) -> d
 class ComponentQuerySet(models.QuerySet):
     """Helper methods to filter QuerySets of Components"""
 
+    def released_components(self, include: bool = True) -> models.QuerySet["Component"]:
+        """Show only released components by default, or unreleased components if include=False"""
+        # TODO: I could make below into separate ArrayFields on the SoftwareBuild model
+        #  like brew_tags and released_errata, but this is all Brew-specific
+        #  it doesn't make sense for other build systems
+        empty_released_errata = Q(software_build__meta_attr__released_errata_tags=())
+        if include:
+            # Truthy values return the excluded queryset (only released components)
+            return self.exclude(empty_released_errata)
+        # Falsey values return the filtered queryset (only unreleased components)
+        return self.filter(empty_released_errata)
+
     def root_components(self, include: bool = True) -> models.QuerySet["Component"]:
         """Show only root components by default, or only non-root components if include=False"""
         if include:

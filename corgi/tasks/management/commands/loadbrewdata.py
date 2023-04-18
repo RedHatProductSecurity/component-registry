@@ -49,6 +49,13 @@ class Command(BaseCommand):
             action="store_true",
             help="Force ingestion even if build exists",
         )
+        parser.add_argument(
+            "-t",
+            "--skip-taxonomy",
+            # Default to true if not present
+            action="store_false",
+            help="Skip saving taxonomy when reprocessing builds",
+        )
 
     def handle(self, *args, **options) -> None:
         if options["build_ids"]:
@@ -93,6 +100,16 @@ class Command(BaseCommand):
             if options["centos"]:
                 build_type = SoftwareBuild.Type.CENTOS
             if options["inline"]:
-                slow_fetch_brew_build(build_id, build_type, force_process=options["force"])
+                slow_fetch_brew_build(
+                    build_id,
+                    build_type,
+                    force_process=options["force"],
+                    save_product=options["skip-taxonomy"],
+                )
             else:
-                slow_fetch_brew_build.delay(build_id, build_type, force_process=options["force"])
+                slow_fetch_brew_build.delay(
+                    build_id,
+                    build_type,
+                    force_process=options["force"],
+                    save_product=options["skip-taxonomy"],
+                )

@@ -44,6 +44,7 @@ def cpu_update_ps_manifest(product_stream: str):
     base=Singleton,
     autoretry_for=RETRYABLE_ERRORS,
     retry_kwargs=RETRY_KWARGS,
+    soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
 )
 def collect_static():
     call_command("collectstatic", verbosity=1, interactive=False)

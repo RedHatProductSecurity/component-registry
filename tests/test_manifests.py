@@ -194,9 +194,8 @@ def test_product_manifest_properties():
 
     assert product_data["SPDXID"] == f"SPDXRef-{stream.uuid}"
     assert product_data["name"] == stream.name
-    if stream.cpes:
-        assert product_data["externalRefs"][0]["referenceLocator"] == stream.cpes[0]
-    assert product_data["externalRefs"][-1]["referenceLocator"] == f"cpe:/{stream.ofuri}"
+    for index, cpe in enumerate(stream.cpes):
+        assert product_data["externalRefs"][index]["referenceLocator"] == cpe
 
     document_describes_product = {
         "relatedSpdxElement": f"SPDXRef-{stream.uuid}",

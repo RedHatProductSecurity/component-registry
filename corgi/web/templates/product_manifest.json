@@ -46,19 +46,14 @@
     },{% endfor %}
     {
         "copyrightText": "NOASSERTION",
-        "downloadLocation": "NOASSERTION",
+        "downloadLocation": "NOASSERTION",{% if obj.cpes %}
         "externalRefs": [{% for cpe in obj.cpes %}
             {
                 "referenceCategory": "SECURITY",
                 "referenceLocator": "{{cpe}}",
                 "referenceType": "cpe22Type"
-            },{% endfor %}
-            {{# We report ofuri since it can be used to link and compare two manifests for the same product, like CPE #}
-                "referenceCategory": "SECURITY",
-                "referenceLocator": "cpe:/{{obj.ofuri}}",
-                "referenceType": "cpe22Type"
-            }
-        ],
+            }{% if not forloop.last %},{% endif %}{% endfor %}
+        ],{% endif %}
         "filesAnalyzed": false,
         "homepage": {% if obj.lifecycle_url %}"{{obj.lifecycle_url}}"{% else %}"https://www.redhat.com/"{% endif %},
         "licenseComments": "Licensing information is provided for individual components only at this time.",

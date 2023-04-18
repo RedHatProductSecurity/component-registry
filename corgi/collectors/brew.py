@@ -19,7 +19,7 @@ from corgi.core.models import Component, SoftwareBuild
 
 logger = logging.getLogger(__name__)
 
-ADVISORY_REGEX = re.compile(r"RH\wA-[12]\d{3}:\d{4,6}")
+ADVISORY_REGEX = re.compile(r"RH[BES]A-[12]\d{3}:\d{4,6}")
 
 
 class BrewBuildTypeNotFound(Exception):
@@ -730,7 +730,8 @@ class Brew:
         return component
 
     @classmethod
-    def _extract_advisory_ids(cls, build_tags: list) -> list:
+    def _extract_advisory_ids(cls, build_tags: list[str]) -> list[str]:
+        """From a Brew build's list of tags, return any errata IDs with -released stripped"""
         advisory_ids = set()
         for tag in build_tags:
             match = ADVISORY_REGEX.match(tag)

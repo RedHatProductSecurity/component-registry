@@ -3,7 +3,7 @@ import logging
 import re
 import uuid as uuid
 from abc import abstractmethod
-from typing import Any, Union
+from typing import Any, Iterator, Union
 
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
@@ -991,7 +991,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     # sources is the inverse of provides. One container can provide many RPMs
     # and one RPM can have many different containers as a source (as well as modules and SRPMs)
     sources = models.ManyToManyField("Component", related_name="provides")
-    provides: models.ManyToManyField
+    provides: models.Manager["Component"]
 
     # Specify related_query_name to add e.g. component field
     # that can be used to filter from a cnode to its related component
@@ -1399,7 +1399,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         self.sources.set(self.get_sources_nodes(using="default"))
 
     @property
-    def provides_queryset(self, using: str = "read_only") -> QuerySet["Component"]:
+    def provides_queryset(self, using: str = "read_only") -> Iterator["Component"]:
         """Return the "provides" queryset using the read-only DB, for use in templates"""
         return self.provides.get_queryset().using(using).iterator()
 

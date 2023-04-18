@@ -105,6 +105,7 @@ class ComponentFilter(FilterSet):
         qs: QuerySet[Component], _name: str, value: bool
     ) -> QuerySet[Component]:
         """Show only GOLANG components that are Go modules, and hide Go packages"""
+        # TODO: Probably should be added to ComponentQuerySet instead of here
         if value in EMPTY_VALUES:
             # User gave an empty ?param= so return the unfiltered queryset
             return qs

@@ -104,12 +104,12 @@ class Command(BaseCommand):
                     build_id,
                     build_type,
                     force_process=options["force"],
-                    save_product=options["skip-taxonomy"],
+                    save_product=options["skip_taxonomy"],
                 )
             else:
                 slow_fetch_brew_build.delay(
                     build_id,
                     build_type,
                     force_process=options["force"],
-                    save_product=options["skip-taxonomy"],
+                    save_product=options["skip_taxonomy"],
                 )

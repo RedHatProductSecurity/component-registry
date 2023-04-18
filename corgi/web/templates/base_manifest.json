@@ -11,7 +11,7 @@
     "documentDescribes": [
         "SPDXRef-{{obj.uuid}}"
     ],
-    "documentNamespace": "https://access.redhat.com/security/data/manifest/spdx/{{obj.name|escapejs}}-{{obj.uuid}}",
+    "documentNamespace": "https://access.redhat.com/security/data/sbom/beta/spdx/{{obj.name|escapejs}}-{{obj.uuid}}",
     "name": "{{obj.name|escapejs}}",
     "packages": [
       {% block packages %}{% endblock %}

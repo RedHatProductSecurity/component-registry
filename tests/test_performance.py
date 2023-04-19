@@ -1,4 +1,5 @@
 import timeit
+from json import JSONDecodeError
 from urllib.parse import quote_plus
 
 import pytest
@@ -67,6 +68,7 @@ def display_manifest_with_many_components() -> dict:
     return response_json
 
 
+@pytest.mark.xfail(raises=JSONDecodeError, reason="CORGI-587 truncates generated files")
 def test_displaying_pregenerated_manifest() -> None:
     """Test that displaying a pre-generated stream manifest with many components is not slow"""
     # Slow manifests and web pod restarts (OoM) were fixed

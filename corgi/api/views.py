@@ -216,6 +216,19 @@ class StatusViewSet(GenericViewSet):
         )
 
 
+@extend_schema(
+    request=None,
+    responses={
+        200: {
+            "type": "object",
+            "properties": {
+                "oidc_enabled": {"type": "string"},
+                "user": {"type": "string"},
+                "auth": {"type": "string"},
+            },
+        }
+    },
+)
 @api_view(["GET"])
 @authentication_classes([OIDCAuthentication])
 @permission_classes([IsAuthenticated])
@@ -241,6 +254,17 @@ class ControlledAccessTestView(APIView):
     permission_classes = [RedHatRolePermission]
     roles_permitted = ["prodsec-dev"]
 
+    @extend_schema(
+        request=None,
+        responses={
+            200: {
+                "type": "object",
+                "properties": {
+                    "user": {"type": "string"},
+                },
+            }
+        },
+    )
     def get(self, request, format=None):
         content = {"user": str(request.user)}
         return Response(content)

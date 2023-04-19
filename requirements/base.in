@@ -25,3 +25,4 @@ requests-gssapi
 splitstream
 version_utils
 whitenoise
+mozilla-django-oidc

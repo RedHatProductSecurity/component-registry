@@ -19,7 +19,7 @@ from corgi.core.models import Component, SoftwareBuild
 
 logger = logging.getLogger(__name__)
 
-ADVISORY_REGEX = re.compile(r"RH[BES]A-[12]\d{3}:\d{4,6}")
+ADVISORY_REGEX = re.compile(r"RH[BES]A-[12]\d{3}:\d{4,}")
 
 
 class BrewBuildTypeNotFound(Exception):
@@ -737,7 +737,18 @@ class Brew:
             match = ADVISORY_REGEX.match(tag)
             if match:
                 advisory_ids.add(match.group())
-        return list(advisory_ids)
+        return sorted(advisory_ids)
+
+    @staticmethod
+    def _parse_advisory_ids(errata_tags: list[str]) -> list[str]:
+        """From a Brew build's list of Errata tags, return tags with released (4-digit) IDs"""
+        # released errata always have 4-digit IDs, e.g. RHBA-2023:1234
+        # unreleased errata have 5-digit IDs or greater
+        # e.g. RHEA-2023:12345 or RHSA-2023:123456
+        # tags in Brew also have a -released, -dropped, or -pending suffix
+        # but our ADVISORY_REGEX strips this to get just the friendly advisory name
+
+        return [errata_tag for errata_tag in errata_tags if len(errata_tag.split(":")[-1]) == 4]
 
     @staticmethod
     def get_module_build_data(build_info: dict) -> dict:
@@ -843,6 +854,7 @@ class Brew:
         tags = self.koji_session.listTags(build_id)
         build["tags"] = [tag["name"] for tag in tags]
         build["errata_tags"] = self._extract_advisory_ids(build["tags"])
+        build["released_errata_tags"] = self._parse_advisory_ids(build["errata_tags"])
 
         # TODO: handle wrapper RPM builds:
         # brew buildID=1839210

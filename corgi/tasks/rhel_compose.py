@@ -44,6 +44,7 @@ def save_compose(stream_name) -> None:
                 compose_id,
                 stream_name,
                 ProductComponentRelation.Type.COMPOSE,
+                slow_fetch_modular_build,
             )
     logger.info("Created %s new relations for stream %s", no_of_relations, stream_name)
 

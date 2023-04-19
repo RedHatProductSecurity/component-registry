@@ -8,7 +8,7 @@ from django.utils import timezone
 from config.celery import app
 from corgi.collectors.pulp import Pulp
 from corgi.core.models import Channel, ProductComponentRelation, SoftwareBuild
-from corgi.tasks.brew import fetch_unprocessed_relations
+from corgi.tasks.brew import fetch_unprocessed_relations, slow_fetch_modular_build
 from corgi.tasks.common import (
     RETRY_KWARGS,
     RETRYABLE_ERRORS,
@@ -63,6 +63,7 @@ def slow_setup_pulp_rpm_relations(channel, variant):
         channel,
         variant,
         ProductComponentRelation.Type.CDN_REPO,
+        slow_fetch_modular_build,
     )
     if no_of_relations > 0:
         logger.info("Created %s new relations for SRPMs in %s", no_of_relations, channel)
@@ -77,6 +78,7 @@ def slow_setup_pulp_module_relations(channel, variant):
         channel,
         variant,
         ProductComponentRelation.Type.CDN_REPO,
+        slow_fetch_modular_build,
     )
     if no_of_relations > 0:
         logger.info("Created %s new relations for rhel_modules in %s", no_of_relations, channel)

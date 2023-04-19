@@ -495,15 +495,22 @@ def load_brew_tags() -> None:
     for ps in ProductStream.objects.get_queryset():
         build_type = BUILD_TYPE
         brew = Brew(BUILD_TYPE)
+        refresh_task = slow_fetch_modular_build
         # This should really be a property in Product Definitions
         if settings.COMMUNITY_MODE_ENABLED and ps.name == "openstack-rdo":
             brew = Brew(SoftwareBuild.Type.CENTOS)
             build_type = SoftwareBuild.Type.CENTOS
+            refresh_task = slow_fetch_brew_build
         for brew_tag, inherit in ps.brew_tags.items():
             # Always load all builds in tag when saving relations
             builds = brew.get_builds_with_tag(brew_tag, inherit=inherit, latest=False)
             no_of_created = create_relations(
-                builds, build_type, brew_tag, ps.name, ProductComponentRelation.Type.BREW_TAG
+                builds,
+                build_type,
+                brew_tag,
+                ps.name,
+                ProductComponentRelation.Type.BREW_TAG,
+                refresh_task,
             )
             logger.info("Saving %s new builds for %s", no_of_created, brew_tag)
 

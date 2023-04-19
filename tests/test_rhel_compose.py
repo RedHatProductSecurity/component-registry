@@ -142,8 +142,9 @@ def mock_fetch_rpm_data(compose_url, variants):
 
 
 @pytest.mark.django_db
+@patch("corgi.tasks.brew.slow_fetch_modular_build.delay")
 @patch("corgi.collectors.rhel_compose.RhelCompose._fetch_rpm_data", new=mock_fetch_rpm_data)
-def test_save_compose(requests_mock):
+def test_save_compose(mock_fetch_modular_build, requests_mock):
     composes = {f"{base_url}/rhel-8/rel-eng/RHEL-8/RHEL-8.4.0-RC-1.2/compose": ["AppStream"]}
     compose_url = next(iter(composes))
     for path in ["composeinfo", "rpms", "osbs", "modules"]:

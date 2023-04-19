@@ -9,6 +9,7 @@ from django.utils import timezone
 from config.celery import app
 from corgi.collectors.yum import Yum
 from corgi.core.models import Channel, ProductComponentRelation, ProductStream
+from corgi.tasks.brew import slow_fetch_modular_build
 from corgi.tasks.common import (
     BUILD_TYPE,
     RETRY_KWARGS,
@@ -82,7 +83,12 @@ def slow_load_yum_repositories_for_stream(stream: str, repo: str) -> None:
     # The daily "fetch_unprocessed_yum_relations" Celery task will look up these IDs
     # then create Components and SoftwareBuilds for each (including both RPMs and modules)
     srpm_relations = create_relations(
-        srpm_build_ids, BUILD_TYPE, channel.name, stream, ProductComponentRelation.Type.YUM_REPO
+        srpm_build_ids,
+        BUILD_TYPE,
+        channel.name,
+        stream,
+        ProductComponentRelation.Type.YUM_REPO,
+        slow_fetch_modular_build,
     )
     if srpm_relations > 0:
         logger.info(f"Created {srpm_relations} new relations for SRPMs in {channel.name}")
@@ -90,7 +96,12 @@ def slow_load_yum_repositories_for_stream(stream: str, repo: str) -> None:
     logger.info(f"Querying Yum repository {repo} for modules")
     module_build_ids = yum.get_modules_from_yum_repos((repo,))
     module_relations = create_relations(
-        module_build_ids, BUILD_TYPE, channel.name, stream, ProductComponentRelation.Type.YUM_REPO
+        module_build_ids,
+        BUILD_TYPE,
+        channel.name,
+        stream,
+        ProductComponentRelation.Type.YUM_REPO,
+        slow_fetch_modular_build,
     )
     if module_relations > 0:
         logger.info(f"Created {module_relations} new relations for modules in {channel.name}")

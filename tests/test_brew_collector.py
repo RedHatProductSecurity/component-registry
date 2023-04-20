@@ -965,15 +965,16 @@ def test_extract_advisory_ids():
     brew = Brew(BUILD_TYPE)
     tags = [
         "stream-released",
-        "RHBA-2023:1234",
-        "RHEA-2023:12345",
-        "RHSA-2023:123456",
-        "RHSA-2023:1234567",
-        "RHXA-2023:1234",
+        "RHBA-2023:1234-released",
+        "RHEA-2023:12345-pending",
+        "RHSA-2023:123456-dropped",
+        "RHSA-2023:1234567-notarealthingyet",
+        "RHXA-2023:1234-released",
     ]
     result = brew._extract_advisory_ids(tags)
     # Only RHBA, RHEA, or RHSA is accepted, not other tags or RHXA
-    assert result == tags[1:5]
+    # Suffixes like -released are stripped
+    assert result == [tag.rsplit("-", maxsplit=1)[0] for tag in tags[1:5]]
 
 
 def test_parse_advisory_ids():

@@ -645,7 +645,7 @@ class ProductStream(ProductModel):
         component_name: str = "",
         strict_search: bool = False,
         using: str = "read_only",
-    ) -> QuerySet["Component"]:
+    ) -> "ComponentQuerySet":
         """Return root components from latest builds, using specified DB (read-only by default."""
         if component_name:
             cond = {}
@@ -696,6 +696,7 @@ class ProductStream(ProductModel):
         for use in templates"""
         unique_provides = (
             self.get_latest_components()
+            .released_components()
             .values_list("provides__pk", flat=True)
             .distinct()
             .order_by("provides__pk")

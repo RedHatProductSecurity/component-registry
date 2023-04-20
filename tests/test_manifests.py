@@ -107,13 +107,14 @@ def test_slim_rpm_in_containers_manifest():
     containers, stream, rpm_in_container = setup_products_and_rpm_in_containers()
 
     # Two components linked to this product
-    num_components = len(stream.get_latest_components())
+    released_components = stream.get_latest_components().released_components()
+    num_components = len(released_components)
     assert num_components == 2
 
     provided = set()
     # Each component has 1 node each
-    for latest_component in stream.get_latest_components():
-        component_nodes = latest_component.get_provides_nodes()
+    for released_component in released_components:
+        component_nodes = released_component.get_provides_nodes()
         assert len(component_nodes) == 1
         provided.update(component_nodes)
 
@@ -166,6 +167,42 @@ def test_slim_rpm_in_containers_manifest():
     assert manifest["relationships"][-1] == document_describes_product
 
 
+def test_product_manifest_excludes_unreleased_components():
+    """Test that manifests for products don't include unreleased components"""
+    component, stream, provided, dev_provided = setup_products_and_components_provides(
+        released=False
+    )
+
+    manifest = json.loads(stream.manifest)
+
+    # No released components linked to this product
+    num_components = len(stream.get_latest_components().released_components())
+    assert num_components == 0
+
+    num_provided = len(stream.provides_queryset)
+    assert num_provided == 0
+
+    # Manifest contains info for no components, no provides, and only the product itself
+    assert len(manifest["packages"]) == 1
+
+    # Only "component" is actually the product
+    product_data = manifest["packages"][0]
+
+    assert product_data["SPDXID"] == f"SPDXRef-{stream.uuid}"
+    assert product_data["name"] == stream.name
+    for index, cpe in enumerate(stream.cpes):
+        assert product_data["externalRefs"][index]["referenceLocator"] == cpe
+
+    # Only one "document describes product" relationship for the whole document at the end
+    assert len(manifest["relationships"]) == 1
+
+    assert manifest["relationships"][0] == {
+        "relatedSpdxElement": f"SPDXRef-{stream.uuid}",
+        "relationshipType": "DESCRIBES",
+        "spdxElementId": "SPDXRef-DOCUMENT",
+    }
+
+
 def test_product_manifest_properties():
     """Test that all models inheriting from ProductModel have a .manifest property
     And that it generates valid JSON."""
@@ -174,7 +211,7 @@ def test_product_manifest_properties():
     manifest = json.loads(stream.manifest)
 
     # One component linked to this product
-    num_components = len(stream.get_latest_components())
+    num_components = len(stream.get_latest_components().released_components())
     assert num_components == 1
 
     num_provided = len(stream.provides_queryset)
@@ -284,11 +321,15 @@ def test_component_manifest_properties():
     assert manifest["relationships"][-1] == document_describes_product
 
 
-def setup_products_and_components_provides():
+def setup_products_and_components_provides(released=True):
     stream, variant = setup_product()
+    meta_attr = {"released_errata_tags": []}
+    if released:
+        meta_attr["released_errata_tags"] = ["RHBA-2023:1234"]
     build = SoftwareBuildFactory(
         build_id=1,
         completion_time=datetime.strptime("2017-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z"),
+        meta_attr=meta_attr,
     )
     provided = ComponentFactory(type=Component.Type.RPM, arch="x86_64")
     dev_provided = ComponentFactory(type=Component.Type.NPM)
@@ -350,6 +391,7 @@ def setup_products_and_rpm_in_containers():
 def _build_rpm_in_containers(rpm_in_container, name=""):
     build = SoftwareBuildFactory(
         completion_time=datetime.strptime("2017-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z"),
+        meta_attr={"released_errata_tags": ["RHBA-2023:1234"]},
     )
     if not name:
         container = ContainerImageComponentFactory(

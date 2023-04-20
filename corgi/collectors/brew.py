@@ -748,7 +748,11 @@ class Brew:
         # tags in Brew also have a -released, -dropped, or -pending suffix
         # but our ADVISORY_REGEX strips this to get just the friendly advisory name
 
-        return [errata_tag for errata_tag in errata_tags if len(errata_tag.split(":")[-1]) == 4]
+        return sorted(
+            errata_tag
+            for errata_tag in errata_tags
+            if len(errata_tag.split(":", maxsplit=1)[-1]) == 4
+        )
 
     @staticmethod
     def get_module_build_data(build_info: dict) -> dict:

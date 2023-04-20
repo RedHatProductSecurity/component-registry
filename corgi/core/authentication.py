@@ -75,6 +75,9 @@ class RedHatRolePermission(BasePermission):  # type: ignore[misc]
         if not hasattr(view, "roles_permitted"):
             raise ValueError(f"View {view} doesn't define any permitted roles")
 
+        if not request.user.is_authenticated:
+            return False
+
         try:
             rhat_profile = RedHatProfile.objects.get(user=request.user)
         except RedHatProfile.DoesNotExist:

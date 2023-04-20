@@ -124,11 +124,8 @@ def slow_fetch_brew_build(
     if not build_meta["errata_tags"]:
         logger.info("no errata tags")
     else:
-        if isinstance(build_meta["errata_tags"], str):
-            slow_load_errata.delay(build_meta["errata_tags"], force_process=force_process)
-        else:
-            for e in build_meta["errata_tags"]:
-                slow_load_errata.delay(e, force_process=force_process)
+        for e in build_meta["errata_tags"]:
+            slow_load_errata.delay(e, force_process=force_process)
 
     build_ids = component.get("nested_builds", ())
     logger.info("Fetching brew builds for (%s, %s)", build_ids, build_type)

@@ -13,7 +13,18 @@ paths:
       - authentication_status
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  oidc_enabled:
+                    type: string
+                  user:
+                    type: string
+                  auth:
+                    type: string
+          description: ''
   /api/controlled_access_test:
     get:
       operationId: controlled_access_test_retrieve
@@ -24,7 +35,14 @@ paths:
       - controlled_access_test
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: string
+          description: ''
   /api/healthy:
     get:
       operationId: healthy_retrieve
@@ -378,6 +396,16 @@ paths:
         name: release
         schema:
           type: string
+      - in: query
+        name: released_components
+        schema:
+          type: boolean
+        description: Show only released components
+      - in: query
+        name: root_components
+        schema:
+          type: boolean
+        description: Show only root components (source RPMs, index container images)
       - name: search
         required: false
         in: query

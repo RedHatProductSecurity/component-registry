@@ -181,6 +181,52 @@ def test_component_detail(client, api_path):
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_released_components_filter(client, api_path):
+    released_build = SoftwareBuildFactory(meta_attr={"released_errata_tags": ["RHBA-2023:1234"]})
+    unreleased_build = SoftwareBuildFactory(meta_attr={"released_errata_tags": []})
+    ComponentFactory(name="released", software_build=released_build)
+    ComponentFactory(name="unreleased", software_build=unreleased_build)
+
+    response = client.get(f"{api_path}/components")
+    assert response.status_code == 200
+    assert response.json()["count"] == 2
+
+    response = client.get(f"{api_path}/components?released_components=True")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 1
+    assert response["results"][0]["name"] == "released"
+
+    response = client.get(f"{api_path}/components?released_components=False")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 1
+    assert response["results"][0]["name"] == "unreleased"
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_root_components_filter(client, api_path):
+    ComponentFactory(name="srpm", type="RPM", arch="src")
+    ComponentFactory(name="binary_rpm", type="RPM", arch="x86_64")
+
+    response = client.get(f"{api_path}/components")
+    assert response.status_code == 200
+    assert response.json()["count"] == 2
+
+    response = client.get(f"{api_path}/components?root_components=True")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 1
+    assert response["results"][0]["name"] == "srpm"
+
+    response = client.get(f"{api_path}/components?root_components=False")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 1
+    assert response["results"][0]["name"] == "binary_rpm"
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_component_detail_unscanned_filter(client, api_path):
     ComponentFactory(name="copyright", copyright_text="test")
     ComponentFactory(name="license", license_concluded_raw="test")

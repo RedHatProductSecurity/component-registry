@@ -3,7 +3,7 @@ import logging
 import re
 import uuid as uuid
 from abc import abstractmethod
-from typing import Any, Union
+from typing import Any, Iterator, Union
 
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
@@ -920,11 +920,35 @@ def get_product_details(variant_names: tuple[str], stream_names: list[str]) -> d
 
 
 class ComponentQuerySet(models.QuerySet):
-    def srpms(self) -> models.QuerySet["Component"]:
-        return self.filter(SRPM_CONDITION)
+    """Helper methods to filter QuerySets of Components"""
 
-    def root_components(self) -> models.QuerySet["Component"]:
-        return self.filter(ROOT_COMPONENTS_CONDITION)
+    def released_components(self, include: bool = True) -> models.QuerySet["Component"]:
+        """Show only released components by default, or unreleased components if include=False"""
+        # TODO: I could make below into separate ArrayFields on the SoftwareBuild model
+        #  like brew_tags and released_errata, but this is all Brew-specific
+        #  it doesn't make sense for other build systems
+        empty_released_errata = Q(software_build__meta_attr__released_errata_tags=())
+        if include:
+            # Truthy values return the excluded queryset (only released components)
+            return self.exclude(empty_released_errata)
+        # Falsey values return the filtered queryset (only unreleased components)
+        return self.filter(empty_released_errata)
+
+    def root_components(self, include: bool = True) -> models.QuerySet["Component"]:
+        """Show only root components by default, or only non-root components if include=False"""
+        if include:
+            # Truthy values return the filtered queryset (only root components)
+            return self.filter(ROOT_COMPONENTS_CONDITION)
+        # Falsey values return the excluded queryset (only non-root components)
+        return self.exclude(ROOT_COMPONENTS_CONDITION)
+
+    def srpms(self, include: bool = True) -> models.QuerySet["Component"]:
+        """Show only source RPMs by default, or only non-SRPMs if include=False"""
+        if include:
+            # Truthy values return the filtered queryset (only SRPM components)
+            return self.filter(SRPM_CONDITION)
+        # Falsey values return the excluded queryset (only non-SRPM components)
+        return self.exclude(SRPM_CONDITION)
 
 
 class Component(TimeStampedModel, ProductTaxonomyMixin):
@@ -991,7 +1015,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     # sources is the inverse of provides. One container can provide many RPMs
     # and one RPM can have many different containers as a source (as well as modules and SRPMs)
     sources = models.ManyToManyField("Component", related_name="provides")
-    provides: models.ManyToManyField
+    provides: models.Manager["Component"]
 
     # Specify related_query_name to add e.g. component field
     # that can be used to filter from a cnode to its related component
@@ -1399,7 +1423,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         self.sources.set(self.get_sources_nodes(using="default"))
 
     @property
-    def provides_queryset(self, using: str = "read_only") -> QuerySet["Component"]:
+    def provides_queryset(self, using: str = "read_only") -> Iterator["Component"]:
         """Return the "provides" queryset using the read-only DB, for use in templates"""
         return self.provides.get_queryset().using(using).iterator()
 

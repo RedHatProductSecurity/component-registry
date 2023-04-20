@@ -4,7 +4,7 @@ from django.core.validators import EMPTY_VALUES
 from django.db.models import QuerySet
 from django_filters.rest_framework import BooleanFilter, CharFilter, Filter, FilterSet
 
-from corgi.core.models import Channel, Component, SoftwareBuild
+from corgi.core.models import Channel, Component, ComponentQuerySet, SoftwareBuild
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +79,13 @@ class ComponentFilter(FilterSet):
     re_upstreams = CharFilter(field_name="upstreams", lookup_expr="purl__regex")
 
     el_match = CharFilter(label="RHEL version for layered products", lookup_expr="icontains")
+    released_components = BooleanFilter(
+        method="filter_released_components", label="Show only released components"
+    )
+    root_components = BooleanFilter(
+        method="filter_root_components",
+        label="Show only root components (source RPMs, index container images)",
+    )
 
     missing_copyright = EmptyStringFilter(
         field_name="copyright_text",
@@ -105,6 +112,7 @@ class ComponentFilter(FilterSet):
         qs: QuerySet[Component], _name: str, value: bool
     ) -> QuerySet[Component]:
         """Show only GOLANG components that are Go modules, and hide Go packages"""
+        # TODO: Probably should be added to ComponentQuerySet instead of here
         if value in EMPTY_VALUES:
             # User gave an empty ?param= so return the unfiltered queryset
             return qs
@@ -134,6 +142,32 @@ class ComponentFilter(FilterSet):
             # Filter using "product__name", "productversions__name", etc.
             lookup_expr = f"{name}__name"
         return queryset.filter(**{lookup_expr: value})
+
+    @staticmethod
+    def filter_released_components(
+        queryset: ComponentQuerySet, _name: str, value: bool
+    ) -> QuerySet["Component"]:
+        """Show only released components in some queryset if user chose YES / NO"""
+        if value in EMPTY_VALUES:
+            # User gave an empty ?param= so return the unfiltered queryset
+            return queryset
+        # Else user gave a non-empty value
+        # Truthy values return the excluded queryset (only released components)
+        # Falsey values return the filtered queryset (only unreleased components)
+        return queryset.released_components(include=value)
+
+    @staticmethod
+    def filter_root_components(
+        queryset: ComponentQuerySet, _name: str, value: bool
+    ) -> QuerySet["Component"]:
+        """Show only root / non-root components in some queryset if user chose YES / NO"""
+        if value in EMPTY_VALUES:
+            # User gave an empty ?param= so return the unfiltered queryset
+            return queryset
+        # Else user gave a non-empty value
+        # Truthy values return the filtered queryset (only root components)
+        # Falsey values return the excluded queryset (only non-root components)
+        return queryset.root_components(include=value)
 
 
 class ProductDataFilter(FilterSet):

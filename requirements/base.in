@@ -26,3 +26,4 @@ splitstream
 version_utils
 whitenoise
 mozilla-django-oidc
+component_registry_bindings

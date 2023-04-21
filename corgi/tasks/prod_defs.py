@@ -134,7 +134,18 @@ def update_products() -> None:
                     # Linking quay streams to the 8Base-Quay-3 variant here via brew tags leads
                     # to builds from later streams being included in earlier ones,
                     # see PROJQUAY-5312.
-                    if len(brew_tags) > 0 and product_version.name != "quay-3":
+                    # The rhn_satellite_6 streams have brew tags, but those brew tags are associated
+                    # with the RHEL-7-SATELLITE-6.10 ET Product Version. We skip them
+                    # here to ensure the rhn_satelite_6.10 variants only get linked with that stream
+                    # I haven't filed a product bug to get them fixed since 6.7 - 6.9 are no longer
+                    # active. See CORGI-546 for more details.
+                    if (
+                        len(brew_tags) > 0
+                        and product_version.name != "quay-3"
+                        and name
+                        not in ["rhn_satellite_6.7", "rhn_satellite_6.8", "rhn_satellite_6.9"]
+                    ):
+                        #    continue
                         logger.debug(
                             "Found brew tags (%s) in product stream: %s",
                             brew_tags,

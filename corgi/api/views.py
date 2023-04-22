@@ -286,17 +286,24 @@ def recursive_component_node_to_dict(
     if node.type in component_type:
         result = {
             "purl": node.purl,
-            # "node_id": node.pk,
             "node_type": node.type,
-            "link": get_component_purl_link(node.purl),
-            # "uuid": node.obj.uuid,
-            "description": node.obj.description,
+            "node_id": node.pk,
+            "obj_link": get_component_purl_link(node.purl),
+            "obj_uuid": node.object_id,
+            "namespace": node.obj.namespace,
+            "type": node.obj.type,
+            "name": node.obj.name,
+            "nvr": node.obj.nvr,
+            "release": node.obj.release,
+            "version": node.obj.version,
+            "arch": node.obj.arch,
         }
     children = tuple(
-        recursive_component_node_to_dict(c, component_type) for c in node.get_children()
+        recursive_component_node_to_dict(c, component_type)
+        for c in node.get_descendants().prefetch_related("obj").using("read_only")
     )
     if children:
-        result["deps"] = children
+        result["provides"] = children
     return result
 
 
@@ -304,9 +311,7 @@ def get_component_taxonomy(
     obj: Component, component_types: tuple[str, ...]
 ) -> tuple[taxonomy_dict_type, ...]:
     """Look up and return the taxonomy for a particular Component."""
-    root_nodes = cache_tree_children(
-        obj.cnodes.get_queryset().get_descendants(include_self=True).using("read_only")
-    )
+    root_nodes = cache_tree_children(obj.cnodes.get_queryset().all().using("read_only"))
     dicts = tuple(
         recursive_component_node_to_dict(
             node,

@@ -116,6 +116,40 @@
           ]
         }
       ]
+    },
+    "rhn_satellite_6.7": {
+      "pp_label": "sat-6-7",
+      "version": "6.7.0",
+      "flags": [
+        "sat-6.7.z"
+      ],
+      "brew_tags": [
+        {
+          "tag": "satellite-6.7.0-rhel-7",
+          "inherit": true
+        }
+      ]
+    },
+    "rhn_satellite_6.10": {
+      "pp_label": "sat-6-10",
+      "version": "6.10.0",
+      "flags": [
+        "sat-6.10.z"
+      ],
+      "errata_info": [
+        {
+          "product_name": "SATELLITE",
+          "product_versions": [
+            {
+              "name": "RHEL-7-SATELLITE-6.10",
+              "variants": [
+                "7Server-Capsule610",
+                "7Server-Satellite610"
+              ]
+            }
+          ]
+        }
+      ]
     }
   },
   "ps_modules": {
@@ -298,7 +332,42 @@
         "supported_from": "2019-06-04"
       },
       "risk": null
-    }
+    },
+    "rhn_satellite_6": {
+			"public_description": "Red Hat Satellite 6",
+			"ps_update_streams": ["rhn_satellite_6.7", "rhn_satellite_6.10"],
+			"active_ps_update_streams": ["rhn_satellite_6.10"],
+			"default_ps_update_streams": ["rhn_satellite_6.10"],
+			"unacked_ps_update_stream": "rhn_satellite_6-default",
+			"bts": {
+				"name": "bugzilla",
+				"key": "Red Hat Satellite",
+				"groups": {
+					"public": ["redhat"],
+					"embargoed": ["security", "qe_staff"]
+				}
+			},
+			"allow_defer": false,
+			"default_cc": ["+sat6"],
+			"component_cc": {},
+			"components": {
+				"default": "Security"
+			},
+			"autofile_trackers": false,
+			"private_trackers_allowed": true,
+			"lifecycle": {
+				"supported_from": null,
+				"supported_until": null
+			},
+			"cpe": ["cpe:/a:redhat:satellite:6",
+				"cpe:/a:redhat:satellite_capsule:6",
+				"cpe:/a:redhat:rhel_satellite_tools:*"],
+			"risk": null,
+			"checklist": null,
+			"exceptions": [],
+			"opengrok": false,
+			"manifest": true
+		}
   },
   "ps_products": {
     "rhel": {
@@ -343,6 +412,20 @@
       "lifecycle_url": "https://access.redhat.com/support/policy/updates/openshift/",
       "ps_modules": [
         "openshift-4"
+      ]
+    },
+    "satellite": {
+      "name": "Red Hat Satellite",
+      "team": "management",
+      "lifecycle_url": "https://access.redhat.com/support/policy/updates/satellite/",
+      "ps_modules": [
+        "rhn_satellite_6"
+      ],
+      "business_unit": "Management",
+      "errata_product_tags": [
+        "SATELLITE",
+        "SAT-TOOLS",
+        "Satellite Client"
       ]
     }
   },

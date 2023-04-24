@@ -871,35 +871,30 @@ class ComponentQuerySet(models.QuerySet):
 
     def latest_components(
         self,
-        component_name: str = "",
-        strict_search: bool = False,
+        include: bool = True,
     ) -> "ComponentQuerySet":
         """Return components from latest builds."""
-        cond = {}
-        if component_name:
-            if strict_search:
-                cond["name"] = component_name
-            else:
-                cond["name__iregex"] = component_name
-            names = self.filter(**cond).values_list("name", flat=True).distinct().iterator()
-            query = Q()
-            for name in names:
-                latest_nevra = self.filter_latest_nevra_by_name(component_name=name)
-                if latest_nevra:
-                    query |= Q(nevra=latest_nevra)
+        names = self.values_list("name", flat=True).distinct().iterator()
+        query = Q()
+        for name in names:
+            latest_nevra = self.filter_latest_nevra_by_name(component_name=name)
+            if latest_nevra:
+                query |= Q(nevra=latest_nevra)
+        if include:
+            # Show only the latest components
             if not query:
+                # No latest components to show??
+                # This is probably a bug in filter_latest_nevra_by_name we're not handling
                 return Component.objects.none()
             return self.filter(query)
         else:
-            names = self.filter(**cond).values_list("name", flat=True).distinct().iterator()
-            query = Q()
-            for name in names:
-                latest_nevra = self.filter_latest_nevra_by_name(component_name=name)
-                if latest_nevra:
-                    query |= Q(nevra=latest_nevra)
+            # Show only the older / non-latest components
             if not query:
-                return Component.objects.none()
-            return self.filter(query)
+                # No latest components to hide??
+                # So show everything / return unfiltered queryset
+                # This is probably a bug in filter_latest_nevra_by_name we're not handling
+                return self
+            return self.exclude(query)
 
     def released_components(self, include: bool = True) -> "ComponentQuerySet":
         """Show only released components by default, or unreleased components if include=False"""

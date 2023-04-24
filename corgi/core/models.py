@@ -15,7 +15,7 @@ from mptt.managers import TreeManager
 from mptt.models import MPTTModel, TreeForeignKey
 from packageurl import PackageURL
 from packageurl.contrib import purl2url
-from version_utils.rpm import compare_packages
+from rpm import labelCompare
 
 from corgi.core.constants import (
     CONTAINER_DIGEST_FORMATS,
@@ -861,11 +861,36 @@ def get_product_details(variant_names: tuple[str], stream_names: list[str]) -> d
 class ComponentQuerySet(models.QuerySet):
     """Helper methods to filter QuerySets of Components"""
 
+    def _compare_packages(
+        self, nevr_1: tuple[str, str, str, str], nevr_2: tuple[str, str, str, str]
+    ) -> int:
+        """Use the rpm library to compare 2 epoch/version/release tuples"""
+        evr_1 = self._ensure_epoch(nevr_1)
+        evr_2 = self._ensure_epoch(nevr_2)
+        return labelCompare(evr_1, evr_2)
+
+    def _ensure_epoch(self, evr: tuple[str, str, str, str]) -> tuple[str, str, str]:
+        """Ensure the epoch value is set to '0' if unset and also drop the nevra at index 0"""
+        # Test for None or 0 int value
+        if not evr[1]:
+            epoch = "0"
+        # We store the meta_attr.epoch as an int, but labelCompare expects a str
+        else:
+            epoch = str(evr[1])
+        return (
+            epoch,
+            evr[2],
+            evr[3],
+        )
+
     def filter_latest_nevra_by_name(self, component_name: str) -> str:
-        nevras = self.filter(name=component_name).values_list("nevra", flat=True)
+        nevras = self.filter(name=component_name).values_list(
+            "nevra", "meta_attr__epoch", "version", "release"
+        )
         if nevras:
-            # Get the latest NVR using python. This only works for valid RPM NEVRAs
-            return sorted(nevras, key=functools.cmp_to_key(compare_packages))[-1]
+            # Get the latest NEVRA using python. This only works for valid RPM epoch/version/release
+            latest_result = sorted(nevras, key=functools.cmp_to_key(self._compare_packages))[-1]
+            return latest_result[0]
         else:
             return ""
 

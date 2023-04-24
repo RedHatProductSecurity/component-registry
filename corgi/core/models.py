@@ -627,10 +627,8 @@ class ProductStream(ProductModel):
         return ProductManifestFile(self).render_content()
 
     @staticmethod
-    def filter_latest_nevra_by_name(
-        components: "ComponentQuerySet", component_name: str, using: str = "read_only"
-    ) -> str:
-        nevras = components.filter(name=component_name).using(using).values_list("nevra", flat=True)
+    def filter_latest_nevra_by_name(components: "ComponentQuerySet", component_name: str) -> str:
+        nevras = components.filter(name=component_name).values_list("nevra", flat=True)
         if nevras:
             # Get the latest NVR using python. This only works for valid RPM NEVRAs
             return sorted(nevras, key=functools.cmp_to_key(compare_packages))[-1]
@@ -642,12 +640,12 @@ class ProductStream(ProductModel):
         """Returns unique aggregate "provides" for the latest components in this stream,
         for use in templates"""
         unique_provides = (
-            self.components.released_components()
+            self.components.db_manager(using)
+            .released_components()
             .latest_components()
             .values_list("provides__pk", flat=True)
             .distinct()
             .order_by("provides__pk")
-            .using(using)
             .iterator()
         )
         return Component.objects.filter(pk__in=unique_provides).using(using)
@@ -874,9 +872,8 @@ class ComponentQuerySet(models.QuerySet):
         self,
         component_name: str = "",
         strict_search: bool = False,
-        using: str = "read_only",
     ) -> "ComponentQuerySet":
-        """Return root components from latest builds, using specified DB (read-only by default)."""
+        """Return root components from latest builds."""
         cond = {}
         if component_name:
             if strict_search:
@@ -888,19 +885,18 @@ class ComponentQuerySet(models.QuerySet):
                 .filter(**cond)
                 .values_list("name", flat=True)
                 .distinct()
-                .using(using)
                 .iterator()
             )
             query = Q()
             for name in names:
                 latest_nevra = ProductStream.filter_latest_nevra_by_name(
-                    components=self, component_name=name, using=using
+                    components=self, component_name=name
                 )
                 if latest_nevra:
                     query |= Q(nevra=latest_nevra)
             if not query:
                 return Component.objects.none()
-            return self.root_components().filter(query).using(using)
+            return self.root_components().filter(query)
         else:
             names = (
                 self.root_components()
@@ -908,19 +904,18 @@ class ComponentQuerySet(models.QuerySet):
                 .exclude(name__endswith="-container-source")
                 .values_list("name", flat=True)
                 .distinct()
-                .using(using)
                 .iterator()
             )
             query = Q()
             for name in names:
                 latest_nevra = ProductStream.filter_latest_nevra_by_name(
-                    components=self, component_name=name, using=using
+                    components=self, component_name=name
                 )
                 if latest_nevra:
                     query |= Q(nevra=latest_nevra)
             if not query:
                 return Component.objects.none()
-            return self.root_components().filter(query).using(using)
+            return self.root_components().filter(query)
 
     def released_components(self, include: bool = True) -> "ComponentQuerySet":
         """Show only released components by default, or unreleased components if include=False"""

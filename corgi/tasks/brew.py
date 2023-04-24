@@ -5,12 +5,13 @@ from typing import Optional
 from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.conf import settings
+from django.db import transaction
 from django.db.models import Q, QuerySet
 from django.utils import dateformat, dateparse, timezone
 from django.utils.timezone import make_aware
 
 from config.celery import app
-from corgi.collectors.brew import Brew, BrewBuildTypeNotSupported
+from corgi.collectors.brew import ADVISORY_REGEX, Brew, BrewBuildTypeNotSupported
 from corgi.core.models import (
     Component,
     ComponentNode,
@@ -590,3 +591,37 @@ def fetch_unprocessed_brew_tag_relations(
         force_process=force_process,
         created_since=created_dt,
     )
+
+
+@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
+def slow_update_brew_tags(
+    build_id: str, tag_added: Optional[str] = None, tag_removed: Optional[str] = None
+) -> None:
+    """Update a build's list of tags in Corgi when they change in Brew"""
+    if not tag_added and not tag_removed:
+        raise ValueError("Must supply one tag to be added or removed")
+
+    with transaction.atomic():
+        build = SoftwareBuild.objects.filter(
+            build_id=build_id, build_type=SoftwareBuild.Type.BREW
+        ).first()
+        if not build:
+            logger.warning(f"Brew build with matching ID not ingested (yet?): {build_id}")
+            return
+
+        if tag_added:
+            build.meta_attr["tags"].append(tag_added)
+            errata_tag = ADVISORY_REGEX.match(tag_added)
+            if errata_tag:
+                # Below should automatically create new relations for this build / erratum
+                slow_load_errata.delay(errata_tag.group())
+        else:
+            build.meta_attr["tags"].remove(tag_removed)
+            # TODO: Clean up old relations for some build / erratum when a tag is removed
+            #  and we need tests for this task
+
+        build.meta_attr["errata_tags"] = Brew.extract_advisory_ids(build.meta_attr["tags"])
+        build.meta_attr["released_errata_tags"] = Brew.parse_advisory_ids(
+            build.meta_attr["errata_tags"]
+        )
+        build.save()

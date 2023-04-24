@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
-from corgi.monitor.consumer import BrewUMBListener
+from corgi.monitor.consumer import BrewBuildUMBListener
 
 
 class Command(BaseCommand):
@@ -11,6 +11,6 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         if settings.UMB_BREW_MONITOR_ENABLED:
             try:
-                BrewUMBListener.consume()
+                BrewBuildUMBListener.consume()
             except KeyboardInterrupt:
                 pass

@@ -729,8 +729,8 @@ class Brew:
         # TODO: add more info
         return component
 
-    @classmethod
-    def _extract_advisory_ids(cls, build_tags: list[str]) -> list[str]:
+    @staticmethod
+    def extract_advisory_ids(build_tags: list[str]) -> list[str]:
         """From a Brew build's list of tags, return any errata IDs with -released stripped"""
         advisory_ids = set()
         for tag in build_tags:
@@ -740,7 +740,7 @@ class Brew:
         return sorted(advisory_ids)
 
     @staticmethod
-    def _parse_advisory_ids(errata_tags: list[str]) -> list[str]:
+    def parse_advisory_ids(errata_tags: list[str]) -> list[str]:
         """From a Brew build's list of Errata tags, return tags with released (4-digit) IDs"""
         # released errata always have 4-digit IDs, e.g. RHBA-2023:1234
         # unreleased errata have 5-digit IDs or greater
@@ -857,8 +857,8 @@ class Brew:
         # Add list of Brew tags for this build
         tags = self.koji_session.listTags(build_id)
         build["tags"] = [tag["name"] for tag in tags]
-        build["errata_tags"] = self._extract_advisory_ids(build["tags"])
-        build["released_errata_tags"] = self._parse_advisory_ids(build["errata_tags"])
+        build["errata_tags"] = self.extract_advisory_ids(build["tags"])
+        build["released_errata_tags"] = self.parse_advisory_ids(build["errata_tags"])
 
         # TODO: handle wrapper RPM builds:
         # brew buildID=1839210

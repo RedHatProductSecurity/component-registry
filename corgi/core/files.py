@@ -66,8 +66,9 @@ class ProductManifestFile(ManifestFile):
 
     def render_content(self) -> str:
 
-        latest_components = self.obj.get_latest_components()  # type: ignore[attr-defined]
-        released_components = latest_components.released_components()
+        components = self.obj.components  # type: ignore[attr-defined]
+        components = components.exclude(name__endswith="-container-source").using("read_only")
+        released_components = components.root_components().released_components().latest_components()
         distinct_provides = self.obj.provides_queryset  # type: ignore[attr-defined]
 
         kwargs_for_template = {

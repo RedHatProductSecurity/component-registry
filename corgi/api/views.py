@@ -519,26 +519,26 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
     lookup_url_kwarg = "uuid"
 
     def get_queryset(self) -> QuerySet[Component]:
-        # 'latest' filter only relevant in terms of a specific offering/product
+        # 'latest' and 'root components' filter automagically turn on
+        # when the ofuri parameter is given
+        # We should remove this parameter and rely on standard Django filters instead
         ofuri = self.request.query_params.get("ofuri")
         if not ofuri:
             return self.queryset
 
         model, _ = get_model_ofuri_type(ofuri)
         if isinstance(model, Product):
-            return self.queryset.filter(products__ofuri=ofuri)
+            components_for_model = self.queryset.filter(products__ofuri=ofuri)
         elif isinstance(model, ProductVersion):
-            return self.queryset.filter(productversions__ofuri=ofuri)
+            components_for_model = self.queryset.filter(productversions__ofuri=ofuri)
         elif isinstance(model, ProductStream):
-            # only ProductStream defines get_latest_components()
-            # TODO: Should this be a ProductModel method? For e.g. Products,
-            #  we could return get_latest_components() for each child stream
-            return model.get_latest_components()
+            components_for_model = self.queryset.filter(productstreams__ofuri=ofuri)
         elif isinstance(model, ProductVariant):
-            return self.queryset.filter(productvariants__ofuri=ofuri)
+            components_for_model = self.queryset.filter(productvariants__ofuri=ofuri)
         else:
             # No matching model instance found, or invalid ofuri
             raise Http404
+        return components_for_model.root_components().latest_components()
 
     @extend_schema(
         parameters=[
@@ -553,63 +553,7 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         # are not interpreted as part of the request.
         view = request.query_params.get("view")
         purl = request.query_params.get("purl")
-        component_name = self.request.query_params.get("name", "")
-        component_re_name = self.request.query_params.get("re_name", "")
         if not purl:
-            # TODO: ?name={}&view=latest this may turn out to be temporary
-            if (component_re_name or component_name) and view == "latest":
-                ps_cond = {}
-                strict_search = True
-                if component_re_name:
-                    strict_search = False
-                    component_name = component_re_name
-                    ps_cond["name__iregex"] = component_name
-                else:
-                    ps_cond["name"] = component_name  # type: ignore
-                latest_components = []
-                product_stream_ofuris = list(
-                    set(
-                        self.get_queryset()
-                        .filter(**ps_cond)
-                        .values_list("productstreams__ofuri", flat=True)
-                        .using("read_only")
-                    )
-                )
-                for ps_ofuri in product_stream_ofuris:
-                    ps = ProductStream.objects.filter(ofuri=ps_ofuri, active=True).first()
-                    if ps:
-                        ps_components = ps.get_latest_components(
-                            component_name, strict_search=strict_search
-                        )
-                        for ps_component in ps_components:
-                            component = {
-                                "product_version": ps.productversions.name,
-                                "product_version_ofuri": ps.productversions.ofuri,
-                                "product_stream": ps.name,
-                                "product_stream_ofuri": ps.ofuri,
-                                "product_active": ps.active,
-                                "purl": ps_component.purl,
-                                "type": ps_component.type,
-                                "namespace": ps_component.namespace,
-                                "name": ps_component.name,
-                                "release": ps_component.release,
-                                "version": ps_component.version,
-                                "nvr": ps_component.nvr,
-                                "build_id": None,
-                                "build_type": None,
-                                "build_source_url": None,
-                                "related_url": ps_component.related_url,
-                                "download_url": ps_component.download_url,
-                                "upstream_purl": ps_component.upstreams.values_list(
-                                    "purl", flat=True
-                                ).first(),
-                            }
-                            if ps_component.software_build:
-                                component["build_id"] = ps_component.software_build.build_id
-                                component["build_type"] = ps_component.software_build.build_type
-                                component["build_source_url"] = ps_component.software_build.source
-                            latest_components.append(component)
-                return Response({"results": latest_components})
             if view == "product":
                 component_name = self.request.query_params.get("name", "")
                 product_streams_arr = []

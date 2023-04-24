@@ -797,11 +797,11 @@ def test_filter_latest_by_name():
     srpm_with_el.productstreams.add(ps)
     srpm = SrpmComponentFactory(name="sdb", version="1.2.1", release="3")
     srpm.productstreams.add(ps)
-    assert ps.filter_latest_nevra_by_name(component_name="sdb") == "sdb-1.2.1-21.el7.src"
+    assert ps.components.filter_latest_nevra_by_name(component_name="sdb") == "sdb-1.2.1-21.el7.src"
 
     # test no result
     ps = ProductStreamFactory(name="rhel-7.7.z")
-    assert not ps.filter_latest_nevra_by_name(component_name="sdb")
+    assert not ps.components.filter_latest_nevra_by_name(component_name="sdb")
 
 
 def test_version_release_arr_el_match():

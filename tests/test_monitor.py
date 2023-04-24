@@ -30,7 +30,9 @@ def test_brew_umb_listener_defines_settings():
     and handles them with correct class"""
     listener = BrewUMBListener()
     assert listener.virtual_topic_addresses == {
-        f"{VIRTUAL_TOPIC_ADDRESS_PREFIX}VirtualTopic.eng.brew.build.complete": "handle_builds"
+        f"{VIRTUAL_TOPIC_ADDRESS_PREFIX}VirtualTopic.eng.brew.build.complete": "handle_builds",
+        f"{VIRTUAL_TOPIC_ADDRESS_PREFIX}VirtualTopic.eng.brew.build.tag": "handle_tags",
+        f"{VIRTUAL_TOPIC_ADDRESS_PREFIX}VirtualTopic.eng.brew.build.untag": "handle_tags",
     }
     assert listener.handler_class == BrewUMBReceiverHandler
 
@@ -92,7 +94,7 @@ def test_brew_umb_receiver_setup():
         )
         for address in handler.virtual_topic_addresses
     ]
-    assert len(handler.virtual_topic_addresses) == 1
+    assert len(handler.virtual_topic_addresses) == 3
     mock_umb_event.container.create_receiver.assert_has_calls(create_receiver_calls)
 
 
@@ -158,3 +160,73 @@ def test_brew_umb_receiver_handles_builds():
 
     # slow_fetch_brew_build.apply_async is called once per message with a build_id arg
     slow_fetch_brew_build_mock.assert_has_calls((call(args=(mock_id,)), call(args=(mock_id,))))
+
+
+def test_handle_tag_and_untag_messages():
+    """Test that the BrewUMBReceiverHandler class either
+    accepts tag / untag messages, when no exceptions are raised
+    OR rejects tag / untag messages if any exception is raised"""
+    addresses = BrewUMBListener().virtual_topic_addresses
+    _, tag_address, untag_address = addresses.keys()
+    assert VIRTUAL_TOPIC_ADDRESS_PREFIX in tag_address
+    assert VIRTUAL_TOPIC_ADDRESS_PREFIX in untag_address
+    assert ".tag" in tag_address
+    assert ".untag" in untag_address
+    tag_address = tag_address.replace(VIRTUAL_TOPIC_ADDRESS_PREFIX, "topic://")
+    untag_address = untag_address.replace(VIRTUAL_TOPIC_ADDRESS_PREFIX, "topic://")
+
+    # Stub out the SSLDomain config class to avoid needing real UMB certs in tests
+    with patch("corgi.monitor.consumer.SSLDomain"):
+        handler = BrewUMBReceiverHandler(virtual_topic_addresses=addresses)
+
+    mock_umb_event = MagicMock()
+    mock_id = "1"
+    mock_tag = "RHSA-2023:1234"
+    # Both tag and untag events share the same message structure
+    mock_umb_event.message.body = '{"build": {"build_id": MOCK_ID}, "tag": {"name": "MOCK_TAG"}}'
+    mock_umb_event.message.body = mock_umb_event.message.body.replace("MOCK_ID", mock_id).replace(
+        "MOCK_TAG", mock_tag
+    )
+    mock_id = int(mock_id)
+
+    invalid_message_exception = Exception("Message received raises an exception")
+    umb_message_exceptions = (None, None, invalid_message_exception, invalid_message_exception)
+    # side_effect is a list of return values for each call to slow_fetch_brew_build.apply_async()
+    # If any side_effect is an Exception subclass, it will be raised
+    # Any other side_effect is just returned instead
+    with patch(
+        "corgi.monitor.consumer.slow_update_brew_tags.apply_async",
+        side_effect=umb_message_exceptions,
+    ) as slow_update_brew_tags_mock:
+        with patch.object(handler, "accept") as mock_accept:
+            # First tag call raises no exception, message should be accepted
+            mock_umb_event.message.address = tag_address
+            handler.on_message(mock_umb_event)
+            mock_accept.assert_called_once_with(mock_umb_event.delivery)
+            mock_accept.reset_mock()
+
+            # First untag call raises no exception, message should be accepted
+            mock_umb_event.message.address = untag_address
+            handler.on_message(mock_umb_event)
+            mock_accept.assert_called_once_with(mock_umb_event.delivery)
+
+        with patch.object(handler, "release") as mock_release:
+            # Second tag call raises exception given above, message should be rejected
+            mock_umb_event.message.address = tag_address
+            handler.on_message(mock_umb_event)
+            mock_release.assert_called_once_with(mock_umb_event.delivery, delivered=True)
+            mock_release.reset_mock()
+
+            # Second untag call raises exception given above, message should be rejected
+            mock_umb_event.message.address = untag_address
+            handler.on_message(mock_umb_event)
+            mock_release.assert_called_once_with(mock_umb_event.delivery, delivered=True)
+
+    # slow_update_brew_tags.apply_async is called once per message with a build_id arg
+    # and either a "tag_added" or "tag_removed" kwarg
+    mock_tag_call = call(args=(mock_id,), kwargs={"tag_added": mock_tag})
+    mock_untag_call = call(args=(mock_id,), kwargs={"tag_removed": mock_tag})
+
+    # Four messages / calls total, two tag and two untag, two accepted and two rejected
+    call_list = [mock_tag_call, mock_untag_call, mock_tag_call, mock_untag_call]
+    slow_update_brew_tags_mock.assert_has_calls(call_list)

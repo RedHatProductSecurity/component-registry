@@ -7,7 +7,7 @@ from proton import Event, SSLDomain
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, Selector
 
-from corgi.tasks.brew import slow_fetch_brew_build
+from corgi.tasks.brew import slow_fetch_brew_build, slow_update_brew_tags
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +106,33 @@ class BrewUMBReceiverHandler(UMBReceiverHandler):
             # Accept the delivered message to remove it from the queue.
             self.accept(event.delivery)
 
+    def handle_tags(self, event: Event) -> None:
+        """Handle messages about Brew builds that have tags added or removed"""
+        logger.info("Handling UMB event for added or removed tags: %s", event.message.id)
+        message = json.loads(event.message.body)
+        build_id = message["build"]["build_id"]
+
+        tag_added_or_removed = message["tag"]["name"]
+        if event.message.address.endswith(".tag"):
+            kwargs = {"tag_added": tag_added_or_removed}
+        else:
+            kwargs = {"tag_removed": tag_added_or_removed}
+
+        try:
+            slow_update_brew_tags.apply_async(args=(build_id,), kwargs=kwargs)
+        except Exception as exc:
+            logger.error(
+                "Failed to schedule slow_update_brew_tags task for build ID %s: %s",
+                build_id,
+                str(exc),
+            )
+            # Release message back to the queue but report back that it was delivered. The
+            # message will be re-delivered to any available client again.
+            self.release(event.delivery, delivered=True)
+        else:
+            # Accept the delivered message to remove it from the queue.
+            self.accept(event.delivery)
+
 
 class UMBListener:
     """Base class that listens for and handles messages on certain UMB topics"""
@@ -133,4 +160,6 @@ class BrewUMBListener(UMBListener):
     handler_class = BrewUMBReceiverHandler
     virtual_topic_addresses = {
         f"Consumer.{settings.UMB_CONSUMER}.VirtualTopic.eng.brew.build.complete": "handle_builds",
+        f"Consumer.{settings.UMB_CONSUMER}.VirtualTopic.eng.brew.build.tag": "handle_tags",
+        f"Consumer.{settings.UMB_CONSUMER}.VirtualTopic.eng.brew.build.untag": "handle_tags",
     }

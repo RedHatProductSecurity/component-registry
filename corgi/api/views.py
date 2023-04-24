@@ -519,26 +519,26 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
     lookup_url_kwarg = "uuid"
 
     def get_queryset(self) -> QuerySet[Component]:
-        # 'latest' filter only relevant in terms of a specific offering/product
+        # 'latest' and 'root components' filter automagically turn on
+        # when the ofuri parameter is given
+        # We should remove this parameter and rely on standard Django filters instead
         ofuri = self.request.query_params.get("ofuri")
         if not ofuri:
             return self.queryset
 
         model, _ = get_model_ofuri_type(ofuri)
         if isinstance(model, Product):
-            return self.queryset.filter(products__ofuri=ofuri)
+            components_for_model = self.queryset.filter(products__ofuri=ofuri)
         elif isinstance(model, ProductVersion):
-            return self.queryset.filter(productversions__ofuri=ofuri)
+            components_for_model = self.queryset.filter(productversions__ofuri=ofuri)
         elif isinstance(model, ProductStream):
-            # only ProductStream defines get_latest_components()
-            # TODO: Should this be a ProductModel method? For e.g. Products,
-            #  we could return get_latest_components() for each child stream
-            return model.get_latest_components()
+            components_for_model = self.queryset.filter(productstreams__ofuri=ofuri)
         elif isinstance(model, ProductVariant):
-            return self.queryset.filter(productvariants__ofuri=ofuri)
+            components_for_model = self.queryset.filter(productvariants__ofuri=ofuri)
         else:
             # No matching model instance found, or invalid ofuri
             raise Http404
+        return components_for_model.latest_components()
 
     @extend_schema(
         parameters=[

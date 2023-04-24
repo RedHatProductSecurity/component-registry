@@ -538,7 +538,7 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         else:
             # No matching model instance found, or invalid ofuri
             raise Http404
-        return components_for_model.latest_components()
+        return components_for_model.root_components().latest_components()
 
     @extend_schema(
         parameters=[

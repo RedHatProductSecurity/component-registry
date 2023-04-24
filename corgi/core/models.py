@@ -640,7 +640,8 @@ class ProductStream(ProductModel):
         """Returns unique aggregate "provides" for the latest components in this stream,
         for use in templates"""
         unique_provides = (
-            self.components.db_manager(using)
+            self.components.exclude(name__endswith="-container-source")
+            .using(using)
             .released_components()
             .latest_components()
             .values_list("provides__pk", flat=True)
@@ -901,7 +902,6 @@ class ComponentQuerySet(models.QuerySet):
             names = (
                 self.root_components()
                 .filter(**cond)
-                .exclude(name__endswith="-container-source")
                 .values_list("name", flat=True)
                 .distinct()
                 .iterator()

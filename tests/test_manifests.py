@@ -5,6 +5,7 @@ from json import JSONDecodeError
 
 import pytest
 
+from corgi.core.files import ProductManifestFile
 from corgi.core.models import (
     Component,
     ComponentNode,
@@ -63,14 +64,19 @@ def test_escapejs_on_copyright():
         ), f"JSONDecodeError thrown by component with special chars in copyright_text {e}"
 
 
-def test_latest_components_exclude_source_container():
+def test_manifests_exclude_source_container():
     """Test that container sources are excluded packages"""
     containers, stream, _ = setup_products_and_rpm_in_containers()
     assert len(containers) == 3
 
-    components = stream.get_latest_components()
-    assert len(components) == 2
-    assert not components.filter(name__endswith="-container-source").exists()
+    manifest_str = ProductManifestFile(stream).render_content()
+    manifest = json.loads(manifest_str)
+    components = manifest["packages"]
+    # Two containers, one RPM, and a product are included
+    assert len(components) == 4, components
+    # The source container is excluded
+    for component in components:
+        assert not component["name"].endswith("-container-source")
 
 
 def test_stream_manifest_backslash():
@@ -107,9 +113,15 @@ def test_slim_rpm_in_containers_manifest():
     containers, stream, rpm_in_container = setup_products_and_rpm_in_containers()
 
     # Two components linked to this product
-    released_components = stream.get_latest_components().released_components()
+    # plus a source container which is shown in API but not in manifests
+    released_components = (
+        stream.components.exclude(name__endswith="-container-source")
+        .root_components()
+        .released_components()
+        .latest_components()
+    )
     num_components = len(released_components)
-    assert num_components == 2
+    assert num_components == 2, released_components
 
     provided = set()
     # Each component has 1 node each
@@ -176,7 +188,9 @@ def test_product_manifest_excludes_unreleased_components():
     manifest = json.loads(stream.manifest)
 
     # No released components linked to this product
-    num_components = len(stream.get_latest_components().released_components())
+    num_components = len(
+        stream.components.root_components().released_components().latest_components()
+    )
     assert num_components == 0
 
     num_provided = len(stream.provides_queryset)
@@ -211,7 +225,9 @@ def test_product_manifest_properties():
     manifest = json.loads(stream.manifest)
 
     # One component linked to this product
-    num_components = len(stream.get_latest_components().released_components())
+    num_components = len(
+        stream.components.root_components().released_components().latest_components()
+    )
     assert num_components == 1
 
     num_provided = len(stream.provides_queryset)

@@ -39,7 +39,7 @@ def test_products(requests_mock):
 
     update_products()
 
-    assert Product.objects.all().count() == 3
+    assert Product.objects.all().count() == 4
 
     rhel_product = Product.objects.get(name="rhel")
     assert rhel_product.name == "rhel"
@@ -64,3 +64,39 @@ def test_products(requests_mock):
     rhacm24z = ProductStream.objects.get(name="rhacm-2.4.z")
     assert rhacm24z
     assert et_variant.name in rhacm24z.productvariants.values_list("name", flat=True)
+
+
+@pytest.mark.django_db
+def test_skip_brew_tag_linking_for_buggy_products(requests_mock):
+    """RHEL-7-SATELLITE-6.10 has a brew_tag for 6.7 version, which means the 7Server-Satellite67
+    ProductVariant gets incorrectly assciated with the rhn_satellite_6.7 product stream"""
+
+    with open("tests/data/product-definitions.json") as prod_defs:
+        text = prod_defs.read()
+        text = text.replace("{CORGI_TEST_DOWNLOAD_URL}", os.getenv("CORGI_TEST_DOWNLOAD_URL"))
+        text = text.replace("{CORGI_PULP_URL}", os.getenv("CORGI_PULP_URL"))
+        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+
+    et_product = CollectorErrataProduct.objects.create(
+        et_id=103, name="Red Hat Satellite 6", short_name="SATELLITE"
+    )
+    CollectorErrataProductVersion.objects.create(
+        et_id=1571,
+        name="RHEL-7-SATELLITE-6.10",
+        product=et_product,
+        brew_tags=["satellite-6.7.0-rhel-7"],
+    )
+
+    update_products()
+
+    rhn_satellite_67 = ProductStream.objects.get(name="rhn_satellite_6.7")
+    assert rhn_satellite_67
+    assert "satellite-6.7.0-rhel-7" in rhn_satellite_67.brew_tags
+    assert rhn_satellite_67.productvariants.count() == 0
+
+    rhn_satellite_610 = ProductStream.objects.get(name="rhn_satellite_6.10")
+    assert rhn_satellite_610
+    sat_610_variants = rhn_satellite_610.productvariants
+    assert sat_610_variants.count() == 2
+    for variant in sat_610_variants.all():
+        assert variant.name in ["7Server-Capsule610", "7Server-Satellite610"]

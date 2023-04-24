@@ -626,15 +626,6 @@ class ProductStream(ProductModel):
         """Return an SPDX-style manifest in JSON format."""
         return ProductManifestFile(self).render_content()
 
-    @staticmethod
-    def filter_latest_nevra_by_name(components: "ComponentQuerySet", component_name: str) -> str:
-        nevras = components.filter(name=component_name).values_list("nevra", flat=True)
-        if nevras:
-            # Get the latest NVR using python. This only works for valid RPM NEVRAs
-            return sorted(nevras, key=functools.cmp_to_key(compare_packages))[-1]
-        else:
-            return ""
-
     @property
     def provides_queryset(self, using: str = "read_only") -> QuerySet["Component"]:
         """Returns unique aggregate "provides" for the latest components in this stream,
@@ -870,6 +861,14 @@ def get_product_details(variant_names: tuple[str], stream_names: list[str]) -> d
 class ComponentQuerySet(models.QuerySet):
     """Helper methods to filter QuerySets of Components"""
 
+    def filter_latest_nevra_by_name(self, component_name: str) -> str:
+        nevras = self.filter(name=component_name).values_list("nevra", flat=True)
+        if nevras:
+            # Get the latest NVR using python. This only works for valid RPM NEVRAs
+            return sorted(nevras, key=functools.cmp_to_key(compare_packages))[-1]
+        else:
+            return ""
+
     def latest_components(
         self,
         component_name: str = "",
@@ -885,9 +884,7 @@ class ComponentQuerySet(models.QuerySet):
             names = self.filter(**cond).values_list("name", flat=True).distinct().iterator()
             query = Q()
             for name in names:
-                latest_nevra = ProductStream.filter_latest_nevra_by_name(
-                    components=self, component_name=name
-                )
+                latest_nevra = self.filter_latest_nevra_by_name(component_name=name)
                 if latest_nevra:
                     query |= Q(nevra=latest_nevra)
             if not query:
@@ -897,9 +894,7 @@ class ComponentQuerySet(models.QuerySet):
             names = self.filter(**cond).values_list("name", flat=True).distinct().iterator()
             query = Q()
             for name in names:
-                latest_nevra = ProductStream.filter_latest_nevra_by_name(
-                    components=self, component_name=name
-                )
+                latest_nevra = self.filter_latest_nevra_by_name(component_name=name)
                 if latest_nevra:
                     query |= Q(nevra=latest_nevra)
             if not query:

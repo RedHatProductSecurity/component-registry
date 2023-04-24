@@ -874,7 +874,7 @@ class ComponentQuerySet(models.QuerySet):
         include: bool = True,
     ) -> "ComponentQuerySet":
         """Return components from latest builds."""
-        names = self.values_list("name", flat=True).distinct().iterator()
+        names = self.values_list("name", flat=True).order_by().distinct().iterator()
         query = Q()
         for name in names:
             latest_nevra = self.filter_latest_nevra_by_name(component_name=name)

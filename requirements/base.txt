@@ -537,9 +537,9 @@ splitstream==1.2.6 \
     --hash=sha256:fc44c3b0598ad29b25a74b7bdbc40612a634adc3f6148a80c06ebb77a28aecad \
     --hash=sha256:fce19720a98664cc3fcaad037f7540892ec817ee0bfe97d2736665925a61c78b
     # via -r requirements/base.in
-sqlparse==0.4.2 \
-    --hash=sha256:0c00730c74263a94e5a9919ade150dfc3b19c574389985446148402998287dae \
-    --hash=sha256:48719e356bb8b42991bdbb1e8b83223757b93789c00910a616a071910ca4a64d
+sqlparse==0.4.4 \
+    --hash=sha256:5430a4fe2ac7d0f93e66f1efc6e1338a41884b7ddf2a350cedd20ccc4d9d28f3 \
+    --hash=sha256:d446183e84b8349fa3061f0fe7f06ca94ba65b426946ffebe6e3e8295332420c
     # via django
 tornado==6.2 \
     --hash=sha256:1d54d13ab8414ed44de07efecb97d4ef7c39f7438cf5e976ccd356bebb1b5fca \

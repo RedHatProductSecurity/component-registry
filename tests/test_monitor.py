@@ -7,6 +7,7 @@ from corgi.monitor.consumer import (
     BrewBuildUMBListener,
     BrewBuildUMBReceiverHandler,
     UMBListener,
+    UMBReceiverHandler,
 )
 
 pytestmark = pytest.mark.unit
@@ -20,7 +21,7 @@ def test_umb_listener_requires_address():
         listener.consume()
 
 
-def test_brew_umb_listener_defines_address():
+def test_brew_build_umb_listener_defines_address():
     """Test BrewBuildUMBListener subclass listens for messages on defined address"""
     listener = BrewBuildUMBListener()
     assert (
@@ -35,11 +36,13 @@ def test_brew_umb_listener_defines_address():
         with patch.object(BrewBuildUMBListener, "handler_class") as mock_receiver_constructor:
             listener.consume()
 
-    # We call the Container() constructor with an instance of BrewBuildUMBReceiverHandler()
-    # returned by mock_receiver_constructor above so we don't need real UMB certs in tests
+    # We call the BrewBuildUMBReceiverHandler() constructor with the class's virtual topic address
     mock_receiver_constructor.assert_called_once_with(
         virtual_topic_address=listener.virtual_topic_address
     )
+
+    # We call the Container() constructor with an instance of BrewBuildUMBReceiverHandler()
+    # returned by mock_receiver_constructor above so we don't need real UMB certs in tests
     mock_receiver_instance = mock_receiver_constructor.return_value
     mock_container_constructor.assert_called_once_with(mock_receiver_instance)
 
@@ -48,10 +51,21 @@ def test_brew_umb_listener_defines_address():
     mock_container_instance.run.assert_called_once_with()
 
 
-def test_umb_receiver_handles_messages():
-    """Test that the UMBReceiverHandler class is set up correctly, then either
-    accepts a message, when no exception is raised
-    OR rejects a message if any exception is raised"""
+def test_umb_receiver_requires_handling_logic():
+    """Test UMBReceiverHandler base class raises NotImplementedError
+    for topic-specific message-handling logic"""
+    address = UMBListener().virtual_topic_address
+    # Stub out the SSLDomain config class to avoid needing real UMB certs in tests
+    with patch("corgi.monitor.consumer.SSLDomain") as mock_ssl_domain_constructor:
+        handler = UMBReceiverHandler(virtual_topic_address=address)
+    mock_ssl_domain_constructor.assert_called_once_with(mock_ssl_domain_constructor.MODE_CLIENT)
+    mock_umb_event = MagicMock()
+    with pytest.raises(NotImplementedError):
+        handler.on_message(mock_umb_event)
+
+
+def test_brew_build_umb_receiver_connects():
+    """Test that the BrewBuildUMBReceiverHandler class is set up correctly"""
     address = BrewBuildUMBListener().virtual_topic_address
     # Stub out the SSLDomain config class to avoid needing real UMB certs in tests
     with patch("corgi.monitor.consumer.SSLDomain") as mock_ssl_domain_constructor:
@@ -59,6 +73,7 @@ def test_umb_receiver_handles_messages():
 
     # We listen (in client mode) to the address passed in, and connect to the UMB URL from settings
     mock_ssl_domain_constructor.assert_called_once_with(mock_ssl_domain_constructor.MODE_CLIENT)
+    mock_ssl_domain_instance = mock_ssl_domain_constructor.return_value
     assert handler.virtual_topic_address == address
     assert handler.urls == [settings.UMB_BROKER_URL]
 
@@ -66,6 +81,31 @@ def test_umb_receiver_handles_messages():
     assert handler.auto_accept is False
     # Accepted messages should be automatically settled (this is the default)
     assert handler.auto_settle is True
+
+    mock_umb_event = MagicMock()
+    mock_connection_constructor = mock_umb_event.container.connect
+    mock_connection_instance = mock_connection_constructor.return_value
+    handler.on_start(mock_umb_event)
+
+    mock_connection_constructor.assert_called_once_with(
+        urls=handler.urls, ssl_domain=mock_ssl_domain_instance, heartbeat=500
+    )
+    mock_umb_event.container.create_receiver.assert_called_once_with(
+        mock_connection_instance,
+        handler.virtual_topic_address,
+        name=None,
+        options=[handler.selector] if handler.selector else [],
+    )
+
+
+def test_brew_build_umb_receiver_handles_messages():
+    """Test that the BrewBuildUMBReceiverHandler class either
+    accepts a message, when no exception is raised
+    OR rejects a message if any exception is raised"""
+    address = BrewBuildUMBListener().virtual_topic_address
+    # Stub out the SSLDomain config class to avoid needing real UMB certs in tests
+    with patch("corgi.monitor.consumer.SSLDomain"):
+        handler = BrewBuildUMBReceiverHandler(virtual_topic_address=address)
 
     mock_umb_event = MagicMock()
     mock_id = "1"

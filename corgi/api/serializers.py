@@ -405,20 +405,51 @@ class ComponentSerializer(ProductTaxonomySerializer):
     def get_link(instance: Component) -> str:
         return get_component_purl_link(instance.purl)
 
-    @staticmethod
-    def get_provides(instance: Component) -> list[dict[str, str]]:
+    # @staticmethod
+    def get_provides(self, instance: Component):
+        if self._next_level_include_fields.get(
+            "provides", []
+        ) or self._next_level_exclude_fields.get("provides", []):
+            context = {
+                "include_fields": self._next_level_include_fields.get("provides", []),
+                "exclude_fields": self._next_level_exclude_fields.get("provides", []),
+            }
+            serializer = ComponentSerializer(
+                instance=instance.provides, many=True, read_only=True, context=context
+            )
+            return serializer.data
         return get_component_data_list(
             instance.provides.values_list("purl", flat=True).using("read_only").iterator()
         )
 
-    @staticmethod
-    def get_sources(instance: Component) -> list[dict[str, str]]:
+    def get_sources(self, instance: Component):
+        if self._next_level_include_fields.get(
+            "sources", []
+        ) or self._next_level_exclude_fields.get("sources", []):
+            context = {
+                "include_fields": self._next_level_include_fields.get("sources", []),
+                "exclude_fields": self._next_level_exclude_fields.get("sources", []),
+            }
+            serializer = ComponentSerializer(
+                instance=instance.sources, many=True, read_only=True, context=context
+            )
+            return serializer.data
         return get_component_data_list(
             instance.sources.values_list("purl", flat=True).using("read_only").iterator()
         )
 
-    @staticmethod
-    def get_upstreams(instance: Component) -> list[dict[str, str]]:
+    def get_upstreams(self, instance: Component):
+        if self._next_level_include_fields.get(
+            "upstreams", []
+        ) or self._next_level_exclude_fields.get("upstreams", []):
+            context = {
+                "include_fields": self._next_level_include_fields.get("upstreams", []),
+                "exclude_fields": self._next_level_exclude_fields.get("upstreams", []),
+            }
+            serializer = ComponentSerializer(
+                instance=instance.upstreams, many=True, read_only=True, context=context
+            )
+            return serializer.data
         return get_component_data_list(
             instance.upstreams.values_list("purl", flat=True).using("read_only").iterator()
         )

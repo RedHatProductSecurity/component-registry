@@ -1463,25 +1463,13 @@ components:
               type: string
           readOnly: true
         sources:
-          type: array
-          items:
-            type: object
-            additionalProperties:
-              type: string
+          type: string
           readOnly: true
         provides:
-          type: array
-          items:
-            type: object
-            additionalProperties:
-              type: string
+          type: string
           readOnly: true
         upstreams:
-          type: array
-          items:
-            type: object
-            additionalProperties:
-              type: string
+          type: string
           readOnly: true
         manifest:
           type: string

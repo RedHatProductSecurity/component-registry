@@ -1,12 +1,14 @@
+import logging
 from collections.abc import Iterable
 from typing import Any
 
 from django.contrib.auth.models import User
 from mozilla_django_oidc.auth import OIDCAuthenticationBackend
-from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import BasePermission
 
 from corgi.core.models import RedHatProfile
+
+logger = logging.getLogger(__name__)
 
 
 class CorgiOIDCBackend(OIDCAuthenticationBackend):
@@ -24,28 +26,26 @@ class CorgiOIDCBackend(OIDCAuthenticationBackend):
         """The default behavior is to use e-mail, which may not be unique.
         Instead, we use Red Hat UUID, which should be unique and persistent
         between changes to other user claims."""
-        rhat_uuid = claims.get("rhatUUID")
 
-        if not rhat_uuid:
-            return self.UserModel.objects.none()
+        # Since verify_claims requires rhatUUID in claims, it will always be here.
+        rhat_uuid = claims["rhatUUID"]
 
         try:
             rhat_profile = RedHatProfile.objects.get(rhat_uuid=rhat_uuid)
             return [rhat_profile.user]
 
         except RedHatProfile.DoesNotExist:
-            return self.UserModel.objects.none()
+            logger.info("UUID %s doesn't have a RedHatProfile", rhat_uuid)
 
         return self.UserModel.objects.none()
 
     def create_user(self, claims: Any) -> User:
         """Rather than changing the existing Django user model, this stores Red Hat SSO
         claims in a separate model keyed to the created user."""
-        if "rhatUUID" not in claims:
-            raise AuthenticationFailed("User claims do not include rhatUUID")
         user = super(CorgiOIDCBackend, self).create_user(claims)
 
         # Create a Red Hat Profile for this user
+        # Because verify_claims requires rhatUUID, it will always be here.
         _ = RedHatProfile.objects.create(
             rhat_uuid=claims["rhatUUID"],
             rhat_roles=claims.get("groups", ""),
@@ -78,10 +78,8 @@ class RedHatRolePermission(BasePermission):  # type: ignore[misc]
         if not request.user.is_authenticated:
             return False
 
-        try:
-            rhat_profile = RedHatProfile.objects.get(user=request.user)
-        except RedHatProfile.DoesNotExist:
-            return False
+        # All authenticated users will have a RedHatProfile
+        rhat_profile = RedHatProfile.objects.get(user=request.user)
 
         user_roles = rhat_profile.rhat_roles.strip("[]").split(", ")
         return set(user_roles).intersection(set(view.roles_permitted)) != set()

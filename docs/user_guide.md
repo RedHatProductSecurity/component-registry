@@ -160,8 +160,15 @@ The following is an example of one component (with some data omitted for brevity
     "nvr": "rh-nodejs12-npm-6.14.16-12.22.12.2.el7",
     "nevra": "rh-nodejs12-npm-6.14.16-12.22.12.2.el7.aarch64",
     "epoch": 0,
-    "license": "MIT and ASL 2.0 and ISC and BSD",
-    "license_list": [
+    "license_concluded": "MIT and ASL 2.0 and ISC and BSD",
+    "license_concluded_list": [
+        "MIT",
+        "ASL 2.0",
+        "ISC",
+        "BSD"
+    ],
+    "license_declared": "MIT and ASL 2.0 and ISC and BSD",
+    "license_declared_list": [
         "MIT",
         "ASL 2.0",
         "ISC",
@@ -247,9 +254,13 @@ The following is a listing of most of the attributes shown above with a descript
 - `version`, `release`, `arch`, `nvr`: `nevra`, `epoch`: attributes of a component that combined with the name
   identify it uniquely; `nvr` and `nevra` are frequently-used combinations of these attributes.
 
-- `license`: the license string as it is included in the component's spec file.
+- `license_concluded`: An SPDX license expression as determined by an OpenLCS scan.
 
-- `license_list`: the license string parsed into its individual components.
+- `license_concluded_list`: the same license string parsed into its individual components.
+
+- `license_declared`: the license string as it is included in the component's spec file, docker image label, etc.
+
+- `license_declared_list`: the same license string parsed into its individual components.
 
 - `software_build`: a minimal representation of the build that produced this component.
 
@@ -629,8 +640,3 @@ $ curl -s -L https://${CORGI_HOST}/api/v1/components?purl=pkg%3Arpmmod/redhat/38
 "pkg:rpm/redhat/389-ds-base-snmp-debuginfo@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=x86_64"
 "pkg:rpm/redhat/python3-lib389@1.4.0.20-10.module%2Bel8.0.0%2B3096%2B101825d5?arch=noarch"
 ```
-
-
-
-
-

@@ -4,7 +4,6 @@ from abc import ABC, abstractmethod
 
 import jsonschema
 from django.conf import settings
-from django.db.models import Q
 from django.template.loader import render_to_string
 
 from corgi.core.mixins import TimeStampedModel
@@ -66,17 +65,9 @@ class ProductManifestFile(ManifestFile):
     # Or to handle different ways of generating manifest properties from Product properties
 
     def render_content(self) -> str:
-        from corgi.core.models import Component
 
         components = self.obj.components  # type: ignore[attr-defined]
-        excluded_components = (
-            # Exclude source containers because they would only duplicate the content of regular
-            # container images.
-            Q(name__endswith="-container-source")
-            # Exclude components with relative paths in their name; see also CORGI-428
-            | (Q(name__contains="./") & Q(type=Component.Type.GOLANG))
-        )
-        components = components.exclude(excluded_components).using("read_only")
+        components = components.exclude(name__endswith="-container-source").using("read_only")
         released_components = components.root_components().released_components().latest_components()
         distinct_provides = self.obj.provides_queryset  # type: ignore[attr-defined]
 

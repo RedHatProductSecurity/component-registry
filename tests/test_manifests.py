@@ -79,6 +79,33 @@ def test_manifests_exclude_source_container():
         assert not component["name"].endswith("-container-source")
 
 
+def test_manifests_exclude_bad_golang_components():
+    """Test that Golang components with names like ../ are excluded packages"""
+    # Remove below when CORGI-428 is resolved
+    containers, stream, _ = setup_products_and_rpm_in_containers()
+    assert len(containers) == 3
+
+    bad_golang = ComponentFactory(type=Component.Type.GOLANG, name="./api-")
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.PROVIDES,
+        parent=containers[0].cnodes.first(),
+        purl=bad_golang.purl,
+        obj=bad_golang,
+    )
+    # Link the bad_golang component to its parent container
+    containers[0].save_component_taxonomy()
+    assert containers[0].provides.filter(name=bad_golang.name).exists()
+
+    manifest_str = ProductManifestFile(stream).render_content()
+    manifest = json.loads(manifest_str)
+    components = manifest["packages"]
+    # Two containers, one RPM, and a product are included
+    assert len(components) == 4, components
+    # The golang component is excluded
+    for component in components:
+        assert not component["name"] == bad_golang.name
+
+
 def test_stream_manifest_backslash():
     """Test that a tailing backslash in a purl doesn't break rendering"""
 

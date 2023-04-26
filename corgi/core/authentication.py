@@ -1,4 +1,5 @@
 import logging
+import uuid
 from collections.abc import Iterable
 from typing import Any
 
@@ -83,3 +84,45 @@ class RedHatRolePermission(BasePermission):  # type: ignore[misc]
 
         user_roles = rhat_profile.rhat_roles.strip("[]").split(", ")
         return set(user_roles).intersection(set(view.roles_permitted)) != set()
+
+
+# drf's BasePermission seems to use metaclasses in a way mypy doesn't like
+class RedHatUUIDPermission(BasePermission):  # type: ignore[misc]
+    """A permission class that grants access to users specified by rhatUUID.
+    More than one user can be specified in a non-nested list, set, or tuple
+    of strings or UUIDs."""
+
+    ALLOWED_UUID_TYPES = (list, tuple, set, str, uuid.UUID)
+
+    def has_permission(self, request: Any, view: Any) -> bool:
+        if not hasattr(view, "uuids_permitted"):
+            raise ValueError(f"View {view} doesn't define any permitted UUIDs")
+
+        if type(view.uuids_permitted) not in RedHatUUIDPermission.ALLOWED_UUID_TYPES:
+            raise TypeError(
+                f"View {view} specifies UUIDs with unsupported type {type(view.uuids_permitted)}"
+            )
+
+        if type(view.uuids_permitted) in (list, tuple, set):
+            if not all([type(x) in (str, uuid.UUID) for x in view.uuids_permitted]):
+                raise TypeError(
+                    f"Something other than str or UUID provided for permission in View {view}"
+                )
+
+        # Converting str to UUID can raise if the string is not a valid hexadecimal UUID
+        if isinstance(view.uuids_permitted, uuid.UUID):
+            permitted_uuids = [view.uuids_permitted]
+        elif isinstance(view.uuids_permitted, str):
+            permitted_uuids = [uuid.UUID(view.uuids_permitted)]
+        else:
+            str_uuids = [uuid.UUID(s) for s in view.uuids_permitted if isinstance(s, str)]
+            nonstr_uuids = [u for u in view.uuids_permitted if not isinstance(u, str)]
+            permitted_uuids = str_uuids + nonstr_uuids
+
+        if not request.user.is_authenticated:
+            return False
+
+        # All authenticated users will have a RedHatProfile
+        user_uuid = RedHatProfile.objects.get(user=request.user).rhat_uuid
+
+        return user_uuid in permitted_uuids

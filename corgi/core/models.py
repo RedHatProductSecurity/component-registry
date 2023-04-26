@@ -631,7 +631,9 @@ class ProductStream(ProductModel):
         """Returns unique aggregate "provides" for the latest components in this stream,
         for use in templates"""
         unique_provides = (
-            self.components.exclude(name__endswith="-container-source")
+            self.components.exclude(
+                type=Component.Type.CONTAINER_IMAGE, name__endswith="-container-source"
+            )
             .using(using)
             .root_components()
             .released_components()
@@ -641,7 +643,11 @@ class ProductStream(ProductModel):
             .order_by("provides__pk")
             .iterator()
         )
-        return Component.objects.filter(pk__in=unique_provides).using(using)
+        return (
+            Component.objects.filter(pk__in=unique_provides)
+            # Remove .exclude() below when CORGI-428 is resolved
+            .exclude(type=Component.Type.GOLANG, name__contains="./").using(using)
+        )
 
 
 class ProductStreamTag(Tag):

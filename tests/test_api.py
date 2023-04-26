@@ -1012,6 +1012,38 @@ def test_oci_component_provides_sources_upstreams(client, api_path):
     assert response.status_code == 200
     assert response.json()["count"] == 1
 
+    response = client.get(f"{api_path}/components/{root_comp.uuid}/taxonomy")
+    assert response.status_code == 200
+    assert len(response.json()[0]["provides"]) == 3
+
+    response = client.get(
+        f"{api_path}/components/{root_comp.uuid}?include_fields=provides.name,provides.purl"
+    )
+    assert response.status_code == 200
+    assert "upstreams" not in response.json()
+    assert len(response.json()["provides"]) == 2
+    for provide in response.json()["provides"]:
+        assert "name" in provide
+        assert "purl" in provide
+    response = client.get(
+        f"{api_path}/components/{root_comp.uuid}?include_fields=upstreams.name,upstreams.purl"
+    )
+    assert response.status_code == 200
+    assert "provides" not in response.json()
+    assert len(response.json()["upstreams"]) == 1
+    for provide in response.json()["upstreams"]:
+        assert "name" in provide
+        assert "purl" in provide
+    response = client.get(
+        f"{api_path}/components/{dep_comp.uuid}?include_fields=sources.name,sources.purl"
+    )
+    assert response.status_code == 200
+    assert "provides" not in response.json()
+    assert len(response.json()["sources"]) == 1
+    for provide in response.json()["sources"]:
+        assert "name" in provide
+        assert "purl" in provide
+
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_srpm_component_provides_sources_upstreams(client, api_path):
@@ -1150,3 +1182,36 @@ def test_srpm_component_provides_sources_upstreams(client, api_path):
     response = client.get(f"{api_path}/components?upstreams={quote(upstream_comp.purl)}")
     assert response.status_code == 200
     assert response.json()["count"] == 3
+
+    response = client.get(f"{api_path}/components/{root_comp.uuid}/taxonomy")
+    assert response.status_code == 200
+    print(response.json())
+    assert len(response.json()[0]["provides"]) == 2
+
+    response = client.get(
+        f"{api_path}/components/{root_comp.uuid}?include_fields=provides.name,provides.purl"
+    )
+    assert response.status_code == 200
+    assert "upstreams" not in response.json()
+    assert len(response.json()["provides"]) == 1
+    for provide in response.json()["provides"]:
+        assert "name" in provide
+        assert "purl" in provide
+    response = client.get(
+        f"{api_path}/components/{root_comp.uuid}?include_fields=upstreams.name,upstreams.purl"
+    )
+    assert response.status_code == 200
+    assert "provides" not in response.json()
+    assert len(response.json()["upstreams"]) == 1
+    for provide in response.json()["upstreams"]:
+        assert "name" in provide
+        assert "purl" in provide
+    response = client.get(
+        f"{api_path}/components/{dep_comp.uuid}?include_fields=sources.name,sources.purl"
+    )
+    assert response.status_code == 200
+    assert "provides" not in response.json()
+    assert len(response.json()["sources"]) == 1
+    for provide in response.json()["sources"]:
+        assert "name" in provide
+        assert "purl" in provide

@@ -962,7 +962,6 @@ def test_load_unprocessed_relations_filters(mock_fetch_modular_task):
 
 def test_extract_advisory_ids():
     """Test that we discover only errata / advisory names from a list of Brew build tag names"""
-    brew = Brew(BUILD_TYPE)
     tags = [
         "stream-released",
         "RHBA-2023:1234-released",
@@ -971,7 +970,7 @@ def test_extract_advisory_ids():
         "RHSA-2023:1234567-notarealthingyet",
         "RHXA-2023:1234-released",
     ]
-    result = brew._extract_advisory_ids(tags)
+    result = Brew.extract_advisory_ids(tags)
     # Only RHBA, RHEA, or RHSA is accepted, not other tags or RHXA
     # Suffixes like -released are stripped
     assert result == [tag.rsplit("-", maxsplit=1)[0] for tag in tags[1:5]]
@@ -979,8 +978,7 @@ def test_extract_advisory_ids():
 
 def test_parse_advisory_ids():
     """Test that we discover only released errata from a list of errata / advisory names"""
-    brew = Brew(BUILD_TYPE)
     errata_tags = ["RHBA-2023:1234", "RHEA-2023:12345", "RHSA-2023:123456", "RHSA-2023:1234567"]
-    result = brew._parse_advisory_ids(errata_tags)
+    result = Brew.parse_advisory_ids(errata_tags)
     # Only 4-digit IDs like 1234 are released
     assert result == errata_tags[:1]

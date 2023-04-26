@@ -7,6 +7,7 @@ from corgi.core.constants import CONTAINER_DIGEST_FORMATS
 from corgi.core.models import (
     Component,
     ComponentNode,
+    ComponentQuerySet,
     Product,
     ProductComponentRelation,
     ProductNode,
@@ -802,6 +803,73 @@ def test_filter_latest_by_name():
     # test no result
     ps = ProductStreamFactory(name="rhel-7.7.z")
     assert not ps.components.filter_latest_nevra_by_name(component_name="sdb")
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_filter_latest_by_name_modular():
+    ps = ProductStreamFactory(name="certificate_system-10.2.z")
+    modular_rpm_1 = SrpmComponentFactory(
+        name="idm-console-framework", version="1.2.0", release="3.module+el8pki+7130+225b0dd0"
+    )
+    modular_rpm_1.productstreams.add(ps)
+    modular_rpm_2 = SrpmComponentFactory(
+        name="idm-console-framework", version="1.2.0", release="3.module+el8pki+8580+f0d97d6d"
+    )
+    modular_rpm_2.productstreams.add(ps)
+    assert (
+        ps.components.filter_latest_nevra_by_name(component_name="idm-console-framework")
+        == "idm-console-framework-1.2.0-3.module+el8pki+8580+f0d97d6d.src"
+    )
+
+
+def test_ensure_epoch():
+    component_qs = ComponentQuerySet()
+    nevra = (
+        "",
+        None,
+        "1.2.0",
+        "3.module+el8pki+7130+225b0dd0",
+    )
+    result = component_qs._ensure_epoch(nevra)
+    assert result[0] == "0"
+    assert result[1] == "1.2.0"
+    assert result[2] == "3.module+el8pki+7130+225b0dd0"
+
+    nevra = (
+        "",
+        "",
+        "",
+        "",
+    )
+    result = component_qs._ensure_epoch(nevra)
+    assert result[0] == "0"
+
+    nevra = (
+        "",
+        "1",
+        "",
+        "",
+    )
+    result = component_qs._ensure_epoch(nevra)
+    assert result[0] == "1"
+
+    nevra = (
+        "",
+        0,
+        "",
+        "",
+    )
+    result = component_qs._ensure_epoch(nevra)
+    assert result[0] == "0"
+
+    nevra = (
+        "",
+        1,
+        "",
+        "",
+    )
+    result = component_qs._ensure_epoch(nevra)
+    assert result[0] == "1"
 
 
 def test_version_release_arr_el_match():

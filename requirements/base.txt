@@ -503,6 +503,10 @@ requests-gssapi==1.2.3 \
     # via
     #   -r requirements/base.in
     #   koji
+rpm==0.1.0 \
+    --hash=sha256:0e320a806fb61c3980c0cd0c5f5faec97c73c347432902ba2955a08a7b1a034f \
+    --hash=sha256:3664381f6f3cf050e97f49619cf57abacf3e77d68ddd3bfea3e7459c7c5f03f9
+    # via -r requirements/base.in
 six==1.16.0 \
     --hash=sha256:1e61c37477a1626458e36f7b1d82aa5c9b094fa4802892072e49de9c60c4c926 \
     --hash=sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254
@@ -562,10 +566,6 @@ urllib3==1.26.7 \
     --hash=sha256:4987c65554f7a2dbf30c18fd48778ef124af6fab771a377103da0585e2336ece \
     --hash=sha256:c4fdf4019605b6e5423637e01bc9fe4daef873709a7973e195ceba0a62bbc844
     # via requests
-version-utils==0.3.2 \
-    --hash=sha256:308191f111395ac19ec5ef4650764af29962a6415d8391785027ae5328579299 \
-    --hash=sha256:4e0f3dff669d7a081dd66d8b616752dc309e7246a7b2c5ac800dde5ec0d9a555
-    # via -r requirements/base.in
 vine==5.0.0 \
     --hash=sha256:4c9dceab6f76ed92105027c49c823800dd33cacce13bdedc5b914e3514b7fb30 \
     --hash=sha256:7d3b1624a953da82ef63462013bbd271d3eb75751489f9807598e8f340bd637e

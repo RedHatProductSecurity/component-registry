@@ -22,7 +22,7 @@ psycopg2
 python-qpid-proton
 requests
 requests-gssapi
+rpm
 splitstream
-version_utils
 whitenoise
 mozilla-django-oidc

@@ -184,7 +184,7 @@ def test_component_detail(client, api_path):
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_latest_components_filter(client, api_path):
-    older_component = ComponentFactory(release="9")
+    older_component = ComponentFactory(type=Component.Type.RPM, release="9")
     newer_component = ComponentFactory(
         type=older_component.type,
         name=older_component.name,

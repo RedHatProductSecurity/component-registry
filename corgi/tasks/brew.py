@@ -487,7 +487,12 @@ def save_node(
     return node
 
 
-@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
+@app.task(
+    base=Singleton,
+    autoretry_for=RETRYABLE_ERRORS,
+    retry_kwargs=RETRY_KWARGS,
+    soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
+)
 def load_brew_tags() -> None:
     for ps in ProductStream.objects.get_queryset():
         build_type = BUILD_TYPE

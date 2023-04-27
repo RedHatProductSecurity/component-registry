@@ -33,6 +33,7 @@ def extract_tag_tuples(tags: list[dict]) -> set[tuple]:
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_software_build_details(client, api_path, build_type):
     build = SoftwareBuildFactory(build_type=build_type, tag__name="t0", tag__value="v0")
+    SoftwareBuildFactory(build_type=build_type)
 
     response = client.get(f"{api_path}/builds/{build.uuid}")
     assert response.status_code == 200
@@ -44,6 +45,7 @@ def test_software_build_details(client, api_path, build_type):
     response = client.get(f"{api_path}/builds?build_id={build.build_id}")
     assert response.status_code == 200
     data = response.json()
+    assert len(data["results"]) == 1
     assert data["results"][0]["uuid"] == str(build.uuid)
 
     response = client.get(f"{api_path}/builds?tags=t0:v0")

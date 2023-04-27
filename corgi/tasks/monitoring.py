@@ -50,12 +50,14 @@ def setup_periodic_tasks(sender, **kwargs):
     IntervalSchedule.objects.get_queryset().delete()
 
     if settings.COMMUNITY_MODE_ENABLED:
-        upsert_cron_task("prod_defs", "update_products", hour=1, minute=0)
+        upsert_cron_task("prod_defs", "update_products", hour=0, minute=0)
+        upsert_cron_task("brew", "load_brew_tags", hour=1, minute=0)
         upsert_cron_task("brew", "fetch_unprocessed_brew_tag_relations", hour=2, minute=0)
-        upsert_cron_task("yum", "fetch_unprocessed_yum_relations", hour=3, minute=0)
-        upsert_cron_task("manifest", "update_manifests", hour=4, minute=0)
-        upsert_cron_task("manifest", "collect_static", hour=5, minute=0)
-        upsert_cron_task("monitoring", "email_failed_tasks", hour=6, minute=0)
+        upsert_cron_task("yum", "load_yum_repositories", hour=3, minute=0)
+        upsert_cron_task("yum", "fetch_unprocessed_yum_relations", hour=4, minute=0)
+        upsert_cron_task("manifest", "update_manifests", hour=5, minute=0)
+        upsert_cron_task("manifest", "collect_static", hour=6, minute=0)
+        upsert_cron_task("monitoring", "email_failed_tasks", hour=6, minute=30)
     else:
         # Once a week on a Saturday fetch relations from all active CDN repos
         # Revisit if this is still necessary after CORGI-257 is complete

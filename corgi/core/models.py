@@ -277,7 +277,7 @@ class SoftwareBuild(TimeStampedModel):
     components: models.Manager["Component"]
 
     class Meta:
-        indexes = (models.Index(fields=("completion_time",)),)
+        indexes = (models.Index(fields=("build_id", "build_type")),)
         constraints = [
             models.UniqueConstraint(
                 fields=["build_id", "build_type"], name="unique_build_id_by_type"

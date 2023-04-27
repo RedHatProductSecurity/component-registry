@@ -12,7 +12,7 @@ from .factories import ProductStreamFactory, SoftwareBuildFactory
 logger = logging.getLogger()
 pytestmark = [
     pytest.mark.unit,
-    pytest.mark.django_db(databases=("default", "read_only"), transaction=True),
+    pytest.mark.django_db(databases=("default",)),
 ]
 
 

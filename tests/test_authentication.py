@@ -160,45 +160,29 @@ class TestPermissionRequirements(TestCase):
         with self.assertRaises(ValueError):
             self.uuid_perm.has_permission(self.req, uuid_view)
 
-        # Type uuid.UUID: OK
+        # UUID not in a collection: Not OK
         uuid_view.uuids_permitted = uuid.uuid4()
-        self.assertFalse(self.uuid_perm.has_permission(self.req, uuid_view))
-
-        # Valid UUID hex string: OK
-        uuid_view.uuids_permitted = "7384d338-b303-47fd-a4de-545af9889c9f"
-        self.assertFalse(self.uuid_perm.has_permission(self.req, uuid_view))
-
-        # List with mix of UUIDs and strings: OK
-        uuid_view.uuids_permitted = [
-            uuid.uuid4(),
-            uuid.uuid4(),
-            "7384d338-b303-47fd-a4de-545af9889c9f",
-        ]
-        self.assertFalse(self.uuid_perm.has_permission(self.req, uuid_view))
-
-        # Dict: Not OK
-        uuid_view.uuids_permitted = {"Permitted": uuid.uuid4()}
         with self.assertRaises(TypeError):
             self.uuid_perm.has_permission(self.req, uuid_view)
 
         # Nested list: Not OK
         uuid_view.uuids_permitted = [
             uuid.uuid4(),
-            "7384d338-b303-47fd-a4de-545af9889c9f",
             [uuid.uuid4()],
         ]
         with self.assertRaises(TypeError):
             self.uuid_perm.has_permission(self.req, uuid_view)
 
-        # Malformed UUID string: OK
-        uuid_view.uuids_permitted = "7384d338-b303-47fd-a4de-"
-        with self.assertRaises(ValueError):
-            self.uuid_perm.has_permission(self.req, uuid_view)
+        # Single UUID in collection: OK
+        uuid_view.uuids_permitted = [uuid.uuid4()]
+        self.assertFalse(self.uuid_perm.has_permission(self.req, uuid_view))
 
-        # List containing malformed UUID string: Not OK
-        uuid_view.uuids_permitted = [uuid.uuid4(), "7384d338-b303-47fd-a4de-"]
-        with self.assertRaises(ValueError):
-            self.uuid_perm.has_permission(self.req, uuid_view)
+        # List of UUIDs: OK
+        uuid_view.uuids_permitted = [
+            uuid.uuid4(),
+            uuid.uuid4(),
+        ]
+        self.assertFalse(self.uuid_perm.has_permission(self.req, uuid_view))
 
 
 class TestPermissions(TestCase):
@@ -210,7 +194,13 @@ class TestPermissions(TestCase):
         self.role_view.roles_permitted = ["prodsec-dev"]
         self.uuid_perm = RedHatUUIDPermission()
         self.uuid_view = APIView()
-        self.uuid_view.uuids_permitted = ["7384d338-b303-47fd-a4de-545af9889c9f"]
+        self.uuid_view.uuids_permitted = [uuid.UUID("7384d338-b303-47fd-a4de-545af9889c9f")]
+        self.multi_uuid = APIView()
+        self.multi_uuid.uuids_permitted = [
+            uuid.UUID("b87fd2ac-c42f-44e3-9e88-cd62629b465d"),
+            uuid.UUID("e2d2079e-8092-471f-ab89-c086d4b41901"),
+            uuid.UUID("7384d338-b303-47fd-a4de-545af9889c9f"),
+        ]
 
     def test_anonymous(self):
         """All permission classes should reject anonymous users"""
@@ -272,3 +262,6 @@ class TestPermissions(TestCase):
         req.user = access
 
         self.assertTrue(self.uuid_perm.has_permission(req, self.uuid_view))
+
+        # User has one of multiple UUIDs
+        self.assertTrue(self.uuid_perm.has_permission(req, self.multi_uuid))

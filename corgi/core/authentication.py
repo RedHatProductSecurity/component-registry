@@ -1,6 +1,6 @@
 import logging
 import uuid
-from collections.abc import Iterable
+from collections.abc import Collection, Iterable
 from typing import Any
 
 from django.contrib.auth.models import User
@@ -88,36 +88,17 @@ class RedHatRolePermission(BasePermission):  # type: ignore[misc]
 
 # drf's BasePermission seems to use metaclasses in a way mypy doesn't like
 class RedHatUUIDPermission(BasePermission):  # type: ignore[misc]
-    """A permission class that grants access to users specified by rhatUUID.
-    More than one user can be specified in a non-nested list, set, or tuple
-    of strings or UUIDs."""
-
-    ALLOWED_UUID_TYPES = (list, tuple, set, str, uuid.UUID)
+    """A permission class that grants access to users specified by rhatUUID."""
 
     def has_permission(self, request: Any, view: Any) -> bool:
         if not hasattr(view, "uuids_permitted"):
             raise ValueError(f"View {view} doesn't define any permitted UUIDs")
 
-        if type(view.uuids_permitted) not in RedHatUUIDPermission.ALLOWED_UUID_TYPES:
-            raise TypeError(
-                f"View {view} specifies UUIDs with unsupported type {type(view.uuids_permitted)}"
-            )
+        if not isinstance(view.uuids_permitted, Collection):
+            raise TypeError("Permitted UUIDs must be specified in a collection")
 
-        if type(view.uuids_permitted) in (list, tuple, set):
-            if not all([type(x) in (str, uuid.UUID) for x in view.uuids_permitted]):
-                raise TypeError(
-                    f"Something other than str or UUID provided for permission in View {view}"
-                )
-
-        # Converting str to UUID can raise if the string is not a valid hexadecimal UUID
-        if isinstance(view.uuids_permitted, uuid.UUID):
-            permitted_uuids = [view.uuids_permitted]
-        elif isinstance(view.uuids_permitted, str):
-            permitted_uuids = [uuid.UUID(view.uuids_permitted)]
-        else:
-            str_uuids = [uuid.UUID(s) for s in view.uuids_permitted if isinstance(s, str)]
-            nonstr_uuids = [u for u in view.uuids_permitted if not isinstance(u, str)]
-            permitted_uuids = str_uuids + nonstr_uuids
+        if not all(isinstance(member, uuid.UUID) for member in view.uuids_permitted):
+            raise TypeError("Permitted UUIDs list contains a non-UUID member")
 
         if not request.user.is_authenticated:
             return False
@@ -125,4 +106,4 @@ class RedHatUUIDPermission(BasePermission):  # type: ignore[misc]
         # All authenticated users will have a RedHatProfile
         user_uuid = RedHatProfile.objects.get(user=request.user).rhat_uuid
 
-        return user_uuid in permitted_uuids
+        return user_uuid in view.uuids_permitted

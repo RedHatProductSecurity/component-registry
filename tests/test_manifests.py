@@ -1,6 +1,5 @@
 import json
 import logging
-from datetime import datetime
 from json import JSONDecodeError
 
 import pytest
@@ -110,9 +109,7 @@ def test_stream_manifest_backslash():
     """Test that a tailing backslash in a purl doesn't break rendering"""
 
     stream = ProductStreamFactory()
-    sb = SoftwareBuildFactory(
-        completion_time=datetime.strptime("2017-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z")
-    )
+    sb = SoftwareBuildFactory()
     component = SrpmComponentFactory(version="2.8.0 \\", software_build=sb)
     component.productstreams.add(stream)
 
@@ -371,7 +368,6 @@ def setup_products_and_components_provides(released=True):
         meta_attr["released_errata_tags"] = ["RHBA-2023:1234"]
     build = SoftwareBuildFactory(
         build_id=1,
-        completion_time=datetime.strptime("2017-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z"),
         meta_attr=meta_attr,
     )
     provided = ComponentFactory(type=Component.Type.RPM, arch="x86_64")
@@ -433,7 +429,6 @@ def setup_products_and_rpm_in_containers():
 
 def _build_rpm_in_containers(rpm_in_container, name=""):
     build = SoftwareBuildFactory(
-        completion_time=datetime.strptime("2017-03-29 12:13:29 GMT+0000", "%Y-%m-%d %H:%M:%S %Z%z"),
         meta_attr={"released_errata_tags": ["RHBA-2023:1234"]},
     )
     if not name:

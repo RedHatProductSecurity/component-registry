@@ -59,6 +59,10 @@ paths:
       description: View for api/v1/builds
       parameters:
       - in: query
+        name: build_id
+        schema:
+          type: string
+      - in: query
         name: build_type
         schema:
           type: string

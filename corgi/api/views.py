@@ -14,13 +14,14 @@ from mozilla_django_oidc.contrib.drf import OIDCAuthentication
 from mptt.templatetags.mptt_tags import cache_tree_children
 from packageurl import PackageURL
 from rest_framework import filters, status
+from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import (
     action,
     api_view,
     authentication_classes,
     permission_classes,
 )
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -268,6 +269,24 @@ class ControlledAccessTestView(APIView):
     def get(self, request, format=None):
         content = {"user": str(request.user)}
         return Response(content)
+
+
+class TokenAuthTestView(APIView):
+    """
+    View to test authentication with DRF Tokens.
+    """
+
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get(self, request, format=None):
+        if request.user.is_authenticated:
+            return Response({"user": str(request.user)})
+        else:
+            return Response()
+
+    def post(self, request, format=None):
+        return Response({"user": str(request.user)})
 
 
 # A dict with string keys and string or tuple values

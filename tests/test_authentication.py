@@ -5,9 +5,14 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.test import RequestFactory, TestCase, override_settings
+from rest_framework.authtoken.models import Token
 from rest_framework.views import APIView
 
-from corgi.api.views import ControlledAccessTestView, authentication_status
+from corgi.api.views import (
+    ControlledAccessTestView,
+    TokenAuthTestView,
+    authentication_status,
+)
 from corgi.core.authentication import (
     CorgiOIDCBackend,
     RedHatProfile,
@@ -265,3 +270,36 @@ class TestPermissions(TestCase):
 
         # User has one of multiple UUIDs
         self.assertTrue(self.uuid_perm.has_permission(req, self.multi_uuid))
+
+
+class TestTokenAuth(TestCase):
+    """Test local user token-based authentication"""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="test", email="test@example.com")
+        self.token = Token.objects.create(user=self.user)
+
+    def test_view(self):
+        anonymous_get = RequestFactory().get("/api/token_auth_test")
+        response = TokenAuthTestView.as_view()(anonymous_get)
+        self.assertEqual(response.status_code, 200)
+
+        anonymous_post = RequestFactory().post("/api/token_auth_test")
+        response = TokenAuthTestView.as_view()(anonymous_post)
+        self.assertEqual(response.status_code, 401)
+
+        authenticated_get = RequestFactory().get(
+            "/api/token_auth_test",
+            HTTP_AUTHORIZATION=f"Token {self.token.key}",
+        )
+        response = TokenAuthTestView.as_view()(authenticated_get)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, {"user": "test"})
+
+        authenticated_post = RequestFactory().post(
+            "/api/token_auth_test",
+            HTTP_AUTHORIZATION=f"Token {self.token.key}",
+        )
+        response = TokenAuthTestView.as_view()(authenticated_post)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, {"user": "test"})

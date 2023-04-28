@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Type, Union
+from typing import Any, Type, Union
 
 import django_filters.rest_framework
 from django.conf import settings
@@ -279,13 +279,13 @@ class TokenAuthTestView(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticatedOrReadOnly]
 
-    def get(self, request, format=None):
+    def get(self, request: Request, format: Any = None) -> Response:
         if request.user.is_authenticated:
             return Response({"user": str(request.user)})
         else:
             return Response()
 
-    def post(self, request, format=None):
+    def post(self, request: Request, format: Any = None) -> Response:
         return Response({"user": str(request.user)})
 
 

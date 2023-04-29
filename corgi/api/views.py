@@ -288,7 +288,7 @@ class TokenAuthTestView(APIView):
                     "user": {"type": "string"},
                 },
             },
-        }
+        },
     )
     def get(self, request: Request, format: Any = None) -> Response:
         user_name = ""
@@ -306,7 +306,7 @@ class TokenAuthTestView(APIView):
                 },
             },
             401: None,
-        }
+        },
     )
     def post(self, request: Request, format: Any = None) -> Response:
         return Response({"user": str(request.user)})

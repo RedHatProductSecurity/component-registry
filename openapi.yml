@@ -53,6 +53,44 @@ paths:
       responses:
         '200':
           description: No response body
+  /api/token_auth_test:
+    get:
+      operationId: token_auth_test_retrieve
+      description: View to test authentication with DRF Tokens.
+      tags:
+      - token_auth_test
+      security:
+      - tokenAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: string
+          description: ''
+    post:
+      operationId: token_auth_test_create
+      description: View to test authentication with DRF Tokens.
+      tags:
+      - token_auth_test
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: string
+          description: ''
+        '401':
+          description: No response body
   /api/v1/builds:
     get:
       operationId: v1_builds_list
@@ -2163,3 +2201,9 @@ components:
       required:
       - created_at
       - name
+  securitySchemes:
+    tokenAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Token-based authentication with required prefix "Token"

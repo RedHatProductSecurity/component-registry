@@ -279,12 +279,35 @@ class TokenAuthTestView(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    @extend_schema(
+        request=None,
+        responses={
+            200: {
+                "type": "object",
+                "properties": {
+                    "user": {"type": "string"},
+                },
+            },
+        }
+    )
     def get(self, request: Request, format: Any = None) -> Response:
+        user_name = ""
         if request.user.is_authenticated:
-            return Response({"user": str(request.user)})
-        else:
-            return Response()
+            user_name = str(request.user)
+        return Response({"user": user_name})
 
+    @extend_schema(
+        request=None,
+        responses={
+            200: {
+                "type": "object",
+                "properties": {
+                    "user": {"type": "string"},
+                },
+            },
+            401: None,
+        }
+    )
     def post(self, request: Request, format: Any = None) -> Response:
         return Response({"user": str(request.user)})
 

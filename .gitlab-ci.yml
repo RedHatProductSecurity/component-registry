@@ -9,6 +9,8 @@ include:
   - project: 'product-security/dev/component-registry-ops'
     ref: "$CORGI_OPS_BRANCH"
     file: '/templates/gitlab/ansible-run.yml'
+  - project: 'enterprise-pipelines/gitlab-ci/includes'
+    file: 'SAST/sonarqube.yml'
 
 .common_ci_setup: &common_ci_setup
   - export LANG=en_US.UTF-8
@@ -59,6 +61,9 @@ deploy-prod:
   except:
     refs:
       - schedules
+
+sonarqube:
+  stage: test
 
 test:
   stage: test
@@ -134,7 +139,6 @@ test-performance:
     - $DNF_WITH_OPTIONS install $RPM_REQUIREMENTS
     - python3.9 -m pip install tox
     - tox -e corgi -- -m performance --no-cov
-  allow_failure: true
 
 mypy:
   stage: test

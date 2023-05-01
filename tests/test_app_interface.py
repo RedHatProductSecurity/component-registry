@@ -8,7 +8,7 @@ from .factories import ProductStreamFactory
 pytestmark = pytest.mark.unit
 
 
-@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+@pytest.mark.django_db(databases=("default",))
 def test_metadata_fetch(requests_mock):
     example_response = {
         "data": {

@@ -27,7 +27,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet
 
-from config import utils
 from corgi import __version__
 from corgi.core.authentication import RedHatRolePermission
 from corgi.core.models import (
@@ -560,6 +559,10 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
     filterset_class = ComponentFilter
     lookup_url_kwarg = "uuid"
 
+    # Require authentication for write operations
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
     def get_queryset(self) -> QuerySet[Component]:
         # 'latest' and 'root components' filter automagically turn on
         # when the ofuri parameter is given
@@ -651,7 +654,7 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         """Allow OpenLCS to upload copyright text / license scan results for a component"""
         # In the future these could be separate endpoints
         # For testing we'll just keep it under one endpoint
-        if utils.running_prod() or settings.COMMUNITY_MODE_ENABLED:
+        if settings.COMMUNITY_MODE_ENABLED:
             # This is only temporary for OpenLCS testing
             # Do not enable in production until we add OIDC authentication
             return Response(status=status.HTTP_403_FORBIDDEN)

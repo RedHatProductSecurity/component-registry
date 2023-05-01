@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Type, Union
+from typing import Any, Type, Union
 
 import django_filters.rest_framework
 from django.conf import settings
@@ -14,13 +14,14 @@ from mozilla_django_oidc.contrib.drf import OIDCAuthentication
 from mptt.templatetags.mptt_tags import cache_tree_children
 from packageurl import PackageURL
 from rest_framework import filters, status
+from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import (
     action,
     api_view,
     authentication_classes,
     permission_classes,
 )
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -268,6 +269,47 @@ class ControlledAccessTestView(APIView):
     def get(self, request, format=None):
         content = {"user": str(request.user)}
         return Response(content)
+
+
+class TokenAuthTestView(APIView):
+    """
+    View to test authentication with DRF Tokens.
+    """
+
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    @extend_schema(
+        request=None,
+        responses={
+            200: {
+                "type": "object",
+                "properties": {
+                    "user": {"type": "string"},
+                },
+            },
+        },
+    )
+    def get(self, request: Request, format: Any = None) -> Response:
+        user_name = ""
+        if request.user.is_authenticated:
+            user_name = str(request.user)
+        return Response({"user": user_name})
+
+    @extend_schema(
+        request=None,
+        responses={
+            200: {
+                "type": "object",
+                "properties": {
+                    "user": {"type": "string"},
+                },
+            },
+            401: None,
+        },
+    )
+    def post(self, request: Request, format: Any = None) -> Response:
+        return Response({"user": str(request.user)})
 
 
 # A dict with string keys and string or tuple values

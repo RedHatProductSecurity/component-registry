@@ -165,6 +165,7 @@ INSTALLED_APPS = [
     "drf_spectacular_sidecar",
     "mptt",
     "rest_framework",
+    "rest_framework.authtoken",
     "django_filters",
     "mozilla_django_oidc",
     "corgi.api",

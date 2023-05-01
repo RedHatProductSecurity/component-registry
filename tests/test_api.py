@@ -322,7 +322,7 @@ def test_component_detail_olcs_put(client, api_path):
         assert response[key] == ""
 
     # Require authentication for put
-    response = client.put(f"{component_path}/olcs_test", data=openlcs_data, format="json")
+    response = client.put(f"{component_path}/update_license", data=openlcs_data, format="json")
     assert response.status_code == 401
 
     # Authenticate
@@ -331,7 +331,7 @@ def test_component_detail_olcs_put(client, api_path):
     # Subtly different from requests.put(), so json= kwarg doesn't work
     # Below should use follow=True, but it's currently broken
     # https://github.com/encode/django-rest-framework/discussions/8695
-    response = client.put(f"{component_path}/olcs_test", data=openlcs_data, format="json")
+    response = client.put(f"{component_path}/update_license", data=openlcs_data, format="json")
     assert response.status_code == 302
     assert response.headers["Location"] == component_path
 
@@ -346,12 +346,12 @@ def test_component_detail_olcs_put(client, api_path):
         assert response[key] == value
 
     # Return a 400 if none of the above keys are getting set. May change in future
-    response = client.put(f"{component_path}/olcs_test", data={}, format="json")
+    response = client.put(f"{component_path}/update_license", data={}, format="json")
     assert response.status_code == 400
 
     # Return a 404 if that component can't be found
     response = client.put(
-        f"{api_path}/components/00000000-0000-0000-0000-000000000000/olcs_test",
+        f"{api_path}/components/00000000-0000-0000-0000-000000000000/update_license",
         data=openlcs_data,
         format="json",
     )
@@ -403,12 +403,21 @@ def test_component_detail_dev(client, api_path):
 @pytest.mark.django_db
 def test_component_write_not_allowed(client, api_path):
     # Currently, only read operations are allowed on all models besides tags
-    # 20230501: For unauthenticated users
     c = ComponentFactory(name="curl")
     response = client.put(f"{api_path}/components/{c.uuid}", params={"name": "wget"})
-    assert response.status_code == 401
+    assert response.status_code == 405
     response = client.post(f"{api_path}/components", data={"name": "curl"})
-    assert response.status_code == 401
+    assert response.status_code == 405
+
+    # Write should only be allowed through the specified endpoint,
+    # even for authenticated users.
+    olcs_user = User.objects.create_user(username="olcs", email="olcs@example.com")
+    olcs_token = Token.objects.create(user=olcs_user, key="mysteries_quirewise_volitant_woolshed")
+    client.credentials(HTTP_AUTHORIZATION=f"Token {olcs_token.key}")
+    response = client.put(f"{api_path}/components/{c.uuid}", params={"name": "wget"})
+    assert response.status_code == 405
+    response = client.post(f"{api_path}/components", data={"name": "curl"})
+    assert response.status_code == 405
 
 
 @pytest.mark.django_db(databases=("read_only",))

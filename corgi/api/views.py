@@ -559,10 +559,6 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
     filterset_class = ComponentFilter
     lookup_url_kwarg = "uuid"
 
-    # Require authentication for write operations
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticatedOrReadOnly]
-
     def get_queryset(self) -> QuerySet[Component]:
         # 'latest' and 'root components' filter automagically turn on
         # when the ofuri parameter is given
@@ -649,8 +645,13 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         manifest = json.loads(obj.manifest)
         return Response(manifest)
 
-    @action(methods=["put"], detail=True)
-    def olcs_test(self, request: Request, uuid: Union[str, None] = None) -> Response:
+    @action(
+        methods=["put"],
+        detail=True,
+        authentication_classes=[TokenAuthentication],
+        permission_classes=[IsAuthenticatedOrReadOnly],
+    )
+    def update_license(self, request: Request, uuid: Union[str, None] = None) -> Response:
         """Allow OpenLCS to upload copyright text / license scan results for a component"""
         # In the future these could be separate endpoints
         # For testing we'll just keep it under one endpoint

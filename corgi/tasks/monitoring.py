@@ -76,8 +76,8 @@ def setup_periodic_tasks(sender, **kwargs):
         upsert_cron_task("yum", "load_yum_repositories", hour=8, minute=0)
         upsert_cron_task("yum", "fetch_unprocessed_yum_relations", hour=9, minute=0)
         upsert_cron_task("managed_services", "refresh_service_manifests", hour=10, minute=0)
-        upsert_cron_task("manifest", "collect_static", hour=11, minute=0)
-        upsert_cron_task("manifest", "update_manifests", hour=12, minute=0)
+        upsert_cron_task("manifest", "update_manifests", hour=11, minute=0)
+        upsert_cron_task("manifest", "collect_static", hour=12, minute=0)
         upsert_cron_task("monitoring", "email_failed_tasks", hour=12, minute=45)
 
     # Automatic task result expiration is currently disabled

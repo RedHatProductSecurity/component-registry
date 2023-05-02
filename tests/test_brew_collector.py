@@ -18,10 +18,13 @@ from corgi.core.models import (
 from corgi.tasks.brew import (
     fetch_unprocessed_relations,
     find_package_file_name,
+    load_brew_tags,
+    load_stream_brew_tags,
     save_component,
     slow_fetch_brew_build,
 )
 from corgi.tasks.common import BUILD_TYPE
+from tests.conftest import setup_product
 from tests.data.image_archive_data import (
     KOJI_LIST_RPMS,
     NO_RPMS_IN_SUBCTL_CONTAINER,
@@ -32,6 +35,7 @@ from tests.data.image_archive_data import (
 from tests.factories import (
     ContainerImageComponentFactory,
     ProductComponentRelationFactory,
+    ProductStreamFactory,
     SoftwareBuildFactory,
     SrpmComponentFactory,
 )
@@ -790,7 +794,8 @@ def test_extract_image_components(mock_koji_session, monkeypatch):
 @pytest.mark.django_db
 @patch("corgi.tasks.brew.Brew")
 @patch("corgi.tasks.sca.cpu_software_composition_analysis.delay")
-def test_fetch_rpm_build(mock_sca, mock_brew):
+@patch("corgi.tasks.brew.load_brew_tags")
+def test_fetch_rpm_build(mock_load_brew_tags, mock_sca, mock_brew):
     with open("tests/data/brew/1705913/component_data.json", "r") as component_data_file:
         mock_brew.return_value.get_component_data.return_value = json.load(component_data_file)
     slow_fetch_brew_build(1705913)
@@ -844,6 +849,17 @@ def test_fetch_rpm_build(mock_sca, mock_brew):
         "pkg:rpm/redhat/cockpit@251-1.el8?arch=src",
     ]
 
+    # See if we checked the tags for brew_tag relations to streams
+    mock_load_brew_tags.assert_called_with(
+        1705913,
+        [
+            "rhel-8.5.0-candidate",
+            "rhel-8.5.0-Beta-1.0-set",
+            "rhel-8.5.0-candidate-Beta-1.0-set",
+            "kpatch-kernel-4.18.0-339.el8-build",
+        ],
+    )
+
 
 @pytest.mark.django_db
 @patch("corgi.tasks.brew.Brew")
@@ -854,10 +870,21 @@ def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, moc
     with open("tests/data/brew/1781353/component_data.json", "r") as component_data_file:
         mock_brew.return_value.get_component_data.return_value = json.load(component_data_file)
 
-    slow_fetch_brew_build(1781353, SoftwareBuild.Type.BREW)
+    stream, _ = setup_product()
+    stream.brew_tags = {"rhacm-2.4-rhel-8-container-released": True}
+    stream.save()
+
+    slow_fetch_brew_build("1781353", SoftwareBuild.Type.BREW)
     image_index = Component.objects.get(
         name="subctl-container", type=Component.Type.CONTAINER_IMAGE, arch="noarch"
     )
+
+    # Check that new components are related to the build via the brew_tag
+    assert ProductComponentRelation.objects.get(
+        build_id="1781353", build_type=SoftwareBuild.Type.BREW
+    )
+    assert image_index.productstreams.filter(pk=stream.uuid).exists()
+
     softwarebuild = SoftwareBuild.objects.get(build_id=1781353, build_type=SoftwareBuild.Type.BREW)
 
     noarch_rpms = []
@@ -891,6 +918,38 @@ def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, moc
     )
     mock_load_errata.assert_called_with("RHEA-2021:4610", force_process=False)
     mock_sca.assert_called_with(str(softwarebuild.pk), force_process=False)
+
+
+@pytest.mark.django_db
+@patch("corgi.tasks.brew.Brew")
+@patch("corgi.tasks.brew.slow_fetch_modular_build.delay")
+def test_load_stream_brew_tags(mock_fetch_modular_build, mock_brew):
+    stream = ProductStreamFactory(brew_tags={"rhacm-2.4-rhel-8-container-released": True})
+    mock_brew.return_value.get_builds_with_tag.return_value = ["1"]
+    load_stream_brew_tags()
+    new_brew_tag_relation = ProductComponentRelation.objects.get(
+        build_id="1",
+        build_type=SoftwareBuild.Type.BREW,
+        type=ProductComponentRelation.Type.BREW_TAG,
+    )
+    assert new_brew_tag_relation.product_ref == stream.name
+    mock_fetch_modular_build.assert_called_once()
+
+
+@pytest.mark.django_db
+@patch("corgi.tasks.brew.slow_fetch_brew_build.delay")
+@patch("corgi.tasks.brew.slow_fetch_modular_build.delay")
+def test_load_brew_tags(mock_fetch_modular_build, mock_fetch_brew_build):
+    stream = ProductStreamFactory(brew_tags={"rhacm-2.4-rhel-8-container-released": True})
+    load_brew_tags("1", ["rhacm-2.4-rhel-8-container-released"])
+    new_brew_tag_relation = ProductComponentRelation.objects.get(
+        build_id="1",
+        build_type=SoftwareBuild.Type.BREW,
+        type=ProductComponentRelation.Type.BREW_TAG,
+    )
+    assert new_brew_tag_relation.product_ref == stream.name
+    mock_fetch_brew_build.assert_not_called()
+    mock_fetch_modular_build.assert_not_called()
 
 
 @pytest.mark.django_db

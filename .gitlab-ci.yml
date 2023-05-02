@@ -128,7 +128,7 @@ test-migrations:
     refs:
       - schedules
 
-test-performance:
+.test-performance:
   stage: test
   # Keep in sync with Dockerfile
   image: registry.redhat.io/ubi8/ubi

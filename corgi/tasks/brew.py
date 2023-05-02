@@ -633,3 +633,43 @@ def slow_update_brew_tags(build_id: str, tag_added: str = "", tag_removed: str =
         )
         build.save()
         return f"Added tag {tag_added} or removed tag {tag_removed} for build {build_id}"
+
+
+@app.task(
+    base=Singleton,
+    autoretry_for=RETRYABLE_ERRORS,
+    retry_kwargs=RETRY_KWARGS,
+    soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
+)
+def slow_add_container_build_brew_tags() -> None:
+    """Add tags for OCI builds that are missing them in Corgi on-demand"""
+    brew = Brew("BREW")
+    container_build_ids_without_tags_iterator = (
+        Component.objects.filter(
+            # Only refresh container builds - I finished RPM / RPMMOD builds already
+            type="OCI",
+            arch="noarch",
+        )
+        .select_related("software_build")
+        .filter(
+            # Only refresh builds that don't already have released_errata_tags defined
+            # This makes the task idempotent / safe to retry
+            # If it times out, just run it again and it will continue where it left off
+            software_build__meta_attr__released_errata_tags__isnull=True,
+            software_build__isnull=False,
+        )
+        .values_list("software_build__build_id", flat=True)
+        .distinct()
+        .iterator()
+    )
+    for build_id in container_build_ids_without_tags_iterator:
+        tags = sorted(tag["name"] for tag in brew.koji_session.listTags(int(build_id)))
+        errata_tags = brew.extract_advisory_ids(tags)
+        released_errata_tags = brew.parse_advisory_ids(errata_tags)
+        with transaction.atomic():
+            # Can't use .update(key="value") on individual keys in a JSONField
+            build = SoftwareBuild.objects.get(build_id=build_id)
+            build.meta_attr["tags"] = tags
+            build.meta_attr["errata_tags"] = errata_tags
+            build.meta_attr["released_errata_tags"] = released_errata_tags
+            build.save()

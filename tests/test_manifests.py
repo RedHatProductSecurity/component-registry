@@ -140,7 +140,6 @@ def test_slim_rpm_in_containers_manifest():
     # plus a source container which is shown in API but not in manifests
     released_components = (
         stream.components.exclude(name__endswith="-container-source")
-        .root_components()
         .released_components()
         .latest_components()
     )
@@ -212,9 +211,7 @@ def test_product_manifest_excludes_unreleased_components():
     manifest = json.loads(stream.manifest)
 
     # No released components linked to this product
-    num_components = len(
-        stream.components.root_components().released_components().latest_components()
-    )
+    num_components = len(stream.components.released_components().latest_components())
     assert num_components == 0
 
     num_provided = len(stream.provides_queryset)
@@ -249,9 +246,7 @@ def test_product_manifest_properties():
     manifest = json.loads(stream.manifest)
 
     # One component linked to this product
-    num_components = len(
-        stream.components.root_components().released_components().latest_components()
-    )
+    num_components = len(stream.components.released_components().latest_components())
     assert num_components == 1
 
     num_provided = len(stream.provides_queryset)

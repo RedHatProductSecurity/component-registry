@@ -890,8 +890,10 @@ class ComponentQuerySet(models.QuerySet):
         )
 
     def filter_latest_nevra_by_name(self, component_name: str) -> str:
-        nevras = self.filter(name=component_name).values_list(
-            "nevra", "meta_attr__epoch", "version", "release"
+        nevras = (
+            self.root_components()
+            .filter(name=component_name)
+            .values_list("nevra", "meta_attr__epoch", "version", "release")
         )
         if nevras:
             # Get the latest NEVRA using python. This only works for valid RPM epoch/version/release

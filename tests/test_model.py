@@ -806,6 +806,20 @@ def test_filter_latest_by_name():
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_filter_latest_by_name_and_arch():
+    ps = ProductStreamFactory(name="rhel-7.9.z")
+    srpm_with_el = SrpmComponentFactory(name="sdb", version="1.2.1", release="21.el7")
+    srpm_with_el.productstreams.add(ps)
+    srpm = SrpmComponentFactory(name="sdb", version="1.2.1", release="21.el7", arch="x86_64")
+    srpm.productstreams.add(ps)
+    assert ps.components.filter_latest_nevra_by_name(component_name="sdb") == "sdb-1.2.1-21.el7.src"
+
+    # test no result
+    ps = ProductStreamFactory(name="rhel-7.7.z")
+    assert not ps.components.filter_latest_nevra_by_name(component_name="sdb")
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_filter_latest_by_name_modular():
     ps = ProductStreamFactory(name="certificate_system-10.2.z")
     modular_rpm_1 = SrpmComponentFactory(

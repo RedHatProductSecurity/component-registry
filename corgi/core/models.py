@@ -951,29 +951,30 @@ class ComponentQuerySet(models.QuerySet):
         )
         query = Q()
         for ps_uuid in product_stream_uuids:
-            distinct_components = (
+            root_components_for_stream = (
                 self.root_components()
                 .prefetch_related("productstreams")
                 .filter(productstreams=ps_uuid)
-                .values_list("namespace", "name", "arch")
+            )
+            distinct_components_for_stream = (
+                root_components_for_stream.values_list("namespace", "name", "arch")
                 # Clear ordering inherited from parent Queryset, if any
                 # So .distinct() works properly and doesn't have duplicates
                 .order_by()
                 .distinct()
                 .iterator()
             )
-            for namespace, name, arch in distinct_components:
-                latest_nevra = (
-                    self.root_components()
-                    .prefetch_related("productstreams")
+            for namespace, name, arch in distinct_components_for_stream:
+                latest_nevra_for_stream = (
+                    root_components_for_stream
                     # Because we filter by root components,
                     # namespace should always be REDHAT
                     # arch should always be "src" for SRPMs or "noarch" for index containers
-                    .filter(name=name, productstreams=ps_uuid)
+                    # No need to filter by name here, that's done in method below
                     .filter_latest_nevra_by_distinct_component(namespace, name, arch)
                 )
-                if latest_nevra:
-                    query |= Q(nevra=latest_nevra)
+                if latest_nevra_for_stream:
+                    query |= Q(nevra=latest_nevra_for_stream)
         if include:
             # Show only the latest components
             if not query:

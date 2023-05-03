@@ -841,6 +841,17 @@ def test_product_components_ofuri(client, api_path):
     assert response.status_code == 200
     assert response.json()["count"] == 0
 
+    response = client.get(
+        f"{api_path}/components?ofuri=o:redhat:rhel:8.6.0&include_fields=purl,product_streams.name"
+    )
+    assert response.status_code == 200
+    assert response.json()["count"] == 1
+    assert "purl" in response.json()["results"][0]
+    assert len(response.json()["results"][0]["product_streams"]) == 1
+    assert "name" in response.json()["results"][0]["product_streams"][0]
+    assert "purl" not in response.json()["results"][0]["product_streams"][0]
+    assert response.json()["results"][0]["product_streams"][0]["name"] == "rhel-8.6.0"
+
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_product_components_versions(client, api_path):

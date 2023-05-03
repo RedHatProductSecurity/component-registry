@@ -268,6 +268,19 @@ class IncludeExcludeFieldsSerializer(serializers.ModelSerializer):
         else:
             return True
 
+    def get_include_exclude_serializer(self, fieldname, serializer, instance, many=True):
+        """return include exclude Serializer when specified"""
+        if self._next_level_include_fields.get(
+            fieldname, []
+        ) or self._next_level_exclude_fields.get(fieldname, []):
+
+            context = {
+                "include_fields": self._next_level_include_fields.get(fieldname, []),
+                "exclude_fields": self._next_level_exclude_fields.get(fieldname, []),
+            }
+            return serializer(instance=instance, many=many, read_only=True, context=context)
+        return None
+
 
 class TagSerializer(serializers.Serializer):
     name = serializers.SlugField(allow_blank=False)
@@ -338,30 +351,52 @@ class SoftwareBuildSummarySerializer(IncludeExcludeFieldsSerializer):
 
 
 class ProductTaxonomySerializer(IncludeExcludeFieldsSerializer):
-    @staticmethod
-    def get_products(instance: Union[ProductModel, ProductTaxonomyMixin]) -> list[dict[str, str]]:
+    def get_products(
+        self, instance: Union[ProductModel, ProductTaxonomyMixin]
+    ) -> list[dict[str, str]]:
+        include_exclude_serializer = self.get_include_exclude_serializer(
+            "products", ProductSerializer, instance.products
+        )
+        if include_exclude_serializer:
+            return include_exclude_serializer.data
         return get_product_data_list("products", instance.products)
 
-    @staticmethod
     def get_product_versions(
-        instance: Union[ProductModel, ProductTaxonomyMixin]
+        self, instance: Union[ProductModel, ProductTaxonomyMixin]
     ) -> list[dict[str, str]]:
+        include_exclude_serializer = self.get_include_exclude_serializer(
+            "product_versions", ProductVersionSerializer, instance.productversions
+        )
+        if include_exclude_serializer:
+            return include_exclude_serializer.data
         return get_product_data_list("product_versions", instance.productversions)
 
-    @staticmethod
     def get_product_streams(
-        instance: Union[ProductModel, ProductTaxonomyMixin]
+        self, instance: Union[ProductModel, ProductTaxonomyMixin]
     ) -> list[dict[str, str]]:
+        include_exclude_serializer = self.get_include_exclude_serializer(
+            "product_streams", ProductStreamSerializer, instance.productstreams
+        )
+        if include_exclude_serializer:
+            return include_exclude_serializer.data
         return get_product_data_list("product_streams", instance.productstreams)
 
-    @staticmethod
     def get_product_variants(
-        instance: Union[ProductModel, ProductTaxonomyMixin]
+        self, instance: Union[ProductModel, ProductTaxonomyMixin]
     ) -> list[dict[str, str]]:
+        include_exclude_serializer = self.get_include_exclude_serializer(
+            "product_variants", ProductVariantSerializer, instance.productvariants
+        )
+        if include_exclude_serializer:
+            return include_exclude_serializer.data
         return get_product_data_list("product_variants", instance.productvariants)
 
-    @staticmethod
-    def get_channels(instance: Union[Component, ProductModel]) -> list[dict[str, str]]:
+    def get_channels(self, instance: Union[Component, ProductModel]) -> list[dict[str, str]]:
+        include_exclude_serializer = self.get_include_exclude_serializer(
+            "channels", ProductVariantSerializer, instance.channels, many=False
+        )
+        if include_exclude_serializer:
+            return include_exclude_serializer.data
         return get_channel_data_list(instance.channels)
 
     class Meta:
@@ -407,49 +442,31 @@ class ComponentSerializer(ProductTaxonomySerializer):
 
     # @staticmethod
     def get_provides(self, instance: Component):
-        if self._next_level_include_fields.get(
-            "provides", []
-        ) or self._next_level_exclude_fields.get("provides", []):
-            context = {
-                "include_fields": self._next_level_include_fields.get("provides", []),
-                "exclude_fields": self._next_level_exclude_fields.get("provides", []),
-            }
-            serializer = ComponentSerializer(
-                instance=instance.provides, many=True, read_only=True, context=context
-            )
-            return serializer.data
+        include_exclude_serializer = self.get_include_exclude_serializer(
+            "provides", ComponentSerializer, instance.provides
+        )
+        if include_exclude_serializer:
+            return include_exclude_serializer.data
         return get_component_data_list(
             instance.provides.values_list("purl", flat=True).using("read_only").iterator()
         )
 
     def get_sources(self, instance: Component):
-        if self._next_level_include_fields.get(
-            "sources", []
-        ) or self._next_level_exclude_fields.get("sources", []):
-            context = {
-                "include_fields": self._next_level_include_fields.get("sources", []),
-                "exclude_fields": self._next_level_exclude_fields.get("sources", []),
-            }
-            serializer = ComponentSerializer(
-                instance=instance.sources, many=True, read_only=True, context=context
-            )
-            return serializer.data
+        include_exclude_serializer = self.get_include_exclude_serializer(
+            "sources", ComponentSerializer, instance.sources
+        )
+        if include_exclude_serializer:
+            return include_exclude_serializer.data
         return get_component_data_list(
             instance.sources.values_list("purl", flat=True).using("read_only").iterator()
         )
 
     def get_upstreams(self, instance: Component):
-        if self._next_level_include_fields.get(
-            "upstreams", []
-        ) or self._next_level_exclude_fields.get("upstreams", []):
-            context = {
-                "include_fields": self._next_level_include_fields.get("upstreams", []),
-                "exclude_fields": self._next_level_exclude_fields.get("upstreams", []),
-            }
-            serializer = ComponentSerializer(
-                instance=instance.upstreams, many=True, read_only=True, context=context
-            )
-            return serializer.data
+        include_exclude_serializer = self.get_include_exclude_serializer(
+            "upstreams", ComponentSerializer, instance.upstreams
+        )
+        if include_exclude_serializer:
+            return include_exclude_serializer.data
         return get_component_data_list(
             instance.upstreams.values_list("purl", flat=True).using("read_only").iterator()
         )

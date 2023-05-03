@@ -889,8 +889,12 @@ class ComponentQuerySet(models.QuerySet):
             evr[3],
         )
 
-    def filter_latest_nevra_by_name(self, component_name: str) -> str:
-        nevras = self.filter(name=component_name).values_list(
+    def filter_latest_nevra_by_distinct_component(
+        self, namespace: str, name: str, arch: str
+    ) -> str:
+        """Find latest epoch / version / release for a distinct component namespace / name / arch
+        and return this latest component's NEVRA"""
+        nevras = self.filter(namespace=namespace, name=name, arch=arch).values_list(
             "nevra", "meta_attr__epoch", "version", "release"
         )
         if nevras:
@@ -905,17 +909,19 @@ class ComponentQuerySet(models.QuerySet):
         include: bool = True,
     ) -> "ComponentQuerySet":
         """Return components from latest builds."""
-        names = self.values_list("name", flat=True).order_by().distinct().iterator()
+        distinct_components = (
+            self.values_list("namespace", "name", "arch").order_by().distinct().iterator()
+        )
         query = Q()
-        for name in names:
-            latest_nevra = self.filter_latest_nevra_by_name(component_name=name)
+        for namespace, name, arch in distinct_components:
+            latest_nevra = self.filter_latest_nevra_by_distinct_component(namespace, name, arch)
             if latest_nevra:
                 query |= Q(nevra=latest_nevra)
         if include:
             # Show only the latest components
             if not query:
                 # No latest components to show??
-                # This is probably a bug in filter_latest_nevra_by_name we're not handling
+                # Probably a bug in filter_latest_nevra_by_distinct_component we're not handling
                 return Component.objects.none()
             return self.filter(query)
         else:
@@ -923,7 +929,7 @@ class ComponentQuerySet(models.QuerySet):
             if not query:
                 # No latest components to hide??
                 # So show everything / return unfiltered queryset
-                # This is probably a bug in filter_latest_nevra_by_name we're not handling
+                # Probably a bug in filter_latest_nevra_by_distinct_component we're not handling
                 return self
             return self.exclude(query)
 
@@ -942,21 +948,24 @@ class ComponentQuerySet(models.QuerySet):
         query = Q()
         for ps_uuid in product_stream_uuids:
             if ps_uuid:
-                names = set(
+                distinct_components = set(
                     self.using("read_only")
                     .root_components()
                     .prefetch_related("productstreams")
                     .filter(productstreams=ps_uuid)
-                    .values_list("name", flat=True)
+                    .values_list("namespace", "name", "arch")
                     .distinct()
                 )
-                for name in names:
+                for namespace, name, arch in distinct_components:
                     latest_nevra = (
                         self.using("read_only")
                         .root_components()
                         .prefetch_related("productstreams")
+                        # Because we filter by root components,
+                        # namespace should always be REDHAT
+                        # arch should always be "src" for SRPMs or "noarch" for index containers
                         .filter(name=name, productstreams=ps_uuid)
-                        .filter_latest_nevra_by_name(component_name=name)
+                        .filter_latest_nevra_by_distinct_component(namespace, name, arch)
                     )
                     if latest_nevra:
                         query |= Q(nevra=latest_nevra)
@@ -964,7 +973,7 @@ class ComponentQuerySet(models.QuerySet):
             # Show only the latest components
             if not query:
                 # No latest components to show??
-                # This is probably a bug in filter_latest_nevra_by_name we're not handling
+                # Probably a bug in filter_latest_nevra_by_distinct_component we're not handling
                 return Component.objects.none()
             return self.using("read_only").root_components().filter(query)
         else:
@@ -972,7 +981,7 @@ class ComponentQuerySet(models.QuerySet):
             if not query:
                 # No latest components to hide??
                 # So show everything / return unfiltered queryset
-                # This is probably a bug in filter_latest_nevra_by_name we're not handling
+                # Probably a bug in filter_latest_nevra_by_distinct_component we're not handling
                 return self
             return self.root_components().exclude(query)
 

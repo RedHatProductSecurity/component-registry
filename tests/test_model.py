@@ -792,21 +792,28 @@ def test_queryset_ordering_fails():
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
-def test_filter_latest_by_name():
+def test_filter_latest_nevra_by_distinct_component():
     ps = ProductStreamFactory(name="rhel-7.9.z")
     srpm_with_el = SrpmComponentFactory(name="sdb", version="1.2.1", release="21.el7")
     srpm_with_el.productstreams.add(ps)
     srpm = SrpmComponentFactory(name="sdb", version="1.2.1", release="3")
     srpm.productstreams.add(ps)
-    assert ps.components.filter_latest_nevra_by_name(component_name="sdb") == "sdb-1.2.1-21.el7.src"
+    assert (
+        ps.components.filter_latest_nevra_by_distinct_component(
+            srpm_with_el.namespace, srpm_with_el.name, srpm_with_el.arch
+        )
+        == srpm_with_el.nevra
+    )
 
     # test no result
     ps = ProductStreamFactory(name="rhel-7.7.z")
-    assert not ps.components.filter_latest_nevra_by_name(component_name="sdb")
+    assert not ps.components.filter_latest_nevra_by_distinct_component(
+        srpm_with_el.namespace, srpm_with_el.name, srpm_with_el.arch
+    )
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
-def test_filter_latest_by_name_modular():
+def test_filter_latest_nevra_by_distinct_component_modular():
     ps = ProductStreamFactory(name="certificate_system-10.2.z")
     modular_rpm_1 = SrpmComponentFactory(
         name="idm-console-framework", version="1.2.0", release="3.module+el8pki+7130+225b0dd0"
@@ -817,8 +824,10 @@ def test_filter_latest_by_name_modular():
     )
     modular_rpm_2.productstreams.add(ps)
     assert (
-        ps.components.filter_latest_nevra_by_name(component_name="idm-console-framework")
-        == "idm-console-framework-1.2.0-3.module+el8pki+8580+f0d97d6d.src"
+        ps.components.filter_latest_nevra_by_distinct_component(
+            modular_rpm_2.namespace, modular_rpm_2.name, modular_rpm_2.arch
+        )
+        == modular_rpm_2.nevra
     )
 
 

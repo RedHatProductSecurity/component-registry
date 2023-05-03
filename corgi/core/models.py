@@ -940,23 +940,30 @@ class ComponentQuerySet(models.QuerySet):
         include: bool = True,
     ) -> "ComponentQuerySet":
         """Return only root components from latest builds for each product stream."""
-        product_stream_uuids = set(
+        product_stream_uuids = (
             self.using("read_only")
             .root_components()
             .exclude(productstreams__isnull=True)
             .values_list("productstreams__uuid", flat=True)
+            # Clear ordering inherited from parent Queryset, if any
+            # So .distinct() works properly and doesn't have duplicates
+            .order_by()
             .distinct()
         )
         query = Q()
         for ps_uuid in product_stream_uuids:
             if ps_uuid:
-                distinct_components = set(
+                distinct_components = (
                     self.using("read_only")
                     .root_components()
                     .prefetch_related("productstreams")
                     .filter(productstreams=ps_uuid)
                     .values_list("namespace", "name", "arch")
+                    # Clear ordering inherited from parent Queryset, if any
+                    # So .distinct() works properly and doesn't have duplicates
+                    .order_by()
                     .distinct()
+                    .iterator()
                 )
                 for namespace, name, arch in distinct_components:
                     latest_nevra = (

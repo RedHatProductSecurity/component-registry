@@ -337,11 +337,6 @@ paths:
         description: 'Include only specified fields in the response. Multiple values
           may be separated by commas. Example: `include_fields=software_build.build_id,name`'
       - in: query
-        name: latest_components
-        schema:
-          type: boolean
-        description: Show only latest components
-      - in: query
         name: latest_components_by_streams
         schema:
           type: boolean

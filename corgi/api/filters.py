@@ -79,9 +79,6 @@ class ComponentFilter(FilterSet):
     re_upstreams = CharFilter(field_name="upstreams", lookup_expr="purl__regex")
 
     el_match = CharFilter(label="RHEL version for layered products", lookup_expr="icontains")
-    latest_components = BooleanFilter(
-        method="filter_latest_components", label="Show only latest components"
-    )
     released_components = BooleanFilter(
         method="filter_released_components", label="Show only released components"
     )
@@ -133,19 +130,6 @@ class ComponentFilter(FilterSet):
         method = qs.exclude if value is False else qs.filter
 
         return method(**{"meta_attr__go_component_type": "gomod"})
-
-    @staticmethod
-    def filter_latest_components(
-        queryset: ComponentQuerySet, _name: str, value: bool
-    ) -> QuerySet["Component"]:
-        """Show only latest components in some queryset if user chose YES / NO"""
-        if value in EMPTY_VALUES:
-            # User gave an empty ?param= so return the unfiltered queryset
-            return queryset
-        # Else user gave a non-empty value
-        # Truthy values return the filtered queryset (only latest components)
-        # Falsey values return the excluded queryset (only older components)
-        return queryset.latest_components(include=value)
 
     @staticmethod
     def filter_ofuri_or_name(

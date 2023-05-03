@@ -655,10 +655,6 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         """Allow OpenLCS to upload copyright text / license scan results for a component"""
         # In the future these could be separate endpoints
         # For testing we'll just keep it under one endpoint
-        if settings.COMMUNITY_MODE_ENABLED:
-            # This is only temporary for OpenLCS testing
-            # Do not enable in production until we add OIDC authentication
-            return Response(status=status.HTTP_403_FORBIDDEN)
         component = self.queryset.filter(uuid=uuid).using("default").first()
         if not component:
             return Response(status=status.HTTP_404_NOT_FOUND)

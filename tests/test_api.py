@@ -212,6 +212,42 @@ def test_latest_components_filter(client, api_path):
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_latest_components_by_streams_filter(client, api_path):
+    ps1 = ProductStreamFactory(name="rhel-7", version="7")
+    assert ps1.ofuri == "o:redhat:rhel:7"
+    ps2 = ProductStreamFactory(name="rhel-8", version="8")
+    assert ps2.ofuri == "o:redhat:rhel:8"
+
+    older_component = SrpmComponentFactory(type=Component.Type.RPM, release="9")
+    older_component.productstreams.add(ps1)
+    newer_component = SrpmComponentFactory(
+        type=older_component.type,
+        name=older_component.name,
+        version=older_component.version,
+        release="10",
+        software_build=older_component.software_build,
+    )
+    newer_component.productstreams.add(ps1)
+    newer_component.productstreams.add(ps2)
+
+    response = client.get(f"{api_path}/components")
+    assert response.status_code == 200
+    assert response.json()["count"] == 2
+
+    response = client.get(f"{api_path}/components?latest_components_by_streams=True")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 1
+    assert response["results"][0]["nevra"] == newer_component.nevra
+
+    response = client.get(f"{api_path}/components?latest_components_by_streams=False")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 1
+    assert response["results"][0]["nevra"] == older_component.nevra
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_released_components_filter(client, api_path):
     released_build = SoftwareBuildFactory(meta_attr={"released_errata_tags": ["RHBA-2023:1234"]})
     unreleased_build = SoftwareBuildFactory(meta_attr={"released_errata_tags": []})

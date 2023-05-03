@@ -20,6 +20,7 @@ from rpm import labelCompare
 from corgi.core.constants import (
     CONTAINER_DIGEST_FORMATS,
     EL_MATCH_RE,
+    EPOCH_TYPE,
     MODEL_NODE_LEVEL_MAPPING,
     RELEASE_VERSION_DELIM_RE,
     ROOT_COMPONENTS_CONDITION,
@@ -868,14 +869,15 @@ class ComponentQuerySet(models.QuerySet):
     """Helper methods to filter QuerySets of Components"""
 
     def _compare_packages(
-        self, nevr_1: tuple[str, str, str, str], nevr_2: tuple[str, str, str, str]
+        self, nevr_1: tuple[str, EPOCH_TYPE, str, str], nevr_2: tuple[str, EPOCH_TYPE, str, str]
     ) -> int:
         """Use the rpm library to compare 2 epoch/version/release tuples"""
         evr_1 = self._ensure_epoch(nevr_1)
         evr_2 = self._ensure_epoch(nevr_2)
         return labelCompare(evr_1, evr_2)
 
-    def _ensure_epoch(self, evr: tuple[str, str, str, str]) -> tuple[str, str, str]:
+    @staticmethod
+    def _ensure_epoch(evr: tuple[str, EPOCH_TYPE, str, str]) -> tuple[str, str, str]:
         """Ensure the epoch value is set to '0' if unset and also drop the nevra at index 0"""
         # Test for None or 0 int value
         if not evr[1]:
@@ -908,7 +910,7 @@ class ComponentQuerySet(models.QuerySet):
         self,
         include: bool = True,
     ) -> "ComponentQuerySet":
-        """Return components from latest builds."""
+        """Return components from latest builds across all product streams."""
         distinct_components = (
             self.values_list("namespace", "name", "arch").order_by().distinct().iterator()
         )
@@ -937,7 +939,7 @@ class ComponentQuerySet(models.QuerySet):
         self,
         include: bool = True,
     ) -> "ComponentQuerySet":
-        """Return components from latest builds ROOT COMPONENTS by product streams."""
+        """Return only root components from latest builds for each product stream."""
         product_stream_uuids = set(
             self.using("read_only")
             .root_components()

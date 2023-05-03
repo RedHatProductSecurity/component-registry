@@ -222,33 +222,59 @@ def test_latest_components_by_streams_filter(client, api_path):
     ps2 = ProductStreamFactory(name="rhel-8", version="8")
     assert ps2.ofuri == "o:redhat:rhel:8"
 
-    older_component = SrpmComponentFactory(type=Component.Type.RPM, release="9")
+    # Only belongs to RHEL7 stream
+    oldest_component = SrpmComponentFactory(release="8")
+    oldest_component.productstreams.add(ps1)
+
+    # Belongs to both RHEL7 and RHEL8 streams
+    older_component = SrpmComponentFactory(
+        name=oldest_component.name, version=oldest_component.version, release="9"
+    )
     older_component.productstreams.add(ps1)
+    older_component.productstreams.add(ps2)
+
     newer_component = SrpmComponentFactory(
-        type=older_component.type,
-        name=older_component.name,
-        version=older_component.version,
+        name=oldest_component.name,
+        version=oldest_component.version,
         release="10",
-        software_build=older_component.software_build,
     )
     newer_component.productstreams.add(ps1)
     newer_component.productstreams.add(ps2)
 
+    # Only belongs to RHEL8 stream
+    newest_component = SrpmComponentFactory(
+        name=oldest_component.name,
+        version=oldest_component.version,
+        release="11",
+    )
+    newest_component.productstreams.add(ps2)
+
     response = client.get(f"{api_path}/components")
     assert response.status_code == 200
-    assert response.json()["count"] == 2
+    assert response.json()["count"] == 4
 
     response = client.get(f"{api_path}/components?latest_components_by_streams=True")
     assert response.status_code == 200
     response = response.json()
-    assert response["count"] == 1
+    assert response["count"] == 2
+    # Report newer_component as the latest for the RHEL7 stream
+    # Even though it's "not the latest" for the RHEL8 stream
+    # Report newest_component as the latest for the RHEL8 stream
+    # Even though both have the same name / only one is latest overall
     assert response["results"][0]["nevra"] == newer_component.nevra
+    assert response["results"][1]["nevra"] == newest_component.nevra
 
     response = client.get(f"{api_path}/components?latest_components_by_streams=False")
     assert response.status_code == 200
     response = response.json()
-    assert response["count"] == 1
-    assert response["results"][0]["nevra"] == older_component.nevra
+    assert response["count"] == 2
+    # Report oldest_component as "not the latest" for the RHEL7 stream
+    # Report older_component as "not the latest" for the RHEL7 and RHEL8 streams
+    # Don't report newer_component, even though it's "not the latest" for the RHEL8 stream
+    # because it is the latest for the RHEL7 stream
+    # So it gets added to the list of latest_nevras and excluded from the results
+    assert response["results"][0]["nevra"] == oldest_component.nevra
+    assert response["results"][1]["nevra"] == older_component.nevra
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)

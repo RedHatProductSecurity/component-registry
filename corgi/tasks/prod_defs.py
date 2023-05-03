@@ -5,7 +5,10 @@ from celery_singleton import Singleton
 from django.db import transaction
 
 from config.celery import app
-from corgi.collectors.models import CollectorErrataProductVersion
+from corgi.collectors.models import (
+    CollectorErrataProductVariant,
+    CollectorErrataProductVersion,
+)
 from corgi.collectors.prod_defs import ProdDefs
 from corgi.core.models import (
     Product,
@@ -177,6 +180,7 @@ def update_products() -> None:
                                         name=et_variant.name,
                                         defaults={
                                             "version": "",
+                                            "cpe": et_variant.cpe,
                                             "description": "",
                                             "products": product,
                                             "productversions": product_version,
@@ -208,11 +212,18 @@ def update_products() -> None:
                                 logger.debug(
                                     "Creating or updating Product Variant: name=%s", variant
                                 )
+                                et_variant_cpe = (
+                                    CollectorErrataProductVariant.objects.filter(name=variant)
+                                    .values_list("cpe", flat=True)
+                                    .first()
+                                )
+
                                 product_variant, _ = ProductVariant.objects.update_or_create(
                                     name=variant,
                                     defaults={
                                         "version": "",
                                         "description": "",
+                                        "cpe": et_variant_cpe if et_variant_cpe else "",
                                         "products": product,
                                         "productversions": product_version,
                                         "productstreams": product_stream,

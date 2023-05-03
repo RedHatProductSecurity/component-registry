@@ -14,7 +14,7 @@ from corgi.tasks.prod_defs import update_products
 pytestmark = pytest.mark.unit
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_products(requests_mock):
     with open("tests/data/product-definitions.json") as prod_defs:
         text = prod_defs.read()
@@ -39,7 +39,7 @@ def test_products(requests_mock):
 
     update_products()
 
-    assert Product.objects.all().count() == 4
+    assert Product.objects.count() == 4
 
     rhel_product = Product.objects.get(name="rhel")
     assert rhel_product.name == "rhel"
@@ -53,23 +53,26 @@ def test_products(requests_mock):
     assert len(rhel_860.composes) == 2
 
     openshift410z = ProductStream.objects.get(name="openshift-4.10.z")
-    assert openshift410z
     assert openshift410z.productvariants.count() == 0
-    openshift410z_brew_tags = openshift410z.brew_tags.keys()
-    assert len(openshift410z_brew_tags) == 2
-    assert "rhaos-4.10-rhel-8-container-released" in openshift410z_brew_tags
+    # Stream "cpes" is a dynamically-generated property, different than the "cpe" field
+    # Which should include the stream's CPE + all the child variant CPEs (if any)
+    assert openshift410z.cpes == ()
+    assert len(openshift410z.brew_tags) == 2
+    assert "rhaos-4.10-rhel-8-container-released" in openshift410z.brew_tags
 
     assert len(openshift410z.yum_repositories) == 5
 
     rhacm24z = ProductStream.objects.get(name="rhacm-2.4.z")
-    assert rhacm24z
     assert et_variant.name in rhacm24z.productvariants.values_list("name", flat=True)
+    # Stream "cpes" is a dynamically-generated property, different than the "cpe" field
+    # Which should include the stream's CPE + all the child variant CPEs (if any)
+    assert et_variant.cpe in rhacm24z.cpes
 
 
 @pytest.mark.django_db
 def test_skip_brew_tag_linking_for_buggy_products(requests_mock):
     """RHEL-7-SATELLITE-6.10 has a brew_tag for 6.7 version, which means the 7Server-Satellite67
-    ProductVariant gets incorrectly assciated with the rhn_satellite_6.7 product stream"""
+    ProductVariant gets incorrectly associated with the rhn_satellite_6.7 product stream"""
 
     with open("tests/data/product-definitions.json") as prod_defs:
         text = prod_defs.read()
@@ -90,13 +93,11 @@ def test_skip_brew_tag_linking_for_buggy_products(requests_mock):
     update_products()
 
     rhn_satellite_67 = ProductStream.objects.get(name="rhn_satellite_6.7")
-    assert rhn_satellite_67
     assert "satellite-6.7.0-rhel-7" in rhn_satellite_67.brew_tags
     assert rhn_satellite_67.productvariants.count() == 0
 
     rhn_satellite_610 = ProductStream.objects.get(name="rhn_satellite_6.10")
-    assert rhn_satellite_610
-    sat_610_variants = rhn_satellite_610.productvariants
-    assert sat_610_variants.count() == 2
-    for variant in sat_610_variants.all():
-        assert variant.name in ["7Server-Capsule610", "7Server-Satellite610"]
+    sat_610_variants = rhn_satellite_610.productvariants.get_queryset()
+    assert len(sat_610_variants) == 2
+    for variant in sat_610_variants:
+        assert variant.name in ("7Server-Capsule610", "7Server-Satellite610")

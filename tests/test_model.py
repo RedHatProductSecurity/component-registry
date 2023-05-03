@@ -791,7 +791,7 @@ def test_queryset_ordering_fails():
         len(misordered_products.distinct("description"))
 
 
-@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+@pytest.mark.django_db
 def test_filter_latest_nevra_by_distinct_component():
     ps = ProductStreamFactory(name="rhel-7.9.z")
     srpm_with_el = SrpmComponentFactory(name="sdb", version="1.2.1", release="21.el7")
@@ -812,7 +812,7 @@ def test_filter_latest_nevra_by_distinct_component():
     )
 
 
-@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+@pytest.mark.django_db
 def test_filter_latest_nevra_by_distinct_component_modular():
     ps = ProductStreamFactory(name="certificate_system-10.2.z")
     modular_rpm_1 = SrpmComponentFactory(

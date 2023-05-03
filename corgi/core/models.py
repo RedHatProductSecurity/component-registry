@@ -941,8 +941,7 @@ class ComponentQuerySet(models.QuerySet):
     ) -> "ComponentQuerySet":
         """Return only root components from latest builds for each product stream."""
         product_stream_uuids = (
-            self.using("read_only")
-            .root_components()
+            self.root_components()
             .exclude(productstreams__isnull=True)
             .values_list("productstreams__uuid", flat=True)
             # Clear ordering inherited from parent Queryset, if any
@@ -952,39 +951,36 @@ class ComponentQuerySet(models.QuerySet):
         )
         query = Q()
         for ps_uuid in product_stream_uuids:
-            if ps_uuid:
-                distinct_components = (
-                    self.using("read_only")
-                    .root_components()
+            distinct_components = (
+                self.root_components()
+                .prefetch_related("productstreams")
+                .filter(productstreams=ps_uuid)
+                .values_list("namespace", "name", "arch")
+                # Clear ordering inherited from parent Queryset, if any
+                # So .distinct() works properly and doesn't have duplicates
+                .order_by()
+                .distinct()
+                .iterator()
+            )
+            for namespace, name, arch in distinct_components:
+                latest_nevra = (
+                    self.root_components()
                     .prefetch_related("productstreams")
-                    .filter(productstreams=ps_uuid)
-                    .values_list("namespace", "name", "arch")
-                    # Clear ordering inherited from parent Queryset, if any
-                    # So .distinct() works properly and doesn't have duplicates
-                    .order_by()
-                    .distinct()
-                    .iterator()
+                    # Because we filter by root components,
+                    # namespace should always be REDHAT
+                    # arch should always be "src" for SRPMs or "noarch" for index containers
+                    .filter(name=name, productstreams=ps_uuid)
+                    .filter_latest_nevra_by_distinct_component(namespace, name, arch)
                 )
-                for namespace, name, arch in distinct_components:
-                    latest_nevra = (
-                        self.using("read_only")
-                        .root_components()
-                        .prefetch_related("productstreams")
-                        # Because we filter by root components,
-                        # namespace should always be REDHAT
-                        # arch should always be "src" for SRPMs or "noarch" for index containers
-                        .filter(name=name, productstreams=ps_uuid)
-                        .filter_latest_nevra_by_distinct_component(namespace, name, arch)
-                    )
-                    if latest_nevra:
-                        query |= Q(nevra=latest_nevra)
+                if latest_nevra:
+                    query |= Q(nevra=latest_nevra)
         if include:
             # Show only the latest components
             if not query:
                 # No latest components to show??
                 # Probably a bug in filter_latest_nevra_by_distinct_component we're not handling
                 return Component.objects.none()
-            return self.using("read_only").root_components().filter(query)
+            return self.root_components().filter(query)
         else:
             # Show only the older / non-latest components
             if not query:

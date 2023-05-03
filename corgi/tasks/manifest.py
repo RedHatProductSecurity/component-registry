@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.conf import settings
@@ -17,6 +19,8 @@ logger = get_task_logger(__name__)
     retry_kwargs=RETRY_KWARGS,
 )
 def update_manifests():
+    # Ensure the OUTPUT_FILES_DIR exists on first run
+    Path(settings.OUTPUT_FILES_DIR).mkdir(exist_ok=True)
     for ps in ProductStream.objects.annotate(num_components=Count("components")).filter(
         num_components__gt=0
     ):

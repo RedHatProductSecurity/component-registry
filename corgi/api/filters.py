@@ -89,6 +89,10 @@ class ComponentFilter(FilterSet):
         method="filter_root_components",
         label="Show only root components (source RPMs, index container images)",
     )
+    latest_components_by_streams = BooleanFilter(
+        method="filter_latest_components_by_streams",
+        label="Show only latest components across product streams",
+    )
 
     missing_copyright = EmptyStringFilter(
         field_name="copyright_text",
@@ -184,6 +188,19 @@ class ComponentFilter(FilterSet):
         # Truthy values return the filtered queryset (only root components)
         # Falsey values return the excluded queryset (only non-root components)
         return queryset.root_components(include=value)
+
+    @staticmethod
+    def filter_latest_components_by_streams(
+        queryset: ComponentQuerySet, _name: str, value: bool
+    ) -> QuerySet["Component"]:
+        """Show only latest ROOT components in some queryset if user chose YES / NO"""
+        if value in EMPTY_VALUES:
+            # User gave an empty ?param= so return the unfiltered queryset
+            return queryset
+        # Else user gave a non-empty value
+        # Truthy values return the filtered queryset (only latest components)
+        # Falsey values return the excluded queryset (only older components)
+        return queryset.latest_components_by_streams(include=value)
 
 
 class ProductDataFilter(FilterSet):

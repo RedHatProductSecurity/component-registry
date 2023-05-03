@@ -341,6 +341,11 @@ paths:
         schema:
           type: boolean
         description: Show only latest components
+      - in: query
+        name: latest_components_by_streams
+        schema:
+          type: boolean
+        description: Show only latest components across product streams
       - name: limit
         required: false
         in: query

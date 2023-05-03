@@ -927,6 +927,55 @@ class ComponentQuerySet(models.QuerySet):
                 return self
             return self.exclude(query)
 
+    def latest_components_by_streams(
+        self,
+        include: bool = True,
+    ) -> "ComponentQuerySet":
+        """Return components from latest builds ROOT COMPONENTS by product streams."""
+        product_stream_uuids = set(
+            self.using("read_only")
+            .root_components()
+            .exclude(productstreams__isnull=True)
+            .values_list("productstreams__uuid", flat=True)
+            .distinct()
+        )
+        query = Q()
+        for ps_uuid in product_stream_uuids:
+            if ps_uuid:
+                names = set(
+                    self.using("read_only")
+                    .root_components()
+                    .prefetch_related("productstreams")
+                    .filter(productstreams=ps_uuid)
+                    .values_list("name", flat=True)
+                    .distinct()
+                )
+                for name in names:
+                    latest_nevra = (
+                        self.using("read_only")
+                        .root_components()
+                        .prefetch_related("productstreams")
+                        .filter(name=name, productstreams=ps_uuid)
+                        .filter_latest_nevra_by_name(component_name=name)
+                    )
+                    if latest_nevra:
+                        query |= Q(nevra=latest_nevra)
+        if include:
+            # Show only the latest components
+            if not query:
+                # No latest components to show??
+                # This is probably a bug in filter_latest_nevra_by_name we're not handling
+                return Component.objects.none()
+            return self.using("read_only").root_components().filter(query)
+        else:
+            # Show only the older / non-latest components
+            if not query:
+                # No latest components to hide??
+                # So show everything / return unfiltered queryset
+                # This is probably a bug in filter_latest_nevra_by_name we're not handling
+                return self
+            return self.root_components().exclude(query)
+
     def released_components(self, include: bool = True) -> "ComponentQuerySet":
         """Show only released components by default, or unreleased components if include=False"""
         empty_released_errata = Q(software_build__meta_attr__released_errata_tags=())

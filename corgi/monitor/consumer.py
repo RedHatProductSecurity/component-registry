@@ -8,6 +8,7 @@ from proton.handlers import MessagingHandler
 from proton.reactor import Container, Selector
 
 from corgi.tasks.brew import slow_fetch_brew_build, slow_update_brew_tags
+from corgi.tasks.pnc import slow_fetch_pnc_sbom
 
 logger = logging.getLogger(__name__)
 
@@ -162,4 +163,33 @@ class BrewUMBListener(UMBListener):
         f"Consumer.{settings.UMB_CONSUMER}.VirtualTopic.eng.brew.build.complete": "handle_builds",
         f"Consumer.{settings.UMB_CONSUMER}.VirtualTopic.eng.brew.build.tag": "handle_tags",
         f"Consumer.{settings.UMB_CONSUMER}.VirtualTopic.eng.brew.build.untag": "handle_tags",
+    }
+
+
+class SbomerUMBHandler(UMBReceiverHandler):
+    """Handle messages about new SBOMs available from PNC"""
+
+    def sbom(self, event: Event) -> None:
+        logger.info(f"Handling UMB message for PNC SBOM {event.message.id}")
+        message = json.loads(event.message.body)
+        try:
+            slow_fetch_pnc_sbom(
+                message["purl"],
+                message["productConfig"]["errataTool"],
+                message["build"],
+                message["sbom"],
+            )
+        except Exception as e:
+            logger.error(f"Failed to schedule fetch PNC SBOM {event.message.id}: {str(e)}")
+            self.release(event.delivery, delivered=True)
+        else:
+            self.accept(event.delivery)
+
+
+class SbomerUMBListener(UMBListener):
+    """Listen for messages from sbomer about SBOMs from PNC"""
+
+    handler_class = SbomerUMBHandler
+    virtual_topic_addresses = {
+        f"Consumer.{settings.UMB_CONSUMER}.VirtualTopic.": "sbom",
     }

@@ -393,7 +393,7 @@ class ProductTaxonomySerializer(IncludeExcludeFieldsSerializer):
 
     def get_channels(self, instance: Union[Component, ProductModel]) -> list[dict[str, str]]:
         include_exclude_serializer = self.get_include_exclude_serializer(
-            "channels", ProductVariantSerializer, instance.channels, many=False
+            "channels", ChannelSerializer, instance.channels, many=False
         )
         if include_exclude_serializer:
             return include_exclude_serializer.data

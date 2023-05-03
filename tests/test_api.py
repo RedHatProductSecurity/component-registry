@@ -188,31 +188,120 @@ def test_component_detail(client, api_path):
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_latest_components_filter(client, api_path):
-    older_component = ComponentFactory(type=Component.Type.RPM, release="9")
-    newer_component = ComponentFactory(
-        type=older_component.type,
-        name=older_component.name,
-        version=older_component.version,
-        release="10",
-        arch=older_component.arch,
-        software_build=older_component.software_build,
-    )
+    # Create many components so we have robust test data
+    # 2 components (1 older version, 1 newer version) for each name / arch pair in REDHAT namespace
+    # 12 REDHAT components across 6 pairs
+    # plus 2 UPSTREAM components per name for src architecture only, 4 upstreams total
+    # Overall 16 components, and latest filter should show 8 (newer, when on or older, when off)
+    components = {}
+    for name in "red", "blue":
+        for arch in "aarch64", "x86_64", "src":
+            older_component = ComponentFactory(
+                type=Component.Type.RPM,
+                namespace=Component.Namespace.REDHAT,
+                name=name,
+                version="9",
+                arch=arch,
+            )
+            # Create newer components with the same type, namespace, name, release, and arch
+            # But a different version and build
+            newer_component = ComponentFactory(
+                type=older_component.type,
+                namespace=older_component.namespace,
+                name=older_component.name,
+                version="10",
+                release=older_component.release,
+                arch=older_component.arch,
+            )
+            components[(name, arch)] = (older_component, newer_component)
+        # Create UPSTREAM components for src architecture only
+        # with the same type, name, and version as REDHAT src components
+        # but no release or software_build
+        older_upstream_component = ComponentFactory(
+            type=older_component.type,
+            namespace=Component.Namespace.UPSTREAM,
+            name=older_component.name,
+            version=older_component.version,
+            release="",
+            arch="noarch",
+            software_build=None,
+        )
+        newer_upstream_component = ComponentFactory(
+            type=newer_component.type,
+            namespace=older_upstream_component.namespace,
+            name=newer_component.name,
+            version=newer_component.version,
+            release=older_upstream_component.release,
+            arch=older_upstream_component.arch,
+            software_build=older_upstream_component.software_build,
+        )
+        components[(name, older_upstream_component.arch)] = (
+            older_upstream_component,
+            newer_upstream_component,
+        )
 
     response = client.get(f"{api_path}/components")
     assert response.status_code == 200
-    assert response.json()["count"] == 2
+    assert response.json()["count"] == 16
 
     response = client.get(f"{api_path}/components?latest_components=True")
     assert response.status_code == 200
     response = response.json()
-    assert response["count"] == 1
-    assert response["results"][0]["nevra"] == newer_component.nevra
+    assert response["count"] == 8
+    for result in response["results"]:
+        assert result["nevra"] == components[(result["name"], result["arch"])][1].nevra
 
     response = client.get(f"{api_path}/components?latest_components=False")
     assert response.status_code == 200
     response = response.json()
-    assert response["count"] == 1
-    assert response["results"][0]["nevra"] == older_component.nevra
+    assert response["count"] == 8
+    for result in response["results"]:
+        assert result["nevra"] == components[(result["name"], result["arch"])][0].nevra
+
+    # Also test latest_components filter when combined with root_components filter
+    # Note that order doesn't matter here, e.g. before CORGI-609 both of below gave 0 results:
+    # /api/v1/components?re_name=webkitgtk&root_components=True&latest_components=True
+    # /api/v1/components?re_name=webkitgtk&latest_components=True&root_components=True
+    #
+    # There are 17 root components in the above queryset:
+    # /api/v1/components?re_name=webkitgtk&root_components=True
+    # But the latest_components filter is always applied first, and previously chose a binary RPM
+    # So the source RPMs were filtered out, and the root_components filter had no data to report
+    # This is likely due to the order the filters are defined in (see corgi/api/filters.py)
+    # Fixed by CORGI-609, and this test makes sure the bug doesn't come back
+    response = client.get(f"{api_path}/components?root_components=True&latest_components=True")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 2
+    # Red and blue components with arch "src" each have 1 latest
+    for result in response["results"]:
+        assert result["nevra"] == components[(result["name"], result["arch"])][1].nevra
+
+    response = client.get(f"{api_path}/components?root_components=True&latest_components=False")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 2
+    # Red and blue components with arch "src" each have 1 non-latest
+    for result in response["results"]:
+        assert result["nevra"] == components[(result["name"], result["arch"])][0].nevra
+
+    response = client.get(f"{api_path}/components?root_components=False&latest_components=True")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 6
+    # Red and blue components for 2 arches each have 1 latest
+    # Red and blue components for upstream (non-root) each have 1 latest
+    for result in response["results"]:
+        assert result["nevra"] == components[(result["name"], result["arch"])][1].nevra
+
+    response = client.get(f"{api_path}/components?root_components=False&latest_components=False")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 6
+    # Red and blue components for 2 arches each have 1 non-latest
+    # Red and blue components for upstream (non-root) each have 1 non-latest
+    for result in response["results"]:
+        assert result["nevra"] == components[(result["name"], result["arch"])][0].nevra
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)

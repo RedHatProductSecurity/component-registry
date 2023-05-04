@@ -27,7 +27,7 @@ class CollectorErrataProductVersion(CollectorErrataModel):
 
 
 class CollectorErrataProductVariant(CollectorErrataModel):
-    cpe = models.TextField(null=True)  # noqa: DJ01
+    cpe = models.TextField(default="")
     product_version = models.ForeignKey(
         CollectorErrataProductVersion, on_delete=models.CASCADE, related_name="variants"
     )

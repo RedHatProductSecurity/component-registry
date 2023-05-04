@@ -36,6 +36,14 @@ def test_products(requests_mock):
         product_version=et_product_version,
         cpe="cpe:/a:redhat:acm:2.4::el8",
     )
+    # Test that a Collector model with missing CPE defaults to empty "" string
+    # Using NULL / None as the default causes issues during ingestion
+    et_variant_without_cpe = CollectorErrataProductVariant.objects.create(
+        et_id=3658,
+        name="8Base2-RHACM-2.4",
+        product_version=et_product_version,
+    )
+    assert et_variant_without_cpe.cpe == ""
 
     update_products()
 

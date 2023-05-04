@@ -567,39 +567,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/Component'
           description: ''
-  /api/v1/components/{uuid}/olcs_test:
-    put:
-      operationId: v1_components_olcs_test_update
-      description: Allow OpenLCS to upload copyright text / license scan results for
-        a component
-      parameters:
-      - in: path
-        name: uuid
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this component.
-        required: true
-      tags:
-      - v1
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Component'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/Component'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/Component'
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Component'
-          description: ''
   /api/v1/components/{uuid}/provides:
     get:
       operationId: v1_components_provides_retrieve
@@ -635,6 +602,41 @@ paths:
         required: true
       tags:
       - v1
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Component'
+          description: ''
+  /api/v1/components/{uuid}/update_license:
+    put:
+      operationId: v1_components_update_license_update
+      description: Allow OpenLCS to upload copyright text / license scan results for
+        a component
+      parameters:
+      - in: path
+        name: uuid
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this component.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Component'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Component'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Component'
+      security:
+      - tokenAuth: []
       responses:
         '200':
           content:

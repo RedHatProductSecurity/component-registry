@@ -441,6 +441,11 @@ class ProductModel(TimeStampedModel):
         pass
 
     @property
+    def manifest(self) -> str:
+        """Return an SPDX-style manifest in JSON format."""
+        return ProductManifestFile(self).render_content()
+
+    @property
     def provides_queryset(self, using: str = "read_only") -> QuerySet["Component"]:
         """Returns unique aggregate "provides" for the latest components in this ProductModel instance,
         for use in templates"""
@@ -644,11 +649,6 @@ class ProductStream(ProductModel):
         """
         stream_name = re.sub(r"(-|_|)" + self.version + "$", "", self.name)
         return f"o:redhat:{stream_name}:{self.version}"
-
-    @property
-    def manifest(self) -> str:
-        """Return an SPDX-style manifest in JSON format."""
-        return ProductManifestFile(self).render_content()
 
 
 class ProductStreamTag(Tag):

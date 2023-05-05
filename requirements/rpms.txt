@@ -18,3 +18,4 @@ python39-pip
 python39-setuptools
 python39-wheel
 https://github.com/anchore/syft/releases/download/v0.74.1/syft_0.74.1_linux_amd64.rpm
+brotli

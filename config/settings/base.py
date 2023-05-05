@@ -384,6 +384,7 @@ OIDC_OP_USER_ENDPOINT = os.getenv("CORGI_OIDC_OP_USER_ENDPOINT", "")
 OIDC_RP_CLIENT_ID = os.getenv("CORGI_OIDC_RP_CLIENT_ID", "")
 OIDC_RP_CLIENT_SECRET = os.getenv("CORGI_OIDC_RP_CLIENT_SECRET", "")
 OIDC_DRF_AUTH_BACKEND = "corgi.core.authentication.CorgiOIDCBackend"
+OIDC_EXEMPT_URLS = ["/static"]
 
 
 # UMB -- Unified Message Bus

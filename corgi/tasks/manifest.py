@@ -41,7 +41,7 @@ def cpu_update_ps_manifest(product_stream: str):
     # That will allow clients to continue to be served the same content from the browser cache
     # over the span of multiple days, until the product stream receives a new build
     with open(f"{settings.OUTPUT_FILES_DIR}/{product_stream}-{ps.pk}.json", "w") as fh:
-        fh.write(ps.manifest)
+        fh.write(ps.manifest())
 
 
 @app.task(

@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 
 import jsonschema
 from django.conf import settings
+from django.db.models import Q
 from django.template.loader import render_to_string
 
 from corgi.core.mixins import TimeStampedModel
@@ -24,8 +25,11 @@ class ManifestFile(ABC):
         """Name of the Django template, not the final file itself."""
         pass
 
-    def __init__(self, obj: TimeStampedModel) -> None:
+    def __init__(self, obj: TimeStampedModel, errata_ids: str = "") -> None:
         self.obj = obj  # Model instance to manifest (either Component or Product)
+        # Errata IDs used to filter builds when generating manifest
+        # or empty list to not filter / use all released builds
+        self.errata_ids = errata_ids.split(",") if errata_ids else []
 
     def render_content(self) -> str:
         kwargs_for_template = {"obj": self.obj}
@@ -68,7 +72,19 @@ class ProductManifestFile(ManifestFile):
 
         components = self.obj.components  # type: ignore[attr-defined]
         components = components.exclude(name__endswith="-container-source").using("read_only")
-        released_components = components.root_components().released_components().latest_components()
+
+        # Report components from any build with released_errata_tags
+        released_components = components.root_components().released_components()
+        if self.errata_ids:
+            # Report only components from builds with any matching released_errata_tag
+            any_matching_erratum = Q()
+            for erratum_id in self.errata_ids:
+                any_matching_erratum |= Q(
+                    software_build__meta_attr__released_errata_tags__contains=erratum_id
+                )
+            released_components = released_components.filter(any_matching_erratum)
+
+        released_components = released_components.latest_components()
         distinct_provides = self.obj.provides_queryset  # type: ignore[attr-defined]
 
         kwargs_for_template = {

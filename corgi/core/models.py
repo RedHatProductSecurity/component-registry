@@ -440,10 +440,9 @@ class ProductModel(TimeStampedModel):
     def get_ofuri(self) -> str:
         pass
 
-    @property
-    def manifest(self) -> str:
+    def manifest(self, errata_ids: str = "") -> str:
         """Return an SPDX-style manifest in JSON format."""
-        return ProductManifestFile(self).render_content()
+        return ProductManifestFile(self, errata_ids).render_content()
 
     @property
     def provides_queryset(self, using: str = "read_only") -> QuerySet["Component"]:

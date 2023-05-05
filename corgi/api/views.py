@@ -496,7 +496,7 @@ class ProductStreamViewSetSet(ProductDataViewSet):
         obj = self.queryset.filter(uuid=uuid).first()
         if not obj:
             return Response(status=status.HTTP_404_NOT_FOUND)
-        manifest = json.loads(obj.manifest)
+        manifest = json.loads(obj.manifest())
         return Response(manifest)
 
 
@@ -535,7 +535,8 @@ class ProductVariantViewSetSet(ProductDataViewSet):
         obj = self.queryset.filter(uuid=uuid).first()
         if not obj:
             return Response(status=status.HTTP_404_NOT_FOUND)
-        manifest = json.loads(obj.manifest)
+        errata_ids = request.query_params.get("errata_ids", "")
+        manifest = json.loads(obj.manifest(errata_ids=errata_ids))
         return Response(manifest)
 
 

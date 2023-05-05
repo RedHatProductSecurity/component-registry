@@ -161,7 +161,7 @@ def test_slim_rpm_in_containers_manifest():
     distinct_provides = stream.provides_queryset
     assert len(distinct_provides) == num_provided
 
-    stream_manifest = stream.manifest
+    stream_manifest = stream.manifest()
     manifest = json.loads(stream_manifest)
 
     # One package for each component
@@ -209,7 +209,7 @@ def test_product_manifest_excludes_unreleased_components():
         released=False
     )
 
-    manifest = json.loads(stream.manifest)
+    manifest = json.loads(stream.manifest())
 
     # No released components linked to this product
     num_components = len(
@@ -246,7 +246,7 @@ def test_product_manifest_properties():
     And that it generates valid JSON."""
     component, stream, provided, dev_provided = setup_products_and_components_provides()
 
-    manifest = json.loads(stream.manifest)
+    manifest = json.loads(stream.manifest())
 
     # One component linked to this product
     num_components = len(

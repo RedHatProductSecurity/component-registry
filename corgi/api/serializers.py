@@ -580,8 +580,7 @@ class ProductModelSerializer(ProductTaxonomySerializer):
     def get_build_count(instance: ProductModel) -> int:
         return instance.builds.count()
 
-    @staticmethod
-    def get_manifest(instance: ProductModel) -> str:
+    def get_manifest(self, instance: ProductModel) -> str:
         """Serve a pre-generated ProductStream manifest from the staticfiles directory
         Override this for any non-ProductStream manifests"""
         if not instance.components.exists():
@@ -764,12 +763,20 @@ class ProductVariantSerializer(ProductModelSerializer):
     def get_link(instance: ProductVariant) -> str:
         return get_model_ofuri_link("product_variants", instance.ofuri)
 
-    @staticmethod
-    def get_manifest(instance: ProductModel) -> str:
+    def get_manifest(self, instance: ProductModel) -> str:
         """Get a manifest for a ProductVariant on demand / not pre-generated"""
         if not instance.components.exists():
             return ""
-        return get_model_id_link("product_variants", instance.uuid, manifest=True)
+        manifest_link = get_model_id_link("product_variants", instance.uuid, manifest=True)
+
+        # Get list of errata to manifest from request, if any
+        request = self.context.get("request")
+        errata_ids = request.query_params.get("errata_ids", "") if request else ""
+        if errata_ids:
+            # Generate manifest for only some errata, which relate to this variant
+            manifest_link = f"{manifest_link}&errata_ids={errata_ids}"
+
+        return manifest_link
 
     class Meta(ProductModelSerializer.Meta):
         model = ProductVariant

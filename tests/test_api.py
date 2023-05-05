@@ -187,32 +187,147 @@ def test_component_detail(client, api_path):
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
-def test_latest_components_filter(client, api_path):
-    older_component = ComponentFactory(type=Component.Type.RPM, release="9")
-    newer_component = ComponentFactory(
-        type=older_component.type,
-        name=older_component.name,
-        version=older_component.version,
-        release="10",
-        arch=older_component.arch,
-        software_build=older_component.software_build,
-    )
+def test_latest_components_by_stream_filter(client, api_path):
+    # Create many components so we have robust test data
+    # 2 components (1 older version, 1 newer version) for each name / arch pair in REDHAT namespace
+    # 12 REDHAT components across 6 pairs
+    # plus 2 UPSTREAM components per name for src architecture only, 4 upstreams total
+    # Overall 16 components, and latest filter should show 8 (newer, when on or older, when off)
+    components = {}
+    stream = ProductStreamFactory()
+    for name in "red", "blue":
+        for arch in "aarch64", "x86_64", "src":
+            older_component = ComponentFactory(
+                type=Component.Type.RPM,
+                namespace=Component.Namespace.REDHAT,
+                name=name,
+                version="9",
+                arch=arch,
+            )
+            older_component.productstreams.add(stream)
+            # Create newer components with the same type, namespace, name, release, and arch
+            # But a different version and build
+            newer_component = ComponentFactory(
+                type=older_component.type,
+                namespace=older_component.namespace,
+                name=older_component.name,
+                version="10",
+                release=older_component.release,
+                arch=older_component.arch,
+            )
+            newer_component.productstreams.add(stream)
+            components[(name, arch)] = (older_component, newer_component)
+        # Create UPSTREAM components for src architecture only
+        # with the same type, name, and version as REDHAT src components
+        # but no release or software_build
+        older_upstream_component = ComponentFactory(
+            type=older_component.type,
+            namespace=Component.Namespace.UPSTREAM,
+            name=older_component.name,
+            version=older_component.version,
+            release="",
+            arch="noarch",
+            software_build=None,
+        )
+        older_upstream_component.productstreams.add(stream)
+        newer_upstream_component = ComponentFactory(
+            type=newer_component.type,
+            namespace=older_upstream_component.namespace,
+            name=newer_component.name,
+            version=newer_component.version,
+            release=older_upstream_component.release,
+            arch=older_upstream_component.arch,
+            software_build=older_upstream_component.software_build,
+        )
+        newer_upstream_component.productstreams.add(stream)
+        components[(name, older_upstream_component.arch)] = (
+            older_upstream_component,
+            newer_upstream_component,
+        )
 
     response = client.get(f"{api_path}/components")
     assert response.status_code == 200
-    assert response.json()["count"] == 2
+    assert response.json()["count"] == 16
 
-    response = client.get(f"{api_path}/components?latest_components=True")
+    response = client.get(f"{api_path}/components?latest_components_by_streams=True")
     assert response.status_code == 200
     response = response.json()
-    assert response["count"] == 1
-    assert response["results"][0]["nevra"] == newer_component.nevra
+    assert response["count"] == 2
+    for result in response["results"]:
+        assert result["nevra"] == components[(result["name"], result["arch"])][1].nevra
 
-    response = client.get(f"{api_path}/components?latest_components=False")
+    response = client.get(f"{api_path}/components?latest_components_by_streams=False")
     assert response.status_code == 200
     response = response.json()
-    assert response["count"] == 1
-    assert response["results"][0]["nevra"] == older_component.nevra
+    assert response["count"] == 2
+    for result in response["results"]:
+        assert result["nevra"] == components[(result["name"], result["arch"])][0].nevra
+
+    # Also test latest_components_by_streams filter when combined with root_components filter
+    # Note that order doesn't matter here, e.g. before CORGI-609 both of below gave 0 results:
+    # /api/v1/components?re_name=webkitgtk&root_components=True&latest_components=True
+    # /api/v1/components?re_name=webkitgtk&latest_components=True&root_components=True
+    #
+    # There are 17 root components in the above queryset:
+    # /api/v1/components?re_name=webkitgtk&root_components=True
+    # But the latest_components filter is always applied first, and previously chose a binary RPM
+    # So the source RPMs were filtered out, and the root_components filter had no data to report
+    # This is likely due to the order the filters are defined in (see corgi/api/filters.py)
+    # Fixed by CORGI-609, and this test makes sure the bug doesn't come back
+    response = client.get(
+        f"{api_path}/components?root_components=True&latest_components_by_streams=True"
+    )
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 2
+    # Red and blue components with arch "src" each have 1 latest
+    for result in response["results"]:
+        assert result["nevra"] == components[(result["name"], result["arch"])][1].nevra
+
+    response = client.get(
+        f"{api_path}/components?root_components=True&latest_components_by_streams=False"
+    )
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 2
+    # Red and blue components with arch "src" each have 1 non-latest
+    for result in response["results"]:
+        assert result["nevra"] == components[(result["name"], result["arch"])][0].nevra
+
+    response = client.get(
+        f"{api_path}/components?root_components=False&latest_components_by_streams=True"
+    )
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 0
+    # Red and blue components for 2 arches each have 1 latest
+    # Red and blue components for upstream each have 1 latest
+    # These are all non-root components, so are excluded in latest_components_by_stream filter
+    for result in response["results"]:
+        assert result["nevra"] == components[(result["name"], result["arch"])][1].nevra
+
+    response = client.get(
+        f"{api_path}/components?root_components=False&latest_components_by_streams=False&limit=20"
+    )
+    assert response.status_code == 200
+    response = response.json()
+    # "Find all the non-root components, then exclude latest root component versions"
+    # "Report only the non-latest root component versions in each stream"
+    #
+    # The latest_components_by_stream filter only looks at root components
+    # So when all root components are filtered out,
+    # there are no "latest root component versions" to exclude
+    #
+    # So when root_components=False,
+    # latest_components_by_stream=False is a no-op and has no NEVRAs to exclude
+    # We report all 12 non-root components, regardless of latest / non-latest version
+    assert response["count"] == 12
+    # Red and blue components for 2 arches each have 2 components (1 latest and 1 non-latest)
+    # Red and blue components for upstream each have 2 components (1 latest and 1 non-latest)
+    for result in response["results"]:
+        assert result["nevra"] in tuple(
+            component.nevra for component in components[(result["name"], result["arch"])]
+        )
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
@@ -222,33 +337,59 @@ def test_latest_components_by_streams_filter(client, api_path):
     ps2 = ProductStreamFactory(name="rhel-8", version="8")
     assert ps2.ofuri == "o:redhat:rhel:8"
 
-    older_component = SrpmComponentFactory(type=Component.Type.RPM, release="9")
+    # Only belongs to RHEL7 stream
+    oldest_component = SrpmComponentFactory(release="8")
+    oldest_component.productstreams.add(ps1)
+
+    # Belongs to both RHEL7 and RHEL8 streams
+    older_component = SrpmComponentFactory(
+        name=oldest_component.name, version=oldest_component.version, release="9"
+    )
     older_component.productstreams.add(ps1)
+    older_component.productstreams.add(ps2)
+
     newer_component = SrpmComponentFactory(
-        type=older_component.type,
-        name=older_component.name,
-        version=older_component.version,
+        name=oldest_component.name,
+        version=oldest_component.version,
         release="10",
-        software_build=older_component.software_build,
     )
     newer_component.productstreams.add(ps1)
     newer_component.productstreams.add(ps2)
 
+    # Only belongs to RHEL8 stream
+    newest_component = SrpmComponentFactory(
+        name=oldest_component.name,
+        version=oldest_component.version,
+        release="11",
+    )
+    newest_component.productstreams.add(ps2)
+
     response = client.get(f"{api_path}/components")
     assert response.status_code == 200
-    assert response.json()["count"] == 2
+    assert response.json()["count"] == 4
 
     response = client.get(f"{api_path}/components?latest_components_by_streams=True")
     assert response.status_code == 200
     response = response.json()
-    assert response["count"] == 1
+    assert response["count"] == 2
+    # Report newer_component as the latest for the RHEL7 stream
+    # Even though it's "not the latest" for the RHEL8 stream
+    # Report newest_component as the latest for the RHEL8 stream
+    # Even though both have the same name / only one is latest overall
     assert response["results"][0]["nevra"] == newer_component.nevra
+    assert response["results"][1]["nevra"] == newest_component.nevra
 
     response = client.get(f"{api_path}/components?latest_components_by_streams=False")
     assert response.status_code == 200
     response = response.json()
-    assert response["count"] == 1
-    assert response["results"][0]["nevra"] == older_component.nevra
+    assert response["count"] == 2
+    # Report oldest_component as "not the latest" for the RHEL7 stream
+    # Report older_component as "not the latest" for the RHEL7 and RHEL8 streams
+    # Don't report newer_component, even though it's "not the latest" for the RHEL8 stream
+    # because it is the latest for the RHEL7 stream
+    # So it gets added to the list of latest_nevras and excluded from the results
+    assert response["results"][0]["nevra"] == oldest_component.nevra
+    assert response["results"][1]["nevra"] == older_component.nevra
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
@@ -1288,7 +1429,6 @@ def test_srpm_component_provides_sources_upstreams(client, api_path):
 
     response = client.get(f"{api_path}/components/{root_comp.uuid}/taxonomy")
     assert response.status_code == 200
-    print(response.json())
     assert len(response.json()[0]["provides"]) == 2
 
     response = client.get(

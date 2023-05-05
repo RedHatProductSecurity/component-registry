@@ -791,22 +791,139 @@ def test_queryset_ordering_fails():
         len(misordered_products.distinct("description"))
 
 
-@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
-def test_filter_latest_by_name():
+@pytest.mark.django_db
+def test_latest_components_queryset(client, api_path):
+    # Create many components so we have robust test data
+    # 2 components (1 older version, 1 newer version) for each name / arch pair in REDHAT namespace
+    # 12 REDHAT components across 6 pairs
+    # plus 2 UPSTREAM components per name for src architecture only, 4 upstreams total
+    # Overall 16 components, and latest queryset should show 8 (newer, when on or older, when off)
+    components = {}
+    for name in "red", "blue":
+        for arch in "aarch64", "x86_64", "src":
+            older_component = ComponentFactory(
+                type=Component.Type.RPM,
+                namespace=Component.Namespace.REDHAT,
+                name=name,
+                version="9",
+                arch=arch,
+            )
+            # Create newer components with the same type, namespace, name, release, and arch
+            # But a different version and build
+            newer_component = ComponentFactory(
+                type=older_component.type,
+                namespace=older_component.namespace,
+                name=older_component.name,
+                version="10",
+                release=older_component.release,
+                arch=older_component.arch,
+            )
+            components[(name, arch)] = (older_component, newer_component)
+        # Create UPSTREAM components for src architecture only
+        # with the same type, name, and version as REDHAT src components
+        # but no release or software_build
+        older_upstream_component = ComponentFactory(
+            type=older_component.type,
+            namespace=Component.Namespace.UPSTREAM,
+            name=older_component.name,
+            version=older_component.version,
+            release="",
+            arch="noarch",
+            software_build=None,
+        )
+        newer_upstream_component = ComponentFactory(
+            type=newer_component.type,
+            namespace=older_upstream_component.namespace,
+            name=newer_component.name,
+            version=newer_component.version,
+            release=older_upstream_component.release,
+            arch=older_upstream_component.arch,
+            software_build=older_upstream_component.software_build,
+        )
+        components[(name, older_upstream_component.arch)] = (
+            older_upstream_component,
+            newer_upstream_component,
+        )
+
+    assert Component.objects.count() == 16
+
+    latest_components = Component.objects.latest_components()
+    assert len(latest_components) == 8
+    for component in latest_components:
+        assert component.nevra == components[(component.name, component.arch)][1].nevra
+
+    non_latest_components = Component.objects.latest_components(include=False)
+    assert len(non_latest_components) == 8
+    for component in non_latest_components:
+        assert component.nevra == components[(component.name, component.arch)][0].nevra
+
+    # Also test latest_components queryset when combined with root_components queryset
+    # Note that order doesn't matter in the API, e.g. before CORGI-609 both of below gave 0 results:
+    # /api/v1/components?re_name=webkitgtk&root_components=True&latest_components=True
+    # /api/v1/components?re_name=webkitgtk&latest_components=True&root_components=True
+    #
+    # There are 17 root components in the above queryset:
+    # /api/v1/components?re_name=webkitgtk&root_components=True
+    # But the latest_components filter eas always applied first, and previously chose a binary RPM
+    # So the source RPMs were filtered out, and the root_components filter had no data to report
+    # This was likely due to the order the filters are defined in (see corgi/api/filters.py)
+    # Fixed by CORGI-609, and this test makes sure the bug doesn't come back
+    latest_root_components = Component.objects.latest_components().root_components()
+    assert len(latest_root_components) == 2
+    # Red and blue components with arch "src" each have 1 latest
+    for component in latest_root_components:
+        assert component.nevra == components[(component.name, component.arch)][1].nevra
+
+    non_latest_root_components = Component.objects.latest_components(
+        include=False
+    ).root_components()
+    assert len(non_latest_root_components) == 2
+    # Red and blue components with arch "src" each have 1 non-latest
+    for component in non_latest_root_components:
+        assert component.nevra == components[(component.name, component.arch)][0].nevra
+
+    latest_non_root_components = Component.objects.latest_components().root_components(
+        include=False
+    )
+    assert len(latest_non_root_components) == 6
+    # Red and blue components for 2 arches each have 1 latest
+    # Red and blue components for upstream (non-root) each have 1 latest
+    for component in latest_non_root_components:
+        assert component.nevra == components[(component.name, component.arch)][1].nevra
+
+    non_latest_non_root_components = Component.objects.latest_components(
+        include=False
+    ).root_components(include=False)
+    assert len(non_latest_non_root_components) == 6
+    # Red and blue components for 2 arches each have 1 non-latest
+    # Red and blue components for upstream (non-root) each have 1 non-latest
+    for component in non_latest_non_root_components:
+        assert component.nevra == components[(component.name, component.arch)][0].nevra
+
+
+@pytest.mark.django_db
+def test_filter_latest_nevra_by_distinct_component():
     ps = ProductStreamFactory(name="rhel-7.9.z")
     srpm_with_el = SrpmComponentFactory(name="sdb", version="1.2.1", release="21.el7")
     srpm_with_el.productstreams.add(ps)
     srpm = SrpmComponentFactory(name="sdb", version="1.2.1", release="3")
     srpm.productstreams.add(ps)
-    assert ps.components.filter_latest_nevra_by_name(component_name="sdb") == "sdb-1.2.1-21.el7.src"
+    assert (
+        ps.components.filter_latest_nevra_by_distinct_component(
+            srpm_with_el.namespace, srpm_with_el.name, srpm_with_el.arch
+        )
+        == srpm_with_el.nevra
+    )
 
     # test no result
     ps = ProductStreamFactory(name="rhel-7.7.z")
-    assert not ps.components.filter_latest_nevra_by_name(component_name="sdb")
+    assert not ps.components.filter_latest_nevra_by_distinct_component(
+        srpm_with_el.namespace, srpm_with_el.name, srpm_with_el.arch
+    )
 
 
-@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
-def test_filter_latest_by_name_modular():
+@pytest.mark.django_db
+def test_filter_latest_nevra_by_distinct_component_modular():
     ps = ProductStreamFactory(name="certificate_system-10.2.z")
     modular_rpm_1 = SrpmComponentFactory(
         name="idm-console-framework", version="1.2.0", release="3.module+el8pki+7130+225b0dd0"
@@ -817,8 +934,10 @@ def test_filter_latest_by_name_modular():
     )
     modular_rpm_2.productstreams.add(ps)
     assert (
-        ps.components.filter_latest_nevra_by_name(component_name="idm-console-framework")
-        == "idm-console-framework-1.2.0-3.module+el8pki+8580+f0d97d6d.src"
+        ps.components.filter_latest_nevra_by_distinct_component(
+            modular_rpm_2.namespace, modular_rpm_2.name, modular_rpm_2.arch
+        )
+        == modular_rpm_2.nevra
     )
 
 

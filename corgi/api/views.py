@@ -530,6 +530,14 @@ class ProductVariantViewSetSet(ProductDataViewSet):
         except ProductVariant.DoesNotExist:
             raise Http404
 
+    @action(methods=["get"], detail=True)
+    def manifest(self, request: Request, uuid: str = "") -> Response:
+        obj = self.queryset.filter(uuid=uuid).first()
+        if not obj:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        manifest = json.loads(obj.manifest)
+        return Response(manifest)
+
 
 @INCLUDE_EXCLUDE_FIELDS_SCHEMA
 class ChannelViewSet(ReadOnlyModelViewSet):

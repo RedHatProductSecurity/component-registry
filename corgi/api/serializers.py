@@ -473,6 +473,7 @@ class ComponentSerializer(ProductTaxonomySerializer):
 
     @staticmethod
     def get_manifest(instance: Component) -> str:
+        """Get a manifest for a Component on demand / not pre-generated"""
         return get_model_id_link("components", instance.uuid, manifest=True)
 
     class Meta:
@@ -580,7 +581,9 @@ class ProductModelSerializer(ProductTaxonomySerializer):
         return instance.builds.count()
 
     @staticmethod
-    def get_manifest(instance: ProductStream) -> str:
+    def get_manifest(instance: ProductModel) -> str:
+        """Serve a pre-generated ProductStream manifest from the staticfiles directory
+        Override this for any non-ProductStream manifests"""
         if not instance.components.exists():
             return ""
         return f"{CORGI_STATIC_URL}{instance.name}-{instance.pk}.json"
@@ -755,10 +758,18 @@ class ProductVariantSerializer(ProductModelSerializer):
     product_streams = serializers.SerializerMethodField()
 
     relations = serializers.SerializerMethodField()
+    manifest = serializers.SerializerMethodField()
 
     @staticmethod
     def get_link(instance: ProductVariant) -> str:
         return get_model_ofuri_link("product_variants", instance.ofuri)
+
+    @staticmethod
+    def get_manifest(instance: ProductModel) -> str:
+        """Get a manifest for a ProductVariant on demand / not pre-generated"""
+        if not instance.components.exists():
+            return ""
+        return get_model_id_link("product_variants", instance.uuid, manifest=True)
 
     class Meta(ProductModelSerializer.Meta):
         model = ProductVariant
@@ -769,6 +780,7 @@ class ProductVariantSerializer(ProductModelSerializer):
             "product_versions",
             "product_streams",
             "channels",
+            "manifest",
         ]
         read_only_fields = fields
 

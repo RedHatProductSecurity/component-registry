@@ -906,6 +906,27 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProductVariant'
           description: ''
+  /api/v1/product_variants/{uuid}/manifest:
+    get:
+      operationId: v1_product_variants_manifest_retrieve
+      description: View for api/v1/product_variants
+      parameters:
+      - in: path
+        name: uuid
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this product variant.
+        required: true
+      tags:
+      - v1
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductVariant'
+          description: ''
   /api/v1/product_versions:
     get:
       operationId: v1_product_versions_list
@@ -1999,6 +2020,9 @@ components:
             additionalProperties:
               type: string
           readOnly: true
+        manifest:
+          type: string
+          readOnly: true
       required:
       - build_count
       - builds
@@ -2006,6 +2030,7 @@ components:
       - components
       - description
       - link
+      - manifest
       - name
       - ofuri
       - product_streams

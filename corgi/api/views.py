@@ -492,7 +492,7 @@ class ProductStreamViewSetSet(ProductDataViewSet):
             raise Http404
 
     @action(methods=["get"], detail=True)
-    def manifest(self, request: Request, uuid: Union[str, None] = None) -> Response:
+    def manifest(self, request: Request, uuid: str = "") -> Response:
         obj = self.queryset.filter(uuid=uuid).first()
         if not obj:
             return Response(status=status.HTTP_404_NOT_FOUND)
@@ -659,7 +659,7 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         authentication_classes=[TokenAuthentication],
         permission_classes=[IsAuthenticatedOrReadOnly],
     )
-    def update_license(self, request: Request, uuid: Union[str, None] = None) -> Response:
+    def update_license(self, request: Request, uuid: str = "") -> Response:
         """Allow OpenLCS to upload copyright text / license scan results for a component"""
         # In the future these could be separate endpoints
         # For testing we'll just keep it under one endpoint
@@ -703,7 +703,7 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         return response
 
     @action(methods=["get"], detail=True)
-    def provides(self, request: Request, uuid: Union[str, None] = None) -> Response:
+    def provides(self, request: Request, uuid: str = "") -> Response:
         obj = self.queryset.filter(uuid=uuid).first()
         if not obj:
             return Response(status=status.HTTP_404_NOT_FOUND)
@@ -714,7 +714,7 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         return Response(dicts)
 
     @action(methods=["get"], detail=True)
-    def taxonomy(self, request: Request, uuid: Union[str, None] = None) -> Response:
+    def taxonomy(self, request: Request, uuid: str = "") -> Response:
         obj = self.queryset.filter(uuid=uuid).first()
         if not obj:
             return Response(status=status.HTTP_404_NOT_FOUND)

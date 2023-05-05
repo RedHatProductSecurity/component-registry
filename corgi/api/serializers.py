@@ -108,7 +108,7 @@ def get_upstream_link(
 
 
 def get_model_id_link(
-    model_name: str, uuid_or_build_id: Union[int, str, UUID], manifest=False
+    model_name: str, uuid_or_build_id: Union[int, str, UUID], manifest: bool = False
 ) -> str:
     """Generic method to get an ID-based link for an arbitrary Model subclass."""
     link = f"{CORGI_API_URL}/{model_name}/{uuid_or_build_id}"

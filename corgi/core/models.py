@@ -440,6 +440,29 @@ class ProductModel(TimeStampedModel):
     def get_ofuri(self) -> str:
         pass
 
+    @property
+    def provides_queryset(self, using: str = "read_only") -> QuerySet["Component"]:
+        """Returns unique aggregate "provides" for the latest components in this ProductModel instance,
+        for use in templates"""
+        unique_provides = (
+            self.components.exclude(
+                type=Component.Type.CONTAINER_IMAGE, name__endswith="-container-source"
+            )
+            .using(using)
+            .root_components()
+            .released_components()
+            .latest_components()
+            .values_list("provides__pk", flat=True)
+            .distinct()
+            .order_by("provides__pk")
+            .iterator()
+        )
+        return (
+            Component.objects.filter(pk__in=unique_provides)
+            # Remove .exclude() below when CORGI-428 is resolved
+            .exclude(type=Component.Type.GOLANG, name__contains="./").using(using)
+        )
+
     def save_product_taxonomy(self):
         """Save links between related ProductModel subclasses"""
         family = self.pnodes.get().get_family()
@@ -626,29 +649,6 @@ class ProductStream(ProductModel):
     def manifest(self) -> str:
         """Return an SPDX-style manifest in JSON format."""
         return ProductManifestFile(self).render_content()
-
-    @property
-    def provides_queryset(self, using: str = "read_only") -> QuerySet["Component"]:
-        """Returns unique aggregate "provides" for the latest components in this stream,
-        for use in templates"""
-        unique_provides = (
-            self.components.exclude(
-                type=Component.Type.CONTAINER_IMAGE, name__endswith="-container-source"
-            )
-            .using(using)
-            .root_components()
-            .released_components()
-            .latest_components()
-            .values_list("provides__pk", flat=True)
-            .distinct()
-            .order_by("provides__pk")
-            .iterator()
-        )
-        return (
-            Component.objects.filter(pk__in=unique_provides)
-            # Remove .exclude() below when CORGI-428 is resolved
-            .exclude(type=Component.Type.GOLANG, name__contains="./").using(using)
-        )
 
 
 class ProductStreamTag(Tag):

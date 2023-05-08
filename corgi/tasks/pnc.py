@@ -45,7 +45,6 @@ def slow_fetch_pnc_sbom(purl: str, product_data, build_data, sbom_data) -> None:
     # TODO: Fetch any necessary PNC build info
 
     # Fetch and parse the SBOM
-    # sbom_data contains both an "SBOM" and a "BOM", the difference between which is ???
     try:
         # TODO: Be paranoid and restrict the URL to a specific host or domain?
         r = requests.get(sbom_data["link"])
@@ -56,6 +55,7 @@ def slow_fetch_pnc_sbom(purl: str, product_data, build_data, sbom_data) -> None:
 
     try:
         for component in CycloneDxSbom.parse(r.text):
+            # Actual parsing of this SBOM to be added in CORGI-488
             pass
     except JSONDecodeError:  # TODO: Better named and more specific exceptions
         logger.warning("SBOM fetch failed to parse SBOM")

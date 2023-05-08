@@ -264,7 +264,6 @@ class SoftwareBuild(TimeStampedModel):
         KOJI = "KOJI"  # Fedora's Koji build system, the upstream equivalent of Red Hat's Brew
         CENTOS = "CENTOS"  # Used by OpenStack RDO
         APP_INTERFACE = "APP_INTERFACE"  # Managed Services
-        PNC = "PNC"  # Red Hat middleware build system
 
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     build_id = models.CharField(max_length=200, default="")

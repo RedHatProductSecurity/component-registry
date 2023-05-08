@@ -1,9 +1,16 @@
+import json
 from unittest.mock import MagicMock, call, patch
 
 import pytest
 from django.conf import settings
 
-from corgi.monitor.consumer import BrewUMBListener, BrewUMBReceiverHandler, UMBListener
+from corgi.monitor.consumer import (
+    BrewUMBListener,
+    BrewUMBReceiverHandler,
+    SbomerUMBHandler,
+    SbomerUMBListener,
+    UMBListener,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -230,3 +237,29 @@ def test_handle_tag_and_untag_messages():
     # Four messages / calls total, two tag and two untag, two accepted and two rejected
     call_list = [mock_tag_call, mock_untag_call, mock_tag_call, mock_untag_call]
     slow_update_brew_tags_mock.assert_has_calls(call_list)
+
+
+def test_sbomer_handler():
+    """Test that the Sbomer UMB Receiver correctly parses UMB messages"""
+    with open("tests/data/sbomer/test_sbomer_message.json") as test_file:
+        test_data = json.load(test_file)
+
+    event = MagicMock()
+    event.message.address = test_data["headers"]["amq6100_originalDestination"]
+    event.message.body = json.dumps(test_data["msg"])
+
+    # Stub out the SSLDomain config class to avoid needing real UMB certs in tests
+    with patch("corgi.monitor.consumer.SSLDomain"):
+        handler = SbomerUMBHandler(
+            virtual_topic_addresses=SbomerUMBListener().virtual_topic_addresses
+        )
+
+    with patch("corgi.monitor.consumer.slow_fetch_pnc_sbom") as fetch_mock:
+        handler.on_message(event)
+
+    fetch_mock.assert_called_with(
+        test_data["msg"]["purl"],
+        test_data["msg"]["productConfig"]["errataTool"],
+        test_data["msg"]["build"],
+        test_data["msg"]["sbom"],
+    )

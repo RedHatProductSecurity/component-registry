@@ -1,5 +1,5 @@
 import logging
-from json.decode import JSONDecodeError
+from json import JSONDecodeError
 
 import requests
 from celery_singleton import Singleton

@@ -1,0 +1,59 @@
+{
+  "i": 0,
+  "msg_id": "ID:umb-stage-1.umb-001.preprod.us-east-1.aws.redhat.com-43921-1682974438869-34:350421:6:0:1",
+  "topic": "/topic/VirtualTopic.eng.pnc.sbom.complete",
+  "timestamp": 1683294818.0,
+  "certificate": null,
+  "signature": null,
+  "username": null,
+  "crypto": null,
+  "msg": {
+    "build": {
+      "id": "AYRWEHJGG3AAA",
+      "link": "https://orch-stage.psi.redhat.com/pnc-rest/v2/builds/AYRWEHJGG3AAA",
+      "system": "pnc"
+    },
+    "productConfig": {
+      "errataTool": {
+        "productName": "RHTESTPRODUCT",
+        "productVariant": "8Base-RHTESTPRODUCT-1.1",
+        "productVersion": "RHEL-8-RHTESTPRODUCT-1.1"
+      }
+    },
+    "purl": "pkg:maven/com.github.michalszynkiewicz.test/empty@1.0.0.redhat-00283?type=jar",
+    "sbom": {
+      "bom": {
+        "format": "cyclonedx",
+        "link": "https://sbomer-stage.apps.ocp-c1.prod.psi.redhat.com/api/v1alpha1/sboms/442318664693579776/bom",
+        "version": "1.4"
+      },
+      "id": "442318664693579776",
+      "link": "https://sbomer-stage.apps.ocp-c1.prod.psi.redhat.com/api/v1alpha1/sboms/442318664693579776"
+    }
+  },
+  "headers": {
+    "JMSXUserID": "nonprod-pnc-sbomer",
+    "JMS_AMQP_MA_x-opt-jms-dest": "1",
+    "JMS_AMQP_MA_x-opt-jms-msg-type": "5",
+    "JMS_AMQP_MESSAGE_FORMAT": "0",
+    "JMS_AMQP_NATIVE": "false",
+    "amq6100_destination": "queue://Consumer.datanommer.psi-ocp-bm-stage.VirtualTopic.eng.>",
+    "amq6100_originalDestination": "topic://VirtualTopic.eng.pnc.sbom.complete",
+    "correlation-id": "476eb3bc-616f-41f3-963a-7119f32df76e",
+    "destination": "/topic/VirtualTopic.eng.pnc.sbom.complete",
+    "expires": "1683297407275",
+    "message-id": "ID:umb-stage-1.umb-001.preprod.us-east-1.aws.redhat.com-43921-1682974438869-34:350421:6:0:1",
+    "original-destination": "/topic/VirtualTopic.eng.pnc.sbom.complete",
+    "persistent": "true",
+    "pnc_build_id": "AYRWEHJGG3AAA",
+    "priority": "4",
+    "producer": "PNC SBOMer",
+    "purl": "pkg:maven/com.github.michalszynkiewicz.test/empty@1.0.0.redhat-00283?type=jar",
+    "sbom_id": "442318664693579776",
+    "subscription": "/queue/Consumer.datanommer.psi-ocp-bm-stage.VirtualTopic.eng.>",
+    "timestamp": "1683293807275",
+    "type": "GenerationFinishedMessage"
+  },
+  "source_name": "datanommer",
+  "source_version": "0.9.1"
+}

@@ -169,7 +169,7 @@ class BrewUMBListener(UMBListener):
 class SbomerUMBHandler(UMBReceiverHandler):
     """Handle messages about new SBOMs available from PNC"""
 
-    def sbom(self, event: Event) -> None:
+    def sbom_complete(self, event: Event) -> None:
         logger.info(f"Handling UMB message for PNC SBOM {event.message.id}")
         message = json.loads(event.message.body)
         try:
@@ -191,5 +191,5 @@ class SbomerUMBListener(UMBListener):
 
     handler_class = SbomerUMBHandler
     virtual_topic_addresses = {
-        f"Consumer.{settings.UMB_CONSUMER}.VirtualTopic.": "sbom",
+        f"Consumer.{settings.UMB_CONSUMER}.VirtualTopic.eng.pnc.sbom.complete": "sbom_complete",
     }

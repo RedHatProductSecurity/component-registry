@@ -19,6 +19,11 @@ SESSION_COOKIE_SECURE = False
 
 ALLOWED_HOSTS = ["*"]
 
+STATIC_URL = "http://localhost:8080/"
+CSP_DEFAULT_SRC = ("'none'", 'localhost:8080',)
+CSP_SCRIPT_SRC = ("'self'", 'localhost:8080',)
+CSP_STYLE_SRC = ("'self'",'localhost:8080',)
+
 # Django Debug Toolbar config; requires requirements/dev.txt deps
 INSTALLED_APPS += ["debug_toolbar"]  # noqa: F405
 MIDDLEWARE += ["debug_toolbar.middleware.DebugToolbarMiddleware"]  # noqa: F405

@@ -301,7 +301,7 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = os.getenv("CORGI_STATIC_FILES_DIR", str(BASE_DIR / "staticfiles"))
 STATICFILES_DIRS = [OUTPUT_FILES_DIR]
-STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
+STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"
 
 # Celery config
 CELERY_BROKER_URL = os.getenv("CORGI_REDIS_URL", "redis://redis:6379")

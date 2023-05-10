@@ -7,11 +7,12 @@ from urllib.parse import quote
 from uuid import UUID
 
 from django.conf import settings
+from django.contrib.staticfiles.storage import StaticFilesStorage
 from django.db.models.manager import Manager
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-from corgi.api.constants import CORGI_API_URL, CORGI_STATIC_URL
+from corgi.api.constants import CORGI_API_URL
 from corgi.core.constants import MODEL_FILTER_NAME_MAPPING
 from corgi.core.models import (
     AppStreamLifeCycle,
@@ -583,7 +584,7 @@ class ProductModelSerializer(ProductTaxonomySerializer):
     def get_manifest(instance: ProductStream) -> str:
         if not instance.components.exists():
             return ""
-        return f"{CORGI_STATIC_URL}{instance.name}-{instance.pk}.json"
+        return StaticFilesStorage().url(f"{instance.name}-{instance.pk}.json")
 
     @staticmethod
     def get_relations(instance: ProductModel) -> list[dict[str, str]]:

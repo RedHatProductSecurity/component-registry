@@ -81,6 +81,19 @@ services:
     volumes:
       - .:/opt/app-root/src:Z
 
+  corgi-nginx:
+    container_name: corgi-nginx
+    image: registry.redhat.io/ubi9/nginx-122:1-12
+    command: nginx -g "daemon off;"
+    deploy:
+      resources:
+        limits:
+          memory: 64M  # Keep in sync with OpenShift mem limits to catch OOM problems
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./staticfiles:/opt/app-root/src:Z
+
   corgi-monitor:
     container_name: corgi-monitor
     image: corgi

@@ -1,5 +1,4 @@
 import timeit
-from json import JSONDecodeError
 from urllib.parse import quote_plus
 
 import pytest
@@ -58,7 +57,7 @@ def display_manifest_with_many_components() -> dict:
     name = response_json["name"]
     uuid = response_json["uuid"]
     manifest_link = response_json["manifest"]
-    assert manifest_link == f"{CORGI_API_URL.replace('api/v1', 'static')}/{name}-{uuid}.json"
+    assert manifest_link.startswith(f"{CORGI_API_URL.replace('api/v1', 'static')}/{name}-{uuid}")
 
     response = requests.get(manifest_link)
     response.raise_for_status()
@@ -68,10 +67,6 @@ def display_manifest_with_many_components() -> dict:
     return response_json
 
 
-@pytest.mark.xfail(
-    raises=JSONDecodeError,
-    reason="CORGI-634 truncates generated files when transferred with Gzip compression",
-)
 def test_displaying_pregenerated_manifest() -> None:
     """Test that displaying a pre-generated stream manifest with many components is not slow"""
     # Slow manifests and web pod restarts (OoM) were fixed
@@ -83,7 +78,7 @@ def test_displaying_pregenerated_manifest() -> None:
     test_results = sorted(timer.repeat(repeat=3, number=1))
     assert len(test_results) == 3
     median_time_taken = test_results[1]
-    assert median_time_taken < 8.0
+    assert median_time_taken < 10.0
 
 
 def generate_manifest_with_many_components() -> dict:

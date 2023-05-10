@@ -118,6 +118,17 @@ To shut down and clean up:
 podman-compose down -v  # Also removes data volume
 ```
 
+### On first run
+The first time the application is run it's expected that the web pod will return an HTTP 500 error when trying render 
+requests. To fix it run:
+
+```bash
+python3 manage.py collectstatic
+```
+
+That will populate staticfiles required by the installed Django plugins and place them in the staticfiles directory. 
+On subsequent runs, as long as those files exist in the staticfiles directory, the web pod should return 200 responses.
+
 ### Running the Development Shell
 
 Ensure you have environment variables defined as noted in "Project Setup"; then run:

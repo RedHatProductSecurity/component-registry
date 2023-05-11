@@ -625,7 +625,7 @@ class ProductStream(ProductModel):
     @property
     def manifest(self, fixup=False) -> str:
         """Return an SPDX-style manifest in JSON format."""
-        return ProductManifestFile(self).render_content(fixup=fixup)
+        return ProductManifestFile(self).render_content(cpe_mapping=fixup)
 
     @property
     def provides_queryset(self, using: str = "read_only") -> QuerySet["Component"]:

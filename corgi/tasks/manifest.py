@@ -33,7 +33,7 @@ def update_manifests(fixup=True):
     autoretry_for=RETRYABLE_ERRORS,
     retry_kwargs=RETRY_KWARGS,
 )
-def cpu_update_ps_manifest(product_stream: str, fixup=False):
+def cpu_update_ps_manifest(product_stream: str, fixup=True):
     logger.info("Updating manifest for %s", product_stream)
     ps = ProductStream.objects.get(name=product_stream)
     # TODO figure out a way skip updating files where the content doesnt need updating

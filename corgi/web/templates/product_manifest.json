@@ -73,14 +73,6 @@
                 "referenceLocator": "{{cpe}}",
                 "referenceType": "cpe22Type"
             }{% if not forloop.last %},{% endif %}{% endfor %}
-        ],
-        {% elif obj.cpes %}
-        "externalRefs": [{% for cpe in obj.cpes %}
-            {
-                "referenceCategory": "SECURITY",
-                "referenceLocator": "{{cpe}}",
-                "referenceType": "cpe22Type"
-            }{% if not forloop.last %},{% endif %}{% endfor %}
         ], {% endif %}
         "filesAnalyzed": false,
         "homepage": {% if obj.lifecycle_url %}"{{obj.lifecycle_url}}"{% else %}"https://www.redhat.com/"{% endif %},

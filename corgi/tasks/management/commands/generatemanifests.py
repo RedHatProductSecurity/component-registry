@@ -15,15 +15,15 @@ class Command(BaseCommand):
         )
         parser.add_argument(
             "-f",
-            "--fixup",
-            action="store_true",
-            help="Apply manifest fixups",
+            "--skip-fixups",
+            action="store_false",
+            help="Skip applying manifest fixups",
         )
 
     def handle(self, *args, **options) -> None:
         if options["stream"]:
             self.stdout.write(self.style.SUCCESS(f"Updating manifest for {options['stream']}"))
-            cpu_update_ps_manifest(options["stream"], fixup=options["fixup"])
+            cpu_update_ps_manifest(options["stream"], fixup=options["skip_fixups"])
         else:
             self.stdout.write(self.style.SUCCESS("Updating manifests for all streams"))
-            update_manifests(fixup=options["fixups"])
+            update_manifests(fixup=options["skip_fixups"])

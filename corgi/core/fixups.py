@@ -330,6 +330,4 @@ cpes = {
 
 def cpe_lookup(product_stream_name: str) -> List[str]:
     """Temporary cpe fixup"""
-    if product_stream_name in cpes:
-        return cpes[product_stream_name]
-    return []
+    return cpes.get(product_stream_name, [])

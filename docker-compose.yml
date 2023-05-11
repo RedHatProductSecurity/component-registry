@@ -79,7 +79,7 @@ services:
       timeout: "3s"
       retries: 3
     volumes:
-      - .:/opt/app-root/src:Z
+      - .:/opt/app-root/src:z
 
   corgi-monitor:
     container_name: corgi-monitor

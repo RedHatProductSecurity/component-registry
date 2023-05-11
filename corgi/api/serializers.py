@@ -10,8 +10,9 @@ from django.conf import settings
 from django.db.models.manager import Manager
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
+from whitenoise.storage import CompressedManifestStaticFilesStorage
 
-from corgi.api.constants import CORGI_API_URL, CORGI_STATIC_URL
+from corgi.api.constants import CORGI_API_URL
 from corgi.core.constants import MODEL_FILTER_NAME_MAPPING
 from corgi.core.models import (
     AppStreamLifeCycle,
@@ -581,9 +582,20 @@ class ProductModelSerializer(ProductTaxonomySerializer):
 
     @staticmethod
     def get_manifest(instance: ProductStream) -> str:
-        if not instance.components.exists():
+        if (
+            not instance.components.root_components()
+            .released_components()
+            .latest_components()
+            .exists()
+        ):
             return ""
-        return f"{CORGI_STATIC_URL}{instance.name}-{instance.pk}.json"
+        filename = f"{instance.name}-{instance.pk}.json"
+        try:
+            manifest_link = CompressedManifestStaticFilesStorage().url(filename)
+        except ValueError:
+            logger.error(f"Failed to find staticfiles url for {filename}")
+            return ""
+        return manifest_link
 
     @staticmethod
     def get_relations(instance: ProductModel) -> list[dict[str, str]]:

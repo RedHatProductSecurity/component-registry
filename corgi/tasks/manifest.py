@@ -40,8 +40,15 @@ def cpu_update_ps_manifest(product_stream: str):
     # have a newer build than the last run.
     # That will allow clients to continue to be served the same content from the browser cache
     # over the span of multiple days, until the product stream receives a new build
-    with open(f"{settings.OUTPUT_FILES_DIR}/{product_stream}-{ps.pk}.json", "w") as fh:
-        fh.write(ps.manifest)
+    if ps.components.root_components().released_components().latest_components().exists():
+        logger.info(f"Generating manifest for {product_stream}")
+        with open(f"{settings.OUTPUT_FILES_DIR}/{product_stream}-{ps.pk}.json", "w") as fh:
+            fh.write(ps.manifest)
+    else:
+        logger.info(
+            f"Didn't find any released components for {product_stream}, "
+            f"skipping manifest generation"
+        )
 
 
 @app.task(

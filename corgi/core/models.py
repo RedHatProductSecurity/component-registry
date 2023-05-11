@@ -623,9 +623,9 @@ class ProductStream(ProductModel):
         return f"o:redhat:{stream_name}:{self.version}"
 
     @property
-    def manifest(self) -> str:
+    def manifest(self, fixup=False) -> str:
         """Return an SPDX-style manifest in JSON format."""
-        return ProductManifestFile(self).render_content()
+        return ProductManifestFile(self).render_content(fixup=fixup)
 
     @property
     def provides_queryset(self, using: str = "read_only") -> QuerySet["Component"]:

@@ -13,11 +13,17 @@ class Command(BaseCommand):
             dest="stream",
             help="Update the manifest for the named product stream",
         )
+        parser.add_argument(
+            "-f",
+            "--fixup",
+            action="store_true",
+            help="Apply manifest fixups",
+        )
 
     def handle(self, *args, **options) -> None:
         if options["stream"]:
             self.stdout.write(self.style.SUCCESS(f"Updating manifest for {options['stream']}"))
-            cpu_update_ps_manifest(options["stream"])
+            cpu_update_ps_manifest(options["stream"], fixup=options["fixup"])
         else:
             self.stdout.write(self.style.SUCCESS("Updating manifests for all streams"))
-            update_manifests()
+            update_manifests(fixup=options["fixups"])

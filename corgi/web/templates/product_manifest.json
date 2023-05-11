@@ -66,14 +66,22 @@
     },{% endfor %}
     {
         "copyrightText": "NOASSERTION",
-        "downloadLocation": "NOASSERTION",{% if obj.cpes %}
+        "downloadLocation": "NOASSERTION", {% if cpes %}
+        "externalRefs": [{% for cpe in cpes %}
+            {
+                "referenceCategory": "SECURITY",
+                "referenceLocator": "{{cpe}}",
+                "referenceType": "cpe22Type"
+            }{% if not forloop.last %},{% endif %}{% endfor %}
+        ],
+        {% elif obj.cpes %}
         "externalRefs": [{% for cpe in obj.cpes %}
             {
                 "referenceCategory": "SECURITY",
                 "referenceLocator": "{{cpe}}",
                 "referenceType": "cpe22Type"
             }{% if not forloop.last %},{% endif %}{% endfor %}
-        ],{% endif %}
+        ], {% endif %}
         "filesAnalyzed": false,
         "homepage": {% if obj.lifecycle_url %}"{{obj.lifecycle_url}}"{% else %}"https://www.redhat.com/"{% endif %},
         "licenseComments": "Licensing information is provided for individual components only at this time.",

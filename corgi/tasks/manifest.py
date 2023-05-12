@@ -25,7 +25,7 @@ def update_manifests(fixup=True):
     for ps in ProductStream.objects.annotate(num_components=Count("components")).filter(
         num_components__gt=0
     ):
-        cpu_update_ps_manifest(fixup=fixup).delay(ps.name)
+        cpu_update_ps_manifest.delay(ps.name, fixup=fixup)
 
 
 @app.task(

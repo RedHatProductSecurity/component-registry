@@ -52,6 +52,22 @@ services:
         limits:
           memory: 300M   # Keep in sync with OpenShift mem limits to catch OOM problems
 
+  corgi-nginx:
+    container_name: corgi-nginx
+    image: registry.access.redhat.com/ubi9/nginx-122:1-12
+    environment:
+      CORGI_WEB_SERVICE_HOST: "corgi-web"
+      CORGI_DOMAIN: "localhost:8080"
+    depends_on: ["corgi-web"]
+    ports:
+      - "8080:8080"
+    env:
+      CORGI_WEB_SERVICE_HOST: "corgi-web"
+    command: /bin/bash -c "envsubst '$${CORGI_WEB_SERVICE_HOST} $${CORGI_DOMAIN}' < /tmp/conf/proxy.conf.tmpl > /opt/app-root/etc/nginx.default.d/proxy.conf && nginx -g 'daemon off;'"
+    volumes:
+      - ./staticfiles:/opt/app-root/src:z
+      - ./etc/nginx:/tmp/conf
+
   corgi-web:
     container_name: corgi-web
     build:

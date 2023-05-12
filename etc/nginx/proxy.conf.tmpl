@@ -1,0 +1,20 @@
+# Settings to serve static files
+location /static/  {
+    root               /opt/app-root/src/;
+}
+
+# For OpenShift health checks
+location /healthz {
+    default_type        text/plain;
+    return              200;
+}
+
+# Proxy connections to gunicorn
+location / {
+    proxy_pass         http://${CORGI_WEB_SERVICE_HOST}:8008;
+    proxy_redirect     off;
+    proxy_set_header   Host ${CORGI_DOMAIN};
+    proxy_set_header   X-Real-IP $remote_addr;
+    proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Host $server_name;
+}

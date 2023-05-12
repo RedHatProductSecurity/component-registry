@@ -13,7 +13,7 @@ from corgi.api.constants import CORGI_API_VERSION
 if settings.CORGI_DOMAIN:
     CORGI_API_URL = f"https://{settings.CORGI_DOMAIN}/api/{CORGI_API_VERSION}"
 else:
-    CORGI_API_URL = f"http://localhost:8008/api/{CORGI_API_VERSION}"
+    CORGI_API_URL = f"http://localhost:8080/api/{CORGI_API_VERSION}"
 
 pytestmark = [pytest.mark.performance]
 
@@ -57,7 +57,7 @@ def display_manifest_with_many_components() -> dict:
     name = response_json["name"]
     uuid = response_json["uuid"]
     manifest_link = response_json["manifest"]
-    assert manifest_link.startswith(f"{CORGI_API_URL.replace('api/v1', 'static')}/{name}-{uuid}")
+    assert manifest_link == f"{CORGI_API_URL.replace('/api/v1', '')}/{name}-{uuid}.json"
 
     response = requests.get(manifest_link)
     response.raise_for_status()

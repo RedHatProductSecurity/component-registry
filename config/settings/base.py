@@ -298,11 +298,10 @@ USE_L10N = False
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
-STATIC_URL = f"https://{CORGI_DOMAIN}/static/"
+STATIC_URL = f"https://{CORGI_DOMAIN}/"
 STATIC_ROOT = os.getenv("CORGI_STATIC_FILES_DIR", str(BASE_DIR / "staticfiles"))
 STATICFILES_DIRS = [OUTPUT_FILES_DIR]
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
-WHITENOISE_KEEP_ONLY_HASHED_FILES = True
+STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
 
 # Celery config
 CELERY_BROKER_URL = os.getenv("CORGI_REDIS_URL", "redis://redis:6379")

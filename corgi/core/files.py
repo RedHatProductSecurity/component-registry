@@ -6,6 +6,7 @@ import jsonschema
 from django.conf import settings
 from django.template.loader import render_to_string
 
+from corgi.core.fixups import cpe_lookup
 from corgi.core.mixins import TimeStampedModel
 
 logger = logging.getLogger(__name__)
@@ -64,7 +65,7 @@ class ProductManifestFile(ManifestFile):
     # We can subclass this to handle different Product subclasses with different properties
     # Or to handle different ways of generating manifest properties from Product properties
 
-    def render_content(self) -> str:
+    def render_content(self, cpe_mapping=True) -> str:
 
         components = self.obj.components  # type: ignore[attr-defined]
         components = components.exclude(name__endswith="-container-source").using("read_only")
@@ -75,7 +76,9 @@ class ProductManifestFile(ManifestFile):
             "obj": self.obj,
             "released_components": released_components,
             "distinct_provides": distinct_provides,
+            "cpes": cpe_lookup(self.obj.name) if cpe_mapping else self.obj.cpes,  # type: ignore[attr-defined] # noqa
         }
+
         content = render_to_string(self.file_name, kwargs_for_template)
 
         return self._validate_and_clean(content)

@@ -38,7 +38,7 @@ def slow_fetch_pnc_sbom(purl: str, product_data, build_data, sbom_data) -> None:
         return
 
     try:
-        for component in CycloneDxSbom.parse(r.text):
+        for component in CycloneDxSbom.parse(r.json()):
             # Actual parsing of this SBOM to be added in CORGI-488
             pass
     except JSONDecodeError:  # TODO: Better named and more specific exceptions

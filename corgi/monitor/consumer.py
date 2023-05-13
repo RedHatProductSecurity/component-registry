@@ -1,11 +1,12 @@
 import json
 import logging
-from typing import Optional
+from collections.abc import Callable
+from typing import Optional, Protocol
 
 from django.conf import settings
 from proton import Event, SSLDomain
 from proton.handlers import MessagingHandler
-from proton.reactor import Container, Selector
+from proton.reactor import Container
 
 from corgi.tasks.brew import slow_fetch_brew_build, slow_update_brew_tags
 from corgi.tasks.pnc import slow_fetch_pnc_sbom
@@ -13,16 +14,25 @@ from corgi.tasks.pnc import slow_fetch_pnc_sbom
 logger = logging.getLogger(__name__)
 
 
-class UMBReceiverHandler(MessagingHandler):
+class UMBTopicHandler(Protocol):
+    """Defines a list of topics to handle and the methods that handle them"""
+
+    virtual_topic_addresses: dict[str, Callable]
+
+
+class UMBDispatcher(MessagingHandler):
     """Handler to deal with received messages from UMB."""
 
-    def __init__(self, virtual_topic_addresses: dict[str, str], selector: Optional[str] = None):
+    def __init__(self, selector: Optional[str] = None):
         """Set up a handler that listens to many topics and processes messages from each"""
-        super(UMBReceiverHandler, self).__init__()
+        super(UMBDispatcher, self).__init__()
 
-        # A mapping of virtual topic addresses to functions that handle topic messages
-        # as determined by a specific listener.
-        self.virtual_topic_addresses = virtual_topic_addresses
+        # A list of handlers, each of which defines which topics they're interested in and which
+        # methods should be invoked to handle those topics
+        self.handlers: list[UMBTopicHandler] = []
+
+        # A map of all handled topics to methods
+        self.dispatch_map: dict[str, Callable] = {}
 
         # Set of URLs where UMB brokers are running. Use AMQP protocol port numbers only. See
         # specific URLs in settings; use env vars to select the appropriate broker.
@@ -41,7 +51,8 @@ class UMBReceiverHandler(MessagingHandler):
         # A set of filters used to narrow down the received messages from UMB; see individual
         # listeners to see if they define any selectors or consume all messages without any
         # filtering.
-        self.selector = None if selector is None else Selector(selector)
+        # TODO: Research combining selector strings to create a union of all registered selectors
+        self.selector = None
 
         # Ack messages manually so that we can ensure we successfully acted upon a message when
         # it was received. See accept condition logic in the on_message() method.
@@ -51,12 +62,29 @@ class UMBReceiverHandler(MessagingHandler):
         # message that is accepted automatically (this is the default value).
         self.auto_settle = True
 
+    def register_handler(self, handler: UMBTopicHandler) -> None:
+        """Register a class which declares which topics it handles, via which methods."""
+        if not handler.virtual_topic_addresses:
+            raise ValueError("Handlers must define virtual topic address(es)")
+
+        if any(
+            a in list(self.dispatch_map.keys())
+            for a in list(handler.virtual_topic_addresses.keys())
+        ):
+            overrides = [
+                addr for addr in self.dispatch_map.keys() if addr in handler.virtual_topic_addresses
+            ]
+            logger.warning(f"Overriding handler for addresses: {overrides}")
+
+        self.handlers.append(handler)
+        self.dispatch_map.update(handler.virtual_topic_addresses)
+
     def on_start(self, event: Event) -> None:
         """Connect to UMB broker(s) and set up a receiver for each virtual topic address"""
-        recv_opts = [self.selector] if self.selector is not None else []
+        recv_opts: list[Optional[str]] = [self.selector] if self.selector is not None else []
         logger.info("Connecting to broker(s): %s", self.urls)
         conn = event.container.connect(urls=self.urls, ssl_domain=self.ssl_domain, heartbeat=500)
-        for virtual_topic_address in self.virtual_topic_addresses:
+        for virtual_topic_address in self.dispatch_map.keys():
             event.container.create_receiver(
                 conn, virtual_topic_address, name=None, options=recv_opts
             )
@@ -68,25 +96,40 @@ class UMBReceiverHandler(MessagingHandler):
         address = event.message.address or ""
         address = address.replace("topic://", f"Consumer.{settings.UMB_CONSUMER}.")
 
-        # Turn function name (str) into callable so we can pass event to it below
-        # We don't pass the callable itself because it needs a self arg
-        callback_name = self.virtual_topic_addresses.get(address, "")
-        callback_function = getattr(self, callback_name, None)
+        callback_function = self.dispatch_map.get(address, None)
 
         if not address:
             raise ValueError(f"UMB event {event.message.id} had no address!")
         elif callback_function:
-            callback_function(event)
+            accepted = callback_function(event)
+            if accepted:
+                # Accept the delivered message to remove it from the queue.
+                self.accept(event.delivery)
+            else:
+                # Release message back to the queue but report back that it was delivered. The
+                # message will be re-delivered to any available client again.
+                self.release(event.delivery, delivered=True)
         else:
             raise ValueError(
                 f"UMB event {event.message.id} had unrecognized address: {event.message.address}"
             )
 
+    def consume(self):
+        logger.info("Starting consumer for virtual topic(s): %s", self.dispatch_map.keys())
+        Container(self).run()
 
-class BrewUMBReceiverHandler(UMBReceiverHandler):
+
+class BrewUMBTopicHandler(UMBTopicHandler):
     """Handle messages about completed Brew builds, tagged builds, and untagged builds"""
 
-    def handle_builds(self, event: Event) -> None:
+    def __init__(self):
+        self.virtual_topic_addresses = {
+            f"Consumer.{settings.UMB_CONSUMER}.VirtualTopic.eng.brew.build.complete": self.handle_builds,  # noqa: E501
+            f"Consumer.{settings.UMB_CONSUMER}.VirtualTopic.eng.brew.build.tag": self.handle_tags,
+            f"Consumer.{settings.UMB_CONSUMER}.VirtualTopic.eng.brew.build.untag": self.handle_tags,
+        }
+
+    def handle_builds(self, event: Event) -> bool:
         """Handle messages about completed Brew builds"""
         logger.info("Handling UMB event for completed builds: %s", event.message.id)
         message = json.loads(event.message.body)
@@ -100,14 +143,11 @@ class BrewUMBReceiverHandler(UMBReceiverHandler):
                 build_id,
                 str(exc),
             )
-            # Release message back to the queue but report back that it was delivered. The
-            # message will be re-delivered to any available client again.
-            self.release(event.delivery, delivered=True)
+            return False
         else:
-            # Accept the delivered message to remove it from the queue.
-            self.accept(event.delivery)
+            return True
 
-    def handle_tags(self, event: Event) -> None:
+    def handle_tags(self, event: Event) -> bool:
         """Handle messages about Brew builds that have tags added or removed"""
         logger.info("Handling UMB event for added or removed tags: %s", event.message.id)
         message = json.loads(event.message.body)
@@ -127,53 +167,24 @@ class BrewUMBReceiverHandler(UMBReceiverHandler):
                 build_id,
                 str(exc),
             )
-            # Release message back to the queue but report back that it was delivered. The
-            # message will be re-delivered to any available client again.
-            self.release(event.delivery, delivered=True)
+            return False
         else:
-            # Accept the delivered message to remove it from the queue.
-            self.accept(event.delivery)
+            return True
 
 
-class UMBListener:
-    """Base class that listens for and handles messages on certain UMB topics"""
-
-    handler_class: Optional[MessagingHandler] = None
-    virtual_topic_addresses: dict[str, str] = {}
-    selector = None
-
-    @classmethod
-    def consume(cls):
-        """Run a single message handler, which can listen to multiple virtual topic addresses"""
-        if not cls.handler_class or not cls.virtual_topic_addresses:
-            raise NotImplementedError(
-                "Subclass must define handler class and virtual topic address(es)"
-            )
-
-        logger.info("Starting consumer for virtual topic(s): %s", cls.virtual_topic_addresses)
-        handler = cls.handler_class(virtual_topic_addresses=cls.virtual_topic_addresses)
-        Container(handler).run()
-
-
-class BrewUMBListener(UMBListener):
-    """Listen for messages about completed Brew builds, tagged builds, and untagged builds."""
-
-    handler_class = BrewUMBReceiverHandler
-    virtual_topic_addresses = {
-        f"Consumer.{settings.UMB_CONSUMER}.VirtualTopic.eng.brew.build.complete": "handle_builds",
-        f"Consumer.{settings.UMB_CONSUMER}.VirtualTopic.eng.brew.build.tag": "handle_tags",
-        f"Consumer.{settings.UMB_CONSUMER}.VirtualTopic.eng.brew.build.untag": "handle_tags",
-    }
-
-
-class SbomerUMBHandler(UMBReceiverHandler):
+class SbomerUMBTopicHandler(UMBTopicHandler):
     """Handle messages about new SBOMs available from PNC"""
 
-    def sbom_complete(self, event: Event) -> None:
+    def __init__(self):
+        self.virtual_topic_addresses = {
+            f"Consumer.{settings.UMB_CONSUMER}.VirtualTopic.eng.pnc.sbom.complete": self.sbom_complete,  # noqa: E501
+        }
+
+    def sbom_complete(self, event: Event) -> bool:
         logger.info(f"Handling UMB message for PNC SBOM {event.message.id}")
         message = json.loads(event.message.body)
         try:
-            slow_fetch_pnc_sbom(
+            slow_fetch_pnc_sbom.delay(
                 message["purl"],
                 message["productConfig"]["errataTool"],
                 message["build"],
@@ -181,15 +192,6 @@ class SbomerUMBHandler(UMBReceiverHandler):
             )
         except Exception as e:
             logger.error(f"Failed to schedule fetch PNC SBOM {event.message.id}: {str(e)}")
-            self.release(event.delivery, delivered=True)
+            return False
         else:
-            self.accept(event.delivery)
-
-
-class SbomerUMBListener(UMBListener):
-    """Listen for messages from sbomer about SBOMs from PNC"""
-
-    handler_class = SbomerUMBHandler
-    virtual_topic_addresses = {
-        f"Consumer.{settings.UMB_CONSUMER}.VirtualTopic.eng.pnc.sbom.complete": "sbom_complete",
-    }
+            return True

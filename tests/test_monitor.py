@@ -1,15 +1,15 @@
 import json
+import unittest
 from unittest.mock import MagicMock, call, patch
 
 import pytest
 from django.conf import settings
 
 from corgi.monitor.consumer import (
-    BrewUMBListener,
-    BrewUMBReceiverHandler,
-    SbomerUMBHandler,
-    SbomerUMBListener,
-    UMBListener,
+    BrewUMBTopicHandler,
+    SbomerUMBTopicHandler,
+    UMBDispatcher,
+    UMBTopicHandler,
 )
 
 pytestmark = pytest.mark.unit
@@ -17,78 +17,78 @@ pytestmark = pytest.mark.unit
 VIRTUAL_TOPIC_ADDRESS_PREFIX = f"Consumer.{settings.UMB_CONSUMER}."
 
 
-def test_umb_listener_requires_settings():
-    """Test UMBListener base class raises NotImplementedError
-    for missing address or missing handler class"""
-    listener = UMBListener()
-    with patch.object(listener, "handler_class", BrewUMBReceiverHandler):
-        assert listener.virtual_topic_addresses == {}
-        with pytest.raises(NotImplementedError):
-            listener.consume()
+class BadHandler(UMBTopicHandler):
+    """A test topic handler that intentionally doesn't declare any addresses"""
 
-    with patch.object(listener, "virtual_topic_addresses", {"1": "1"}):
-        assert listener.handler_class is None
-        with pytest.raises(NotImplementedError):
-            listener.consume()
+    def __init__(self):
+        self.virtual_topic_addresses = {}
 
 
-def test_brew_umb_listener_defines_settings():
-    """Test BrewUMBListener subclass listens for messages on defined address
+def test_umb_dispatcher_requires_settings():
+    """Test UMBDispatcher raises ValueError when handlers register with no topics"""
+    # Stub out the SSLDomain config class to avoid needing real UMB certs in tests
+    with patch("corgi.monitor.consumer.SSLDomain"):
+        dispatcher = UMBDispatcher()
+
+    bad_handler = BadHandler()
+    with pytest.raises(ValueError):
+        dispatcher.register_handler(bad_handler)
+
+
+def test_brew_umb_topic_handler_defines_settings():
+    """Test BrewUMBTopicHandler subclass listens for messages on defined address
     and handles them with correct class"""
-    listener = BrewUMBListener()
-    assert listener.virtual_topic_addresses == {
-        f"{VIRTUAL_TOPIC_ADDRESS_PREFIX}VirtualTopic.eng.brew.build.complete": "handle_builds",
-        f"{VIRTUAL_TOPIC_ADDRESS_PREFIX}VirtualTopic.eng.brew.build.tag": "handle_tags",
-        f"{VIRTUAL_TOPIC_ADDRESS_PREFIX}VirtualTopic.eng.brew.build.untag": "handle_tags",
+
+    handler = BrewUMBTopicHandler()
+    assert handler.virtual_topic_addresses == {
+        f"{VIRTUAL_TOPIC_ADDRESS_PREFIX}VirtualTopic.eng.brew.build.complete": handler.handle_builds,  # noqa: E501
+        f"{VIRTUAL_TOPIC_ADDRESS_PREFIX}VirtualTopic.eng.brew.build.tag": handler.handle_tags,
+        f"{VIRTUAL_TOPIC_ADDRESS_PREFIX}VirtualTopic.eng.brew.build.untag": handler.handle_tags,
     }
-    assert listener.handler_class == BrewUMBReceiverHandler
 
     # Stub out the real Container class with a mock we can assert on
     with patch("corgi.monitor.consumer.Container") as mock_container_constructor:
-        # Stub out a different class that we don't want to test here
-        with patch.object(BrewUMBListener, "handler_class") as mock_receiver_constructor:
-            listener.consume()
+        with patch("corgi.monitor.consumer.SSLDomain"):
+            dispatcher = UMBDispatcher()
+            dispatcher.register_handler(handler)
+            dispatcher.consume()
 
-    # We call the BrewUMBReceiverHandler() constructor with the class's virtual topic addresses
-    mock_receiver_constructor.assert_called_once_with(
-        virtual_topic_addresses=listener.virtual_topic_addresses
-    )
-
-    # We call the Container() constructor with an instance of BrewUMBReceiverHandler()
-    # returned by mock_receiver_constructor above so we don't need real UMB certs in tests
-    mock_receiver_instance = mock_receiver_constructor.return_value
-    mock_container_constructor.assert_called_once_with(mock_receiver_instance)
+    # We call the Container() constructor with an instance of UMBDispatcher()
+    # returned by mock_dispatcher_constructor above so we don't need real UMB certs in tests
+    mock_container_constructor.assert_called_once_with(dispatcher)
 
     # We call run() on the Container() instance returned by mock_container_constructor
     mock_container_instance = mock_container_constructor.return_value
     mock_container_instance.run.assert_called_once_with()
 
 
-def test_brew_umb_receiver_setup():
-    """Test that the BrewUMBReceiverHandler class is set up correctly"""
-    addresses = BrewUMBListener().virtual_topic_addresses
+def test_umb_dispatcher_setup():
+    """Test that the UMBDispatcher class is set up correctly"""
+    handler = BrewUMBTopicHandler()
+
     # Stub out the SSLDomain config class to avoid needing real UMB certs in tests
     with patch("corgi.monitor.consumer.SSLDomain") as mock_ssl_domain_constructor:
-        handler = BrewUMBReceiverHandler(virtual_topic_addresses=addresses)
+        dispatcher = UMBDispatcher()
+        dispatcher.register_handler(handler)
 
     # We listen (in client mode) to the address passed in, and connect to the UMB URL from settings
     mock_ssl_domain_constructor.assert_called_once_with(mock_ssl_domain_constructor.MODE_CLIENT)
     mock_ssl_domain_instance = mock_ssl_domain_constructor.return_value
-    assert handler.virtual_topic_addresses == addresses
-    assert handler.urls == [settings.UMB_BROKER_URL]
+    assert dispatcher.dispatch_map == handler.virtual_topic_addresses
+    assert dispatcher.urls == [settings.UMB_BROKER_URL]
 
     # Messages should be accepted manually (only if no exception)
-    assert handler.auto_accept is False
+    assert dispatcher.auto_accept is False
     # Accepted messages should be automatically settled (this is the default)
-    assert handler.auto_settle is True
+    assert dispatcher.auto_settle is True
 
     mock_umb_event = MagicMock()
     mock_connection_constructor = mock_umb_event.container.connect
     mock_connection_instance = mock_connection_constructor.return_value
-    handler.on_start(mock_umb_event)
+    dispatcher.on_start(mock_umb_event)
 
     mock_connection_constructor.assert_called_once_with(
-        urls=handler.urls, ssl_domain=mock_ssl_domain_instance, heartbeat=500
+        urls=dispatcher.urls, ssl_domain=mock_ssl_domain_instance, heartbeat=500
     )
 
     # One receiver per virtual topic address should be created
@@ -97,51 +97,82 @@ def test_brew_umb_receiver_setup():
             mock_connection_instance,
             address,
             name=None,
-            options=[handler.selector] if handler.selector else [],
+            options=[dispatcher.selector] if dispatcher.selector else [],
         )
         for address in handler.virtual_topic_addresses
     ]
-    assert len(handler.virtual_topic_addresses) == 3
+    assert len(dispatcher.dispatch_map.items()) == 3
     mock_umb_event.container.create_receiver.assert_has_calls(create_receiver_calls)
 
 
-def test_brew_umb_receiver_():
-    """Test that the BrewUMBReceiverHandler class raises an error
+class TestAddressOverride(unittest.TestCase):
+    """Ensure a warning is emitted when handlers override existing addresses"""
+
+    def test_override(self):
+        # Overriding addresses should emit a log warning
+        handler_a = BadHandler()
+        handler_a.virtual_topic_addresses = {
+            "umb_topic": None,
+        }
+        handler_b = BadHandler()
+        handler_b.virtual_topic_addresses = {
+            "umb_topic": None,
+        }
+
+        # Stub out the SSLDomain config class to avoid needing real UMB certs in tests
+        with patch("corgi.monitor.consumer.SSLDomain"):
+            dispatcher = UMBDispatcher()
+
+        with self.assertLogs("corgi.monitor.consumer", level="WARN") as log:
+            dispatcher.register_handler(handler_a)
+            dispatcher.register_handler(handler_b)
+        self.assertEqual(
+            log.output,
+            ["WARNING:corgi.monitor.consumer:Overriding handler for addresses: ['umb_topic']"],
+        )
+
+
+def test_umb_dispatcher_():
+    """Test that the UMBDispatcher class raises an error
     when a message is missing its address or is for an unknown topic"""
-    addresses = BrewUMBListener().virtual_topic_addresses
+    handler = BrewUMBTopicHandler()
+
     # Stub out the SSLDomain config class to avoid needing real UMB certs in tests
     with patch("corgi.monitor.consumer.SSLDomain"):
-        handler = BrewUMBReceiverHandler(virtual_topic_addresses=addresses)
+        dispatcher = UMBDispatcher()
+        dispatcher.register_handler(handler)
 
     mock_umb_event = MagicMock()
     mock_id = "1"
     mock_umb_event.message.address = "invalid_virtual_topic_address"
-    assert mock_umb_event.message.address not in addresses
+    assert mock_umb_event.message.address not in handler.virtual_topic_addresses
 
     mock_umb_event.message.body = '{"info": {"build_id": MOCK_ID}}'.replace("MOCK_ID", mock_id)
     with pytest.raises(ValueError):
-        handler.on_message(mock_umb_event)
+        dispatcher.on_message(mock_umb_event)
 
     mock_umb_event.message.address = None
     with pytest.raises(ValueError):
-        handler.on_message(mock_umb_event)
+        dispatcher.on_message(mock_umb_event)
 
 
-def test_brew_umb_receiver_handles_builds():
-    """Test that the BrewUMBReceiverHandler class either
+def test_brew_umb_topic_handler_handles_builds():
+    """Test that the BrewUMBTopicHandler class either
     accepts a "build complete" message, when no exception is raised
     OR rejects the message if any exception is raised"""
-    addresses = BrewUMBListener().virtual_topic_addresses
+    handler = BrewUMBTopicHandler()
+
     # Stub out the SSLDomain config class to avoid needing real UMB certs in tests
     with patch("corgi.monitor.consumer.SSLDomain"):
-        handler = BrewUMBReceiverHandler(virtual_topic_addresses=addresses)
+        dispatcher = UMBDispatcher()
+        dispatcher.register_handler(handler)
 
     mock_umb_event = MagicMock()
     mock_id = "1"
     mock_umb_event.message.address = "topic://VirtualTopic.eng.brew.build.complete"
     assert (
         mock_umb_event.message.address.replace("topic://", VIRTUAL_TOPIC_ADDRESS_PREFIX)
-        in addresses
+        in handler.virtual_topic_addresses
     )
 
     mock_umb_event.message.body = '{"info": {"build_id": MOCK_ID}}'.replace("MOCK_ID", mock_id)
@@ -156,13 +187,13 @@ def test_brew_umb_receiver_handles_builds():
         side_effect=umb_message_exceptions,
     ) as slow_fetch_brew_build_mock:
         # First call raises no exception, message should be accepted
-        with patch.object(handler, "accept") as mock_accept:
-            handler.on_message(mock_umb_event)
+        with patch.object(dispatcher, "accept") as mock_accept:
+            dispatcher.on_message(mock_umb_event)
             mock_accept.assert_called_once_with(mock_umb_event.delivery)
 
         # Second call raises exception given above, message should be rejected
-        with patch.object(handler, "release") as mock_release:
-            handler.on_message(mock_umb_event)
+        with patch.object(dispatcher, "release") as mock_release:
+            dispatcher.on_message(mock_umb_event)
             mock_release.assert_called_once_with(mock_umb_event.delivery, delivered=True)
 
     # slow_fetch_brew_build.apply_async is called once per message with a build_id arg
@@ -170,11 +201,11 @@ def test_brew_umb_receiver_handles_builds():
 
 
 def test_handle_tag_and_untag_messages():
-    """Test that the BrewUMBReceiverHandler class either
+    """Test that the BrewUMBTopicHandler class either
     accepts tag / untag messages, when no exceptions are raised
     OR rejects tag / untag messages if any exception is raised"""
-    addresses = BrewUMBListener().virtual_topic_addresses
-    _, tag_address, untag_address = addresses.keys()
+    handler = BrewUMBTopicHandler()
+    _, tag_address, untag_address = handler.virtual_topic_addresses.keys()
     assert VIRTUAL_TOPIC_ADDRESS_PREFIX in tag_address
     assert VIRTUAL_TOPIC_ADDRESS_PREFIX in untag_address
     assert ".tag" in tag_address
@@ -184,7 +215,8 @@ def test_handle_tag_and_untag_messages():
 
     # Stub out the SSLDomain config class to avoid needing real UMB certs in tests
     with patch("corgi.monitor.consumer.SSLDomain"):
-        handler = BrewUMBReceiverHandler(virtual_topic_addresses=addresses)
+        dispatcher = UMBDispatcher()
+        dispatcher.register_handler(handler)
 
     mock_umb_event = MagicMock()
     mock_id = "1"
@@ -205,28 +237,28 @@ def test_handle_tag_and_untag_messages():
         "corgi.monitor.consumer.slow_update_brew_tags.apply_async",
         side_effect=umb_message_exceptions,
     ) as slow_update_brew_tags_mock:
-        with patch.object(handler, "accept") as mock_accept:
+        with patch.object(dispatcher, "accept") as mock_accept:
             # First tag call raises no exception, message should be accepted
             mock_umb_event.message.address = tag_address
-            handler.on_message(mock_umb_event)
+            dispatcher.on_message(mock_umb_event)
             mock_accept.assert_called_once_with(mock_umb_event.delivery)
             mock_accept.reset_mock()
 
             # First untag call raises no exception, message should be accepted
             mock_umb_event.message.address = untag_address
-            handler.on_message(mock_umb_event)
+            dispatcher.on_message(mock_umb_event)
             mock_accept.assert_called_once_with(mock_umb_event.delivery)
 
-        with patch.object(handler, "release") as mock_release:
+        with patch.object(dispatcher, "release") as mock_release:
             # Second tag call raises exception given above, message should be rejected
             mock_umb_event.message.address = tag_address
-            handler.on_message(mock_umb_event)
+            dispatcher.on_message(mock_umb_event)
             mock_release.assert_called_once_with(mock_umb_event.delivery, delivered=True)
             mock_release.reset_mock()
 
             # Second untag call raises exception given above, message should be rejected
             mock_umb_event.message.address = untag_address
-            handler.on_message(mock_umb_event)
+            dispatcher.on_message(mock_umb_event)
             mock_release.assert_called_once_with(mock_umb_event.delivery, delivered=True)
 
     # slow_update_brew_tags.apply_async is called once per message with a build_id arg
@@ -240,7 +272,7 @@ def test_handle_tag_and_untag_messages():
 
 
 def test_sbomer_handler():
-    """Test that the Sbomer UMB Receiver correctly parses UMB messages"""
+    """Test that the Sbomer UMB Handler correctly parses UMB messages"""
     with open("tests/data/sbomer/test_sbomer_message.json") as test_file:
         test_data = json.load(test_file)
 
@@ -248,14 +280,15 @@ def test_sbomer_handler():
     event.message.address = test_data["headers"]["amq6100_originalDestination"]
     event.message.body = json.dumps(test_data["msg"])
 
+    handler = SbomerUMBTopicHandler()
+
     # Stub out the SSLDomain config class to avoid needing real UMB certs in tests
     with patch("corgi.monitor.consumer.SSLDomain"):
-        handler = SbomerUMBHandler(
-            virtual_topic_addresses=SbomerUMBListener().virtual_topic_addresses
-        )
+        dispatcher = UMBDispatcher()
+        dispatcher.register_handler(handler)
 
-    with patch("corgi.monitor.consumer.slow_fetch_pnc_sbom") as fetch_mock:
-        handler.on_message(event)
+    with patch("corgi.monitor.consumer.slow_fetch_pnc_sbom.delay") as fetch_mock:
+        dispatcher.on_message(event)
 
     fetch_mock.assert_called_with(
         test_data["msg"]["purl"],

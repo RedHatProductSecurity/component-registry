@@ -19,26 +19,10 @@ def slow_fetch_pnc_sbom(purl: str, product_data, build_data, sbom_data) -> None:
 
     # Validate the supplied product information
     try:
-        product_variant = ProductVariant.objects.get(name=product_data["productVariant"])
+        ProductVariant.objects.get(name=product_data["productVariant"])
     except ProductVariant.DoesNotExist:
         logger.warning(
             "SBOM fetch request for nonexistant product variant: %s", product_data["productVariant"]
-        )
-        return
-
-    if product_data["productVersion"] != product_variant.productversions.name:
-        logger.warning(
-            "SBOM fetch request had mismatched product version/variant: %s / %s",
-            product_data["productVersion"],
-            product_variant.name,
-        )
-        return
-
-    if product_data["product"] != product_variant.products.name:
-        logger.warning(
-            "SBOM fetch request had mismatched product/variant: %s / %s",
-            product_data["product"],
-            product_variant.name,
         )
         return
 

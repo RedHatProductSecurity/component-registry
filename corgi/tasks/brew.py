@@ -633,3 +633,26 @@ def slow_update_brew_tags(build_id: str, tag_added: str = "", tag_removed: str =
         )
         build.save()
         return f"Added tag {tag_added} or removed tag {tag_removed} for build {build_id}"
+
+
+@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
+def slow_refresh_brew_build_tags(build_id: int) -> None:
+    """Refresh tags for a Brew build when some erratum releases it"""
+    # We can't rely on above tag added / removed logic
+    # The tags are only renamed, but there's no UMB event for this
+    # Errata Tool's UMB messages only have info about the errata tags
+    # We also need to update non-errata tags that link streams to builds
+    # e.g. stream-name-candidate will change to stream-name-released
+    logger.info(f"Refreshing Brew build tags for {build_id}")
+    brew = Brew(SoftwareBuild.Type.BREW)
+    tags = sorted(set(tag["name"] for tag in brew.koji_session.listTags(build_id)))
+    errata_tags = Brew.extract_advisory_ids(tags)
+    released_errata_tags = Brew.parse_advisory_ids(errata_tags)
+    with transaction.atomic():
+        # Can't use .update(key="value") on individual keys in a JSONField
+        build = SoftwareBuild.objects.get(build_id=build_id)
+        build.meta_attr["tags"] = tags
+        build.meta_attr["errata_tags"] = errata_tags
+        build.meta_attr["released_errata_tags"] = released_errata_tags
+        build.save()
+    logger.info(f"Finished refreshing Brew build tags for {build_id}")

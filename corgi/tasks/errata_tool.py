@@ -47,7 +47,7 @@ def slow_save_errata_product_taxonomy(erratum_id: int):
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def slow_load_errata(erratum_name, force_process: bool = False):
+def slow_load_errata(erratum_name: str, force_process: bool = False):
     et = ErrataTool()
     if not erratum_name.isdigit():
         erratum_id = et.normalize_erratum_id(erratum_name)
@@ -185,3 +185,38 @@ def update_variant_repos() -> None:
                 # Saving the Channel's taxonomy automatically links it to all other models
                 # Those other models don't need to have their taxonomies saved separately
                 repo.save_product_taxonomy()
+
+
+@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
+def slow_handle_shipped_errata(erratum_id: int, erratum_status: str) -> None:
+    """Given a numeric ID for some SHIPPED_LIVE erratum,
+    refresh each related build's list of tags, errata_tags, and released_errata_tags
+    then force saving the erratum taxonomy in case it changed between ingestion and release"""
+    logger.info(f"Refreshing tags and taxonomy for all builds on erratum {erratum_id}")
+    if erratum_status != "SHIPPED_LIVE":
+        # The UMB listener has a selector to limit the messages received
+        # Only messages about SHIPPED_LIVE errata should be received and processed
+        raise ValueError(f"Invalid status {erratum_status} for erratum {erratum_id}")
+    builds_list = ErrataTool().get(f"api/v1/erratum/{erratum_id}/builds_list")
+
+    # There should only be one erratum / list of builds in the response
+    # But the JSON data is wrapped in some outer keys we want to ignore
+    for erratum in builds_list.values():
+        for brew_build in erratum["builds"]:
+            for nested_build in brew_build.values():
+                build_id = nested_build["id"]
+                if not SoftwareBuild.objects.filter(build_id=build_id).exists():
+                    # Loading a new build for the first time will set the tags correctly
+                    logger.warning(f"Brew build with matching ID not ingested yet: {build_id}")
+                    logger.info(f"Calling slow_fetch_brew_build for {build_id}")
+                    app.send_task(
+                        "corgi.tasks.brew.slow_fetch_brew_build",
+                        args=(build_id, SoftwareBuild.Type.BREW),
+                    )
+                else:
+                    logger.info(f"Calling slow_refresh_brew_build_tags for {build_id}")
+                    app.send_task("corgi.tasks.brew.slow_refresh_brew_build_tags", args=(build_id,))
+
+    logger.info(f"Calling slow_load_errata for {erratum_id}")
+    slow_load_errata.delay(str(erratum_id), force_process=True)
+    logger.info(f"Finished refreshing tags and taxonomy for all builds on erratum {erratum_id}")

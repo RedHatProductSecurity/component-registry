@@ -1,10 +1,11 @@
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 import pytest
 
-from corgi.collectors.brew import ADVISORY_REGEX
+from corgi.collectors.brew import ADVISORY_REGEX, Brew
 from corgi.core.models import SoftwareBuild
-from corgi.tasks.brew import slow_update_brew_tags
+from corgi.tasks.brew import slow_refresh_brew_build_tags, slow_update_brew_tags
+from corgi.tasks.errata_tool import slow_handle_shipped_errata
 
 from .factories import SoftwareBuildFactory
 
@@ -125,3 +126,66 @@ def test_slow_update_brew_tags_errors():
         # This shouldn't happen unless we failed to add the tag in the first place
         # Probably worth reingesting at that point - explicit error reminds us to do so
         slow_update_brew_tags(build.build_id, tag_removed="does_not_exist")
+
+
+@patch("corgi.tasks.errata_tool.app")
+@patch("corgi.tasks.errata_tool.slow_load_errata")
+@patch("corgi.tasks.errata_tool.ErrataTool")
+def test_slow_handle_shipped_errata(mock_et_constructor, mock_load_errata, mock_app):
+    """Test that builds have tags updated correctly when an erratum ships them"""
+    erratum_id = 12345
+    missing_build_id = 210
+    existing_build = SoftwareBuildFactory()
+    mock_et_collector = mock_et_constructor.return_value
+    mock_et_collector.get.return_value = {
+        "erratum_name": {
+            "builds": [
+                {"build_nevr": {"id": missing_build_id}},
+                {"build_nevr": {"id": existing_build.build_id}},
+            ]
+        }
+    }
+
+    slow_handle_shipped_errata(erratum_id=erratum_id, erratum_status="SHIPPED_LIVE")
+
+    mock_et_constructor.assert_called_once_with()
+    mock_et_collector.get.assert_called_once_with(f"api/v1/erratum/{erratum_id}/builds_list")
+
+    # Missing builds are fetched, existing builds have only their tags refreshed
+    mock_fetch_brew_build_call = call(
+        "corgi.tasks.brew.slow_fetch_brew_build",
+        args=(missing_build_id, SoftwareBuild.Type.BREW),
+    )
+    mock_refresh_brew_build_tags_call = call(
+        "corgi.tasks.brew.slow_refresh_brew_build_tags",
+        args=(existing_build.build_id,),
+    )
+    mock_app.send_task.assert_has_calls(
+        [mock_fetch_brew_build_call, mock_refresh_brew_build_tags_call]
+    )
+
+    # Taxonomy is always force-saved at the end
+    mock_load_errata.delay.assert_called_once_with(str(erratum_id), force_process=True)
+
+
+def test_slow_refresh_brew_build_tags():
+    """Test that existing builds get their tags refreshed"""
+    build = SoftwareBuildFactory(
+        meta_attr={"tags": [], "errata_tags": [], "released_errata_tags": []}
+    )
+    with patch("corgi.tasks.brew.Brew", wraps=Brew) as mock_brew_constructor:
+        # Wrap the mocked object, and call its methods directly
+        # Unless we override / specify a return value here
+        mock_brew_collector = mock_brew_constructor.return_value
+        mock_brew_collector.koji_session.listTags.return_value = [
+            {"name": tag} for tag in EXISTING_TAGS
+        ]
+        slow_refresh_brew_build_tags(build_id=build.build_id)
+
+        mock_brew_constructor.assert_called_once_with(SoftwareBuild.Type.BREW)
+        mock_brew_collector.koji_session.listTags.assert_called_once_with(build.build_id)
+
+    build.refresh_from_db()
+    assert build.meta_attr["tags"] == CLEAN_TAGS
+    assert build.meta_attr["errata_tags"] == CLEAN_ERRATA_TAGS
+    assert build.meta_attr["released_errata_tags"] == CLEAN_RELEASED_TAGS

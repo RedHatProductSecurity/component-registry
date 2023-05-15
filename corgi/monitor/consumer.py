@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class UMBReceiverHandler(MessagingHandler):
     """Handler to deal with received messages from UMB."""
 
-    def __init__(self, virtual_topic_addresses: dict[str, str], selector: Optional[str] = None):
+    def __init__(self, virtual_topic_addresses: dict[str, str], selector: dict[str, str]):
         """Set up a handler that listens to many topics and processes messages from each"""
         super(UMBReceiverHandler, self).__init__()
 
@@ -40,7 +40,7 @@ class UMBReceiverHandler(MessagingHandler):
         # A set of filters used to narrow down the received messages from UMB; see individual
         # listeners to see if they define any selectors or consume all messages without any
         # filtering.
-        self.selector = None if selector is None else Selector(selector)
+        self.selector = selector
 
         # Ack messages manually so that we can ensure we successfully acted upon a message when
         # it was received. See accept condition logic in the on_message() method.
@@ -52,10 +52,11 @@ class UMBReceiverHandler(MessagingHandler):
 
     def on_start(self, event: Event) -> None:
         """Connect to UMB broker(s) and set up a receiver for each virtual topic address"""
-        recv_opts = [self.selector] if self.selector is not None else []
         logger.info("Connecting to broker(s): %s", self.urls)
         conn = event.container.connect(urls=self.urls, ssl_domain=self.ssl_domain, heartbeat=500)
         for virtual_topic_address in self.virtual_topic_addresses:
+            topic_selector = self.selector.get(virtual_topic_address, "")
+            recv_opts = [Selector(topic_selector)] if topic_selector else []
             event.container.create_receiver(
                 conn, virtual_topic_address, name=None, options=recv_opts
             )
@@ -137,9 +138,11 @@ class BrewUMBReceiverHandler(UMBReceiverHandler):
 class UMBListener:
     """Base class that listens for and handles messages on certain UMB topics"""
 
+    VIRTUAL_TOPIC_PREFIX = f"Consumer.{settings.UMB_CONSUMER}.VirtualTopic.eng"
     handler_class: Optional[MessagingHandler] = None
     virtual_topic_addresses: dict[str, str] = {}
-    selector = None
+    # By default, listen for all messages on a topic
+    selector: dict[str, str] = {}
 
     @classmethod
     def consume(cls):
@@ -150,7 +153,9 @@ class UMBListener:
             )
 
         logger.info("Starting consumer for virtual topic(s): %s", cls.virtual_topic_addresses)
-        handler = cls.handler_class(virtual_topic_addresses=cls.virtual_topic_addresses)
+        handler = cls.handler_class(
+            virtual_topic_addresses=cls.virtual_topic_addresses, selector=cls.selector
+        )
         Container(handler).run()
 
 
@@ -159,7 +164,7 @@ class BrewUMBListener(UMBListener):
 
     handler_class = BrewUMBReceiverHandler
     virtual_topic_addresses = {
-        f"Consumer.{settings.UMB_CONSUMER}.VirtualTopic.eng.brew.build.complete": "handle_builds",
-        f"Consumer.{settings.UMB_CONSUMER}.VirtualTopic.eng.brew.build.tag": "handle_tags",
-        f"Consumer.{settings.UMB_CONSUMER}.VirtualTopic.eng.brew.build.untag": "handle_tags",
+        f"{UMBListener.VIRTUAL_TOPIC_PREFIX}.brew.build.complete": "handle_builds",
+        f"{UMBListener.VIRTUAL_TOPIC_PREFIX}.brew.build.tag": "handle_tags",
+        f"{UMBListener.VIRTUAL_TOPIC_PREFIX}.brew.build.untag": "handle_tags",
     }

@@ -111,7 +111,7 @@ To start system locally
 podman-compose up -d
 ```
 
-The application should be available on http://localhost:8008.
+The application should be available on http://localhost:8080.
 
 To shut down and clean up:
 ```bash

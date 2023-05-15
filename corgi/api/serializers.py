@@ -10,7 +10,7 @@ from django.conf import settings
 from django.db.models.manager import Manager
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
-from whitenoise.storage import CompressedManifestStaticFilesStorage
+from whitenoise.storage import CompressedStaticFilesStorage
 
 from corgi.api.constants import CORGI_API_URL
 from corgi.core.constants import MODEL_FILTER_NAME_MAPPING
@@ -591,7 +591,7 @@ class ProductModelSerializer(ProductTaxonomySerializer):
             return ""
         filename = f"{instance.name}-{instance.pk}.json"
         try:
-            manifest_link = CompressedManifestStaticFilesStorage().url(filename)
+            manifest_link = CompressedStaticFilesStorage().url(filename)
         except ValueError:
             logger.error(f"Failed to find staticfiles url for {filename}")
             return ""

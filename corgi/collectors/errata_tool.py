@@ -92,10 +92,15 @@ class ErrataTool:
             except CollectorErrataProductVersion.DoesNotExist:
                 logger.warning("Did not find product version with id %s", product_version_id)
                 continue
+
+            cpe = variant["attributes"]["cpe"]
+            # CORGI-648 the value can be null
+            if not cpe:
+                cpe = ""
             et_product_variant, created = CollectorErrataProductVariant.objects.update_or_create(
                 et_id=variant["id"],
                 defaults={
-                    "cpe": variant["attributes"]["cpe"],
+                    "cpe": cpe,
                     "product_version": et_product_version,
                     "name": variant["attributes"]["name"],
                 },

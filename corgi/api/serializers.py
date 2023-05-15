@@ -14,6 +14,7 @@ from whitenoise.storage import CompressedStaticFilesStorage
 
 from corgi.api.constants import CORGI_API_URL
 from corgi.core.constants import MODEL_FILTER_NAME_MAPPING
+from corgi.core.fixups import supported_stream_cpes
 from corgi.core.models import (
     AppStreamLifeCycle,
     Channel,
@@ -274,7 +275,6 @@ class IncludeExcludeFieldsSerializer(serializers.ModelSerializer):
         if self._next_level_include_fields.get(
             fieldname, []
         ) or self._next_level_exclude_fields.get(fieldname, []):
-
             context = {
                 "include_fields": self._next_level_include_fields.get(fieldname, []),
                 "exclude_fields": self._next_level_exclude_fields.get(fieldname, []),
@@ -587,7 +587,7 @@ class ProductModelSerializer(ProductTaxonomySerializer):
             .released_components()
             .latest_components()
             .exists()
-        ):
+        ) or (instance.name not in supported_stream_cpes):
             return ""
         filename = f"{instance.name}-{instance.pk}.json"
         try:

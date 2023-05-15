@@ -33,6 +33,8 @@ def test_brew_umb_listener_defines_settings():
         f"{VIRTUAL_TOPIC_ADDRESS_PREFIX}VirtualTopic.eng.brew.build.complete": "handle_builds",
         f"{VIRTUAL_TOPIC_ADDRESS_PREFIX}VirtualTopic.eng.brew.build.tag": "handle_tags",
         f"{VIRTUAL_TOPIC_ADDRESS_PREFIX}VirtualTopic.eng.brew.build.untag": "handle_tags",
+        f"{VIRTUAL_TOPIC_ADDRESS_PREFIX}VirtualTopic.eng."
+        f"errata.activity.status": "handle_shipped_errata",
     }
     assert listener.handler_class == BrewUMBReceiverHandler
 
@@ -82,7 +84,10 @@ def test_brew_umb_receiver_setup():
     mock_umb_event = MagicMock()
     mock_connection_constructor = mock_umb_event.container.connect
     mock_connection_instance = mock_connection_constructor.return_value
-    handler.on_start(mock_umb_event)
+    with patch("corgi.monitor.consumer.Selector") as mock_selector:
+        handler.on_start(mock_umb_event)
+        mock_selector.assert_called_once_with("errata_status = 'SHIPPED_LIVE'")
+        shipped_errata_selector = mock_selector.return_value
 
     mock_connection_constructor.assert_called_once_with(
         urls=handler.urls, ssl_domain=mock_ssl_domain_instance, heartbeat=500
@@ -94,11 +99,11 @@ def test_brew_umb_receiver_setup():
             mock_connection_instance,
             address,
             name=None,
-            options=[handler.selector] if handler.selector else [],
+            options=[shipped_errata_selector] if handler.selector.get(address) else [],
         )
         for address in handler.virtual_topic_addresses
     ]
-    assert len(handler.virtual_topic_addresses) == 3
+    assert len(handler.virtual_topic_addresses) == 4
     mock_umb_event.container.create_receiver.assert_has_calls(create_receiver_calls)
 
 
@@ -177,7 +182,7 @@ def test_handle_tag_and_untag_messages():
     listener = BrewUMBListener()
     addresses = listener.virtual_topic_addresses
     selector = listener.selector
-    _, tag_address, untag_address = addresses.keys()
+    _, tag_address, untag_address, _ = addresses.keys()
     assert VIRTUAL_TOPIC_ADDRESS_PREFIX in tag_address
     assert VIRTUAL_TOPIC_ADDRESS_PREFIX in untag_address
     assert ".tag" in tag_address

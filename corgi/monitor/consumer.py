@@ -8,6 +8,7 @@ from proton.handlers import MessagingHandler
 from proton.reactor import Container, Selector
 
 from corgi.tasks.brew import slow_fetch_brew_build, slow_update_brew_tags
+from corgi.tasks.errata_tool import slow_handle_shipped_errata
 
 logger = logging.getLogger(__name__)
 
@@ -107,6 +108,34 @@ class BrewUMBReceiverHandler(UMBReceiverHandler):
             # Accept the delivered message to remove it from the queue.
             self.accept(event.delivery)
 
+    def handle_shipped_errata(self, event: Event) -> None:
+        """Handle messages about ET advisories that enter the SHIPPED_LIVE state"""
+        logger.info("Handling UMB event for shipped erratum: %s", event.message.id)
+        message = json.loads(event.message.body)
+        errata_id = message["errata_id"]
+        errata_status = message["errata_status"]
+        if errata_status != "SHIPPED_LIVE":
+            # Don't raise an error here because it will kill the whole listener
+            logger.error(
+                f"Received event with wrong status for erratum {errata_id}: {errata_status}"
+            )
+
+        try:
+            # If an erratum has the wrong status, we'll raise an error in the task
+            slow_handle_shipped_errata.apply_async(args=(errata_id, errata_status))
+        except Exception as exc:
+            logger.error(
+                "Failed to schedule slow_update_brew_tags task for build ID %s: %s",
+                errata_id,
+                str(exc),
+            )
+            # Release message back to the queue but report back that it was delivered. The
+            # message will be re-delivered to any available client again.
+            self.release(event.delivery, delivered=True)
+        else:
+            # Accept the delivered message to remove it from the queue.
+            self.accept(event.delivery)
+
     def handle_tags(self, event: Event) -> None:
         """Handle messages about Brew builds that have tags added or removed"""
         logger.info("Handling UMB event for added or removed tags: %s", event.message.id)
@@ -160,11 +189,19 @@ class UMBListener:
 
 
 class BrewUMBListener(UMBListener):
-    """Listen for messages about completed Brew builds, tagged builds, and untagged builds."""
+    """Listen for messages about completed Brew builds, tagged builds, and untagged builds.
+    Listen for messages about shipped ET advisories, only to update released tags on Brew builds."""
 
     handler_class = BrewUMBReceiverHandler
     virtual_topic_addresses = {
         f"{UMBListener.VIRTUAL_TOPIC_PREFIX}.brew.build.complete": "handle_builds",
         f"{UMBListener.VIRTUAL_TOPIC_PREFIX}.brew.build.tag": "handle_tags",
         f"{UMBListener.VIRTUAL_TOPIC_PREFIX}.brew.build.untag": "handle_tags",
+        f"{UMBListener.VIRTUAL_TOPIC_PREFIX}.errata.activity.status": "handle_shipped_errata",
     }
+    # By default, listen for all messages on a topic
+    selector = {key: "" for key in virtual_topic_addresses}
+    # Only listen for messages about SHIPPED_LIVE errata
+    selector[
+        f"{UMBListener.VIRTUAL_TOPIC_PREFIX}.errata.activity.status"
+    ] = "errata_status = 'SHIPPED_LIVE'"

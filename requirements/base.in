@@ -24,5 +24,4 @@ requests
 requests-gssapi
 rpm
 splitstream
-whitenoise
 mozilla-django-oidc

@@ -11,6 +11,7 @@ ALLOWED_HOSTS = [
     socket.gethostname(),
     socket.gethostbyname(socket.gethostname()),
     os.getenv('CORGI_WEB_SERVICE_HOST'),
+    "corgi-stage.prodsec.redhat.com",
 ]
 
 CSP_UPGRADE_INSECURE_REQUESTS = True

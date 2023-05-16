@@ -582,12 +582,9 @@ class ProductModelSerializer(ProductTaxonomySerializer):
 
     @staticmethod
     def get_manifest(instance: ProductStream) -> str:
-        if (
-            not instance.components.root_components()
-            .released_components()
-            .latest_components()
-            .exists()
-        ) or (instance.name not in supported_stream_cpes):
+        if (not instance.components.manifest_components(quick=True).exists()) or (
+            instance.name not in supported_stream_cpes
+        ):
             return ""
         filename = f"{instance.name}-{instance.pk}.json"
         try:

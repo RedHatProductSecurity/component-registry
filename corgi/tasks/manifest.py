@@ -44,7 +44,10 @@ def cpu_update_ps_manifest(product_stream: str, fixup=True):
     if ps.components.root_components().released_components().latest_components().exists():
         logger.info(f"Generating manifest for {product_stream}")
         with open(f"{settings.OUTPUT_FILES_DIR}/{product_stream}-{ps.pk}.json", "w") as fh:
-            fh.write(ps.manifest)
+            if fixup:
+                fh.write(ps.manifest_with_cpe_fixup)
+            else:
+                fh.write(ps.manifest)
     else:
         logger.info(
             f"Didn't find any released components for {product_stream}, "

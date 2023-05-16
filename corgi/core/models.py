@@ -623,9 +623,15 @@ class ProductStream(ProductModel):
         return f"o:redhat:{stream_name}:{self.version}"
 
     @property
-    def manifest(self, fixup=False) -> str:
+    def manifest(self) -> str:
         """Return an SPDX-style manifest in JSON format."""
-        return ProductManifestFile(self).render_content(cpe_mapping=fixup)
+        return ProductManifestFile(self).render_content(cpe_mapping=False)
+
+    # TODO remove this, and get the CPE in an a fashion which is easier to maintain
+    @property
+    def manifest_with_cpe_fixup(self) -> str:
+        """Return an SPDX-style manifest in JSON format."""
+        return ProductManifestFile(self).render_content(cpe_mapping=True)
 
     @property
     def provides_queryset(self, using: str = "read_only") -> QuerySet["Component"]:

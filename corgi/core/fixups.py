@@ -1,6 +1,6 @@
-from typing import List
-
-cpes = {
+# This is a temporary mapping of Product Streams, for which we can generate and publish SBOMs.
+# This data should be moved to an appropriate object in product definitions as soon as possible.
+supported_stream_cpes = {
     "3amp-2": ["cpe:/a:redhat:3scale_amp:2.12::el7", "cpe:/a:redhat:3scale_amp:2.12::el8"],
     "amq-ic-1": [
         "cpe:/a:redhat:amq_interconnect:1::el7",
@@ -328,6 +328,6 @@ cpes = {
 }
 
 
-def cpe_lookup(product_stream_name: str) -> List[str]:
+def cpe_lookup(product_stream_name: str) -> list[str]:
     """Temporary cpe fixup"""
-    return cpes.get(product_stream_name, [])
+    return supported_stream_cpes.get(product_stream_name, [])

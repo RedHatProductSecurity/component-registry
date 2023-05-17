@@ -138,12 +138,7 @@ def test_slim_rpm_in_containers_manifest():
 
     # Two components linked to this product
     # plus a source container which is shown in API but not in manifests
-    released_components = (
-        stream.components.exclude(name__endswith="-container-source")
-        .root_components()
-        .released_components()
-        .latest_components()
-    )
+    released_components = stream.components.manifest_components()
     num_components = len(released_components)
     assert num_components == 2, released_components
 
@@ -212,9 +207,7 @@ def test_product_manifest_excludes_unreleased_components():
     manifest = json.loads(stream.manifest)
 
     # No released components linked to this product
-    num_components = len(
-        stream.components.root_components().released_components().latest_components()
-    )
+    num_components = len(stream.components.manifest_components())
     assert num_components == 0
 
     num_provided = len(stream.provides_queryset)
@@ -241,6 +234,26 @@ def test_product_manifest_excludes_unreleased_components():
     }
 
 
+def test_product_manifest_excludes_internal_components():
+    """Test that manifests for products don't include unreleased components"""
+    component, stream, provided, dev_provided = setup_products_and_components_provides(
+        internal_component=True
+    )
+
+    manifest = json.loads(stream.manifest)
+
+    # This is the root rpm src component
+    num_components = len(stream.components.manifest_components())
+    assert num_components == 1
+
+    num_provided = len(stream.provides_queryset)
+    assert num_provided == 1
+
+    package_data = manifest["packages"]
+    for package in package_data:
+        assert "redhat.com/" not in package["name"]
+
+
 def test_product_manifest_properties():
     """Test that all models inheriting from ProductModel have a .manifest property
     And that it generates valid JSON."""
@@ -249,9 +262,7 @@ def test_product_manifest_properties():
     manifest = json.loads(stream.manifest)
 
     # One component linked to this product
-    num_components = len(
-        stream.components.root_components().released_components().latest_components()
-    )
+    num_components = len(stream.components.manifest_components())
     assert num_components == 1
 
     num_provided = len(stream.provides_queryset)
@@ -361,7 +372,7 @@ def test_component_manifest_properties():
     assert manifest["relationships"][-1] == document_describes_product
 
 
-def setup_products_and_components_provides(released=True):
+def setup_products_and_components_provides(released=True, internal_component=False):
     stream, variant = setup_product()
     meta_attr = {"released_errata_tags": []}
     if released:
@@ -370,8 +381,12 @@ def setup_products_and_components_provides(released=True):
         build_id=1,
         meta_attr=meta_attr,
     )
-    provided = ComponentFactory(type=Component.Type.RPM, arch="x86_64")
-    dev_provided = ComponentFactory(type=Component.Type.NPM)
+    if internal_component:
+        provided = ComponentFactory(name="gitlab.cee.redhat.com/", type=Component.Type.GOLANG)
+        dev_provided = ComponentFactory(name="github.com/blah.redhat.com", type=Component.Type.NPM)
+    else:
+        provided = ComponentFactory(type=Component.Type.RPM, arch="x86_64")
+        dev_provided = ComponentFactory(type=Component.Type.NPM)
     component = SrpmComponentFactory(
         software_build=build,
     )

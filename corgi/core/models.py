@@ -638,13 +638,8 @@ class ProductStream(ProductModel):
         """Returns unique aggregate "provides" for the latest components in this stream,
         for use in templates"""
         unique_provides = (
-            self.components.exclude(
-                type=Component.Type.CONTAINER_IMAGE, name__endswith="-container-source"
-            )
+            self.components.manifest_components()
             .using(using)
-            .root_components()
-            .released_components()
-            .latest_components()
             .values_list("provides__pk", flat=True)
             .distinct()
             .order_by("provides__pk")
@@ -653,7 +648,9 @@ class ProductStream(ProductModel):
         return (
             Component.objects.filter(pk__in=unique_provides)
             # Remove .exclude() below when CORGI-428 is resolved
-            .exclude(type=Component.Type.GOLANG, name__contains="./").using(using)
+            .exclude(type=Component.Type.GOLANG, name__contains="./")
+            .external_components()
+            .using(using)
         )
 
 
@@ -1013,6 +1010,28 @@ class ComponentQuerySet(models.QuerySet):
             return self.filter(ROOT_COMPONENTS_CONDITION)
         # Falsey values return the excluded queryset (only non-root components)
         return self.exclude(ROOT_COMPONENTS_CONDITION)
+
+    # See CORGI-658 for the motivation
+    def external_components(self, include: bool = True) -> "ComponentQuerySet":
+        """Show only external components by default, or internal components if include=False"""
+        redhat_com_query = Q(name__contains="redhat.com/")
+        if include:
+            # Truthy values return the excluded queryset (only external components)
+            return self.exclude(redhat_com_query)
+        # Falsey values return the filtered queryset (only internal components)
+        return self.filter(redhat_com_query)
+
+    def manifest_components(self, quick=False) -> "ComponentQuerySet":
+        """filter latest components takes a long time, dont bother with that if we're just
+        checking there is anything to manifest"""
+        non_container_source_components = self.exclude(name__endswith="-container-source").using(
+            "read_only"
+        )
+        released_roots = non_container_source_components.root_components().released_components()
+        if quick:
+            return released_roots
+        else:
+            return released_roots.latest_components()
 
     def srpms(self, include: bool = True) -> models.QuerySet["Component"]:
         """Show only source RPMs by default, or only non-SRPMs if include=False"""

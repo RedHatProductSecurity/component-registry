@@ -36,12 +36,14 @@ def update_manifests(fixup=True):
 def cpu_update_ps_manifest(product_stream: str, fixup=True):
     logger.info("Updating manifest for %s", product_stream)
     ps = ProductStream.objects.get(name=product_stream)
-    # TODO figure out a way skip updating files where the content doesnt need updating
-    # for example we could check for the timestamp of the latest build, and only update if we
-    # have a newer build than the last run.
-    # That will allow clients to continue to be served the same content from the browser cache
-    # over the span of multiple days, until the product stream receives a new build
-    if ps.components.root_components().released_components().latest_components().exists():
+    # TODO figure out a way to skip updating files where the content doesnt need updating
+    # for example we could render the manifest in a temp file, remove the created_at line and diff
+    # the contents only if there is a difference we can overwrite the file.
+    # This would could save a lot of resource downstream, because clients could just check if the
+    # file has been modified before obtaining the updated copy.
+    # We'd have to check that collectstatic does not modify a file in staticfiles directory if it
+    # hasn't been updated in outputfiles though.
+    if ps.components.manifest_components(quick=True).exists():
         logger.info(f"Generating manifest for {product_stream}")
         with open(f"{settings.OUTPUT_FILES_DIR}/{product_stream}-{ps.pk}.json", "w") as fh:
             if fixup:

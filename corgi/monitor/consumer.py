@@ -8,6 +8,7 @@ from proton.handlers import MessagingHandler
 from proton.reactor import Container, Selector
 
 from corgi.tasks.brew import slow_fetch_brew_build, slow_update_brew_tags
+from corgi.tasks.errata_tool import slow_handle_shipped_errata
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,7 @@ logger = logging.getLogger(__name__)
 class UMBReceiverHandler(MessagingHandler):
     """Handler to deal with received messages from UMB."""
 
-    def __init__(self, virtual_topic_addresses: dict[str, str], selector: Optional[str] = None):
+    def __init__(self, virtual_topic_addresses: dict[str, str], selector: dict[str, str]):
         """Set up a handler that listens to many topics and processes messages from each"""
         super(UMBReceiverHandler, self).__init__()
 
@@ -40,7 +41,7 @@ class UMBReceiverHandler(MessagingHandler):
         # A set of filters used to narrow down the received messages from UMB; see individual
         # listeners to see if they define any selectors or consume all messages without any
         # filtering.
-        self.selector = None if selector is None else Selector(selector)
+        self.selector = selector
 
         # Ack messages manually so that we can ensure we successfully acted upon a message when
         # it was received. See accept condition logic in the on_message() method.
@@ -52,10 +53,11 @@ class UMBReceiverHandler(MessagingHandler):
 
     def on_start(self, event: Event) -> None:
         """Connect to UMB broker(s) and set up a receiver for each virtual topic address"""
-        recv_opts = [self.selector] if self.selector is not None else []
         logger.info("Connecting to broker(s): %s", self.urls)
         conn = event.container.connect(urls=self.urls, ssl_domain=self.ssl_domain, heartbeat=500)
         for virtual_topic_address in self.virtual_topic_addresses:
+            topic_selector = self.selector.get(virtual_topic_address, "")
+            recv_opts = [Selector(topic_selector)] if topic_selector else []
             event.container.create_receiver(
                 conn, virtual_topic_address, name=None, options=recv_opts
             )
@@ -106,6 +108,34 @@ class BrewUMBReceiverHandler(UMBReceiverHandler):
             # Accept the delivered message to remove it from the queue.
             self.accept(event.delivery)
 
+    def handle_shipped_errata(self, event: Event) -> None:
+        """Handle messages about ET advisories that enter the SHIPPED_LIVE state"""
+        logger.info("Handling UMB event for shipped erratum: %s", event.message.id)
+        message = json.loads(event.message.body)
+        errata_id = message["errata_id"]
+        errata_status = message["errata_status"]
+        if errata_status != "SHIPPED_LIVE":
+            # Don't raise an error here because it will kill the whole listener
+            logger.error(
+                f"Received event with wrong status for erratum {errata_id}: {errata_status}"
+            )
+
+        try:
+            # If an erratum has the wrong status, we'll raise an error in the task
+            slow_handle_shipped_errata.apply_async(args=(errata_id, errata_status))
+        except Exception as exc:
+            logger.error(
+                "Failed to schedule slow_update_brew_tags task for build ID %s: %s",
+                errata_id,
+                str(exc),
+            )
+            # Release message back to the queue but report back that it was delivered. The
+            # message will be re-delivered to any available client again.
+            self.release(event.delivery, delivered=True)
+        else:
+            # Accept the delivered message to remove it from the queue.
+            self.accept(event.delivery)
+
     def handle_tags(self, event: Event) -> None:
         """Handle messages about Brew builds that have tags added or removed"""
         logger.info("Handling UMB event for added or removed tags: %s", event.message.id)
@@ -137,9 +167,11 @@ class BrewUMBReceiverHandler(UMBReceiverHandler):
 class UMBListener:
     """Base class that listens for and handles messages on certain UMB topics"""
 
+    VIRTUAL_TOPIC_PREFIX = f"Consumer.{settings.UMB_CONSUMER}.VirtualTopic.eng"
     handler_class: Optional[MessagingHandler] = None
     virtual_topic_addresses: dict[str, str] = {}
-    selector = None
+    # By default, listen for all messages on a topic
+    selector: dict[str, str] = {}
 
     @classmethod
     def consume(cls):
@@ -150,16 +182,26 @@ class UMBListener:
             )
 
         logger.info("Starting consumer for virtual topic(s): %s", cls.virtual_topic_addresses)
-        handler = cls.handler_class(virtual_topic_addresses=cls.virtual_topic_addresses)
+        handler = cls.handler_class(
+            virtual_topic_addresses=cls.virtual_topic_addresses, selector=cls.selector
+        )
         Container(handler).run()
 
 
 class BrewUMBListener(UMBListener):
-    """Listen for messages about completed Brew builds, tagged builds, and untagged builds."""
+    """Listen for messages about completed Brew builds, tagged builds, and untagged builds.
+    Listen for messages about shipped ET advisories, only to update released tags on Brew builds."""
 
     handler_class = BrewUMBReceiverHandler
     virtual_topic_addresses = {
-        f"Consumer.{settings.UMB_CONSUMER}.VirtualTopic.eng.brew.build.complete": "handle_builds",
-        f"Consumer.{settings.UMB_CONSUMER}.VirtualTopic.eng.brew.build.tag": "handle_tags",
-        f"Consumer.{settings.UMB_CONSUMER}.VirtualTopic.eng.brew.build.untag": "handle_tags",
+        f"{UMBListener.VIRTUAL_TOPIC_PREFIX}.brew.build.complete": "handle_builds",
+        f"{UMBListener.VIRTUAL_TOPIC_PREFIX}.brew.build.tag": "handle_tags",
+        f"{UMBListener.VIRTUAL_TOPIC_PREFIX}.brew.build.untag": "handle_tags",
+        f"{UMBListener.VIRTUAL_TOPIC_PREFIX}.errata.activity.status": "handle_shipped_errata",
     }
+    # By default, listen for all messages on a topic
+    selector = {key: "" for key in virtual_topic_addresses}
+    # Only listen for messages about SHIPPED_LIVE errata
+    selector[
+        f"{UMBListener.VIRTUAL_TOPIC_PREFIX}.errata.activity.status"
+    ] = "errata_status = 'SHIPPED_LIVE'"

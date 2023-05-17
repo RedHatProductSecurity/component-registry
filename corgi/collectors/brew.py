@@ -77,7 +77,9 @@ class Brew:
     # A list of component names, for which build analysis will be skipped.
     COMPONENT_EXCLUDES = json.loads(os.getenv("CORGI_COMPONENT_EXCLUDES", "[]"))
 
-    def __init__(self, source: Optional[str] = ""):
+    koji_session: koji.ClientSession = None
+
+    def __init__(self, source: str = ""):
         if source == SoftwareBuild.Type.CENTOS:
             self.koji_session = koji.ClientSession(settings.CENTOS_URL)
         elif source == SoftwareBuild.Type.KOJI:

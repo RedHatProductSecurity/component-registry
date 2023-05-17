@@ -653,6 +653,22 @@ class ProductStream(ProductModel):
             .using(using)
         )
 
+    @property
+    def upstreams_queryset(self, using: str = "read_only") -> QuerySet["Component"]:
+        """Returns unique aggregate "upstreams" for the latest components in this stream,
+        for use in templates"""
+        unique_upstreams = (
+            # RPM upstream data is human-generated and unreliable
+            self.components.exclude(type=Component.Type.RPM)
+            .manifest_components()
+            .using(using)
+            .values_list("upstreams__pk", flat=True)
+            .distinct()
+            .order_by("upstreams__pk")
+            .iterator()
+        )
+        return Component.objects.filter(pk__in=unique_upstreams).using(using)
+
 
 class ProductStreamTag(Tag):
     tagged_model = models.ForeignKey(ProductStream, on_delete=models.CASCADE, related_name="tags")

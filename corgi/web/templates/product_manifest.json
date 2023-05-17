@@ -21,7 +21,7 @@
         "SPDXID": "SPDXRef-{{component.uuid}}",
         "supplier": "Organization: Red Hat",
         "versionInfo": "{{component.nevra|escapejs}}"
-    },{% if component.type != component.Type.RPM %}{% for upstream in component.upstreams.get_queryset.iterator %}{# RPM upstream data is human-generated and unreliable #}{
+    },{% endfor %}{% for upstream in distinct_upstreams.iterator %}{
         "copyrightText": {% if upstream.copyright_text %}"{{upstream.copyright_text|escapejs}}"{% else %}"NOASSERTION"{% endif %},
         "downloadLocation": {% if upstream.download_url %}"{{upstream.download_url|escapejs}}"{% else %}"NOASSERTION"{% endif %},
         "externalRefs": [
@@ -41,7 +41,7 @@
         "SPDXID": "SPDXRef-{{upstream.uuid}}",
         "supplier": "NOASSERTION",
         "versionInfo": "{{upstream.nevra|escapejs}}"
-    },{% endfor %}{% endif %}{% endfor %}{% for provided in distinct_provides %}
+    },{% endfor %}{% for provided in distinct_provides.iterator %}
     {
         "copyrightText": {% if provided.copyright_text %}"{{provided.copyright_text|escapejs}}"{% else %}"NOASSERTION"{% endif %},
         "downloadLocation": {% if provided.download_url %}"{{provided.download_url|escapejs}}"{% else %}"NOASSERTION"{% endif %},
@@ -73,7 +73,7 @@
                 "referenceLocator": "{{cpe}}",
                 "referenceType": "cpe22Type"
             }{% if not forloop.last %},{% endif %}{% endfor %}
-        ], {% endif %}
+        ],{% endif %}
         "filesAnalyzed": false,
         "homepage": {% if obj.lifecycle_url %}"{{obj.lifecycle_url}}"{% else %}"https://www.redhat.com/"{% endif %},
         "licenseComments": "Licensing information is provided for individual components only at this time.",

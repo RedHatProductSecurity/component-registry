@@ -93,7 +93,7 @@
         },{% endfor %}{% if component.type != component.Type.RPM %}{% for node_id in component.get_upstreams_pks %}{# RPM upstream data is human-generated and unreliable #}
         {{# Upstreams of the root index container. Arch-specific containers have the same upstreams, so no need to report these separately #}
           "relatedSpdxElement": "SPDXRef-{{component.uuid}}",
-          "relationshipType": "ANCESTOR_OF",
+          "relationshipType": "GENERATES",
           "spdxElementId": "SPDXRef-{{node_id}}"
         },{% endfor %}{% endif %}
         {

@@ -1886,6 +1886,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             .values_list("type", "object_id")
             # Ensure generated manifests only change when content does
             .order_by("object_id")
+            .distinct()
             .iterator()
         )
 

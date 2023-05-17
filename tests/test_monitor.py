@@ -47,7 +47,7 @@ def test_brew_umb_listener_defines_settings():
     # We call the BrewUMBReceiverHandler() constructor with the class's virtual topic addresses
     # and a dict of selectors for each address
     mock_receiver_constructor.assert_called_once_with(
-        virtual_topic_addresses=listener.virtual_topic_addresses, selector=listener.selector
+        virtual_topic_addresses=listener.virtual_topic_addresses, selectors=listener.selectors
     )
 
     # We call the Container() constructor with an instance of BrewUMBReceiverHandler()
@@ -64,16 +64,16 @@ def test_brew_umb_receiver_setup():
     """Test that the BrewUMBReceiverHandler class is set up correctly"""
     listener = BrewUMBListener()
     addresses = listener.virtual_topic_addresses
-    selector = listener.selector
+    selectors = listener.selectors
     # Stub out the SSLDomain config class to avoid needing real UMB certs in tests
     with patch("corgi.monitor.consumer.SSLDomain") as mock_ssl_domain_constructor:
-        handler = BrewUMBReceiverHandler(virtual_topic_addresses=addresses, selector=selector)
+        handler = BrewUMBReceiverHandler(virtual_topic_addresses=addresses, selectors=selectors)
 
     # We listen (in client mode) to the address passed in, and connect to the UMB URL from settings
     mock_ssl_domain_constructor.assert_called_once_with(mock_ssl_domain_constructor.MODE_CLIENT)
     mock_ssl_domain_instance = mock_ssl_domain_constructor.return_value
     assert handler.virtual_topic_addresses == addresses
-    assert handler.selector == selector
+    assert handler.selectors == selectors
     assert handler.urls == [settings.UMB_BROKER_URL]
 
     # Messages should be accepted manually (only if no exception)
@@ -99,7 +99,7 @@ def test_brew_umb_receiver_setup():
             mock_connection_instance,
             address,
             name=None,
-            options=[shipped_errata_selector] if handler.selector.get(address) else [],
+            options=[shipped_errata_selector] if handler.selectors.get(address) else [],
         )
         for address in handler.virtual_topic_addresses
     ]
@@ -112,10 +112,10 @@ def test_brew_umb_receiver_():
     when a message is missing its address or is for an unknown topic"""
     listener = BrewUMBListener()
     addresses = listener.virtual_topic_addresses
-    selector = listener.selector
+    selectors = listener.selectors
     # Stub out the SSLDomain config class to avoid needing real UMB certs in tests
     with patch("corgi.monitor.consumer.SSLDomain"):
-        handler = BrewUMBReceiverHandler(virtual_topic_addresses=addresses, selector=selector)
+        handler = BrewUMBReceiverHandler(virtual_topic_addresses=addresses, selectors=selectors)
 
     mock_umb_event = MagicMock()
     mock_id = "1"
@@ -137,10 +137,10 @@ def test_brew_umb_receiver_handles_builds():
     OR rejects the message if any exception is raised"""
     listener = BrewUMBListener()
     addresses = listener.virtual_topic_addresses
-    selector = listener.selector
+    selectors = listener.selectors
     # Stub out the SSLDomain config class to avoid needing real UMB certs in tests
     with patch("corgi.monitor.consumer.SSLDomain"):
-        handler = BrewUMBReceiverHandler(virtual_topic_addresses=addresses, selector=selector)
+        handler = BrewUMBReceiverHandler(virtual_topic_addresses=addresses, selectors=selectors)
 
     mock_umb_event = MagicMock()
     mock_id = "1"
@@ -181,7 +181,7 @@ def test_handle_tag_and_untag_messages():
     OR rejects tag / untag messages if any exception is raised"""
     listener = BrewUMBListener()
     addresses = listener.virtual_topic_addresses
-    selector = listener.selector
+    selectors = listener.selectors
     _, tag_address, untag_address, _ = addresses.keys()
     assert VIRTUAL_TOPIC_ADDRESS_PREFIX in tag_address
     assert VIRTUAL_TOPIC_ADDRESS_PREFIX in untag_address
@@ -192,7 +192,7 @@ def test_handle_tag_and_untag_messages():
 
     # Stub out the SSLDomain config class to avoid needing real UMB certs in tests
     with patch("corgi.monitor.consumer.SSLDomain"):
-        handler = BrewUMBReceiverHandler(virtual_topic_addresses=addresses, selector=selector)
+        handler = BrewUMBReceiverHandler(virtual_topic_addresses=addresses, selectors=selectors)
 
     mock_umb_event = MagicMock()
     mock_id = "1"

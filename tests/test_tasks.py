@@ -132,16 +132,21 @@ def test_slow_update_brew_tags_errors():
 @patch("corgi.tasks.errata_tool.slow_load_errata")
 @patch("corgi.tasks.errata_tool.ErrataTool")
 def test_slow_handle_shipped_errata(mock_et_constructor, mock_load_errata, mock_app):
-    """Test that builds have tags updated correctly when an erratum ships them"""
+    """Test that Brew builds have tags updated correctly when an erratum ships them"""
     erratum_id = 12345
+    # The SoftwareBuild model and the slow_fetch_brew_build task use string build IDs
+    # But the slow_refresh_brew_build_tags task and the Errata Tool builds_list endpoint
+    # use int build IDs, so we pass data from ET directly to the task without conversion
     missing_build_id = 210
-    existing_build = SoftwareBuildFactory()
+    existing_build_id = 12345
+    SoftwareBuildFactory(build_type=SoftwareBuild.Type.BREW, build_id=str(existing_build_id))
+
     mock_et_collector = mock_et_constructor.return_value
     mock_et_collector.get.return_value = {
         "erratum_name": {
             "builds": [
                 {"build_nevr": {"id": missing_build_id}},
-                {"build_nevr": {"id": existing_build.build_id}},
+                {"build_nevr": {"id": existing_build_id}},
             ]
         }
     }
@@ -154,11 +159,11 @@ def test_slow_handle_shipped_errata(mock_et_constructor, mock_load_errata, mock_
     # Missing builds are fetched, existing builds have only their tags refreshed
     mock_fetch_brew_build_call = call(
         "corgi.tasks.brew.slow_fetch_brew_build",
-        args=(missing_build_id, SoftwareBuild.Type.BREW),
+        args=(str(missing_build_id), SoftwareBuild.Type.BREW),
     )
     mock_refresh_brew_build_tags_call = call(
         "corgi.tasks.brew.slow_refresh_brew_build_tags",
-        args=(existing_build.build_id,),
+        args=(existing_build_id,),
     )
     mock_app.send_task.assert_has_calls(
         [mock_fetch_brew_build_call, mock_refresh_brew_build_tags_call]
@@ -170,8 +175,14 @@ def test_slow_handle_shipped_errata(mock_et_constructor, mock_load_errata, mock_
 
 def test_slow_refresh_brew_build_tags():
     """Test that existing builds get their tags refreshed"""
+    # The SoftwareBuild model uses string build IDs
+    # But koji's listTags method and the Errata Tool builds_list endpoint
+    # both use integer build IDs, so we pass ints to this task
+    build_id = 12345
     build = SoftwareBuildFactory(
-        meta_attr={"tags": [], "errata_tags": [], "released_errata_tags": []}
+        build_type=SoftwareBuild.Type.BREW,
+        build_id=str(build_id),
+        meta_attr={"tags": [], "errata_tags": [], "released_errata_tags": []},
     )
     with patch("corgi.tasks.brew.Brew", wraps=Brew) as mock_brew_constructor:
         # Wrap the mocked object, and call its methods directly
@@ -180,10 +191,10 @@ def test_slow_refresh_brew_build_tags():
         mock_brew_collector.koji_session.listTags.return_value = [
             {"name": tag} for tag in EXISTING_TAGS
         ]
-        slow_refresh_brew_build_tags(build_id=build.build_id)
+        slow_refresh_brew_build_tags(build_id=build_id)
 
         mock_brew_constructor.assert_called_once_with(SoftwareBuild.Type.BREW)
-        mock_brew_collector.koji_session.listTags.assert_called_once_with(build.build_id)
+        mock_brew_collector.koji_session.listTags.assert_called_once_with(build_id)
 
     build.refresh_from_db()
     assert build.meta_attr["tags"] == CLEAN_TAGS

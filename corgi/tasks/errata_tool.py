@@ -36,7 +36,7 @@ def save_variant_cdn_repo_mapping() -> None:
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def slow_save_errata_product_taxonomy(erratum_id: int):
+def slow_save_errata_product_taxonomy(erratum_id: int) -> None:
     logger.info(f"slow_save_errata_product_taxonomy called for {erratum_id}")
     relation_builds = _get_relation_builds(erratum_id)
     for build_id, build_type in relation_builds:
@@ -47,7 +47,7 @@ def slow_save_errata_product_taxonomy(erratum_id: int):
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def slow_load_errata(erratum_name: str, force_process: bool = False):
+def slow_load_errata(erratum_name: str, force_process: bool = False) -> None:
     et = ErrataTool()
     if not erratum_name.isdigit():
         erratum_id = et.normalize_erratum_id(erratum_name)
@@ -205,13 +205,15 @@ def slow_handle_shipped_errata(erratum_id: int, erratum_status: str) -> None:
         for brew_build in erratum["builds"]:
             for nested_build in brew_build.values():
                 build_id = nested_build["id"]
-                if not SoftwareBuild.objects.filter(build_id=build_id).exists():
+                if not SoftwareBuild.objects.filter(
+                    build_type=SoftwareBuild.Type.BREW, build_id=str(build_id)
+                ).exists():
                     # Loading a new build for the first time will set the tags correctly
                     logger.warning(f"Brew build with matching ID not ingested yet: {build_id}")
                     logger.info(f"Calling slow_fetch_brew_build for {build_id}")
                     app.send_task(
                         "corgi.tasks.brew.slow_fetch_brew_build",
-                        args=(build_id, SoftwareBuild.Type.BREW),
+                        args=(str(build_id), SoftwareBuild.Type.BREW),
                     )
                 else:
                     logger.info(f"Calling slow_refresh_brew_build_tags for {build_id}")

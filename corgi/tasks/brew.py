@@ -650,7 +650,9 @@ def slow_refresh_brew_build_tags(build_id: int) -> None:
     released_errata_tags = Brew.parse_advisory_ids(errata_tags)
     with transaction.atomic():
         # Can't use .update(key="value") on individual keys in a JSONField
-        build = SoftwareBuild.objects.get(build_id=build_id)
+        build = SoftwareBuild.objects.get(
+            build_type=SoftwareBuild.Type.BREW, build_id=str(build_id)
+        )
         build.meta_attr["tags"] = tags
         build.meta_attr["errata_tags"] = errata_tags
         build.meta_attr["released_errata_tags"] = released_errata_tags

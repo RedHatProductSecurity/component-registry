@@ -245,3 +245,68 @@ def test_handle_tag_and_untag_messages():
     # Four messages / calls total, two tag and two untag, two accepted and two rejected
     call_list = [mock_tag_call, mock_untag_call, mock_tag_call, mock_untag_call]
     slow_update_brew_tags_mock.assert_has_calls(call_list)
+
+
+def test_brew_umb_receiver_handles_shipped_errata():
+    """Test that the BrewUMBReceiverHandler class either
+    accepts a shipped errata message, when no exception is raised
+    OR rejects the message if any exception is raised"""
+    listener = BrewUMBListener()
+    addresses = listener.virtual_topic_addresses
+    selectors = listener.selectors
+    # Stub out the SSLDomain config class to avoid needing real UMB certs in tests
+    with patch("corgi.monitor.consumer.SSLDomain"):
+        handler = BrewUMBReceiverHandler(virtual_topic_addresses=addresses, selectors=selectors)
+
+    mock_umb_event = MagicMock()
+    mock_invalid_event = MagicMock()
+    mock_id = "1234"
+    address = "topic://VirtualTopic.eng.errata.activity.status"
+    mock_umb_event.message.address = address
+    mock_invalid_event.message.address = address
+    assert address.replace("topic://", VIRTUAL_TOPIC_ADDRESS_PREFIX) in addresses
+
+    mock_umb_event.message.body = '{"errata_status": "SHIPPED_LIVE", "errata_id": MOCK_ID}'.replace(
+        "MOCK_ID", mock_id
+    )
+    # Messages with an invalid status should get filtered out by the topic selector
+    mock_invalid_event.message.body = (
+        '{"errata_status": "DROPPED_NO_SHIP", "errata_id": MOCK_ID}'.replace("MOCK_ID", mock_id)
+    )
+    mock_id = int(mock_id)
+
+    umb_message_exceptions = (None, None, Exception("Third message received raises an exception"))
+    # side_effect is a list of return values for each call to slow_fetch_brew_build.apply_async()
+    # If any side_effect is an Exception subclass, it will be raised
+    # Any other side_effect is just returned instead
+    with patch(
+        "corgi.monitor.consumer.slow_handle_shipped_errata.apply_async",
+        side_effect=umb_message_exceptions,
+    ) as slow_handle_shipped_errata_mock:
+        # First call raises no exception, message should be accepted
+        with patch.object(handler, "accept") as mock_accept:
+            handler.on_message(mock_umb_event)
+            mock_accept.assert_called_once_with(mock_umb_event.delivery)
+            mock_accept.reset_mock()
+
+            # Second call raises no exception
+            # The task will raise an exception for the invalid status (should never happen)
+            # This will log the invalid message status and ID in our Celery task results
+            # Raising an exception in the listener would block processing other messages
+            handler.on_message(mock_invalid_event)
+            mock_accept.assert_called_once_with(mock_invalid_event.delivery)
+
+        # Third call raises exception given above, message should be rejected
+        with patch.object(handler, "release") as mock_release:
+            handler.on_message(mock_umb_event)
+            mock_release.assert_called_once_with(mock_umb_event.delivery, delivered=True)
+
+    # slow_handle_shipped_errata.apply_async is called once per message
+    # with an erratum_id and erratum_status arg
+    slow_handle_shipped_errata_mock.assert_has_calls(
+        (
+            call(args=(mock_id, "SHIPPED_LIVE")),
+            call(args=(mock_id, "DROPPED_NO_SHIP")),
+            call(args=(mock_id, "SHIPPED_LIVE")),
+        )
+    )

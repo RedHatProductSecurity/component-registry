@@ -173,6 +173,16 @@ def test_slow_handle_shipped_errata(mock_et_constructor, mock_load_errata, mock_
     mock_load_errata.delay.assert_called_once_with(str(erratum_id), force_process=True)
 
 
+def test_slow_handle_shipped_errata_errors():
+    """Test that we only process messages for SHIPPED_LIVE errata"""
+    erratum_id = 12345
+    # Only process messages for SHIPPED_LIVE errata
+    # This code should never be hit since we filter the message type
+    # using a "selector" on the UMB listener
+    with pytest.raises(ValueError):
+        slow_handle_shipped_errata(erratum_id=erratum_id, erratum_status="DROPPED_NO_SHIP")
+
+
 def test_slow_refresh_brew_build_tags():
     """Test that existing builds get their tags refreshed"""
     # The SoftwareBuild model uses string build IDs

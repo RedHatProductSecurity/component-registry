@@ -69,12 +69,12 @@ class ProductManifestFile(ManifestFile):
 
         components = self.obj.components  # type: ignore[attr-defined]
         released_components = components.manifest_components()
-        distinct_provides = self.obj.provides_queryset  # type: ignore[attr-defined]
+        related_components = self.obj.related_queryset  # type: ignore[attr-defined]
 
         kwargs_for_template = {
             "obj": self.obj,
             "released_components": released_components,
-            "distinct_provides": distinct_provides,
+            "distinct_related": related_components,
             "cpes": cpe_lookup(self.obj.name) if cpe_mapping else self.obj.cpes,  # type: ignore[attr-defined] # noqa
         }
 

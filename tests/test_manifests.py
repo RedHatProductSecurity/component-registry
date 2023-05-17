@@ -153,7 +153,7 @@ def test_slim_rpm_in_containers_manifest():
     num_provided = len(provided)
     assert num_provided == 1
 
-    distinct_provides = stream.provides_queryset
+    distinct_provides = stream.related_queryset
     assert len(distinct_provides) == num_provided
 
     stream_manifest = stream.manifest
@@ -210,7 +210,7 @@ def test_product_manifest_excludes_unreleased_components():
     num_components = len(stream.components.manifest_components())
     assert num_components == 0
 
-    num_provided = len(stream.provides_queryset)
+    num_provided = len(stream.related_queryset)
     assert num_provided == 0
 
     # Manifest contains info for no components, no provides, and only the product itself
@@ -246,7 +246,7 @@ def test_product_manifest_excludes_internal_components():
     num_components = len(stream.components.manifest_components())
     assert num_components == 1
 
-    num_provided = len(stream.provides_queryset)
+    num_provided = len(stream.related_queryset)
     assert num_provided == 1
 
     package_data = manifest["packages"]
@@ -265,7 +265,7 @@ def test_product_manifest_properties():
     num_components = len(stream.components.manifest_components())
     assert num_components == 1
 
-    num_provided = len(stream.provides_queryset)
+    num_provided = len(stream.related_queryset)
     assert num_provided == 2
 
     # Manifest contains info for all components, their provides, and the product itself
@@ -328,6 +328,23 @@ def test_product_manifest_properties():
     assert manifest["relationships"][-1] == document_describes_product
 
 
+def test_no_duplicates_in_manifest_with_upstream():
+    stream, component, other_component, upstream = setup_products_and_components_upstreams()
+
+    assert component.upstreams.get(pk=upstream.uuid)
+    assert other_component.upstreams.get(pk=upstream.uuid)
+
+    manifest = json.loads(stream.manifest)
+
+    # 1 (product) + 2 (root components) + 1 (upstream)
+    for package in manifest["packages"]:
+        for k, v in package.items():
+            print(f"{k}:{v}")
+    assert len(manifest["packages"]) == 4
+
+    # manifest = json.loads(stream.manifest)
+
+
 def test_component_manifest_properties():
     """Test that all Components have a .manifest property
     And that it generates valid JSON."""
@@ -370,6 +387,73 @@ def test_component_manifest_properties():
     assert manifest["relationships"][provided_index] == provided_contained_by_component
     assert manifest["relationships"][dev_provided_index] == dev_provided_dependency_of_component
     assert manifest["relationships"][-1] == document_describes_product
+
+
+def setup_products_and_components_upstreams():
+    stream, variant = setup_product()
+    meta_attr = {"released_errata_tags": ["RHBA-2023:1234"]}
+
+    build = SoftwareBuildFactory(
+        build_id=1,
+        meta_attr=meta_attr,
+    )
+
+    other_build = SoftwareBuildFactory(
+        build_id=2,
+        meta_attr=meta_attr,
+    )
+
+    upstream = ComponentFactory(namespace=Component.Namespace.UPSTREAM)
+    component = ComponentFactory(
+        software_build=build, type=Component.Type.CONTAINER_IMAGE, arch="noarch"
+    )
+    other_component = ComponentFactory(
+        software_build=other_build, type=Component.Type.CONTAINER_IMAGE, arch="noarch"
+    )
+    cnode = ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=component.purl, obj=component
+    )
+    other_cnode = ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        purl=other_component.purl,
+        obj=other_component,
+    )
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=cnode,
+        purl=upstream.purl,
+        obj=upstream,
+    )
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=other_cnode,
+        purl=upstream.purl,
+        obj=upstream,
+    )
+    # Link the components to each other
+    component.save_component_taxonomy()
+    other_component.save_component_taxonomy()
+
+    # The product_ref here is a variant name but below we use it's parent stream
+    # to generate the manifest
+    ProductComponentRelationFactory(
+        build_id=str(build.build_id),
+        build_type=build.build_type,
+        product_ref=variant.name,
+        type=ProductComponentRelation.Type.ERRATA,
+    )
+    ProductComponentRelationFactory(
+        build_id=str(other_build.build_id),
+        build_type=other_build.build_type,
+        product_ref=variant.name,
+        type=ProductComponentRelation.Type.ERRATA,
+    )
+    # Link the components to the ProductModel instances
+    build.save_product_taxonomy()
+    other_build.save_product_taxonomy()
+
+    return stream, component, other_component, upstream
 
 
 def setup_products_and_components_provides(released=True, internal_component=False):

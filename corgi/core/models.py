@@ -634,7 +634,7 @@ class ProductStream(ProductModel):
         return ProductManifestFile(self).render_content(cpe_mapping=True)
 
     @property
-    def provides_queryset(self, using: str = "read_only") -> QuerySet["Component"]:
+    def related_queryset(self, using: str = "read_only") -> QuerySet["Component"]:
         """Returns unique aggregate "provides" for the latest components in this stream,
         for use in templates"""
         unique_provides = (
@@ -642,14 +642,22 @@ class ProductStream(ProductModel):
             .using(using)
             .values_list("provides__pk", flat=True)
             .distinct()
-            .order_by("provides__pk")
-            .iterator()
+        )
+        unique_upstreams = (
+            self.components.manifest_components()
+            # RPM upstream data is human-generated and unreliable
+            .exclude(type=Component.Type.RPM)
+            .using(using)
+            .values_list("upstreams__pk", flat=True)
+            .distinct()
         )
         return (
-            Component.objects.filter(pk__in=unique_provides)
+            Component.objects.filter(Q(pk__in=unique_provides) | Q(pk__in=unique_upstreams))
             # Remove .exclude() below when CORGI-428 is resolved
             .exclude(type=Component.Type.GOLANG, name__contains="./")
             .external_components()
+            .order_by("pk")
+            .distinct()
             .using(using)
         )
 

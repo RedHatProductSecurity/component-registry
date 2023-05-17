@@ -49,7 +49,7 @@ def test_displaying_component_with_many_sources() -> None:
 
 def display_manifest_with_many_components() -> dict:
     """Helper method for timeit to display a manifest with many components"""
-    large_stream_ofuri = "o:redhat:rhel:9.1.0.z"
+    large_stream_ofuri = "o:redhat:rhel:9.2.0"
     response = requests.get(f"{CORGI_API_URL}/product_streams?ofuri={large_stream_ofuri}")
     response.raise_for_status()
     response_json = response.json()

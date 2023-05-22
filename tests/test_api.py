@@ -491,6 +491,10 @@ def test_component_detail_olcs_put(client, api_path):
     olcs_user = User.objects.create_user(username="olcs", email="olcs@example.com")
     olcs_token = Token.objects.create(user=olcs_user, key="mysteries_quirewise_volitant_woolshed")
 
+    # User for OpenLCS authentication1
+    olcs_user1 = User.objects.create_user(username="olcs1", email="olcs1@example.com")
+    olcs_token1 = Token.objects.create(user=olcs_user1, key="mysteries1_quirewise_volitant_woolshed")
+
     response = client.get(component_path)
     assert response.status_code == 200
     response = response.json()

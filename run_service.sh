@@ -6,9 +6,7 @@
 # collect static CSS / JS files like corgi/web/static/base.css
 # This is required to avoid breaking the app on startup
 # It does not delete any existing files in the static_output dir
-# --ignore '*.json' stops us from processing every manifest
-# Otherwise the command / web pod deployment will time out
-python3 manage.py collectstatic --ignore '*.json' --noinput
+python3 manage.py collectstatic --noinput
 
 # start gunicorn
 if [[ $1 == dev ]]; then

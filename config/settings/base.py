@@ -10,8 +10,6 @@ from corgi import __version__ as CORGI_VERSION
 # Build paths inside the project like this: BASE_DIR / "subdir".
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-OUTPUT_FILES_DIR = os.getenv("CORGI_OUTPUT_FILES_DIR", str(BASE_DIR / "outputfiles"))
-
 # Added
 CA_CERT = os.getenv("REQUESTS_CA_BUNDLE")
 
@@ -298,7 +296,6 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = "/staticfiles/"
 STATIC_ROOT = os.getenv("CORGI_STATIC_FILES_DIR", str(BASE_DIR / "staticfiles"))
-STATICFILES_DIRS = [OUTPUT_FILES_DIR]
 STATICFILES_STORAGE = "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"
 
 # Celery config

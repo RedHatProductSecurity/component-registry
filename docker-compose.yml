@@ -60,7 +60,7 @@ services:
       - "8080:8080"
     command: "nginx -g 'daemon off;'"
     volumes:
-      - ./staticfiles:/opt/app-root/src:z
+      - ./staticfiles:/opt/app-root/src/staticfiles:z
       - ./etc/nginx:/opt/app-root/etc/nginx.default.d/
 
   corgi-web:

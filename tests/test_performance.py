@@ -57,7 +57,7 @@ def display_manifest_with_many_components() -> dict:
     name = response_json["name"]
     uuid = response_json["uuid"]
     manifest_link = response_json["manifest"]
-    assert manifest_link == f"{CORGI_API_URL.replace('/api/v1', '')}/{name}-{uuid}.json"
+    assert manifest_link == f"{CORGI_API_URL.replace('/api/v1', '/staticfiles')}/{name}-{uuid}.json"
 
     response = requests.get(manifest_link)
     response.raise_for_status()

@@ -624,8 +624,17 @@ def slow_update_brew_tags(build_id: str, tag_added: str = "", tag_removed: str =
                 # Below should automatically create new relations for this build / erratum
                 slow_load_errata.delay(errata_tag.group())
         else:
-            build.meta_attr["tags"].remove(tag_removed)
-            # TODO: Clean up old relations for some build / erratum when a tag is removed
+            try:
+                build.meta_attr["tags"].remove(tag_removed)
+                # TODO: Clean up old relations for some build / erratum when a tag is removed
+            except ValueError:
+                # Tag to be removed not found in list
+                # i.e. it was renamed earlier and is now being removed
+                # We don't get a UMB event for these renames
+                # Refresh all the tags so we have the most current data
+                logger.warning(f"Tag to remove {tag_removed} not found, so refreshing all tags")
+                slow_refresh_brew_build_tags.delay(int(build_id))
+                return f"Tag to remove {tag_removed} not found, so refreshing all tags"
 
         build.meta_attr["errata_tags"] = Brew.extract_advisory_ids(build.meta_attr["tags"])
         build.meta_attr["released_errata_tags"] = Brew.parse_advisory_ids(
@@ -643,18 +652,27 @@ def slow_refresh_brew_build_tags(build_id: int) -> None:
     # Errata Tool's UMB messages only have info about the errata tags
     # We also need to update non-errata tags that link streams to builds
     # e.g. stream-name-candidate will change to stream-name-released
+
     logger.info(f"Refreshing Brew build tags for {build_id}")
     brew = Brew(SoftwareBuild.Type.BREW)
     tags = sorted(set(tag["name"] for tag in brew.koji_session.listTags(build_id)))
     errata_tags = Brew.extract_advisory_ids(tags)
     released_errata_tags = Brew.parse_advisory_ids(errata_tags)
+
     with transaction.atomic():
         # Can't use .update(key="value") on individual keys in a JSONField
         build = SoftwareBuild.objects.get(
             build_type=SoftwareBuild.Type.BREW, build_id=str(build_id)
         )
+        # If the newly-refreshed tags have errata that weren't present before
+        # We need to create relations for these new errata tags
+        new_errata_tags = set(errata_tags) - set(build.meta_attr["errata_tags"])
+
         build.meta_attr["tags"] = tags
         build.meta_attr["errata_tags"] = errata_tags
         build.meta_attr["released_errata_tags"] = released_errata_tags
         build.save()
+
+    for erratum_id in sorted(new_errata_tags):
+        slow_load_errata.delay(erratum_id)
     logger.info(f"Finished refreshing Brew build tags for {build_id}")

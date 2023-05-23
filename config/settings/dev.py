@@ -18,7 +18,6 @@ SESSION_COOKIE_SECURE = False
 #      - "1025:1025"
 
 ALLOWED_HOSTS = ["*"]
-STATIC_URL = "http://localhost:8080/"
 
 # Django Debug Toolbar config; requires requirements/dev.txt deps
 INSTALLED_APPS += ["debug_toolbar"]  # noqa: F405

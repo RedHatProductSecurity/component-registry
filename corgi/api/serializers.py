@@ -10,9 +10,8 @@ from django.conf import settings
 from django.db.models.manager import Manager
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
-from whitenoise.storage import CompressedStaticFilesStorage
 
-from corgi.api.constants import CORGI_API_URL
+from corgi.api.constants import CORGI_API_URL, CORGI_STATIC_URL
 from corgi.core.constants import MODEL_FILTER_NAME_MAPPING
 from corgi.core.fixups import supported_stream_cpes
 from corgi.core.models import (
@@ -586,13 +585,7 @@ class ProductModelSerializer(ProductTaxonomySerializer):
             instance.name not in supported_stream_cpes
         ):
             return ""
-        filename = f"{instance.name}-{instance.pk}.json"
-        try:
-            manifest_link = CompressedStaticFilesStorage().url(filename)
-        except ValueError:
-            logger.error(f"Failed to find staticfiles url for {filename}")
-            return ""
-        return manifest_link
+        return f"{CORGI_STATIC_URL}{instance.name}-{instance.pk}.json"
 
     @staticmethod
     def get_relations(instance: ProductModel) -> list[dict[str, str]]:

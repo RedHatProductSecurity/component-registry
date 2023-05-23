@@ -111,21 +111,27 @@ def test_slow_update_brew_tags_removed():
 
 def test_slow_update_brew_tags_errors():
     """Test that slow_update_brew_tags handles missing builds and missing tags"""
-    warning = slow_update_brew_tags("123", tag_added="123")
-    assert warning == "Brew build with matching ID not ingested (yet?): 123"
+    build_id = "123"
+    warning = slow_update_brew_tags(build_id, tag_added=build_id)
+    assert warning == f"Brew build with matching ID not ingested (yet?): {build_id}"
 
     # meta_attr field for all builds always has tags key set to a list (on ingestion)
     # no need to test missing tags key or values other than lists
-    build = SoftwareBuildFactory(build_type=SoftwareBuild.Type.BREW, meta_attr={"tags": []})
+    SoftwareBuildFactory(
+        build_type=SoftwareBuild.Type.BREW, build_id=build_id, meta_attr={"tags": []}
+    )
     with pytest.raises(ValueError):
         # Must supply either tag_added or tag_removed kwarg
-        slow_update_brew_tags(build.build_id)
+        slow_update_brew_tags(build_id)
 
-    with pytest.raises(ValueError):
-        # Raise an error if tag isn't found
-        # This shouldn't happen unless we failed to add the tag in the first place
-        # Probably worth reingesting at that point - explicit error reminds us to do so
-        slow_update_brew_tags(build.build_id, tag_removed="does_not_exist")
+    with patch("corgi.tasks.brew.slow_refresh_brew_build_tags") as mock_refresh:
+        # Refresh all tags if tag to remove isn't found
+        # This happens when tags are renamed, e.g. X to Y, then removed
+        # We get a UMB event to remove Y, but no event for the rename
+        # So our list of tags still has only X, and Y is missing
+        warning = slow_update_brew_tags(build_id, tag_removed=build_id)
+        assert warning == f"Tag to remove {build_id} not found, so refreshing all tags"
+        mock_refresh.delay.assert_called_once_with(int(build_id))
 
 
 @patch("corgi.tasks.errata_tool.app")
@@ -201,10 +207,14 @@ def test_slow_refresh_brew_build_tags():
         mock_brew_collector.koji_session.listTags.return_value = [
             {"name": tag} for tag in EXISTING_TAGS
         ]
-        slow_refresh_brew_build_tags(build_id=build_id)
+        with patch("corgi.tasks.brew.slow_load_errata") as mock_load_errata:
+            slow_refresh_brew_build_tags(build_id=build_id)
 
         mock_brew_constructor.assert_called_once_with(SoftwareBuild.Type.BREW)
         mock_brew_collector.koji_session.listTags.assert_called_once_with(build_id)
+        mock_load_errata.delay.assert_has_calls(
+            tuple(call(erratum_id) for erratum_id in CLEAN_ERRATA_TAGS)
+        )
 
     build.refresh_from_db()
     assert build.meta_attr["tags"] == CLEAN_TAGS

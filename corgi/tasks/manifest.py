@@ -19,8 +19,6 @@ logger = get_task_logger(__name__)
 )
 def update_manifests(fixup=True):
     # Note - temporarily setting fixup=True
-    # Ensure the OUTPUT_FILES_DIR exists on first run
-    Path(settings.OUTPUT_FILES_DIR).mkdir(exist_ok=True)
     for ps in ProductStream.objects.annotate(num_components=Count("components")).filter(
         num_components__gt=0
     ):

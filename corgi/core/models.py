@@ -1217,13 +1217,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             )
 
         # Red Hat components should be namespaced, everything else is assumed to be upstream.
-        # BUT https://github.com/package-url/purl-spec/blob/master/PURL-TYPES.rst#oci
-        # "OCI purls do not contain a namespace, although,
-        # repository_url may contain a namespace as part of the physical location of the package."
-        if (
-            self.namespace == Component.Namespace.REDHAT
-            and self.type != Component.Type.CONTAINER_IMAGE
-        ):
+        if self.namespace == Component.Namespace.REDHAT:
             # Don't wipe out Maven / other purl namespaces if they already exist
             existing_namespace = purl_data.get("namespace", "")
             purl_data["namespace"] = f"{Component.Namespace.REDHAT.lower()}/{existing_namespace}"
@@ -1308,15 +1302,8 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
     def strip_namespace(self, purl: str) -> str:
         """Remove "redhat/" that we prepend to namespace strings in our purls"""
-        if (
-            self.namespace == Component.Namespace.REDHAT
-            and self.type != Component.Type.CONTAINER_IMAGE
-            and purl
-        ):
+        if self.namespace == Component.Namespace.REDHAT and purl:
             # purls like pkg:golang/redhat/otherstuff cause issues with purl2url
-            # Container images don't have a /redhat/ namespace in their purl
-            # Trying to strip this value anyway might cause other issues
-            # if the purl contains e.g. ?repository_url=example.com/redhat/path/
             purl = purl.replace("/redhat/", "/", 1)
         return purl
 

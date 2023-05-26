@@ -361,7 +361,7 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
     root_node = save_node(ComponentNode.ComponentNodeType.SOURCE, None, obj)
 
     if "upstream_go_modules" in build_data["meta"]:
-        meta_attr = {"go_component_type": "gomod"}
+        meta_attr = {"go_component_type": "gomod", "source": ["collectors/brew"]}
         for module in build_data["meta"]["upstream_go_modules"]:
             # the upstream commit is included in the dist-git commit history, but is not
             # exposed anywhere in the brew data that I can find, so can't set version

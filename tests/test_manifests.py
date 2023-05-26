@@ -5,21 +5,14 @@ from json import JSONDecodeError
 import pytest
 
 from corgi.core.files import ProductManifestFile
-from corgi.core.models import (
-    Component,
-    ComponentNode,
-    ProductComponentRelation,
-    ProductNode,
-)
+from corgi.core.models import Component, ComponentNode, ProductComponentRelation
 
+from .conftest import setup_product
 from .factories import (
     ComponentFactory,
     ContainerImageComponentFactory,
     ProductComponentRelationFactory,
-    ProductFactory,
     ProductStreamFactory,
-    ProductVariantFactory,
-    ProductVersionFactory,
     SoftwareBuildFactory,
     SrpmComponentFactory,
 )
@@ -554,23 +547,3 @@ def _build_rpm_in_containers(rpm_in_container, name=""):
     # Link the components to each other
     container.save_component_taxonomy()
     return build, container
-
-
-def setup_product():
-    product = ProductFactory()
-    version = ProductVersionFactory(products=product)
-    stream = ProductStreamFactory(products=product, productversions=version)
-    variant = ProductVariantFactory(
-        name="1", products=product, productversions=version, productstreams=stream
-    )
-    # TODO: Factory should probably create nodes for model
-    #  Move these somewhere for reuse - common.py helper method, or fixtures??
-    pnode = ProductNode.objects.create(parent=None, obj=product)
-    pvnode = ProductNode.objects.create(parent=pnode, obj=version)
-    psnode = ProductNode.objects.create(parent=pvnode, obj=stream)
-    ProductNode.objects.create(parent=psnode, obj=variant)
-    # This generates and saves the ProductModel properties of stream
-    # AKA we link the ProductModel instances to each other
-    stream.save_product_taxonomy()
-    assert variant in stream.productvariants.get_queryset()
-    return stream, variant

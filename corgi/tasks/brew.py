@@ -2,6 +2,7 @@ import re
 from datetime import datetime, timedelta
 from typing import Optional
 
+from celery.local import PromiseProxy
 from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.conf import settings
@@ -113,8 +114,15 @@ def slow_fetch_brew_build(
     for child_component in component.get("components", []):
         save_component(child_component, root_node, softwarebuild)
 
-    # We don't call save_product_taxonomy by default to allow async call of slow_load_errata task
-    # See CORGI-21
+    # for builds with any tag, check if the tag is used for product stream relations, and create the
+    # relations if so.
+    if not build_meta["tags"]:
+        logger.info("no brew tags")
+    else:
+        new_relations = load_brew_tags(build_id, build_meta["tags"])
+        logger.info(f"Created {new_relations} for brew tags in {build_type}:{build_id}")
+
+    # Allow async call of slow_load_errata task, see CORGI-21
     if save_product:
         softwarebuild.save_product_taxonomy()
         for related_component in softwarebuild.components.get_queryset():
@@ -494,28 +502,59 @@ def save_node(
     retry_kwargs=RETRY_KWARGS,
     soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
 )
-def load_brew_tags() -> None:
+def load_stream_brew_tags() -> None:
     for ps in ProductStream.objects.get_queryset():
-        build_type = BUILD_TYPE
-        brew = Brew(BUILD_TYPE)
-        refresh_task = slow_fetch_modular_build
-        # This should really be a property in Product Definitions
-        if settings.COMMUNITY_MODE_ENABLED and ps.name == "openstack-rdo":
-            brew = Brew(SoftwareBuild.Type.CENTOS)
-            build_type = SoftwareBuild.Type.CENTOS
-            refresh_task = slow_fetch_brew_build
+        brew, build_type, refresh_task = _relation_context_for_stream(ps.name)
         for brew_tag, inherit in ps.brew_tags.items():
-            # Always load all builds in tag when saving relations
             builds = brew.get_builds_with_tag(brew_tag, inherit=inherit, latest=False)
-            no_of_created = create_relations(
-                builds,
-                build_type,
-                brew_tag,
-                ps.name,
-                ProductComponentRelation.Type.BREW_TAG,
-                refresh_task,
-            )
-            logger.info("Saving %s new builds for %s", no_of_created, brew_tag)
+            _create_relations_for_tag(builds, brew_tag, build_type, ps.name, refresh_task)
+
+
+def load_brew_tags(build_id: str, brew_tags: list[str]) -> int:
+    all_stream_tags = ProductStream.objects.exclude(brew_tags__exact={}).values_list(
+        "name", "brew_tags"
+    )
+    no_created = 0
+    distinct_brew_tags = set(brew_tags)
+    for stream_name, stream_tags in all_stream_tags:
+        distinct_stream_tags = set(stream_tags)
+        distinct_stream_tags = distinct_brew_tags.intersection(distinct_stream_tags)
+        for tag in distinct_stream_tags:
+            brew, build_type, _ = _relation_context_for_stream(stream_name)
+            logger.info(f"Creating relations for {stream_name} and {tag}")
+            no_created += _create_relations_for_tag((build_id,), tag, build_type, stream_name, None)
+    return no_created
+
+
+def _create_relations_for_tag(
+    build_ids: tuple,
+    brew_tag: str,
+    build_type: SoftwareBuild.Type,
+    stream_name: str,
+    refresh_task: Optional[PromiseProxy],
+):
+    no_of_created = create_relations(
+        build_ids,
+        build_type,
+        brew_tag,
+        stream_name,
+        ProductComponentRelation.Type.BREW_TAG,
+        refresh_task,
+    )
+    logger.info("Saving %s new builds for %s", no_of_created, brew_tag)
+    return no_of_created
+
+
+def _relation_context_for_stream(stream_name: str):
+    build_type = BUILD_TYPE
+    brew = Brew(BUILD_TYPE)
+    refresh_task = slow_fetch_modular_build
+    # This should really be a property in Product Definitions
+    if settings.COMMUNITY_MODE_ENABLED and stream_name == "openstack-rdo":
+        brew = Brew(SoftwareBuild.Type.CENTOS)
+        build_type = SoftwareBuild.Type.CENTOS
+        refresh_task = slow_fetch_brew_build
+    return brew, build_type, refresh_task
 
 
 def fetch_modular_builds(relations_query: QuerySet, force_process: bool = False) -> None:

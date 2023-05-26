@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
-from corgi.tasks.brew import load_brew_tags
+from corgi.tasks.brew import load_stream_brew_tags
 from corgi.tasks.errata_tool import load_et_products
 from corgi.tasks.prod_defs import update_products
 from corgi.tasks.pulp import setup_pulp_relations, update_cdn_repo_channels
@@ -41,7 +41,7 @@ class Command(BaseCommand):
                 "Loading Brew Tags",
             )
         )
-        load_brew_tags()
+        load_stream_brew_tags()
 
     def do_save_composes(self):
         self.stdout.write(

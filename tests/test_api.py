@@ -1318,7 +1318,6 @@ def test_srpm_component_provides_sources_upstreams(client, api_path):
     this behaviour.
 
     """  # noqa
-
     # create a top level root source component
     root_comp = ComponentFactory(
         name="root_comp",

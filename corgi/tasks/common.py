@@ -1,7 +1,9 @@
 import logging
 import subprocess
 from datetime import datetime, timedelta
+from typing import Optional
 
+from celery.local import PromiseProxy
 from django.conf import settings
 from django.db.utils import InterfaceError as DjangoInterfaceError
 from django.utils import timezone
@@ -69,7 +71,12 @@ def get_last_success_for_task(task_name: str) -> datetime:
 
 
 def create_relations(
-    build_ids, build_type, external_system_id, product_ref, relation_type, refresh_task
+    build_ids: tuple,
+    build_type: SoftwareBuild.Type,
+    external_system_id: str,
+    product_ref: str,
+    relation_type: ProductComponentRelation.Type,
+    refresh_task: Optional[PromiseProxy],
 ) -> int:
     no_of_relations = 0
     for build_id in build_ids:
@@ -81,15 +88,18 @@ def create_relations(
             defaults={"type": relation_type},
         )
         if created:
-            # Similar to fetch_unprocessed_relations
-            # This skips use of the Collector models for builds in the CENTOS koji instance
-            # It was done to avoid updating the collector models not to use build_id as
-            # a primary key. It's possible because the only product stream (openstack-rdo)
-            # stored in CENTOS koji doesn't use modules
-            if build_type == SoftwareBuild.Type.CENTOS:
-                refresh_task.delay(build_id=build_id, build_type=SoftwareBuild.Type.CENTOS)
-            else:
-                refresh_task.delay(build_id=build_id)
+            # When creating relations via fetch_brew_build we call save_product_taxonomy right after
+            # we call this function, so no need to refresh the build.
+            if refresh_task:
+                # Similar to fetch_unprocessed_relations
+                # This skips use of the Collector models for builds in the CENTOS koji instance
+                # It was done to avoid updating the collector models not to use build_id as
+                # a primary key. It's possible because the only product stream (openstack-rdo)
+                # stored in CENTOS koji doesn't use modules
+                if build_type == SoftwareBuild.Type.CENTOS:
+                    refresh_task.delay(build_id=build_id, build_type=SoftwareBuild.Type.CENTOS)
+                else:
+                    refresh_task.delay(build_id=build_id)
             no_of_relations += 1
     return no_of_relations
 

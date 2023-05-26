@@ -1041,3 +1041,25 @@ def test_parse_advisory_ids():
     result = Brew.parse_advisory_ids(errata_tags)
     # Only 4-digit IDs like 1234 are released
     assert result == errata_tags[:1]
+
+
+def test_parse_bundled_provides():
+    """Test that bundled component data for some SRPM is correct"""
+    bundled_golang = (Component.Type.GOLANG, "name1", "version1")
+    bundled_npm = (Component.Type.NPM, "name2", "version2")
+    bundled_provides = [bundled_golang, bundled_npm]
+    rpm_info = {"id": "123"}
+    parsed_provides = Brew._parse_bundled_provides(bundled_provides, rpm_info)
+
+    for index, provided in enumerate(parsed_provides):
+        assert provided["type"] == bundled_provides[index][0]
+        assert provided["namespace"] == Component.Namespace.UPSTREAM
+        assert provided["meta"]["name"] == bundled_provides[index][1]
+        assert provided["meta"]["version"] == bundled_provides[index][2]
+        assert provided["meta"]["rpm_id"] == f"{rpm_info['id']}-bundles-{index + 1}"
+        assert provided["meta"]["source"] == ["specfile"]
+
+        # We can't set go_component_type here
+        # Both Go modules and Go packages can be bundled into an RPM
+        # There's no easy way for us to tell which type this component is
+        assert "go_component_type" not in provided["meta"]

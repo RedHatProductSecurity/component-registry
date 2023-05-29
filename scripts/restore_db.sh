@@ -13,6 +13,6 @@ fi
 pg_restore -l "${db_dump_dir}" | grep -v "EXTENSION" > ./restore-elements
 
 # Restore the database re-creating the tables
-pg_restore -h localhost -p 5433 -U corgi-db-user --dbname corgi-db -j 2 -v --no-owner -c -L ./restore-elements "${db_dump_dir}"
+pg_restore -h localhost -p 5433 -U corgi-db-user --dbname corgi-db -j 2 -v --no-privileges --no-owner -c -L ./restore-elements "${db_dump_dir}"
 
 rm -rf ./restore-elements

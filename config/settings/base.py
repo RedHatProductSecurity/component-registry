@@ -207,11 +207,17 @@ TEMPLATES: list[dict] = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
+COMMUNITY_MODE_ENABLED = strtobool(os.getenv("CORGI_COMMUNITY_MODE_ENABLED", "false"))
+
 # Splunk friendly key/value pairs
 LOG_FORMAT_START = (
     "%(asctime)s.%(msecs)03d+00:00 thread=%(thread)d, name=%(name)s, lineno=%(lineno)d"
 )
 LOG_FORMAT_END = f'level=%(levelname)s, app=corgi, environ={get_env()}, msg="%(message)s"'
+
+if COMMUNITY_MODE_ENABLED:
+    LOG_FORMAT_END = f"community=true {LOG_FORMAT_END}"
+
 # Splunk friendly timestamp
 LOG_DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
 
@@ -396,8 +402,6 @@ UMB_BROKER_URL = os.getenv("CORGI_UMB_BROKER_URL")
 # True values are y, yes, t, true, on and 1; false values are n, no, f, false, off and 0
 # https://docs.python.org/3/distutils/apiref.html#distutils.util.strtobool
 UMB_BREW_MONITOR_ENABLED = strtobool(os.getenv("CORGI_UMB_BREW_MONITOR_ENABLED", "true"))
-
-COMMUNITY_MODE_ENABLED = strtobool(os.getenv("CORGI_COMMUNITY_MODE_ENABLED", "false"))
 
 if CORGI_DOMAIN.endswith(".fedoraproject.org"):
     CORGI_DOMAIN_BASE = ".fedoraproject.org"

@@ -9,8 +9,10 @@ from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
+from django.contrib.postgres.aggregates import JSONBAgg
 from django.db import models
 from django.db.models import Q, QuerySet
+from django.db.models.expressions import RawSQL
 from mptt.managers import TreeManager
 from mptt.models import MPTTModel, TreeForeignKey
 from packageurl import PackageURL
@@ -930,12 +932,27 @@ class ComponentQuerySet(models.QuerySet):
         include: bool = True,
     ) -> "ComponentQuerySet":
         """Return components from latest builds across all product streams."""
-        distinct_components = (
-            self.values_list("namespace", "name", "arch").order_by().distinct().iterator()
+        nevras_by_components = self.values_list("namespace", "name", "arch").annotate(
+            nevras=JSONBAgg(
+                RawSQL(
+                    "json_build_object('nevra', nevra, 'epoch', epoch, 'version', core_component.version, 'release', release)",
+                    (),
+                )
+            )
         )
         query = Q()
-        for namespace, name, arch in distinct_components:
-            latest_nevra = self.filter_latest_nevra_by_distinct_component(namespace, name, arch)
+        for _, _, _, nevra_data in nevras_by_components:
+            nevras = []
+            for nevra in nevra_data:
+                nevras.append(
+                    (
+                        nevra["nevra"],
+                        nevra["epoch"],
+                        nevra["version"],
+                        nevra["release"],
+                    )
+                )
+            latest_nevra = sorted(nevras, key=functools.cmp_to_key(self._compare_packages))[-1]
             if latest_nevra:
                 query |= Q(nevra=latest_nevra)
         if include:

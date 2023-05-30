@@ -259,6 +259,7 @@ def save_component(
             else Component.Namespace.UPSTREAM,
             "related_url": related_url,
             "software_build": softwarebuild,
+            "epoch": int(meta.pop("epoch", 0)),
         },
     )
 
@@ -278,6 +279,7 @@ def save_srpm(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
     name = build_data["meta"].pop("name")
     version = build_data["meta"].pop("version")
     related_url = build_data["meta"].pop("url", "")
+    epoch = build_data["meta"].pop("epoch", 0)
     if not related_url:
         # Handle case when key is present but value is None
         related_url = ""
@@ -300,6 +302,7 @@ def save_srpm(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
             "meta_attr": build_data["meta"],
             "namespace": Component.Namespace.REDHAT,
             "software_build": softwarebuild,
+            "epoch": int(epoch),
         },
     )
     node = save_node(ComponentNode.ComponentNodeType.SOURCE, None, obj)

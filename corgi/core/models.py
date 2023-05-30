@@ -1105,6 +1105,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
     type = models.CharField(choices=Type.choices, max_length=20)
     namespace = models.CharField(choices=Namespace.choices, max_length=20)
+    epoch = models.PositiveSmallIntegerField(default=0)
     version = models.CharField(max_length=1024)
     release = models.CharField(max_length=1024, default="")
     arch = models.CharField(max_length=1024, default="")
@@ -1851,10 +1852,6 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     def manifest(self) -> str:
         """Return an SPDX-style manifest in JSON format."""
         return ComponentManifestFile(self).render_content()
-
-    @property
-    def epoch(self) -> str:
-        return self.meta_attr.get("epoch", "")
 
     def get_provides_nodes(self, include_dev: bool = True, using: str = "read_only") -> set[str]:
         """return a set of descendant ids with PROVIDES ComponentNode type"""

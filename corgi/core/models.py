@@ -980,6 +980,7 @@ class ComponentQuerySet(models.QuerySet):
         else:
             # Show only the older / non-latest components
             if not query:
+                # No latest components to hide??
                 # So show everything / return unfiltered queryset
                 return self
             return self.root_components().exclude(query)

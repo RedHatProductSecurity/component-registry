@@ -78,19 +78,22 @@ def slow_fetch_brew_build(
         if dt:
             completion_dt = make_aware(dt)
         else:
-            logger.info("Could not parse completion_time for build %s", build_id)
-            return
+            raise ValueError(f"Could not parse completion_time for build {build_id}")
     else:
-        logger.info("No completion_time for build %s", build_id)
-        return
+        # Build has no timestamp even though it's in COMPLETE state?
+        # This really shouldn't happen
+        raise ValueError(f"No completion_time for build {build_id}")
 
+    # TODO: Should we update_or_create to pick up changed build_meta?
+    #  Sometimes builds are deleted in Brew
+    #  In that case, don't wipe out data - test this
     softwarebuild, created = SoftwareBuild.objects.get_or_create(
         build_id=build_id,
         build_type=build_type,
         defaults={
+            "source": build_meta.pop("source"),
             "meta_attr": build_meta,
             "name": component["meta"]["name"],
-            "source": component["build_meta"]["build_info"]["source"],
         },
         completion_time=completion_dt,
     )

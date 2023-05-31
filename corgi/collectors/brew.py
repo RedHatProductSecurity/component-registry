@@ -247,6 +247,8 @@ class Brew:
                     "arch": rpm_info["arch"],
                     "source": ["koji.listRPMs", "koji.getRPMHeaders"],
                     "rpm_id": rpm_id,
+                    # Our custom "source" key conflicts with the "SOURCE" RPM header
+                    # So we call it "source_files" here instead
                     "source_files": headers["source"],
                 },
             }
@@ -540,8 +542,15 @@ class Brew:
                 remote_source.pkg_managers,
             )
             for pkg_type in remote_source.pkg_managers:
+                # We process top-level .packages and all child .packages[].dependencies
+                # This is enough to get all components from the manifest
+                # The top-level .dependencies are duplicates
+                # of each top-level .package's child .dependencies
+                # We don't need to process them again
                 if pkg_type in ("npm", "pip", "yarn"):
                     # Convert Cachito-reported package type to Corgi component type.
+                    # TODO:  Add logging-kibana6-container-v6.8.1-362 to test data
+                    #  use remote-source-kibana6.json manifest from Cachito
                     provides, remote_source.packages = cls._extract_provides(
                         remote_source.packages, pkg_type
                     )
@@ -549,16 +558,15 @@ class Brew:
                     provides, remote_source.packages = cls._extract_golang(
                         remote_source.packages, go_stdlib_version
                     )
-                    provides, remote_source.dependencies = cls._extract_golang(
-                        remote_source.dependencies, go_stdlib_version
-                    )
                 else:
                     logger.warning("Found unsupported remote-source pkg_manager %s", pkg_type)
                     continue
+
                 try:
                     source_component["components"].extend(provides)
                 except KeyError:
                     source_component["components"] = provides
+
             source_components.append(source_component)
         return source_components
 
@@ -645,11 +653,14 @@ class Brew:
         for typed_pkg in typed_pkgs:
             typed_component: dict[str, Any] = {
                 "type": cls.CACHITO_PKG_TYPE_MAPPING[pkg_type],
+                "namespace": Component.Namespace.UPSTREAM,
                 "meta": {
                     "name": typed_pkg.name,
                     "version": typed_pkg.version,
                 },
             }
+            # Sometimes a top-level package has a "path" key
+            # e.g. for npm or go-package components nested into a subfolder
             try:
                 typed_component["meta"]["path"] = typed_pkg.path
             except AttributeError:
@@ -663,6 +674,7 @@ class Brew:
                 }
                 component = {
                     "type": cls.CACHITO_PKG_TYPE_MAPPING[dep.type],
+                    "namespace": Component.Namespace.UPSTREAM,
                     "meta": component_meta,
                 }
                 # The dev key is only present for Cachito package managers which support

@@ -7,7 +7,6 @@ from corgi.core.constants import CONTAINER_DIGEST_FORMATS
 from corgi.core.models import (
     Component,
     ComponentNode,
-    ComponentQuerySet,
     Product,
     ProductComponentRelation,
     ProductNode,
@@ -902,28 +901,23 @@ def test_latest_components_queryset(client, api_path):
 
 
 @pytest.mark.django_db
-def test_filter_latest_nevra_by_distinct_component():
+def test_latest_filter():
     ps = ProductStreamFactory(name="rhel-7.9.z")
     srpm_with_el = SrpmComponentFactory(name="sdb", version="1.2.1", release="21.el7")
     srpm_with_el.productstreams.add(ps)
     srpm = SrpmComponentFactory(name="sdb", version="1.2.1", release="3")
     srpm.productstreams.add(ps)
-    assert (
-        ps.components.filter_latest_nevra_by_distinct_component(
-            srpm_with_el.namespace, srpm_with_el.name, srpm_with_el.arch
-        )
-        == srpm_with_el.nevra
-    )
+    latest_components = ps.components.latest_components()
+    assert latest_components.count() == 1
+    assert latest_components[0] == srpm_with_el
 
     # test no result
     ps = ProductStreamFactory(name="rhel-7.7.z")
-    assert not ps.components.filter_latest_nevra_by_distinct_component(
-        srpm_with_el.namespace, srpm_with_el.name, srpm_with_el.arch
-    )
+    assert not ps.components.latest_components()
 
 
 @pytest.mark.django_db
-def test_filter_latest_nevra_by_distinct_component_modular():
+def test_latest_filter_components_modular():
     ps = ProductStreamFactory(name="certificate_system-10.2.z")
     modular_rpm_1 = SrpmComponentFactory(
         name="idm-console-framework", version="1.2.0", release="3.module+el8pki+7130+225b0dd0"
@@ -933,62 +927,9 @@ def test_filter_latest_nevra_by_distinct_component_modular():
         name="idm-console-framework", version="1.2.0", release="3.module+el8pki+8580+f0d97d6d"
     )
     modular_rpm_2.productstreams.add(ps)
-    assert (
-        ps.components.filter_latest_nevra_by_distinct_component(
-            modular_rpm_2.namespace, modular_rpm_2.name, modular_rpm_2.arch
-        )
-        == modular_rpm_2.nevra
-    )
-
-
-def test_ensure_epoch():
-    component_qs = ComponentQuerySet()
-    nevra = (
-        "",
-        None,
-        "1.2.0",
-        "3.module+el8pki+7130+225b0dd0",
-    )
-    result = component_qs._ensure_epoch(nevra)
-    assert result[0] == "0"
-    assert result[1] == "1.2.0"
-    assert result[2] == "3.module+el8pki+7130+225b0dd0"
-
-    nevra = (
-        "",
-        "",
-        "",
-        "",
-    )
-    result = component_qs._ensure_epoch(nevra)
-    assert result[0] == "0"
-
-    nevra = (
-        "",
-        "1",
-        "",
-        "",
-    )
-    result = component_qs._ensure_epoch(nevra)
-    assert result[0] == "1"
-
-    nevra = (
-        "",
-        0,
-        "",
-        "",
-    )
-    result = component_qs._ensure_epoch(nevra)
-    assert result[0] == "0"
-
-    nevra = (
-        "",
-        1,
-        "",
-        "",
-    )
-    result = component_qs._ensure_epoch(nevra)
-    assert result[0] == "1"
+    latest_components = ps.components.latest_components()
+    assert latest_components.count() == 1
+    assert latest_components[0] == modular_rpm_2
 
 
 def test_version_release_arr_el_match():

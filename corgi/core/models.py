@@ -1,4 +1,3 @@
-import functools
 import logging
 import re
 import uuid as uuid
@@ -22,7 +21,6 @@ from rpm import labelCompare
 from corgi.core.constants import (
     CONTAINER_DIGEST_FORMATS,
     EL_MATCH_RE,
-    EPOCH_TYPE,
     MODEL_NODE_LEVEL_MAPPING,
     RELEASE_VERSION_DELIM_RE,
     ROOT_COMPONENTS_CONDITION,
@@ -889,87 +887,67 @@ def get_product_details(variant_names: tuple[str], stream_names: list[str]) -> d
 class ComponentQuerySet(models.QuerySet):
     """Helper methods to filter QuerySets of Components"""
 
-    def _compare_packages(
-        self, nevr_1: tuple[str, EPOCH_TYPE, str, str], nevr_2: tuple[str, EPOCH_TYPE, str, str]
-    ) -> int:
-        """Use the rpm library to compare 2 epoch/version/release tuples"""
-        evr_1 = self._ensure_epoch(nevr_1)
-        evr_2 = self._ensure_epoch(nevr_2)
-        return labelCompare(evr_1, evr_2)
-
-    @staticmethod
-    def _ensure_epoch(evr: tuple[str, EPOCH_TYPE, str, str]) -> tuple[str, str, str]:
-        """Ensure the epoch value is set to '0' if unset and also drop the nevra at index 0"""
-        # Test for None or 0 int value
-        if not evr[1]:
-            epoch = "0"
-        # We store the meta_attr.epoch as an int, but labelCompare expects a str
-        else:
-            epoch = str(evr[1])
-        return (
-            epoch,
-            evr[2],
-            evr[3],
-        )
-
-    def filter_latest_nevra_by_distinct_component(
-        self, namespace: str, name: str, arch: str
-    ) -> str:
-        """Find latest epoch / version / release for a distinct component namespace / name / arch
-        and return this latest component's NEVRA"""
-        nevras = self.filter(namespace=namespace, name=name, arch=arch).values_list(
-            "nevra", "meta_attr__epoch", "version", "release"
-        )
-        if nevras:
-            # Get the latest NEVRA using python. This only works for valid RPM epoch/version/release
-            latest_result = sorted(nevras, key=functools.cmp_to_key(self._compare_packages))[-1]
-            return latest_result[0]
-        else:
-            return ""
-
     def latest_components(
         self,
         include: bool = True,
     ) -> "ComponentQuerySet":
         """Return components from latest builds across all product streams."""
-        nevras_by_components = self.values_list("namespace", "name", "arch").annotate(
-            nevras=JSONBAgg(
-                RawSQL(
-                    "json_build_object('nevra', nevra, 'epoch', epoch, 'version', core_component.version, 'release', release)",
-                    (),
-                )
-            )
+        latest_components = self.latest_components_q(self)
+        if latest_components:
+            if include:
+                return self.filter(latest_components)
+            else:
+                return self.exclude(latest_components)
+        else:
+            # Don't modify the ComponentQuerySet
+            return self
+
+    def latest_components_q(self, queryset: models.QuerySet) -> Q:
+        component_versions = self._versions_by_name(queryset)
+        latest_components = Q()
+        # We need to build tuples of the nevras for comparison with the rpm.labelCompare function
+        # We can discard the namespace, name, arch part of results as it was only used for grouping.
+        for _, _, _, versions in component_versions:
+            latest_version = self._version_dict_to_tuple(versions[0])
+            for version in versions:
+                current_version = self._version_dict_to_tuple(version)
+                if labelCompare(current_version[1:], latest_version[1:]) == 1:
+                    latest_version = current_version
+            if latest_version:
+                # use the first entry in the tuple (the uuid) in the query
+                latest_components |= Q(pk=latest_version[0])
+        return latest_components
+
+    def _version_dict_to_tuple(self, version_dict):
+        return (
+            version_dict["uuid"],
+            version_dict["epoch"],
+            version_dict["version"],
+            version_dict["release"],
         )
-        query = Q()
-        for _, _, _, nevra_data in nevras_by_components:
-            nevras = []
-            for nevra in nevra_data:
-                nevras.append(
-                    (
-                        nevra["nevra"],
-                        nevra["epoch"],
-                        nevra["version"],
-                        nevra["release"],
+
+    def _versions_by_name(self, queryset: models.QuerySet) -> Iterator[Any]:
+        """This builds a json object 'nevras' so that we can group multiple
+        epoch/version/release (EVR) by namespace/name/arch.
+        We select the uuid as well to identify the latest EVR for that namespace/name/arch"""
+        return (
+            queryset.values_list("namespace", "name", "arch")
+            .annotate(
+                nevras=JSONBAgg(
+                    RawSQL(
+                        "json_build_object(" "'uuid', core_component.uuid, "
+                        # the rpm.labelCompare function expects the epoch to be a string
+                        "'epoch', epoch::VARCHAR, "
+                        # Avoids AmbiguousColumn: column reference "version" is ambiguous
+                        "'version', core_component.version, " "'release', release)",
+                        (),
                     )
                 )
-            latest_nevra = sorted(nevras, key=functools.cmp_to_key(self._compare_packages))[-1]
-            if latest_nevra:
-                query |= Q(nevra=latest_nevra)
-        if include:
-            # Show only the latest components
-            if not query:
-                # No latest components to show??
-                # Probably a bug in filter_latest_nevra_by_distinct_component we're not handling
-                return Component.objects.none()
-            return self.filter(query)
-        else:
-            # Show only the older / non-latest components
-            if not query:
-                # No latest components to hide??
-                # So show everything / return unfiltered queryset
-                # Probably a bug in filter_latest_nevra_by_distinct_component we're not handling
-                return self
-            return self.exclude(query)
+            )
+            .order_by()
+            .distinct()
+            .iterator()
+        )
 
     def latest_components_by_streams(
         self,
@@ -992,38 +970,17 @@ class ComponentQuerySet(models.QuerySet):
                 .prefetch_related("productstreams")
                 .filter(productstreams=ps_uuid)
             )
-            distinct_components_for_stream = (
-                root_components_for_stream.values_list("namespace", "name", "arch")
-                # Clear ordering inherited from parent Queryset, if any
-                # So .distinct() works properly and doesn't have duplicates
-                .order_by()
-                .distinct()
-                .iterator()
-            )
-            for namespace, name, arch in distinct_components_for_stream:
-                latest_nevra_for_stream = (
-                    root_components_for_stream
-                    # Because we filter by root components,
-                    # namespace should always be REDHAT
-                    # arch should always be "src" for SRPMs or "noarch" for index containers
-                    # No need to filter by name here, that's done in method below
-                    .filter_latest_nevra_by_distinct_component(namespace, name, arch)
-                )
-                if latest_nevra_for_stream:
-                    query |= Q(nevra=latest_nevra_for_stream)
+            query |= self.latest_components_q(root_components_for_stream)
         if include:
             # Show only the latest components
             if not query:
-                # No latest components to show??
-                # Probably a bug in filter_latest_nevra_by_distinct_component we're not handling
+                # no latest components, don't do any further filtering
                 return Component.objects.none()
             return self.root_components().filter(query)
         else:
             # Show only the older / non-latest components
             if not query:
-                # No latest components to hide??
                 # So show everything / return unfiltered queryset
-                # Probably a bug in filter_latest_nevra_by_distinct_component we're not handling
                 return self
             return self.root_components().exclude(query)
 

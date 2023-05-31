@@ -247,6 +247,8 @@ class Brew:
                     "arch": rpm_info["arch"],
                     "source": ["koji.listRPMs", "koji.getRPMHeaders"],
                     "rpm_id": rpm_id,
+                    # Our custom "source" key conflicts with the "SOURCE" RPM header
+                    # So we call it "source_files" here instead
                     "source_files": headers["source"],
                 },
             }
@@ -509,6 +511,9 @@ class Brew:
     def _extract_remote_sources(
         cls, go_stdlib_version: str, remote_sources: dict[str, tuple[str, str]]
     ) -> list[dict[str, Any]]:
+        """Given a list of remote-source.json filenames / Cachito manifest names,
+        build and return a list of source component dicts for each top-level package
+        and set dependencies / child components for each source component / top-level package"""
         source_components: list[dict[str, Any]] = []
         for build_loc, coords in remote_sources.items():
             remote_source = cls._get_remote_source(coords[0])
@@ -534,8 +539,15 @@ class Brew:
                 remote_source.pkg_managers,
             )
             for pkg_type in remote_source.pkg_managers:
+                # We process top-level .packages and all child .packages[].dependencies
+                # This is enough to get all components from the manifest
+                # The top-level .dependencies are duplicates
+                # of each top-level .package's child .dependencies
+                # We don't need to process them again
                 if pkg_type in ("npm", "pip", "yarn"):
                     # Convert Cachito-reported package type to Corgi component type.
+                    # TODO:  Add logging-kibana6-container-v6.8.1-362 to test data
+                    #  use remote-source-kibana6.json manifest from Cachito
                     provides, remote_source.packages = cls._extract_provides(
                         remote_source.packages, pkg_type
                     )
@@ -543,16 +555,15 @@ class Brew:
                     provides, remote_source.packages = cls._extract_golang(
                         remote_source.packages, go_stdlib_version
                     )
-                    provides, remote_source.dependencies = cls._extract_golang(
-                        remote_source.dependencies, go_stdlib_version
-                    )
                 else:
                     logger.warning("Found unsupported remote-source pkg_manager %s", pkg_type)
                     continue
+
                 try:
                     source_component["components"].extend(provides)
                 except KeyError:
                     source_component["components"] = provides
+
             source_components.append(source_component)
         return source_components
 

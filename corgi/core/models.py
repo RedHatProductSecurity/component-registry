@@ -1812,7 +1812,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         # Flatten it back to a list[str] in one line to fix mypy errors
         license_parts = [nested for part in license_parts for nested in part.split(" OR ")]
 
-        return [part.strip("()") for part in license_parts]
+        return [part.strip("()") for part in license_parts if part]
 
     @property
     def license_concluded_list(self) -> list[str]:

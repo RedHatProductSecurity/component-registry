@@ -970,3 +970,37 @@ def test_version_release_arr_el_match():
     assert c.release_arr == []
     assert c.version_arr == []
     assert c.el_match == []
+
+
+def test_license_properties():
+    """Test that generated license properties normalize SPDX data correctly"""
+    # Per spec, keywords like AND, OR, WITH must be uppercase
+    # Per spec, license identifiers are not case-sensitive
+    # Uppercase MIT, lowercase bsd, and mixed-case GPLv3 are all fine
+    # We just make everything uppercase to meet the first rule
+    # It's simple and doesn't require any additional parsing
+    c = ComponentFactory()
+    assert c.license_concluded == c.license_concluded_raw.upper()
+    assert c.license_declared == c.license_declared_raw.upper()
+
+    # Every entry in the list should have parentheses and keywords stripped
+    for c_license in c.license_concluded_list:
+        assert "(" not in c_license
+        assert ")" not in c_license
+        assert "AND" not in c_license
+        assert "OR" not in c_license
+        assert "WITH" not in c_license
+
+    for c_license in c.license_declared_list:
+        assert "(" not in c_license
+        assert ")" not in c_license
+        assert "AND" not in c_license
+        assert "OR" not in c_license
+        assert "WITH" not in c_license
+
+    c.license_concluded_raw = ""
+    c.license_declared_raw = ""
+    c.save()
+    # We should end up with an empty list, and not [""]
+    assert c.license_concluded_list == []
+    assert c.license_declared_list == []

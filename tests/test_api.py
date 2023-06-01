@@ -440,9 +440,9 @@ def test_root_components_filter(client, api_path):
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_component_detail_unscanned_filter(client, api_path):
-    ComponentFactory(name="copyright", copyright_text="test")
+    ComponentFactory(name="copyright", copyright_text="test", license_concluded_raw="")
     ComponentFactory(name="license", license_concluded_raw="test")
-    ComponentFactory(name="unscanned")
+    ComponentFactory(name="unscanned", license_concluded_raw="")
 
     response = client.get(f"{api_path}/components")
     assert response.status_code == 200
@@ -478,7 +478,7 @@ def test_component_detail_unscanned_filter(client, api_path):
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_component_detail_olcs_put(client, api_path):
     """Test that OpenLCS can upload scan results for a component"""
-    c1 = ComponentFactory()
+    c1 = ComponentFactory(license_concluded_raw="")
     component_path = f"{api_path}/components/{c1.uuid}"
     openlcs_data = {
         "copyright_text": "Copyright Test",

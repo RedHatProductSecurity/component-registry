@@ -980,6 +980,7 @@ class ComponentQuerySet(models.QuerySet):
         else:
             # Show only the older / non-latest components
             if not query:
+                # No latest components to hide??
                 # So show everything / return unfiltered queryset
                 return self
             return self.root_components().exclude(query)
@@ -1812,7 +1813,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         # Flatten it back to a list[str] in one line to fix mypy errors
         license_parts = [nested for part in license_parts for nested in part.split(" OR ")]
 
-        return [part.strip("()") for part in license_parts]
+        return [part.strip("()") for part in license_parts if part]
 
     @property
     def license_concluded_list(self) -> list[str]:

@@ -1,11 +1,10 @@
-import itertools
 import json
 import logging
 import os
 import re
 from datetime import datetime
 from types import SimpleNamespace
-from typing import Any, Dict, Generator, List, Optional, Tuple
+from typing import Any, Generator, Optional, Union
 from urllib.parse import urlparse
 
 import koji
@@ -115,7 +114,7 @@ class Brew:
         raise BrewBuildSourceNotFound(no_source_msg)
 
     @classmethod
-    def _parse_remote_source_url(cls, url: str) -> Tuple[str, Component.Type]:
+    def _parse_remote_source_url(cls, url: str) -> tuple[str, Component.Type]:
         """Used to parse remote_source repo from OSBS into purl name for github namespace
         ref https://github.com/containerbuildsystem/osbs-client/blob/
         f719759af18ef9f3bb45ee4411f80a9580723e31/osbs/schemas/container.json#L310"""
@@ -184,7 +183,7 @@ class Brew:
     def _extract_bundled_provides(
         cls, provides: list[tuple[str, str]]
     ) -> list[tuple[Component.Type, str, str]]:
-        bundled_components: List[tuple[Component.Type, str, str]] = []
+        bundled_components: list[tuple[Component.Type, str, str]] = []
         for component, version in provides:
             component = cls._bundled_or_golang(component)
             if not component:
@@ -227,7 +226,7 @@ class Brew:
             # Create a dictionary by zipping together the values from the "provides" and
             # "provideversion" headers.
             rpm_provides = list(zip(headers.pop("provides"), headers.pop("provideversion")))
-            rpm_component: Dict[str, Any] = {
+            rpm_component: dict[str, Any] = {
                 "type": Component.Type.RPM,
                 "namespace": Component.Namespace.REDHAT,
                 "meta": {
@@ -256,22 +255,10 @@ class Brew:
                 continue
 
             # Process bundled dependencies for each RPM
-            bundled_components: List[Dict[str, Any]] = []
-            id_generator = itertools.count(1)
+            bundled_components = []
             bundled_provides = self._extract_bundled_provides(rpm_provides)
             if bundled_provides:
-                for component_type, bundled_component_name, version in bundled_provides:
-                    bundled_component = {
-                        "type": component_type,
-                        "namespace": Component.Namespace.UPSTREAM,
-                        "meta": {
-                            "name": bundled_component_name,
-                            "version": version,
-                            "rpm_id": f"{rpm_info['id']}-bundles-{next(id_generator)}",
-                            "source": ["specfile"],
-                        },
-                    }
-                    bundled_components.append(bundled_component)
+                bundled_components = self._parse_bundled_provides(bundled_provides, rpm_info)
 
             rpm_component["components"] = bundled_components
             rpm_components.append(rpm_component)
@@ -285,6 +272,33 @@ class Brew:
 
         # TODO: list all components used as build requirements
         return srpm_component
+
+    @staticmethod
+    def _parse_bundled_provides(
+        bundled_provides: list[tuple[Component.Type, str, str]], rpm_info: dict[str, str]
+    ) -> list[dict[str, Union[str, dict[str, Union[str, list[str]]]]]]:
+        """Parse a list of (type, name, version) tuples, build a list of bundled component dicts"""
+        id_counter = 0
+        parsed_provides = []
+        for component_type, bundled_component_name, version in bundled_provides:
+            id_counter += 1
+            bundled_component_meta: dict[str, Union[str, list[str]]] = {
+                "name": bundled_component_name,
+                "version": version,
+                "rpm_id": f"{rpm_info['id']}-bundles-{id_counter}",
+                "source": ["specfile"],
+            }
+
+            bundled_component: dict[str, Union[str, dict[str, Union[str, list[str]]]]] = {
+                "type": component_type,
+                "namespace": Component.Namespace.UPSTREAM,
+                "meta": bundled_component_meta,
+            }
+            # We can't set go_component_type here for Golang components
+            # Both Go modules and Go packages can be bundled into an RPM
+            # There's no easy way for us to tell which type this component is
+            parsed_provides.append(bundled_component)
+        return parsed_provides
 
     @staticmethod
     def _build_archive_dl_url(filename: str, build_info: dict) -> str:
@@ -363,7 +377,7 @@ class Brew:
         }
 
         go_stdlib_version = ""
-        remote_sources: dict[str, Tuple] = {}
+        remote_sources: dict[str, tuple[str, str]] = {}
         # TODO: Should we raise an error if build_info["extra"] is missing?
         if build_info["extra"]:
             index = build_info["extra"]["image"].get("index", {})
@@ -484,7 +498,7 @@ class Brew:
                 break
 
     def _extract_remote_sources(
-        self, go_stdlib_version: str, remote_sources: dict[str, tuple]
+        self, go_stdlib_version: str, remote_sources: dict[str, tuple[str, str]]
     ) -> list[dict[str, Any]]:
         source_components: list[dict[str, Any]] = []
         for build_loc, coords in remote_sources.items():
@@ -557,7 +571,7 @@ class Brew:
         build_nvr: str,
         noarch_rpms_by_id: dict[int, dict[str, Any]],
         rpm_build_ids: set[int],
-    ) -> Tuple[dict[int, dict[str, Any]], dict[str, Any]]:
+    ) -> tuple[dict[int, dict[str, Any]], dict[str, Any]]:
         logger.info("Processing image archive %s", archive["filename"])
         docker_config = archive["extra"]["docker"]["config"]
         labels = self._get_labels(docker_config)
@@ -604,7 +618,7 @@ class Brew:
 
     def _extract_provides(
         self, packages: list[SimpleNamespace], pkg_type: str
-    ) -> Tuple[list[dict[str, Any]], list[SimpleNamespace]]:
+    ) -> tuple[list[dict[str, Any]], list[SimpleNamespace]]:
         components: list[dict[str, Any]] = []
         typed_pkgs, remaining_packages = self._filter_by_type(packages, pkg_type)
         for typed_pkg in typed_pkgs:
@@ -640,7 +654,7 @@ class Brew:
 
     def _extract_golang(
         self, dependencies: list[SimpleNamespace], go_stdlib_version: str = ""
-    ) -> Tuple[list[dict[str, Any]], list[SimpleNamespace]]:
+    ) -> tuple[list[dict[str, Any]], list[SimpleNamespace]]:
         dependants: list[dict[str, Any]] = []
         modules, remaining_deps = self._filter_by_type(dependencies, "gomod")
         packages, remaining_deps = self._filter_by_type(remaining_deps, "go-package")
@@ -706,7 +720,7 @@ class Brew:
     @staticmethod
     def _filter_by_type(
         dependencies: list[SimpleNamespace], pkg_type: str
-    ) -> Tuple[list[SimpleNamespace], list[SimpleNamespace]]:
+    ) -> tuple[list[SimpleNamespace], list[SimpleNamespace]]:
         filtered: list[SimpleNamespace] = []
         remaining_deps = dependencies[:]
         for dep in dependencies:

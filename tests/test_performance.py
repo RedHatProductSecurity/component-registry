@@ -18,6 +18,35 @@ else:
 pytestmark = [pytest.mark.performance]
 
 
+def display_product_stream_with_many_roots() -> dict:
+    stream_with_many_root = "o:redhat:rhel:7.9.z"
+    response = requests.get(
+        f"{CORGI_API_URL}/components?ofuri={stream_with_many_root}" f"&view=summary&limit=5000"
+    )
+
+    # If you're running performance tests manually against a dev environment,
+    # make sure that you've loaded the right data for this test
+    # Any exceptions will be passed through to test code
+    response.raise_for_status()
+    response_json = response.json()
+    assert response_json["count"] > 3000
+    return response_json
+
+
+def test_displaying_product_stream_with_many_roots() -> None:
+    """Test that displaying a product stream with many root components does not take a long time"""
+    # This request uses the latest_components filter to find the latest version for a component
+    # the query was changed in CORGI-680 to do a single query for all components vs one for each
+    # root component.
+    timer = timeit.Timer(display_product_stream_with_many_roots)
+
+    # 3 test results, each of which makes only 1 request
+    test_results = sorted(timer.repeat(repeat=3, number=1))
+    assert len(test_results) == 3
+    median_time_taken = test_results[1]
+    assert median_time_taken < 20.0
+
+
 # This still sometimes raises a 502 Bad Gateway error
 def display_component_with_many_sources() -> dict:
     """Helper method for timeit to get a component with many sources"""

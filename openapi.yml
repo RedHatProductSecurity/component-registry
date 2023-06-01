@@ -1435,7 +1435,7 @@ components:
           type: string
           readOnly: true
         epoch:
-          type: string
+          type: integer
           readOnly: true
         copyright_text:
           type: string

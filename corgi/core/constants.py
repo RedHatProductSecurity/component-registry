@@ -2,7 +2,6 @@
     model constants
 """
 import re
-from typing import Union
 
 from django.db.models import Q
 
@@ -46,6 +45,3 @@ ROOT_COMPONENTS_CONDITION = SRPM_CONDITION | INDEX_CONTAINER_CONDITION
 # Regex for generating version_arr, release_arr and el_match fields
 RELEASE_VERSION_DELIM_RE = re.compile("[.,\\-,_,\\+]")
 EL_MATCH_RE = re.compile(".*el(\\d+)?[.,\\-,_]?(\\d+)?[.,\\-,_]?(\\d+)?(.*)")
-
-# Epoch can be 0, "0", or missing,
-EPOCH_TYPE = Union[int, str, None]

@@ -766,7 +766,7 @@ def test_re_purl_filter(client, api_path):
 def test_nvr_nevra_filter(client, api_path):
     c1 = ComponentFactory(
         type=Component.Type.RPM,
-        meta_attr={"epoch": "1"},
+        epoch=1,
         name="autotrace-devel",
         version="3.2.1",
         release="1.0.1e",
@@ -775,7 +775,7 @@ def test_nvr_nevra_filter(client, api_path):
     response = client.get(f"{api_path}/components?type=RPM")
     assert response.status_code == 200
     response = client.get(f"{api_path}/components/{c1.uuid}")
-    assert response.json()["epoch"] == "1"
+    assert response.json()["epoch"] == 1
     assert response.json()["nvr"] == "autotrace-devel-3.2.1-1.0.1e"
     assert response.json()["nevra"] == "autotrace-devel:1-3.2.1-1.0.1e.noarch"
     response = client.get(f"{api_path}/components?nvr=autotrace-devel-3.2.1-1.0.1e")

@@ -1871,7 +1871,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         return (
             ComponentNode.objects.filter(pk__in=provides_set)
             .using(using)
-            .values_list("type", "object_id")
+            .values_list("purl", "type", "object_id")
             # Ensure generated manifests only change when content does
             .order_by("object_id")
             .distinct()

@@ -6,6 +6,7 @@ import pytest
 
 from corgi.core.files import ProductManifestFile
 from corgi.core.models import Component, ComponentNode, ProductComponentRelation
+from corgi.web.templatetags.base_extras import provided_relationship
 
 from .conftest import setup_product
 from .factories import (
@@ -547,3 +548,27 @@ def _build_rpm_in_containers(rpm_in_container, name=""):
     # Link the components to each other
     container.save_component_taxonomy()
     return build, container
+
+
+def test_provided_relationships():
+    """Test that nodes / components in a manifest are linked to each other
+    using the correct relationship type"""
+    # Arch-specific containers are a VARIANT_OF the parent noarch container
+    # Regardless of node type
+    purl = f"pkg:{Component.Type.CONTAINER_IMAGE.lower()}/name@version"
+    node_type = ComponentNode.ComponentNodeType.PROVIDES
+    assert provided_relationship(purl, node_type) == "VARIANT_OF"
+    node_type = ComponentNode.ComponentNodeType.PROVIDES_DEV
+    assert provided_relationship(purl, node_type) == "VARIANT_OF"
+
+    # All other component types are either a DEV_DEPENDENCY_OF their parent
+    purl = f"pkg:{Component.Type.RPM.lower()}/name@version"
+    assert provided_relationship(purl, node_type) == "DEV_DEPENDENCY_OF"
+    purl = f"pkg:{Component.Type.GOLANG.lower()}/name@version"
+    assert provided_relationship(purl, node_type) == "DEV_DEPENDENCY_OF"
+
+    # Or CONTAINED_BY their parent, depending on node type
+    node_type = ComponentNode.ComponentNodeType.PROVIDES
+    assert provided_relationship(purl, node_type) == "CONTAINED_BY"
+    purl = f"pkg:{Component.Type.RPM.lower()}/name@version"
+    assert provided_relationship(purl, node_type) == "CONTAINED_BY"

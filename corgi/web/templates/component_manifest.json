@@ -1,4 +1,4 @@
-{# Component manifest, obj is a Component here #}{% extends "base_manifest.json" %}
+{# Component manifest, obj is a Component here #}{% extends "base_manifest.json" %}{% load base_extras %}
 {% block packages %}{% for component in obj.provides_queryset %}{
         "copyrightText": {% if component.copyright_text %}"{{component.copyright_text|escapejs}}"{% else %}"NOASSERTION"{% endif %},
         "downloadLocation": {% if component.download_url %}"{{component.download_url|escapejs}}"{% else %}"NOASSERTION"{% endif %},
@@ -63,10 +63,10 @@
         "supplier": "Organization: Red Hat",
         "versionInfo": "{{obj.nevra|escapejs}}"
     }
-{% endblock packages %}{% block relationships %}{% for node_type, node_id in obj.get_provides_nodes_queryset %}
+{% endblock packages %}{% block relationships %}{% for node_purl, node_type, node_id in obj.get_provides_nodes_queryset %}
     {
       "relatedSpdxElement": "SPDXRef-{{obj.uuid}}",{# subcomponent is built from, or contained in, component #}
-      "relationshipType": {% if node_type == "PROVIDES_DEV" %}"DEV_DEPENDENCY_OF"{% else %}"CONTAINED_BY"{% endif %},
+      "relationshipType": "{{node_purl|provided_relationship:node_type}}",
       "spdxElementId": "SPDXRef-{{node_id}}"
     },{% endfor %}{% if obj.type != obj.Type.RPM %}{% for node_id in obj.get_upstreams_pks %}{# RPM upstream data is human-generated and unreliable #}
     {{# Upstreams of the root index container. Arch-specific containers have the same upstreams, so no need to report these separately #}

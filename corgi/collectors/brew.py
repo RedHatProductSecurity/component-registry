@@ -61,7 +61,8 @@ class Brew:
         MODULE_BUILD_TYPE,
     )
 
-    EXTERNAL_PKG_TYPE_MAPPING = {
+    # Map Cachito types to Corgi types
+    CACHITO_PKG_TYPE_MAPPING = {
         "python": Component.Type.PYPI,
         "pip": Component.Type.PYPI,
         "ruby": Component.Type.GEM,
@@ -70,6 +71,8 @@ class Brew:
         "nodejs": Component.Type.NPM,
         "js": Component.Type.NPM,
         "golang": Component.Type.GOLANG,
+        "go-package": Component.Type.GOLANG,
+        "gomod": Component.Type.GOLANG,
         "crate": Component.Type.CARGO,
     }
 
@@ -174,8 +177,8 @@ class Brew:
             if component in ("aarch-64", "ppc-64", "s390-64", "x86-64"):
                 return None
             return Component.Type.GOLANG
-        elif component_type in cls.EXTERNAL_PKG_TYPE_MAPPING:
-            return cls.EXTERNAL_PKG_TYPE_MAPPING[component_type]
+        elif component_type in cls.CACHITO_PKG_TYPE_MAPPING:
+            return cls.CACHITO_PKG_TYPE_MAPPING[component_type]
         else:
             return Component.Type.GENERIC
 
@@ -616,14 +619,15 @@ class Brew:
         config = docker_config.get("config", {})
         return config.get("Labels", {})
 
+    @classmethod
     def _extract_provides(
-        self, packages: list[SimpleNamespace], pkg_type: str
+        cls, packages: list[SimpleNamespace], pkg_type: str
     ) -> tuple[list[dict[str, Any]], list[SimpleNamespace]]:
         components: list[dict[str, Any]] = []
-        typed_pkgs, remaining_packages = self._filter_by_type(packages, pkg_type)
+        typed_pkgs, remaining_packages = cls._filter_by_type(packages, pkg_type)
         for typed_pkg in typed_pkgs:
             typed_component: dict[str, Any] = {
-                "type": self.EXTERNAL_PKG_TYPE_MAPPING[pkg_type],
+                "type": cls.CACHITO_PKG_TYPE_MAPPING[pkg_type],
                 "meta": {
                     "name": typed_pkg.name,
                     "version": typed_pkg.version,
@@ -636,28 +640,30 @@ class Brew:
 
             typed_component["components"] = []
             for dep in typed_pkg.dependencies:
+                component_meta = {
+                    "name": dep.name,
+                    "version": dep.version,
+                }
                 component = {
-                    "type": dep.type,
-                    "meta": {
-                        "name": dep.name,
-                        "version": dep.version,
-                    },
+                    "type": cls.CACHITO_PKG_TYPE_MAPPING[dep.type],
+                    "meta": component_meta,
                 }
                 # The dev key is only present for Cachito package managers which support
                 # dev dependencies. See https://github.com/containerbuildsystem/cachito/blob/
                 # f3e954e3d04d2cd35cc878c1189cd55e7471220d/docs/metadata.md#dependencydev
                 if hasattr(dep, "dev"):
-                    component["meta"]["dev"] = dep.dev
+                    component_meta["dev"] = dep.dev
                 typed_component["components"].append(component)
             components.append(typed_component)
         return components, remaining_packages
 
+    @classmethod
     def _extract_golang(
-        self, dependencies: list[SimpleNamespace], go_stdlib_version: str = ""
+        cls, dependencies: list[SimpleNamespace], go_stdlib_version: str = ""
     ) -> tuple[list[dict[str, Any]], list[SimpleNamespace]]:
         dependants: list[dict[str, Any]] = []
-        modules, remaining_deps = self._filter_by_type(dependencies, "gomod")
-        packages, remaining_deps = self._filter_by_type(remaining_deps, "go-package")
+        modules, remaining_deps = cls._filter_by_type(dependencies, "gomod")
+        packages, remaining_deps = cls._filter_by_type(remaining_deps, "go-package")
         # Golang packages are related to modules by name.
         module_packages: dict[tuple, list[dict[str, Any]]] = {}
         # Add all the modules directly to the source.

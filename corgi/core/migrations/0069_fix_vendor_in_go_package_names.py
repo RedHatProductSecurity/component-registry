@@ -15,27 +15,29 @@ def fix_vendor_in_go_package_names(apps, schema_editor):
         for component in Component.objects.filter(
             type="GOLANG", name__startswith="vendor/"
         ).iterator():
-            try:
-                component.name = component.name.replace("vendor/", "", 1)
-                # We can't rely on custom .save() code to update the nevra / purl??
-                component.nevra = component.nevra.replace("vendor/", "", 1)
-                component.purl = component.purl.replace("vendor/", "", 1)
-                component.save()
-            except IntegrityError:
-                # The Component is a duplicate and can't be updated
-                # Relinking all the cnodes to the other Component also fails
-                # Fixing the duplicate nodes without losing data is non-trivial
-                # Punt for now, clean all this mess up in CORGI-566
-                pass
+            component.name = component.name.replace("vendor/", "", 1)
+            # We can't rely on custom .save() code to update the nevra / purl??
+            component.nevra = component.nevra.replace("vendor/", "", 1)
+            component.purl = component.purl.replace("vendor/", "", 1)
+            with transaction.atomic():
+                try:
+                    component.save()
+                except IntegrityError:
+                    # The Component is a duplicate and can't be updated
+                    # Relinking all the cnodes to the other Component also fails
+                    # Fixing the duplicate nodes without losing data is non-trivial
+                    # Punt for now, clean all this mess up in CORGI-566
+                    pass
         # We also can't access GenericForeignKeys / component.cnodes in a migration
         for node in ComponentNode.objects.filter(purl__startswith="pkg:golang/vendor/").iterator():
-            try:
-                new_purl = node.purl.replace("vendor/", "", 1)
-                node.obj = Component.objects.get(purl=new_purl)
-                node.purl = new_purl
-                node.save()
-            except IntegrityError:
-                pass
+            new_purl = node.purl.replace("vendor/", "", 1)
+            node.obj = Component.objects.get(purl=new_purl)
+            node.purl = new_purl
+            with transaction.atomic():
+                try:
+                    node.save()
+                except IntegrityError:
+                    pass
 
 
 class Migration(migrations.Migration):

@@ -673,43 +673,34 @@ class Brew:
         # Nest packages under the module they belong to
         for pkg in packages:
             found_matching_module = False
-            pkg_name = pkg.name.removeprefix("vendor/")
+            pkg.name = pkg.name.removeprefix("vendor/")
             # This indicates it's a stdlib component, and get its version from the golang compiler
             if not pkg.version:
                 pkg.version = go_stdlib_version
+            package_dependant = {
+                "type": Component.Type.GOLANG,
+                "namespace": Component.Namespace.UPSTREAM,
+                "meta": {
+                    "go_component_type": "go-package",
+                    "name": pkg.name,
+                    "version": pkg.version,
+                },
+            }
             for module in modules:
-                if pkg_name.startswith(module.name):
+                if pkg.name.startswith(module.name):
                     found_matching_module = True
-                    dependant_provides: dict[str, Any] = {
-                        "type": Component.Type.GOLANG,
-                        "namespace": Component.Namespace.UPSTREAM,
-                        "meta": {
-                            "go_component_type": "go-package",
-                            "name": pkg_name,
-                            "version": pkg.version,
-                        },
-                    }
-                    module_packages[module.name, module.version].append(dependant_provides)
+                    module_packages[module.name, module.version].append(package_dependant)
                     break  # from iterating modules
             if not found_matching_module:
                 # Add this package as a direct dependency of the source
                 # Usually these are golang standard library packages
-                direct_dependant: dict[str, Any] = {
-                    "type": Component.Type.GOLANG,
-                    "namespace": Component.Namespace.UPSTREAM,
-                    "meta": {
-                        "go_component_type": "go-package",
-                        "name": pkg.name,
-                        "version": pkg.version,
-                    },
-                }
-                dependants.append(direct_dependant)
+                dependants.append(package_dependant)
 
         # Add modules with nested packages
         module_version: tuple
         package_list: list[dict[str, Any]]
         for module_version, package_list in module_packages.items():
-            dependant: dict[str, Any] = {
+            module_dependant: dict[str, Any] = {
                 "type": Component.Type.GOLANG,
                 "namespace": Component.Namespace.UPSTREAM,
                 "meta": {
@@ -719,8 +710,8 @@ class Brew:
                 },
             }
             if len(package_list) > 0:
-                dependant["components"] = package_list
-            dependants.append(dependant)
+                module_dependant["components"] = package_list
+            dependants.append(module_dependant)
         return dependants, remaining_deps
 
     @staticmethod

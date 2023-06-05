@@ -424,8 +424,6 @@ ERRATA_TOOL_URL = os.getenv("CORGI_ERRATA_TOOL_URL")
 
 # Pulp
 PULP_URL = os.getenv("CORGI_PULP_URL")
-PULP_USERNAME = os.getenv("CORGI_PULP_USERNAME", "")
-PULP_PASSWORD = os.getenv("CORGI_PULP_PASSWORD", "")
 
 # App-Interface
 APP_INTERFACE_URL = os.getenv("CORGI_APP_INTERFACE_URL", "")

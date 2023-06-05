@@ -35,6 +35,7 @@ MODULE_CRITERIA = {
 class Pulp:
     def __init__(self):
         self.session = requests.Session()
+        self.session.cert = (settings.UMB_CERT, settings.UMB_KEY)
 
     def get_active_repositories(self) -> int:
         """Fetch all Pulp repos which had something shipped in them, and their content sets."""
@@ -45,8 +46,7 @@ class Pulp:
             }
         }
         url = f"{settings.PULP_URL}/api/v2/repositories/search/"
-        auth = (settings.PULP_USERNAME, settings.PULP_PASSWORD)
-        response = self.session.post(url, json=criteria, auth=auth)
+        response = self.session.post(url, json=criteria)
         response.raise_for_status()
         no_created = 0
         for repo in response.json():
@@ -110,8 +110,7 @@ class Pulp:
 
     def _get_unit_data(self, repo: str, criteria: dict) -> list[dict[str, dict]]:
         url = f"{settings.PULP_URL}/api/v2/repositories/{repo}/search/units/"
-        auth = (settings.PULP_USERNAME, settings.PULP_PASSWORD)
-        response = self.session.post(url, json=criteria, auth=auth)
+        response = self.session.post(url, json=criteria)
         if response.status_code == 404:
             logger.warning("No pulp units found for repo: %s", repo)
             return []

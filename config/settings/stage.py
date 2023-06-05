@@ -5,7 +5,6 @@ from .base import *  # noqa: F401, F403
 # SECURITY WARNING: keep the secret key used in stage secret!
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")  # noqa: F405
 
-# TODO setup stage cname for community stage
 ALLOWED_HOSTS = [
     # Allow local host's IP address and hostname for health probes
     socket.gethostname(),

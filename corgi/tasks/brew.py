@@ -209,23 +209,20 @@ def save_component(
     component: dict, parent: ComponentNode, softwarebuild: Optional[SoftwareBuild] = None
 ):
     logger.debug("Called save component with component %s", component)
-    component_type = component.pop("type").upper()
+    component_type = component.pop("type")
     meta = component.get("meta", {})
 
     node_type = ComponentNode.ComponentNodeType.PROVIDES
     if meta.pop("dev", False):
         node_type = ComponentNode.ComponentNodeType.PROVIDES_DEV
 
-    component_version = meta.pop("version", "")
-    if component_type in ("GO-PACKAGE", "GOMOD"):
-        component_type = Component.Type.GOLANG
-
-    elif component_type == "PIP":
-        component_type = "PYPI"
-
-    elif component_type not in Component.Type.values:
-        logger.warning("Tried to create component with invalid component_type: %s", component_type)
-        return
+    # Map Cachito (lowercase) type to Corgi TYPE, or use existing Corgi TYPE, or raise error
+    if component_type in Brew.CACHITO_PKG_TYPE_MAPPING:
+        component_type = Brew.CACHITO_PKG_TYPE_MAPPING[component_type]
+    elif component_type.upper() in Component.Type.values:
+        component_type = component_type.upper()
+    else:
+        raise ValueError(f"Tried to create component with invalid component_type: {component_type}")
 
     # Only save softwarebuild for RPM where they are direct children of SRPMs
     # This avoids the situation where only the latest build fetched has the softarebuild associated
@@ -251,7 +248,7 @@ def save_component(
     obj, _ = Component.objects.update_or_create(
         type=component_type,
         name=meta.pop("name", ""),
-        version=component_version,
+        version=meta.pop("version", ""),
         release=meta.pop("release", ""),
         arch=meta.pop("arch", "noarch"),
         defaults={

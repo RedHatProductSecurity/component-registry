@@ -217,7 +217,10 @@ def save_component(
         node_type = ComponentNode.ComponentNodeType.PROVIDES_DEV
 
     # Map Cachito (lowercase) type to Corgi TYPE, or use existing Corgi TYPE, or raise error
-    if component_type in Brew.CACHITO_PKG_TYPE_MAPPING:
+    if component_type in ("go-package", "gomod"):
+        meta["go_component_type"] = component_type
+        component_type = Component.Type.GOLANG
+    elif component_type in Brew.CACHITO_PKG_TYPE_MAPPING:
         component_type = Brew.CACHITO_PKG_TYPE_MAPPING[component_type]
     elif component_type.upper() in Component.Type.values:
         component_type = component_type.upper()

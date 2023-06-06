@@ -1,4 +1,3 @@
-import re
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -195,16 +194,6 @@ def slow_fetch_modular_build(build_id: str, force_process: bool = False) -> None
     logger.info("Finished fetching modular build: %s", build_id)
 
 
-def find_package_file_name(sources: list[str]) -> str:
-    """Find a packageFileName for a manifest using a list of source filenames from a build system"""
-    for source in sources:
-        # Use first matching source value that looks like a package
-        match = re.search(r"\.(?:rpm|tar|tgz|zip)", source)
-        if match:
-            return source
-    return ""  # If sources was an empty list, or none of the filenames matched
-
-
 def save_component(
     component: dict, parent: ComponentNode, softwarebuild: Optional[SoftwareBuild] = None
 ):
@@ -256,7 +245,6 @@ def save_component(
         arch=meta.pop("arch", "noarch"),
         defaults={
             "description": meta.pop("description", ""),
-            "filename": find_package_file_name(meta.pop("source_files", [])),
             "namespace": Component.Namespace.REDHAT
             if component_type == Component.Type.RPM
             else Component.Namespace.UPSTREAM,
@@ -289,7 +277,6 @@ def save_srpm(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
 
     extra = {
         "description": build_data["meta"].pop("description", ""),
-        "filename": find_package_file_name(build_data["meta"].pop("source_files", [])),
         "license_declared_raw": build_data["meta"].pop("license", ""),
         "related_url": related_url,
     }

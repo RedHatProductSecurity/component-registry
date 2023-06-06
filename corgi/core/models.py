@@ -1587,6 +1587,9 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     def save(self, *args, **kwargs):
         self.nvr = self.get_nvr()
         self.nevra = self.get_nevra()
+        if self.type == Component.Type.RPM:
+            # Filenames for non-RPM components are set with data from build system / meta_attr
+            self.filename = f"{self.nevra}.rpm"
         purl = self.get_purl()
         self.purl = purl.to_string()
         self.related_url = self._build_repo_url_for_type()

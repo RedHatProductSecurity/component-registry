@@ -17,7 +17,6 @@ from corgi.core.models import (
 )
 from corgi.tasks.brew import (
     fetch_unprocessed_relations,
-    find_package_file_name,
     load_brew_tags,
     load_stream_brew_tags,
     save_component,
@@ -387,19 +386,6 @@ def test_get_container_build_data_remote_sources_in_archives(
             f"{settings.BREW_DOWNLOAD_ROOT_URL}/{download_path}/remote-source-{path}.tar.gz"
             for path in remote_sources_names
         ]
-
-
-def test_find_package_file_name():
-    filename = find_package_file_name(
-        [
-            "gvisor-tap-vsock-fdc231ae7b8fe1aec4cf0b8777274fa21b70d789.tar.gz",
-            "podman-machine-cni-0749884.tar.gz",
-            "dnsname-18822f9.tar.gz",
-            "v0.1.7.tar.gz",
-            "podman-4.3.1-814b7b0.tar.gz",
-        ]
-    )
-    assert filename == "gvisor-tap-vsock-fdc231ae7b8fe1aec4cf0b8777274fa21b70d789.tar.gz"
 
 
 def test_extract_remote_sources(requests_mock):

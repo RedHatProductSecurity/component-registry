@@ -272,6 +272,7 @@ def test_product_manifest_properties():
     # UUID and PURL, for each component attached to product, should be included in manifest
     assert component_data["SPDXID"] == f"SPDXRef-{component.uuid}"
     assert component_data["name"] == component.name
+    assert component_data["packageFileName"] == f"{component.nevra}.rpm"
     assert component_data["externalRefs"][0]["referenceLocator"] == component.purl
 
     assert product_data["SPDXID"] == f"SPDXRef-{stream.uuid}"

@@ -22,7 +22,6 @@ from corgi.core.constants import (
     CONTAINER_DIGEST_FORMATS,
     EL_MATCH_RE,
     MODEL_NODE_LEVEL_MAPPING,
-    RELEASE_VERSION_DELIM_RE,
     ROOT_COMPONENTS_CONDITION,
     SRPM_CONDITION,
 )
@@ -902,15 +901,16 @@ class ComponentQuerySet(models.QuerySet):
             # Don't modify the ComponentQuerySet
             return self
 
-    def latest_components_q(self, queryset: models.QuerySet) -> Q:
-        component_versions = self._versions_by_name(queryset)
+    @classmethod
+    def latest_components_q(cls, queryset: models.QuerySet) -> Q:
+        component_versions = cls._versions_by_name(queryset)
         latest_components = Q()
         # We need to build tuples of the nevras for comparison with the rpm.labelCompare function
         # We can discard the namespace, name, arch part of results as it was only used for grouping.
         for _, _, _, versions in component_versions:
-            latest_version = self._version_dict_to_tuple(versions[0])
+            latest_version = cls._version_dict_to_tuple(versions[0])
             for version in versions:
-                current_version = self._version_dict_to_tuple(version)
+                current_version = cls._version_dict_to_tuple(version)
                 if labelCompare(current_version[1:], latest_version[1:]) == 1:
                     latest_version = current_version
             if latest_version:
@@ -918,7 +918,8 @@ class ComponentQuerySet(models.QuerySet):
                 latest_components |= Q(pk=latest_version[0])
         return latest_components
 
-    def _version_dict_to_tuple(self, version_dict):
+    @staticmethod
+    def _version_dict_to_tuple(version_dict):
         return (
             version_dict["uuid"],
             version_dict["epoch"],
@@ -926,7 +927,8 @@ class ComponentQuerySet(models.QuerySet):
             version_dict["release"],
         )
 
-    def _versions_by_name(self, queryset: models.QuerySet) -> Iterator[Any]:
+    @staticmethod
+    def _versions_by_name(queryset: models.QuerySet) -> Iterator[Any]:
         """This builds a json object 'nevras' so that we can group multiple
         epoch/version/release (EVR) by namespace/name/arch.
         We select the uuid as well to identify the latest EVR for that namespace/name/arch"""
@@ -1131,10 +1133,9 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
     related_url = models.CharField(max_length=1024, default="")
 
-    # these are generated fields eg, we parse version and release on root components to
-    # enhance performance of filters (ex. latest)
-    version_arr = fields.ArrayField(models.CharField(max_length=200), default=list)
-    release_arr = fields.ArrayField(models.CharField(max_length=200), default=list)
+    # We parse release on all components to support filtering
+    # a layered product's (e.g. OpenShift's) components
+    # using the base product version (e.g. RHEL 8 vs. RHEL 9)
     el_match = fields.ArrayField(models.CharField(max_length=200), default=list)
 
     objects = ComponentQuerySet.as_manager()
@@ -1586,23 +1587,17 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     def save(self, *args, **kwargs):
         self.nvr = self.get_nvr()
         self.nevra = self.get_nevra()
+        if self.type == Component.Type.RPM:
+            # Filenames for non-RPM components are set with data from build system / meta_attr
+            self.filename = f"{self.nevra}.rpm"
         purl = self.get_purl()
         self.purl = purl.to_string()
         self.related_url = self._build_repo_url_for_type()
 
-        # generate version_arr, release_arr and el_match (used by filters, ex. latest filter)
-        if (self.type == Component.Type.RPM and self.arch == "src") or (
-            self.type == Component.Type.CONTAINER_IMAGE and self.arch == "noarch"
-        ):
-            version_arr = re.split(RELEASE_VERSION_DELIM_RE, self.version)
-            if version_arr:
-                self.version_arr = version_arr
-            release_arr = re.split(RELEASE_VERSION_DELIM_RE, self.release)
-            if release_arr:
-                self.release_arr = release_arr
-            el_match = re.match(EL_MATCH_RE, self.release)
-            if el_match:
-                self.el_match = [x for x in el_match.groups() if x]
+        # generate el_match field needed for filter
+        el_match = re.match(EL_MATCH_RE, self.release)
+        if el_match:
+            self.el_match = [x for x in el_match.groups() if x]
 
         super().save(*args, **kwargs)
 

@@ -932,12 +932,11 @@ def test_latest_filter_components_modular():
     assert latest_components[0] == modular_rpm_2
 
 
-def test_version_release_arr_el_match():
+def test_el_match():
+    """Test that el_match field is set correctly based on target RHEL version"""
     c = ComponentFactory(
         arch="src", type=Component.Type.RPM, release="2.Final_redhat_2.1.ep6.el7", version="1.2_3"
     )
-    assert c.release_arr == ["2", "Final", "redhat", "2", "1", "ep6", "el7"]
-    assert c.version_arr == ["1", "2", "3"]
     assert c.el_match == ["7"]
     c = ComponentFactory(
         arch="src",
@@ -945,14 +944,10 @@ def test_version_release_arr_el_match():
         release="2.module+el8.2.0+4938+c0cffa5b",
         version="1-2.3",
     )
-    assert c.release_arr == ["2", "module", "el8", "2", "0", "4938", "c0cffa5b"]
-    assert c.version_arr == ["1", "2", "3"]
     assert c.el_match == ["8", "2", "0", "+4938+c0cffa5b"]
     c = ComponentFactory(
         arch="noarch", type=Component.Type.CONTAINER_IMAGE, release="2.4.4.1.el5_10", version="2"
     )
-    assert c.release_arr == ["2", "4", "4", "1", "el5", "10"]
-    assert c.version_arr == ["2"]
     assert c.el_match == ["5", "10"]
 
     c = ComponentFactory(
@@ -961,15 +956,10 @@ def test_version_release_arr_el_match():
         release="14.module+el9.1.0+16330+91eb0817",
         version="blue_elephant",
     )
-    assert c.release_arr == ["14", "module", "el9", "1", "0", "16330", "91eb0817"]
-    assert c.version_arr == ["blue", "elephant"]
     assert c.el_match == ["9", "1", "0", "+16330+91eb0817"]
 
-    # negative test eg. only noarch OCI or src RPM get this treatment
     c = ComponentFactory(type=Component.Type.GOLANG, release="2.ep6.el7", version="1.2_3")
-    assert c.release_arr == []
-    assert c.version_arr == []
-    assert c.el_match == []
+    assert c.el_match == ["7"]
 
 
 def test_license_properties():

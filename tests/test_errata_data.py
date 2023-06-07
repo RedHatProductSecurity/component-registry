@@ -106,7 +106,7 @@ def setup_models_for_variant_repos(repos, ps_node, variant, et_id):
 
 
 # id, no_of_obj
-errata_details = [
+rhel_errata_details = [
     (
         "77149",
         """    {
@@ -202,7 +202,7 @@ errata_details = [
 
 
 @patch("config.celery.app.send_task")
-@pytest.mark.parametrize("erratum_id, build_list, no_of_objs", errata_details)
+@pytest.mark.parametrize("erratum_id, build_list, no_of_objs", rhel_errata_details)
 def test_save_product_component_for_errata(
     mock_send, erratum_id, build_list, no_of_objs, requests_mock
 ):
@@ -212,3 +212,67 @@ def test_save_product_component_for_errata(
     pcr = ProductComponentRelation.objects.filter(external_system_id=erratum_id)
     assert len(pcr) == no_of_objs
     assert mock_send.call_count == no_of_objs
+
+
+brew_tag_errata_details = [
+    (
+        "115076",
+        """    {
+      "OSE-4.13-RHEL-8": {
+        "name": "OSE-4.13-RHEL-8",
+        "description": "Red Hat OpenShift Container Platform 4.13",
+        "builds": [
+          {
+            "openshift-enterprise-cluster-capacity-container-v4.13.0-202305262054.p0.g4019c6f.assembly.stream": {
+              "nvr": "openshift-enterprise-cluster-capacity-container-v4.13.0-202305262054.p0.g4019c6f.assembly.stream",
+              "nevr": "openshift-enterprise-cluster-capacity-container-0:v4.13.0-202305262054.p0.g4019c6f.assembly.stream",
+              "id": 2524805,
+              "variant_arch": {
+                "8Base-RHOSE-4.13": {
+                  "multi": [
+                    "docker-image-sha256:aaabb7384d4be5f7ca7c88fa4f1552d98b05eb6e6dc63aa2c1391e65a886d6b6.s390x.tar.gz",
+                    "docker-image-sha256:04138c030af4df22d557deb4816427fb657535f18be75db5231ed3de65444b06.x86_64.tar.gz",
+                    "docker-image-sha256:8ec47d5399e43d7458fcbeb26b29f039379d51892ada2e97ae4ac1630c2cf726.ppc64le.tar.gz",
+                    "docker-image-sha256:28758d5dd643844d9783a16c54c4f2d3397ffa45c382cda42ecf569308988111.aarch64.tar.gz"
+                  ]
+                }
+              },
+              "added_by": "exd-ocp-buildvm-bot-prod"
+            }
+          },
+          {
+            "atomic-openshift-descheduler-container-v4.13.0-202305262054.p0.g27e89a0.assembly.stream": {
+              "nvr": "atomic-openshift-descheduler-container-v4.13.0-202305262054.p0.g27e89a0.assembly.stream",
+              "nevr": "atomic-openshift-descheduler-container-0:v4.13.0-202305262054.p0.g27e89a0.assembly.stream",
+              "id": 2524641,
+              "variant_arch": {
+                "8Base-RHOSE-4.13": {
+                  "multi": [
+                    "docker-image-sha256:3f86db12ea5f83f014c56d8711d293791b6911a69dddd893bb9bf0a81eee5d5b.s390x.tar.gz",
+                    "docker-image-sha256:3ef71d02e614339a17418a871c255309ad1fb222e6e0dfa3a68b85fbd709095d.aarch64.tar.gz",
+                    "docker-image-sha256:8317ea7a2329dc59852816527ad5cf8449ef849b7de8b438a7c32f0e698e372c.ppc64le.tar.gz",
+                    "docker-image-sha256:192a9a84b518b1f0614b9ec8248ed4396de5a1a0b5b970e82313b1c874d4d3f4.x86_64.tar.gz"
+                  ]
+                }
+              },
+              "added_by": "exd-ocp-buildvm-bot-prod"
+            }
+          }
+        ]
+      }
+    }""",
+        2,
+    )
+]
+
+
+@patch("config.celery.app.send_task")
+@pytest.mark.parametrize("erratum_id, build_list, no_of_objs", brew_tag_errata_details)
+def test_variants_created_for_stream(mock_send, erratum_id, build_list, no_of_objs, requests_mock):
+    # Setup brew_tag stream for openshift-4.13
+    # Setup Collector models for 8Base-RHOSE-4.13
+    build_list_url = f"{settings.ERRATA_TOOL_URL}/api/v1/erratum/{erratum_id}/builds_list.json"
+    requests_mock.get(build_list_url, text=build_list)
+    slow_load_errata(erratum_id)
+    assert mock_send.call_count == no_of_objs
+    # Ensure openshift-4.13 stream is associated with 8Base-RHOSE-4.13 variant

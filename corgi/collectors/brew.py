@@ -4,7 +4,7 @@ import os
 import re
 from datetime import datetime
 from types import SimpleNamespace
-from typing import Any, Generator, Optional, Union
+from typing import Any, Generator, Iterable, Optional, Union
 from urllib.parse import urlparse
 
 import koji
@@ -93,7 +93,7 @@ class Brew:
         else:
             raise ValueError(f"Tried to create Brew collector with invalid type: {source}")
 
-    def get_source_of_build(self, build_info: dict) -> str:
+    def get_source_of_build(self, build_info: dict[str, Any]) -> str:
         """Find the source used to build the Koji build."""
         no_source_msg = f'Build {build_info["id"]} has no associated source URL'
         if build_info.get("task_id") is None:
@@ -116,35 +116,40 @@ class Brew:
 
         raise BrewBuildSourceNotFound(no_source_msg)
 
-    @classmethod
-    def _parse_remote_source_url(cls, url: str) -> tuple[str, Component.Type]:
+    @staticmethod
+    def _parse_remote_source_url(url: str) -> tuple[str, Component.Type]:
         """Used to parse remote_source repo from OSBS into purl name for github namespace
         ref https://github.com/containerbuildsystem/osbs-client/blob/
         f719759af18ef9f3bb45ee4411f80a9580723e31/osbs/schemas/container.json#L310"""
         parsed_url = urlparse(url)
         path = parsed_url.path.removesuffix(".git")
+
         # handle url like git@github.com:rh-gitops-midstream/argo-cd
         if path.startswith("git@"):
             path = path.removeprefix("git@")
             path = path.replace(":", "/")
+
         # look for github.com and set ComponentType with modified path
-        type = Component.Type.GENERIC
         if parsed_url.netloc == "github.com":
-            type = Component.Type.GITHUB
+            component_type = Component.Type.GITHUB
             # urlparse keeps the leading / on the path component when netloc was found
             # the purl spec dictates that we remove it for Github purls
             path = path.removeprefix("/")
+
         # no netloc
         elif path.startswith("github.com/"):
+            component_type = Component.Type.GITHUB
             path = path.removeprefix("github.com/")
-            type = Component.Type.GITHUB
+
         # non github url with netloc
         else:
-            return (f"{parsed_url.netloc}{path}", type)
-        return (path, type)
+            component_type = Component.Type.GENERIC
+            path = f"{parsed_url.netloc}{path}"
 
-    @classmethod
-    def _bundled_or_golang(cls, component: str) -> str:
+        return path, component_type
+
+    @staticmethod
+    def _bundled_or_golang(component: str) -> str:
         # Process bundled deps only; account for typed golang deps of type:
         # "golang(golang.org/x/crypto/acme)"
         if component.startswith("bundled("):
@@ -156,12 +161,12 @@ class Brew:
         # Strip right parens
         return c.replace(")", "")
 
-    @classmethod
+    @staticmethod
     def _check_maven_component(
-        cls, component: str, version: str
+        component: str, version: str
     ) -> Optional[tuple[Component.Type, str, str]]:
         if ":" in component:
-            return (Component.Type.MAVEN, component.replace(":", "/"), version)
+            return Component.Type.MAVEN, component.replace(":", "/"), version
         return None
 
     @classmethod
@@ -213,7 +218,7 @@ class Brew:
             bundled_components.append((bundled_component_type, component, version))
         return bundled_components
 
-    def get_rpm_build_data(self, build_id: int) -> dict:
+    def get_rpm_build_data(self, build_id: int) -> dict[str, Any]:
         # Parent-level SRPM component
         srpm_component = None
 
@@ -304,7 +309,7 @@ class Brew:
         return parsed_provides
 
     @staticmethod
-    def _build_archive_dl_url(filename: str, build_info: dict) -> str:
+    def _build_archive_dl_url(filename: str, build_info: dict[str, str]) -> str:
         url = (
             f"{settings.BREW_DOWNLOAD_ROOT_URL}/packages/"
             f"{build_info['name']}/"
@@ -356,7 +361,7 @@ class Brew:
         return image_component
 
     @staticmethod
-    def split_nvr(nvr):
+    def split_nvr(nvr: str) -> tuple[str, str, str]:
         nvr_parts = nvr.rsplit("-", maxsplit=2)
         if len(nvr_parts) != 3:
             raise ValueError(f"NVR {nvr} had invalid length after splitting: {len(nvr_parts)}")
@@ -365,7 +370,7 @@ class Brew:
         release = nvr_parts[2]
         return name, version, release
 
-    def get_container_build_data(self, build_id: int, build_info: dict) -> dict:
+    def get_container_build_data(self, build_id: int, build_info: dict[str, Any]) -> dict[str, Any]:
 
         component: dict[str, Any] = {
             "type": Component.Type.CONTAINER_IMAGE,
@@ -493,20 +498,21 @@ class Brew:
         return component
 
     @staticmethod
-    def _get_child_meta(component: dict, meta_attr: str) -> None:
+    def _get_child_meta(component: dict[str, Any], meta_attr: str) -> None:
         for image in component["image_components"]:
             meta_attr_value = image["meta"].get(meta_attr)
             if meta_attr_value:
                 component["meta"][meta_attr] = meta_attr_value
                 break
 
+    @classmethod
     def _extract_remote_sources(
-        self, go_stdlib_version: str, remote_sources: dict[str, tuple[str, str]]
+        cls, go_stdlib_version: str, remote_sources: dict[str, tuple[str, str]]
     ) -> list[dict[str, Any]]:
         source_components: list[dict[str, Any]] = []
         for build_loc, coords in remote_sources.items():
-            remote_source = self._get_remote_source(coords[0])
-            remote_source_name, remote_source_type = self._parse_remote_source_url(
+            remote_source = cls._get_remote_source(coords[0])
+            remote_source_name, remote_source_type = cls._parse_remote_source_url(
                 remote_source.repo
             )
             source_component: dict[str, Any] = {
@@ -530,7 +536,7 @@ class Brew:
             for pkg_type in remote_source.pkg_managers:
                 if pkg_type in ("npm", "pip", "yarn"):
                     # Convert Cachito-reported package type to Corgi component type.
-                    provides, remote_source.packages = self._extract_provides(
+                    provides, remote_source.packages = cls._extract_provides(
                         remote_source.packages, pkg_type
                     )
                     try:
@@ -541,29 +547,35 @@ class Brew:
                     (
                         source_component["components"],
                         remote_source.packages,
-                    ) = self._extract_golang(remote_source.packages, go_stdlib_version)
+                    ) = cls._extract_golang(remote_source.packages, go_stdlib_version)
                     (
                         source_component["components"],
                         remote_source.dependencies,
-                    ) = self._extract_golang(remote_source.dependencies, go_stdlib_version)
+                    ) = cls._extract_golang(remote_source.dependencies, go_stdlib_version)
                 else:
                     logger.warning("Found unsupported remote-source pkg_manager %s", pkg_type)
             source_components.append(source_component)
         return source_components
 
-    def update_remote_sources(self, archive, build_info, remote_sources):
+    @classmethod
+    def update_remote_sources(
+        cls,
+        archive: dict[str, str],
+        build_info: dict[str, str],
+        remote_sources: dict[str, tuple[str, str]],
+    ) -> None:
         cachito_url = next(iter(remote_sources))
         logger.debug("Setting remote sources for %s using archive data %s", cachito_url, archive)
-        remote_sources_url = self._build_archive_dl_url(archive["filename"], build_info)
+        remote_sources_url = cls._build_archive_dl_url(archive["filename"], build_info)
         # Update the remote sources download url tuple
         existing_coords = list(remote_sources[cachito_url])
         if archive["type_name"] == "tar":
-            remote_sources[cachito_url] = tuple([existing_coords[0], remote_sources_url])
+            remote_sources[cachito_url] = (existing_coords[0], remote_sources_url)
         elif archive["type_name"] == "json":
-            remote_sources[cachito_url] = tuple([remote_sources_url, existing_coords[1]])
+            remote_sources[cachito_url] = (remote_sources_url, existing_coords[1])
 
     @staticmethod
-    def extract_common_key(filename):
+    def extract_common_key(filename: str) -> str:
         without_prefix = filename.removeprefix("remote-source-")
         return without_prefix.split(".", 1)[0]
 
@@ -615,7 +627,7 @@ class Brew:
         return noarch_rpms_by_id, child_component
 
     @staticmethod
-    def _get_labels(docker_config: dict) -> dict[str, str]:
+    def _get_labels(docker_config: dict[str, dict[str, dict[str, str]]]) -> dict[str, str]:
         config = docker_config.get("config", {})
         return config.get("Labels", {})
 
@@ -727,7 +739,9 @@ class Brew:
         return filtered, remaining_deps
 
     @staticmethod
-    def get_maven_build_data(build_info: dict, build_type_info: dict) -> dict:
+    def get_maven_build_data(
+        build_info: dict[str, Any], build_type_info: dict[str, Any]
+    ) -> dict[str, Any]:
         component = {
             "type": Component.Type.MAVEN,
             "namespace": Component.Namespace.REDHAT,
@@ -768,7 +782,7 @@ class Brew:
         )
 
     @staticmethod
-    def get_module_build_data(build_info: dict) -> dict:
+    def get_module_build_data(build_info: dict[str, Any]) -> dict[str, Any]:
 
         modulemd_yaml = build_info["extra"]["typeinfo"]["module"].get("modulemd_str", "")
         if not modulemd_yaml:
@@ -798,7 +812,7 @@ class Brew:
         return module
 
     # Force clients to call this using an int build_id
-    def get_component_data(self, build_id: int) -> dict:
+    def get_component_data(self, build_id: int) -> dict[str, Any]:
         logger.info("Retrieving Brew build: %s", build_id)
         # koji api expects a build_id to be an int. If you pass a string it'll look for an NVR
         build = self.koji_session.getBuild(build_id)
@@ -895,7 +909,7 @@ class Brew:
 
     def get_builds_with_tag(
         self, brew_tag: str, inherit: bool = False, latest: bool = True
-    ) -> tuple:
+    ) -> tuple[str, ...]:
         try:
             builds = self.koji_session.listTagged(brew_tag, inherit=inherit, latest=latest)
             return tuple(b["build_id"] for b in builds)
@@ -903,7 +917,9 @@ class Brew:
             logger.warning("Couldn't find brew builds with tag %s: %s", brew_tag, exc)
             return tuple()
 
-    def brew_rpm_headers_lookup(self, rpm_infos) -> tuple:
+    def brew_rpm_headers_lookup(
+        self, rpm_infos: list[dict[str, str]]
+    ) -> tuple[tuple[dict[str, str], Any], ...]:
         # Define headers from which we'll pull extra RPM metadata
         rpm_headers = (
             "summary",
@@ -921,27 +937,29 @@ class Brew:
             )
         return rpm_info_header_calls
 
-    def brew_srpm_lookup(self, srpms) -> tuple:
+    def brew_srpm_lookup(self, srpms: Iterable[str]) -> tuple[tuple[str, Any], ...]:
         """The Koji API findBuild call can except NVR as a format"""
         with self.koji_session.multicall() as multicall:
             find_build_id_calls = tuple((srpm, multicall.findBuildID(srpm)) for srpm in srpms)
         return find_build_id_calls
 
-    def brew_rpm_lookup(self, rpms) -> tuple:
+    def brew_rpm_lookup(self, rpms: tuple[str, ...]) -> tuple[tuple[str, Any], ...]:
         """The Koji API getRPM call can except rpm in NVR"""
         with self.koji_session.multicall() as multicall:
             get_rpm_calls = tuple((rpm, multicall.getRPM(rpm)) for rpm in rpms)
         return get_rpm_calls
 
-    def sans_epoch(self, rpm) -> str:
+    @classmethod
+    def sans_epoch(cls, rpm: str) -> str:
         """This removed the epoch part of a SRPM or RPM so the RPM name is in NVR format"""
-        name, version, release = self.split_nvr(rpm)
+        name, version, release = cls.split_nvr(rpm)
         version_parts = version.split(":")
         if len(version_parts) > 1:
             rpm = f"{name}-{version_parts[1]}-{release}"
         return rpm
 
-    def module_key_to_nvr(self, module_key) -> str:
+    @staticmethod
+    def module_key_to_nvr(module_key: str) -> str:
         """This adjusts the rhel_module name found in composes to be in NVR format expected by
         the Koji API"""
         module_parts = module_key.split(":")
@@ -960,12 +978,14 @@ class Brew:
                 defaults={"nvr": srpm},
             )
             # Lookup the rpm build_ids
-            rpms = [self.sans_epoch(rpm) for rpm in rhel_modules[srpm] if not rpm.endswith(".src")]
+            rpms = tuple(
+                self.sans_epoch(rpm) for rpm in rhel_modules[srpm] if not rpm.endswith(".src")
+            )
             rpm_lookup_calls = self.brew_rpm_lookup(rpms)
             for rpm, call in rpm_lookup_calls:
                 srpm_build_id = call.result["build_id"]
-                srpm, _ = CollectorSRPM.objects.get_or_create(build_id=srpm_build_id)
-                rpm_obj, _ = CollectorRPM.objects.get_or_create(nvra=rpm, srpm=srpm)
+                srpm_obj, _ = CollectorSRPM.objects.get_or_create(build_id=srpm_build_id)
+                rpm_obj, _ = CollectorRPM.objects.get_or_create(nvra=rpm, srpm=srpm_obj)
                 rpm_obj.rhel_module.add(rhel_module)
 
             yield build_id
@@ -999,8 +1019,8 @@ class Brew:
                     continue
             yield build_id
 
-    @classmethod
-    def fetch_rhel_module(cls, build_id: str) -> dict[str, Any]:
+    @staticmethod
+    def fetch_rhel_module(build_id: str) -> dict[str, Any]:
         """Look up a RHEL module by either an integer build_id or an NVR."""
         try:
             lookup: dict = {"build_id": int(build_id)}

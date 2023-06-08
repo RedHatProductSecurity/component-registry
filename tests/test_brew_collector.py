@@ -394,7 +394,7 @@ def test_extract_remote_sources(requests_mock):
     remote_sources = {"28637": (json_url, "tar.gz")}
     with open("tests/data/remote-source-quay-clair-container.json") as remote_source_data:
         requests_mock.get(json_url, text=remote_source_data.read())
-    source_components = Brew(BUILD_TYPE)._extract_remote_sources("", remote_sources)
+    source_components = Brew._extract_remote_sources("", remote_sources)
     assert len(source_components) == 1
     assert source_components[0]["meta"]["name"] == "thomasmckay/clair"
     assert source_components[0]["type"] == Component.Type.GITHUB
@@ -429,7 +429,7 @@ def test_extract_multiple_remote_sources(requests_mock):
                 text=remote_source_data.read(),
             )
     go_version = "v1.16.0"
-    source_components = Brew(BUILD_TYPE)._extract_remote_sources(go_version, remote_sources)
+    source_components = Brew._extract_remote_sources(go_version, remote_sources)
     assert len(source_components) == 4
     components = [len(s["components"]) for s in source_components]
     # TODO FAIL: what do these numbers mean?!?
@@ -674,11 +674,10 @@ extract_golang_test_data = [
 
 @pytest.mark.parametrize("test_data_file,expected_component", extract_golang_test_data)
 def test_extract_golang(test_data_file, expected_component):
-    brew = Brew(BUILD_TYPE)
     with open(test_data_file) as testdata:
         testdata = testdata.read()
         testdata = json.loads(testdata, object_hook=lambda d: SimpleNamespace(**d))
-    components, remaining = brew._extract_golang(testdata.dependencies, "1.15.0")
+    components, remaining = Brew._extract_golang(testdata.dependencies, "1.15.0")
     assert expected_component in components
     assert len(remaining) == 0
 

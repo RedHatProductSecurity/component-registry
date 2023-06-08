@@ -1,16 +1,21 @@
+from collections import defaultdict
+
 from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.conf import settings
 from django.db import transaction
-from django.db.models import QuerySet
 
 from config.celery import app
 from corgi.collectors.errata_tool import ErrataTool
-from corgi.collectors.models import CollectorRPMRepository
+from corgi.collectors.models import (
+    CollectorErrataProductVariant,
+    CollectorRPMRepository,
+)
 from corgi.core.models import (
     Channel,
     ProductComponentRelation,
     ProductNode,
+    ProductStream,
     ProductVariant,
     SoftwareBuild,
 )
@@ -35,15 +40,83 @@ def save_variant_cdn_repo_mapping() -> None:
     ErrataTool().save_variant_cdn_repo_mapping()
 
 
+def associate_variant_with_build_stream(
+    build_id: str, build_type: str, variant_names: list[str]
+) -> bool:
+    try:
+        software_build = SoftwareBuild.objects.get(build_id=build_id, build_type=build_type)
+    except SoftwareBuild.DoesNotExist:
+        logger.warning(f"SoftwareBuild with id {build_id} of type {build_type} does not exist.")
+        return False
+
+    # This function is design to discover new variant to stream mappings
+    # If a variant already exists, we assume it is already correct mapped to a stream and give up
+    # This avoids the slow build_streams query below when it's not necessary
+    if ProductVariant.objects.filter(name__in=variant_names).exists():
+        logger.debug(f"Not associating Product Variants {variant_names}")
+        return False
+
+    build_streams = ProductStream.objects.filter(components__software_build=software_build)
+    any_created = False
+
+    build_streams_count = len(build_streams)
+    # Only associate this variant to a single stream to keep one-to-many cardinality between
+    # ProductStream and ProductVariant
+    if build_streams_count != 1:
+        return any_created
+
+    stream = build_streams[0]
+    for variant_name in variant_names:
+        # The CollectorErrataProductVariant should always exist, let the DoesNotExist error
+        # propagate if it doesn't
+        try:
+            errata_variant = CollectorErrataProductVariant.objects.get(name=variant_name)
+            cpe = errata_variant.cpe
+        except CollectorErrataProductVariant.DoesNotExist:
+            logger.warning(f"CollectorErrataProductVariant with name {variant_name} does not exist")
+            cpe = ""
+        # We don't use update_or_create here because we checked earlier in this function
+        # ProductVariant objects with this name do not already exists.
+        ProductVariant.objects.create(
+            name=variant_name,
+            cpe=cpe,
+            products=stream.products,
+            productversions=stream.productversions,
+            productstreams=stream,
+            meta_attr={
+                "build_id": build_id,
+                "build_type": build_type,
+            },
+        )
+        any_created = True
+        # CORGI-703 - Also add channels for each new variant here
+    return any_created
+
+
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def slow_save_errata_product_taxonomy(erratum_id: int) -> None:
-    logger.info(f"slow_save_errata_product_taxonomy called for {erratum_id}")
-    relation_builds = _get_relation_builds(erratum_id)
-    for build_id, build_type in relation_builds:
+def slow_save_errata_product_taxonomy(
+    build_variants: dict[str, list[str]], build_type: str
+) -> bool:
+    logger.info(f"slow_save_errata_product_taxonomy called with build_variants {build_variants}")
+
+    variants_created = False
+    for build_id, variant_ids in build_variants.items():
+        # Only associate stream with variants where an existing relation not of type ERRATA exists
+        if (
+            ProductComponentRelation.objects.filter(
+                build_id=build_id,
+                build_type=build_type,
+            )
+            .exclude(type=ProductComponentRelation.Type.ERRATA)
+            .exists()
+        ):
+            if associate_variant_with_build_stream(build_id, build_type, variant_ids):
+                variants_created = True
         logger.info("Saving product taxonomy for build (%s, %s)", build_id, build_type)
         # once all build's components are ingested we must save product taxonomy
         sb = SoftwareBuild.objects.get(build_id=build_id, build_type=build_type)
         sb.save_product_taxonomy()
+    return variants_created
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
@@ -53,38 +126,23 @@ def slow_load_errata(erratum_name: str, force_process: bool = False) -> None:
         erratum_id = et.normalize_erratum_id(erratum_name)
     else:
         erratum_id = int(erratum_name)
-    relation_builds = _get_relation_builds(erratum_id)
-
-    build_types = set()
-    build_ids = set()
-    for build_id, build_type in relation_builds:
-        build_ids.add(build_id)
-        build_types.add(build_type)
-
-    # Errata are not used in community products, and we are not yet attaching other builds types
-    # like HACBS to errata. If that changes, we should review this task for correctness
-    if len(build_types) > 1:
-        raise ValueError("Multiple build types found for errata %s", erratum_name)
-    elif len(build_types) == 0:
-        build_type = BUILD_TYPE
+    build_variants, build_type = _get_relation_builds(erratum_id)
 
     # Check is we have software builds for all of them.
-    # Most of the time will not have all the builds
-    # so we don't load all the software builds at this point
     no_of_processed_builds = SoftwareBuild.objects.filter(
-        build_id__in=build_ids, build_type=build_type
+        build_id__in=build_variants.keys(), build_type=build_type
     ).count()
 
     # If we have no relations at all, or we want to update them
-    if len(build_ids) == 0 or force_process:
-        # Save PCR
-        logger.info("Saving product components for errata %s", erratum_id)
+    if len(build_variants) == 0 or force_process:
+        # Save Errata relations
+        logger.info("Saving relations for errata %s", erratum_id)
         variant_to_component_map = et.get_erratum_components(str(erratum_id))
         for variant_id, build_objects in variant_to_component_map.items():
             for build_obj in build_objects:
                 for build_id, errata_components in build_obj.items():
                     # Add to relations list as we go, so we can fetch them below
-                    build_ids.add(build_id)
+                    build_variants[build_id] = variant_id
                     ProductComponentRelation.objects.update_or_create(
                         external_system_id=erratum_id,
                         product_ref=variant_id,
@@ -96,19 +154,18 @@ def slow_load_errata(erratum_name: str, force_process: bool = False) -> None:
                         },
                     )
 
-    # If the number of relations was more than 0 check if we've processed all the builds
-    # in the errata
-    elif len(build_ids) == no_of_processed_builds:
+    # If we have SoftwareBuilds for all the builds in the errata, save the build product taxonomy
+    elif len(build_variants) == no_of_processed_builds:
         logger.info(f"Calling slow_save_errata_product_taxonomy for {erratum_id}")
-        slow_save_errata_product_taxonomy.delay(erratum_id)
+        slow_save_errata_product_taxonomy.delay(build_variants, build_type)
 
     # Check if we are only part way through loading the errata
-    if no_of_processed_builds < len(build_ids) or force_process:
+    if no_of_processed_builds < len(build_variants) or force_process:
         # Calculate and print the percentage of builds for the errata
-        if len(build_ids) > 0:
-            percentage_complete = int(no_of_processed_builds / len(build_ids) * 100)
+        if len(build_variants) > 0:
+            percentage_complete = int(no_of_processed_builds / len(build_variants) * 100)
             logger.info("Processed %i%% of builds in %s", percentage_complete, erratum_name)
-        for build_id in build_ids:
+        for build_id in build_variants.keys():
             # We set save_product argument to False because it reads from the
             # ProductComponentRelations table which this function writes to. We've seen contention
             # on this database table causes by recursive looping of this task, and the
@@ -125,16 +182,33 @@ def slow_load_errata(erratum_name: str, force_process: bool = False) -> None:
             )
 
     if force_process:
-        slow_save_errata_product_taxonomy.delay(erratum_id)
+        slow_save_errata_product_taxonomy.delay(build_variants, build_type)
 
     logger.info("Finished processing %s", erratum_id)
 
 
-def _get_relation_builds(erratum_id: int) -> QuerySet:
+def _get_relation_builds(erratum_id: int) -> tuple[dict[str, list[str]], str]:
     # Get all the PCR with errata_id
-    return ProductComponentRelation.objects.filter(
+    relation_builds = ProductComponentRelation.objects.filter(
         type=ProductComponentRelation.Type.ERRATA, external_system_id=erratum_id
-    ).values_list("build_id", "build_type")
+    ).values_list("build_id", "build_type", "product_ref")
+    build_variants: dict[str, list[str]] = defaultdict(list)
+    build_types = set()
+    # Check erratum builds all have the same type
+    for build_id, build_type, variant_id in relation_builds:
+        build_variants[build_id].append(variant_id)
+        build_types.add(build_type)
+
+    # Errata are not used in community products, and we are not yet attaching other builds types
+    # like HACBS to errata. If that changes, we should review slow_load_errata for correctness
+    if len(build_types) > 1:
+        raise ValueError("Multiple build types found for errata %s", erratum_id)
+    elif len(build_types) == 0:
+        # if the queryset above had no results
+        build_type = BUILD_TYPE
+    else:
+        build_type = build_types.pop()
+    return build_variants, build_type
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)

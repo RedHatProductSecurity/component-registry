@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 import pytest
 from django.conf import settings
@@ -16,9 +16,19 @@ from corgi.core.models import (
     ProductNode,
     ProductVariant,
 )
-from corgi.tasks.errata_tool import slow_load_errata, update_variant_repos
+from corgi.tasks.errata_tool import (
+    associate_variant_with_build_stream,
+    slow_load_errata,
+    slow_save_errata_product_taxonomy,
+    update_variant_repos,
+)
 
-from .factories import ProductStreamFactory, ProductVariantFactory
+from .factories import (
+    ComponentFactory,
+    ProductStreamFactory,
+    ProductVariantFactory,
+    SoftwareBuildFactory,
+)
 
 pytestmark = [pytest.mark.unit, pytest.mark.django_db]
 
@@ -106,7 +116,7 @@ def setup_models_for_variant_repos(repos, ps_node, variant, et_id):
 
 
 # id, no_of_obj
-rhel_errata_details = [
+errata_details = [
     (
         "77149",
         """    {
@@ -201,10 +211,11 @@ rhel_errata_details = [
 ]
 
 
+@patch("corgi.tasks.errata_tool.associate_variant_with_build_stream")
 @patch("config.celery.app.send_task")
-@pytest.mark.parametrize("erratum_id, build_list, no_of_objs", rhel_errata_details)
+@pytest.mark.parametrize("erratum_id, build_list, no_of_objs", errata_details)
 def test_save_product_component_for_errata(
-    mock_send, erratum_id, build_list, no_of_objs, requests_mock
+    mock_send, mock_associate, erratum_id, build_list, no_of_objs, requests_mock
 ):
     build_list_url = f"{settings.ERRATA_TOOL_URL}/api/v1/erratum/{erratum_id}/builds_list.json"
     requests_mock.get(build_list_url, text=build_list)
@@ -212,67 +223,153 @@ def test_save_product_component_for_errata(
     pcr = ProductComponentRelation.objects.filter(external_system_id=erratum_id)
     assert len(pcr) == no_of_objs
     assert mock_send.call_count == no_of_objs
+    assert mock_associate.call_count == 0
 
 
-brew_tag_errata_details = [
-    (
-        "115076",
-        """    {
-      "OSE-4.13-RHEL-8": {
-        "name": "OSE-4.13-RHEL-8",
-        "description": "Red Hat OpenShift Container Platform 4.13",
-        "builds": [
-          {
-            "openshift-enterprise-cluster-capacity-container-v4.13.0-202305262054.p0.g4019c6f.assembly.stream": {
-              "nvr": "openshift-enterprise-cluster-capacity-container-v4.13.0-202305262054.p0.g4019c6f.assembly.stream",
-              "nevr": "openshift-enterprise-cluster-capacity-container-0:v4.13.0-202305262054.p0.g4019c6f.assembly.stream",
-              "id": 2524805,
-              "variant_arch": {
-                "8Base-RHOSE-4.13": {
-                  "multi": [
-                    "docker-image-sha256:aaabb7384d4be5f7ca7c88fa4f1552d98b05eb6e6dc63aa2c1391e65a886d6b6.s390x.tar.gz",
-                    "docker-image-sha256:04138c030af4df22d557deb4816427fb657535f18be75db5231ed3de65444b06.x86_64.tar.gz",
-                    "docker-image-sha256:8ec47d5399e43d7458fcbeb26b29f039379d51892ada2e97ae4ac1630c2cf726.ppc64le.tar.gz",
-                    "docker-image-sha256:28758d5dd643844d9783a16c54c4f2d3397ffa45c382cda42ecf569308988111.aarch64.tar.gz"
-                  ]
-                }
-              },
-              "added_by": "exd-ocp-buildvm-bot-prod"
-            }
-          },
-          {
-            "atomic-openshift-descheduler-container-v4.13.0-202305262054.p0.g27e89a0.assembly.stream": {
-              "nvr": "atomic-openshift-descheduler-container-v4.13.0-202305262054.p0.g27e89a0.assembly.stream",
-              "nevr": "atomic-openshift-descheduler-container-0:v4.13.0-202305262054.p0.g27e89a0.assembly.stream",
-              "id": 2524641,
-              "variant_arch": {
-                "8Base-RHOSE-4.13": {
-                  "multi": [
-                    "docker-image-sha256:3f86db12ea5f83f014c56d8711d293791b6911a69dddd893bb9bf0a81eee5d5b.s390x.tar.gz",
-                    "docker-image-sha256:3ef71d02e614339a17418a871c255309ad1fb222e6e0dfa3a68b85fbd709095d.aarch64.tar.gz",
-                    "docker-image-sha256:8317ea7a2329dc59852816527ad5cf8449ef849b7de8b438a7c32f0e698e372c.ppc64le.tar.gz",
-                    "docker-image-sha256:192a9a84b518b1f0614b9ec8248ed4396de5a1a0b5b970e82313b1c874d4d3f4.x86_64.tar.gz"
-                  ]
-                }
-              },
-              "added_by": "exd-ocp-buildvm-bot-prod"
-            }
-          }
-        ]
-      }
-    }""",
-        2,
+@patch("corgi.tasks.errata_tool.associate_variant_with_build_stream")
+@patch("corgi.tasks.errata_tool.slow_save_errata_product_taxonomy.delay")
+def test_variants_created_for_stream(mock_save_errata, mock_associate):
+    # We have a BREW_TAG relation for build_id 2524805, not 2524641
+    ProductComponentRelation.objects.get_or_create(
+        external_system_id="rhaos-4.13-rhel-8-container-released",
+        product_ref="openshift-4.13.z",
+        build_id="2524805",
+        build_type="BREW",
+        defaults={"type": ProductComponentRelation.Type.BREW_TAG},
     )
-]
-
-
-@patch("config.celery.app.send_task")
-@pytest.mark.parametrize("erratum_id, build_list, no_of_objs", brew_tag_errata_details)
-def test_variants_created_for_stream(mock_send, erratum_id, build_list, no_of_objs, requests_mock):
-    # Setup brew_tag stream for openshift-4.13
-    # Setup Collector models for 8Base-RHOSE-4.13
-    build_list_url = f"{settings.ERRATA_TOOL_URL}/api/v1/erratum/{erratum_id}/builds_list.json"
-    requests_mock.get(build_list_url, text=build_list)
+    # Simulate calling slow_load_errata with all the builds already fetched
+    SoftwareBuildFactory(build_id="2524805", build_type="BREW")
+    SoftwareBuildFactory(build_id="2524641", build_type="BREW")
+    # These are the ERRATA relations for the builds
+    erratum_id = "1"
+    ProductComponentRelation.objects.get_or_create(
+        external_system_id=erratum_id,
+        product_ref="8Base-RHOSE-4.13",
+        build_id="2524805",
+        build_type="BREW",
+        defaults={"type": ProductComponentRelation.Type.ERRATA},
+    )
+    ProductComponentRelation.objects.get_or_create(
+        external_system_id=erratum_id,
+        product_ref="8Base-RHOSE-4.13",
+        build_id="2524641",
+        build_type="BREW",
+        defaults={"type": ProductComponentRelation.Type.ERRATA},
+    )
     slow_load_errata(erratum_id)
-    assert mock_send.call_count == no_of_objs
-    # Ensure openshift-4.13 stream is associated with 8Base-RHOSE-4.13 variant
+    build_variants = {"2524641": ["8Base-RHOSE-4.13"], "2524805": ["8Base-RHOSE-4.13"]}
+    assert mock_save_errata.call_args_list == [call(build_variants, "BREW")]
+    slow_save_errata_product_taxonomy(build_variants, "BREW")
+    assert mock_associate.call_args_list == [call("2524805", "BREW", ["8Base-RHOSE-4.13"])]
+
+
+def test_associate_variant_with_streams():
+    sb = SoftwareBuildFactory()
+    product, _ = CollectorErrataProduct.objects.get_or_create(name="RHOSE", et_id=79)
+    product_version, _ = CollectorErrataProductVersion.objects.get_or_create(
+        name="OSE-4.13-RHEL-8", et_id=1892, product=product
+    )
+    CollectorErrataProductVariant.objects.get_or_create(
+        name="8Base-RHOSE-4.13",
+        cpe="cpe:/a:redhat:openshift:4.13::el8",
+        et_id=4160,
+        product_version=product_version,
+    )
+    assert not associate_variant_with_build_stream(sb.build_id, sb.build_type, ["8Base-RHOSE-4.13"])
+    assert not ProductVariant.objects.filter(name="8Base-RHOSE-4.13").exists()
+
+    # This time create a linked component with stream to associate
+    stream = ProductStreamFactory(active=True)
+    component = ComponentFactory(software_build=sb)
+    component.productstreams.set([stream])
+    assert associate_variant_with_build_stream(sb.build_id, sb.build_type, ["8Base-RHOSE-4.13"])
+    product_variant = ProductVariant.objects.get(name="8Base-RHOSE-4.13")
+    assert product_variant
+    assert product_variant.cpe == "cpe:/a:redhat:openshift:4.13::el8"
+    assert product_variant.productstreams == stream
+
+
+# Assert that we only associate a variant with a stream where a single stream is associated with the
+# build
+def test_associate_variant_with_many_homogenous_streams():
+    sb = SoftwareBuildFactory(build_id="1808180")
+    product, _ = CollectorErrataProduct.objects.get_or_create(name="RHOSE", et_id=79)
+    product_version, _ = CollectorErrataProductVersion.objects.get_or_create(
+        name="OSE-4.9-RHEL-8", et_id=1509, product=product
+    )
+    CollectorErrataProductVariant.objects.get_or_create(
+        name="8Base-RHOSE-4.9",
+        cpe="cpe:/a:redhat:openshift:4.9::el8",
+        et_id=3481,
+        product_version=product_version,
+    )
+    inactive_stream = ProductStreamFactory(name="openshift-4.9", active=False)
+    active_stream = ProductStreamFactory(name="openshift-4.9.z", active=True)
+    ose_pod = ComponentFactory(software_build=sb)
+    ose_pod.productstreams.set([inactive_stream, active_stream])
+    assert not associate_variant_with_build_stream(sb.build_id, sb.build_type, ["8Base-RHOSE-4.9"])
+    assert not ProductVariant.objects.filter(name="8Base-RHOSE-4.9").exists()
+
+
+def test_associate_variant_with_many_disparate_streams():
+    # Where there are multiple streams for a component, don't associate any of them
+    # with the variant. This keeps the current (correct) rule enforcing a single
+    # ProductStream per ProductVariant.
+    # This is a contrived example because rhel-8.6.0.z and rhel-8.4.0.z use errata_info,
+    # however I couldn't find any component associated with multiple active BREW_TAG streams.
+    sb = SoftwareBuildFactory(build_id="1269433")
+    product, _ = CollectorErrataProduct.objects.get_or_create(name="RHEL", et_id=16)
+    product_version, _ = CollectorErrataProductVersion.objects.get_or_create(
+        name="RHEL-8.6.0.Z.EUS", et_id=1663, product=product
+    )
+    CollectorErrataProductVariant.objects.get_or_create(
+        name="BaseOS-8.6.0.Z.EUS",
+        cpe="cpe:/o:redhat:rhel_eus:8.6::baseos",
+        et_id=3729,
+        product_version=product_version,
+    )
+    rhel_86z = ProductStreamFactory(active=True)
+    rhel_84z = ProductStreamFactory(active=True)
+    curl = ComponentFactory(software_build=sb)
+    curl.productstreams.set([rhel_86z, rhel_84z])
+    assert not associate_variant_with_build_stream(
+        sb.build_id, sb.build_type, ["BaseOS-8.6.0.Z.EUS"]
+    )
+    assert not ProductVariant.objects.filter(name="BaseOS-8.6.0.Z.EUS").exists()
+
+
+# eg. https://errata.devel.redhat.com/advisory/41819/builds
+# This is a contrived example because rhel-7.9.z uses errata_info
+# However this is the only active stream I could find using multiple
+# variants for a single build in an erratum
+def test_associate_build_with_multiple_variants():
+    sb = SoftwareBuildFactory(build_id="891182")
+    product, _ = CollectorErrataProduct.objects.get_or_create(name="RHEL", et_id=16)
+    product_version, _ = CollectorErrataProductVersion.objects.get_or_create(
+        name="RHEL-7.9.z", et_id=1315, product=product
+    )
+    CollectorErrataProductVariant.objects.get_or_create(
+        name="7Workstation-7.9.Z",
+        cpe="cpe:/o:redhat:enterprise_linux:7::workstation",
+        et_id=3149,
+        product_version=product_version,
+    )
+    CollectorErrataProductVariant.objects.get_or_create(
+        name="7Server-7.9.Z",
+        cpe="cpe:/o:redhat:enterprise_linux:7::server",
+        et_id=2024,
+        product_version=product_version,
+    )
+    stream = ProductStreamFactory()
+    component = ComponentFactory(software_build=sb)
+    component.productstreams.set([stream])
+    assert associate_variant_with_build_stream(
+        sb.build_id, sb.build_type, ["7Workstation-7.9.Z", "7Server-7.9.Z"]
+    )
+    server_product_variant = ProductVariant.objects.get(name="7Server-7.9.Z")
+    workstation_product_variant = ProductVariant.objects.get(name="7Workstation-7.9.Z")
+    for variant in (server_product_variant, workstation_product_variant):
+        assert variant
+        assert variant.productstreams == stream
+    assert workstation_product_variant.cpe == "cpe:/o:redhat:enterprise_linux:7::workstation"
+    assert server_product_variant.cpe == "cpe:/o:redhat:enterprise_linux:7::server"

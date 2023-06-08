@@ -173,23 +173,20 @@ def update_products() -> None:
                                         et_variant.name,
                                         product_stream.name,
                                     )
-                                    variant_product_version: CollectorErrataProductVersion = (
-                                        et_variant.product_version
-                                    )
-                                    product_variant, _ = ProductVariant.objects.update_or_create(
+                                    (
+                                        product_variant,
+                                        created,
+                                    ) = ProductVariant.objects.update_or_create(
                                         name=et_variant.name,
                                         defaults={
-                                            "version": "",
                                             "cpe": et_variant.cpe,
-                                            "description": "",
                                             "products": product,
                                             "productversions": product_version,
                                             "productstreams": product_stream,
-                                            "meta_attr": {
-                                                "et_product": variant_product_version.product.name,
-                                                "et_product_version": variant_product_version.name,
-                                            },
                                         },
+                                    )
+                                    update_variant_meta(
+                                        product_variant, {"brew_tag": trimmed_brew_tag}
                                     )
                                     ProductNode.objects.get_or_create(
                                         object_id=product_variant.pk,
@@ -201,7 +198,6 @@ def update_products() -> None:
                                     product_variant.save_product_taxonomy()
                     et_product_versions_set = set(product_stream.et_product_versions)
                     for et_product in errata_info:
-                        et_product_name = et_product.pop("product_name")
                         et_product_versions = et_product.pop("product_versions")
 
                         for et_product_version in et_product_versions:
@@ -217,22 +213,16 @@ def update_products() -> None:
                                     .values_list("cpe", flat=True)
                                     .first()
                                 )
-
                                 product_variant, _ = ProductVariant.objects.update_or_create(
                                     name=variant,
                                     defaults={
-                                        "version": "",
-                                        "description": "",
                                         "cpe": et_variant_cpe if et_variant_cpe else "",
                                         "products": product,
                                         "productversions": product_version,
                                         "productstreams": product_stream,
-                                        "meta_attr": {
-                                            "et_product": et_product_name,
-                                            "et_product_version": et_pv_name,
-                                        },
                                     },
                                 )
+                                update_variant_meta(product_variant, {"source": "errata_info"})
                                 ProductNode.objects.get_or_create(
                                     object_id=product_variant.pk,
                                     defaults={
@@ -252,3 +242,9 @@ def update_products() -> None:
                     product_stream.save_product_taxonomy()
                 product_version.save_product_taxonomy()
             product.save_product_taxonomy()
+
+
+def update_variant_meta(product_variant, meta):
+    if product_variant.meta_attr != meta:
+        product_variant.meta_attr = product_variant.meta_attr | meta
+        product_variant.save()

@@ -1,17 +1,58 @@
 {% extends "base.html" %}
 {% block body %}
-<div class="container-fluid">
-  <hr/>
-  <p>Corgi: <a href="/api/v1/">API</a> | <a href="api/healthy">Health</a> | <a href="/api/v1/status">Status</a></p>
-  <p>Utils: <a href="/data">Data</a> | <a href="tasks">Available Tasks</a> | <a href="/tasks/running">Running Tasks</a></p>
-  <hr/>
-  <p>Docs:
-    <a href="/api/v1/schema/docs">API</a>
-    |
-    <a href="https:///github.com/RedHatProductSecurity/component-registry/tree/main/docs"
-       rel="noopener noreferrer">GitHub <em class="fa fa-external-link"></em>
-    </a>
-  </p>
-  <p>Schema: <a href="/api/v1/schema?format=json">JSON</a> | <a href="api/v1/schema?format=yaml">YAML</a></p>
+<div class="jumbotron">
+  <div class="container">
+    <h1 class="display-4">Component Registry</h1>
+    <p class="lead">Aggregates component data from software build systems to enable SBOM
+      generation, software composition data analysis, and software license reviews.</p>
+  </div>
+</div>
+<div class="container-fluid container-cards-pf home-page">
+  <div class="row row-cards-pf">
+    <div class="col-xl-2 col-lg-3 col-md-4">
+      <div class="card-pf">
+        <div class="card-pf-body">
+          <h1 class="card-pf-title"><i class="fa fa-cog fa-lg fa-padding"></i>API</h1>
+        </div>
+        <ul class="list-group">
+          <li class="list-group-item">API v1: <a href="/api/v1/">/api/v1/</a></li>
+          <li class="list-group-item">Health Endpoint: <a href="/api/healthy">/api/healthy</a></li>
+          <li class="list-group-item">Status Endpoint:
+            <a href="/api/v1/status">/api/v1/status</a></li>
+          <li class="list-group-item">OpenAPI Schema:
+            <a href="/api/v1/schema?format=json">JSON</a> /
+            <a href="/api/v1/schema?format=yaml">YAML</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <div class="col-xl-2 col-lg-3 col-md-4">
+      <div class="card-pf">
+        <div class="card-pf-body">
+          <h1 class="card-pf-title"><i class="fa fa-database fa-lg fa-padding"></i>Utils</h1>
+        </div>
+        <ul class="list-group">
+          <li class="list-group-item"><a href="/data">Data</a></li>
+          <li class="list-group-item"><a href="/tasks">Available Tasks</a></li>
+          <li class="list-group-item"><a href="/tasks/running">Running Tasks</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="col-xl-2 col-lg-3 col-md-4">
+      <div class="card-pf">
+        <div class="card-pf-body">
+          <h1 class="card-pf-title"><i class="fa fa-book fa-lg fa-padding"></i>Docs</h1>
+        </div>
+        <ul class="list-group">
+          <li class="list-group-item"><a href="/api/v1/schema/docs">API Schema</a></li>
+          <li class="list-group-item">
+            <a href="https://github.com/RedHatProductSecurity/component-registry/tree/main/docs"
+               rel="noopener noreferrer">GitHub <i class="fa fa-external-link"></i>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}

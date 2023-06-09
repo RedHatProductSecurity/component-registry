@@ -10,7 +10,7 @@
   margin-left: 1em;
 }
 
-.whitefont {
+.whitefont, .whitefont:hover {
   font-size: 14px;
   text-decoration: none;
   color: white;
@@ -22,4 +22,24 @@
 
 .paddingright {
   padding-right: 0.5em;
+}
+
+.fa-padding {
+  padding-right: 10px;
+}
+
+.home-page h1.card-pf-title {
+  font-size: 24px;
+}
+
+.home-page .card-pf {
+  min-height: 300px;
+}
+
+.home-page .card-pf li {
+  font-size: large;
+}
+
+.jumbotron .container {
+  margin-left: 100px;
 }

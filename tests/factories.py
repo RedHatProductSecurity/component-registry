@@ -176,8 +176,9 @@ class ComponentFactory(factory.django.DjangoModelFactory):
     version = ".".join(str(n) for n in random.sample(range(10), 3))
     release = str(random.randint(0, 10))
     arch = random.choice(("src", "noarch", "s390", "ppc", "x86_64"))
-    license_declared_raw = "BSD-3-Clause or (GPLv3+ and LGPLv3+)"
-    license_concluded_raw = "(MIT and (ASL-2.0 or GPLv3+)) or LGPLv3+"
+    # These values use nonstandard SPDX license identifiers to match the real data
+    license_declared_raw = "BSD-3-Clause or (GPLv3+ with exceptions and LGPLv3+) and Public Domain"
+    license_concluded_raw = "(MIT and (ASL 2.0 or GPLv3+ with exceptions)) or LGPLv3+"
 
     software_build = factory.SubFactory(SoftwareBuildFactory)
     tag = factory.RelatedFactory(ComponentTagFactory, factory_related_name="tagged_model")

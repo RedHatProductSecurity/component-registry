@@ -969,24 +969,42 @@ def test_license_properties():
     # Uppercase MIT, lowercase bsd, and mixed-case GPLv3 are all fine
     # We just make everything uppercase to meet the first rule
     # It's simple and doesn't require any additional parsing
+    # We also have to convert multi-word identifiers like ASL 2.0
+    # into single words separated by dashes, like ASL-2.0
+    # To make the online SPDX validator happy: https://tools.spdx.org/app/validate
     c = ComponentFactory()
-    assert c.license_concluded == c.license_concluded_raw.upper()
-    assert c.license_declared == c.license_declared_raw.upper()
+    assert c.license_concluded == c.license_concluded_raw.upper().replace("ASL 2.0", "ASL-2.0")
+    assert c.license_declared == c.license_declared_raw.upper().replace(
+        "PUBLIC DOMAIN", "PUBLIC-DOMAIN"
+    )
+    for keyword in ("AND", "OR", "WITH"):
+        # Keyword with dashes should not be in either license string
+        assert (
+            f"-{keyword}-" not in c.license_concluded and f"-{keyword}-" not in c.license_declared
+        )
+        # Keyword with spaces should be in both license strings instead
+        assert f" {keyword} " in c.license_concluded and f" {keyword} " in c.license_declared
 
-    # Every entry in the list should have parentheses and keywords stripped
+    # Every entry in the list should have parentheses and most keywords stripped
     for c_license in c.license_concluded_list:
         assert "(" not in c_license
         assert ")" not in c_license
         assert "AND" not in c_license
         assert "OR" not in c_license
-        assert "WITH" not in c_license
+        # When splitting into a list for easy reading,
+        # we treat exceptions as part of the identifier
+        # e.g. ASL-2.0, PUBLIC-DOMAIN, GPLv3+ WITH EXCEPTIONS
+        # assert "WITH" not in c_license
 
     for c_license in c.license_declared_list:
         assert "(" not in c_license
         assert ")" not in c_license
         assert "AND" not in c_license
         assert "OR" not in c_license
-        assert "WITH" not in c_license
+        # When splitting into a list for easy reading,
+        # we treat exceptions as part of the identifier
+        # e.g. ASL-2.0, PUBLIC-DOMAIN, GPLv3+ WITH EXCEPTIONS
+        # assert "WITH" not in c_license
 
     c.license_concluded_raw = ""
     c.license_declared_raw = ""

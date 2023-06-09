@@ -6,7 +6,7 @@
     ],
     "licenseListVersion": "3.8"
   },
-  "dataLicense": "CC-BY-4.0",
+  "dataLicense": "CC0-1.0",
   "documentDescribes": [
     "SPDXRef-{{obj.uuid}}"
   ],

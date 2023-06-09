@@ -23,7 +23,8 @@ ADMINS = tuple(
     for name_and_email in os.getenv("CORGI_ADMINS", ";root@localhost").split(",")
 )
 
-DOCS_URL = os.getenv("CORGI_DOCS_URL")
+# Default to public Jira project if we can't point at any ops docs.
+DOCS_URL = os.getenv("CORGI_DOCS_URL", "https://issues.redhat.com/projects/SECDATA")
 OPENSHIFT_BUILD_COMMIT = os.getenv("OPENSHIFT_BUILD_COMMIT")
 PRODSEC_EMAIL = os.getenv("PRODSEC_EMAIL", "dev@example.com")
 

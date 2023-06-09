@@ -1786,17 +1786,32 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         )
         return list(erratum for erratum in errata_qs if erratum)
 
+    @staticmethod
+    def license_clean(license_str: str) -> str:
+        """Take an SPDX license expression, and remove spaces from all identifiers
+        so that PUBLIC DOMAIN becomes PUBLIC-DOMAIN, ASL 2.0 becomes ASL-2.0, etc."""
+        license_str = license_str.replace(" ", "-")
+        # Above fixed identifiers, but also the keywords "-AND-", "-OR-" and "-WITH-"
+        license_str = license_str.replace("-AND-", " AND ")
+        license_str = license_str.replace("-OR-", " OR ")
+        license_str = license_str.replace("-WITH-", " WITH ")
+        return license_str
+
     @property
     def license_concluded(self) -> str:
         """Return the OLCS scan results formatted as an SPDX license expression
-        This is almost the same as above, but operators (AND, OR) + license IDs are uppercased"""
-        return self.license_concluded_raw.upper()
+        This is almost the same as above, but operators (AND, OR) + license IDs are uppercased
+        and multi-word identifiers like ASL 2.0 are joined with - dashes, like ASL-2.0"""
+        license_str = self.license_concluded_raw.upper()
+        return self.license_clean(license_str)
 
     @property
     def license_declared(self) -> str:
         """Return the "summary license string" formatted as an SPDX license expression
-        This is almost the same as above, but operators (AND, OR) + license IDs are uppercased"""
-        return self.license_declared_raw.upper()
+        This is almost the same as above, but operators (AND, OR) + license IDs are uppercased
+        and multi-word identifiers like ASL 2.0 are joined with - dashes, like ASL-2.0"""
+        license_str = self.license_declared_raw.upper()
+        return self.license_clean(license_str)
 
     @staticmethod
     def license_list(license_expression: str) -> list[str]:

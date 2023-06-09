@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from celery import states as celery_states
 from celery.signals import beat_init
 from celery.utils.log import get_task_logger
 from celery_singleton import Singleton, clear_locks
@@ -94,7 +95,7 @@ def email_failed_tasks():
 
     failed_tasks_threshold = get_last_success_for_task("corgi.tasks.monitoring.email_failed_tasks")
     failed_tasks = TaskResult.objects.filter(
-        status__exact="FAILURE",
+        status__in=(celery_states.FAILURE, celery_states.RETRY),
         date_done__gte=failed_tasks_threshold,
     ).using("read_only")
 

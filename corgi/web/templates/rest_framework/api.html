@@ -1,5 +1,10 @@
 {% extends "rest_framework/base.html" %}
 
+{% block style %}
+{{ block.super }}
+  <link rel="icon" href="data:," />
+{% endblock %}
+
 {% block branding %}
   <a class="navbar-brand" href="/">Component Registry</a>
 {% endblock %}

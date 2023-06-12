@@ -54,7 +54,7 @@ services:
 
   corgi-nginx:
     container_name: corgi-nginx
-    image: registry.access.redhat.com/ubi9/nginx-122:1-12
+    image: registry.redhat.io/ubi9/nginx-122:1
     depends_on: ["corgi-web"]
     ports:
       - "8080:8080"
@@ -62,6 +62,23 @@ services:
     volumes:
       - ./staticfiles:/opt/app-root/src/staticfiles:z
       - ./etc/nginx:/opt/app-root/etc/nginx.default.d/
+    deploy:
+      resources:
+        limits:
+          memory: 1.5G   # Keep in sync with OpenShift mem limits to catch OOM problems
+
+  corgi-nginx-exporter:
+    container_name: corgi-nginx-exporter
+    depends_on: ["corgi-nginx"]
+    image: quay.io/nginx/nginx-prometheus-exporter@sha256:131c2c2963296bbae7e9fcb52f77a1202f1d87d5d85e8e6cd7bcbccad799bc01
+    environment:
+      SCRAPE_URI: "http://corgi-nginx:8080/stub_status"
+    ports:
+      - "9113:9113"
+    deploy:
+      resources:
+        limits:
+          memory: 128M   # Keep in sync with OpenShift mem limits to catch OOM problems
 
   corgi-web:
     container_name: corgi-web
@@ -165,7 +182,7 @@ services:
       replicas: 2
       resources:
         limits:
-          memory: 2G  # Keep in sync with OpenShift mem limits to catch OOM problems
+          memory: 5G  # Keep in sync with OpenShift mem limits to catch OOM problems
     container_name: corgi-celery-cpu
     image: corgi
     env_file:

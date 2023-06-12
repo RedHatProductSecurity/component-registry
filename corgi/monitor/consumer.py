@@ -24,6 +24,8 @@ class UMBHandler:
     methods to invoke for handle messages in those topics."""
 
     def __init__(self, addresses: dict[str, HandleMethod], selectors: dict[str, str]):
+        if not addresses:
+            raise ValueError("UMBHandler has no addresses")
         # A mapping of virtual topic addresses to functions that handle topic messages
         # as determined by a specific listener.
         self.virtual_topic_addresses = addresses
@@ -31,111 +33,6 @@ class UMBHandler:
         # A set of filters used to narrow down the received messages from UMB for this handler, if
         # none, handle all messages
         self.selectors = selectors
-
-
-class UMBDispatcher(MessagingHandler):
-    """Maintains a collection of UMBHandlers and dispatches messages to them"""
-
-    def __init__(self):
-        """Set up a handler that listens to many topics and processes messages from each"""
-        super(UMBDispatcher, self).__init__()
-
-        # Set of URLs where UMB brokers are running. Use AMQP protocol port numbers only. See
-        # specific URLs in settings; use env vars to select the appropriate broker.
-        self.urls = [settings.UMB_BROKER_URL]
-
-        # The UMB cert and key are generated for an LDAP user (developer) or service account
-        # (this app). The CA cert is the standard internal root CA cert installed in the Dockerfile.
-        # To request a new set of UMB certs, see docs/developer.md or docs/operations.md.
-        self.ssl_domain = SSLDomain(SSLDomain.MODE_CLIENT)
-        self.ssl_domain.set_credentials(
-            cert_file=settings.UMB_CERT, key_file=settings.UMB_KEY, password=None
-        )
-        self.ssl_domain.set_trusted_ca_db(settings.CA_CERT)
-        self.ssl_domain.set_peer_authentication(SSLDomain.VERIFY_PEER)
-
-        # A list of UMBHandlers to which messages will be dispatched
-        self.handlers: list[UMBHandler]
-
-        # Ack messages manually so that we can ensure we successfully acted upon a message when
-        # it was received. See accept condition logic in the on_message() method.
-        self.auto_accept = False
-
-        # Each message that is accepted also needs to be settled locally. Auto-settle each
-        # message that is accepted automatically (this is the default value).
-        self.auto_settle = True
-
-        # Handlers must be registered before the listener is started
-        self.started = False
-
-    def register_handler(self, handler: UMBHandler):
-        """Register an additional handler. Handlers should be registered before the dispatcher
-        is started."""
-        if self.started:
-            raise RuntimeError("Handlers must be added before UMBDispatcher is started")
-        elif not handler.virtual_topic_addresses:
-            raise ValueError("Handler has no addresses")
-        else:
-            self.handlers.append(handler)
-
-    @property
-    def virtual_topic_addresses(self) -> dict[str, HandleMethod]:
-        return {
-            addr: handler.virtual_topic_addresses[addr]
-            for handler in self.handlers
-            for addr in handler.virtual_topic_addresses
-        }
-
-    @property
-    def selectors(self) -> dict[str, str]:
-        return {
-            addr: handler.selectors[addr] for handler in self.handlers for addr in handler.selectors
-        }
-
-    def on_start(self, event: Event) -> None:
-        """Connect to UMB broker(s) and set up a receiver for each virtual topic address"""
-        logger.info("Connecting to broker(s): %s", self.urls)
-        conn = event.container.connect(urls=self.urls, ssl_domain=self.ssl_domain, heartbeat=500)
-        for virtual_topic_address in self.virtual_topic_addresses:
-            topic_selector = self.selectors.get(virtual_topic_address, "")
-            recv_opts = [Selector(topic_selector)] if topic_selector else []
-            event.container.create_receiver(
-                conn, virtual_topic_address, name=None, options=recv_opts
-            )
-
-    def on_message(self, event: Event) -> None:
-        """Route message to a handler function, based on the virtual topic it was received on"""
-        logger.info("Received UMB event on %s: %s", event.message.address, event.message.id)
-        # Convert general topic address into specific address we listen on
-        address = event.message.address or ""
-        address = address.replace("topic://", f"Consumer.{settings.UMB_CONSUMER}.")
-
-        # Look up the function registered for this address
-        callback = self.virtual_topic_addresses.get(address)
-
-        if not address:
-            raise ValueError(f"UMB event {event.message.id} had no address!")
-        elif callback:
-            accepted = callback(event)
-            if accepted:
-                # Accept the delivered message to remove it from the queue.
-                self.accept(event.delivery)
-            else:
-                # Release message back to the queue but report back that it was delivered. The
-                # message will be re-delivered to any available client again.
-                self.release(event.delivery, delivered=True)
-        else:
-            raise ValueError(
-                f"UMB event {event.message.id} had unrecognized address: {event.message.address}"
-            )
-
-    def consume(self):
-        """Run a single message handler, which can listen to multiple virtual topic addresses"""
-        if not self.handlers:
-            raise ValueError("Dispatcher must have handler(s) registered before consuming")
-
-        logger.info("Starting consumer for virtual topic(s): %s", self.virtual_topic_addresses)
-        Container(self).run()
 
 
 class BrewUMBHandler(UMBHandler):
@@ -156,7 +53,7 @@ class BrewUMBHandler(UMBHandler):
             f"{VIRTUAL_TOPIC_PREFIX}.errata.activity.status"
         ] = "errata_status = 'SHIPPED_LIVE'"
 
-        super(UMBHandler, self).__init__(addresses=addresses, selectors=selectors)
+        super(BrewUMBHandler, self).__init__(addresses=addresses, selectors=selectors)
 
     def handle_builds(self, event: Event) -> bool:
         """Handle messages about completed Brew builds"""
@@ -224,3 +121,93 @@ class BrewUMBHandler(UMBHandler):
             return False
         else:
             return True
+
+
+class UMBDispatcher(MessagingHandler):
+    """Maintains a collection of UMBHandlers and dispatches messages to them"""
+
+    def __init__(self):
+        """Set up a handler that listens to many topics and processes messages from each"""
+        super(UMBDispatcher, self).__init__()
+
+        # Set of URLs where UMB brokers are running. Use AMQP protocol port numbers only. See
+        # specific URLs in settings; use env vars to select the appropriate broker.
+        self.urls = [settings.UMB_BROKER_URL]
+
+        # The UMB cert and key are generated for an LDAP user (developer) or service account
+        # (this app). The CA cert is the standard internal root CA cert installed in the Dockerfile.
+        # To request a new set of UMB certs, see docs/developer.md or docs/operations.md.
+        self.ssl_domain = SSLDomain(SSLDomain.MODE_CLIENT)
+        self.ssl_domain.set_credentials(
+            cert_file=settings.UMB_CERT, key_file=settings.UMB_KEY, password=None
+        )
+        self.ssl_domain.set_trusted_ca_db(settings.CA_CERT)
+        self.ssl_domain.set_peer_authentication(SSLDomain.VERIFY_PEER)
+
+        # Ack messages manually so that we can ensure we successfully acted upon a message when
+        # it was received. See accept condition logic in the on_message() method.
+        self.auto_accept = False
+
+        # Each message that is accepted also needs to be settled locally. Auto-settle each
+        # message that is accepted automatically (this is the default value).
+        self.auto_settle = True
+
+        # A list of UMBHandlers to which messages will be dispatched. If you add new handlers,
+        # make sure they're added here.
+        self.handlers: list[UMBHandler] = [BrewUMBHandler()]
+
+    @property
+    def virtual_topic_addresses(self) -> dict[str, HandleMethod]:
+        return {
+            addr: handler.virtual_topic_addresses[addr]
+            for handler in self.handlers
+            for addr in handler.virtual_topic_addresses
+        }
+
+    @property
+    def selectors(self) -> dict[str, str]:
+        return {
+            addr: handler.selectors[addr] for handler in self.handlers for addr in handler.selectors
+        }
+
+    def on_start(self, event: Event) -> None:
+        """Connect to UMB broker(s) and set up a receiver for each virtual topic address"""
+        logger.info("Connecting to broker(s): %s", self.urls)
+        conn = event.container.connect(urls=self.urls, ssl_domain=self.ssl_domain, heartbeat=500)
+        for virtual_topic_address in self.virtual_topic_addresses:
+            topic_selector = self.selectors.get(virtual_topic_address, "")
+            recv_opts = [Selector(topic_selector)] if topic_selector else []
+            event.container.create_receiver(
+                conn, virtual_topic_address, name=None, options=recv_opts
+            )
+
+    def on_message(self, event: Event) -> None:
+        """Route message to a handler function, based on the virtual topic it was received on"""
+        logger.info("Received UMB event on %s: %s", event.message.address, event.message.id)
+        # Convert general topic address into specific address we listen on
+        address = event.message.address or ""
+        address = address.replace("topic://", f"Consumer.{settings.UMB_CONSUMER}.")
+
+        # Look up the function registered for this address
+        callback = self.virtual_topic_addresses.get(address)
+
+        if not address:
+            raise ValueError(f"UMB event {event.message.id} had no address!")
+        elif callback:
+            accepted = callback(event)
+            if accepted:
+                # Accept the delivered message to remove it from the queue.
+                self.accept(event.delivery)
+            else:
+                # Release message back to the queue but report back that it was delivered. The
+                # message will be re-delivered to any available client again.
+                self.release(event.delivery, delivered=True)
+        else:
+            raise ValueError(
+                f"UMB event {event.message.id} had unrecognized address: {event.message.address}"
+            )
+
+    def consume(self):
+        """Run a single message handler, which can listen to multiple virtual topic addresses"""
+        logger.info("Starting consumer for virtual topic(s): %s", self.virtual_topic_addresses)
+        Container(self).run()

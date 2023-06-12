@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
-from corgi.monitor.consumer import BrewUMBHandler, UMBDispatcher
+from corgi.monitor.consumer import UMBDispatcher
 
 
 class Command(BaseCommand):
@@ -13,7 +13,6 @@ class Command(BaseCommand):
         if settings.UMB_BREW_MONITOR_ENABLED:
             try:
                 dispatcher = UMBDispatcher()
-                dispatcher.register_handler(BrewUMBHandler())
                 dispatcher.consume()
             except KeyboardInterrupt:
                 pass

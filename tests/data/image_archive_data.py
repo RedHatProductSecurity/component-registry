@@ -9,15 +9,18 @@ TEST_IMAGE_ARCHIVE = {
         "docker": {
             "layer_sizes": [
                 {
-                    "diff_id": "sha256:744c86b543903d171c69633d70aef72a25ce73da0a3be609e46db08e72978810",
+                    "diff_id": "sha256:"
+                    "744c86b543903d171c69633d70aef72a25ce73da0a3be609e46db08e72978810",
                     "size": 102428737,
                 },
                 {
-                    "diff_id": "sha256:1323ffbff4ddc4ec19320352186f090abf00c9c5a22b94f1057ae7ca4cb89f52",
+                    "diff_id": "sha256:"
+                    "1323ffbff4ddc4ec19320352186f090abf00c9c5a22b94f1057ae7ca4cb89f52",
                     "size": 4654,
                 },
                 {
-                    "diff_id": "sha256:99058f5b1a1f25e0c17575931b4263224778e1004344dd0db0d9f7359ccbd6da",
+                    "diff_id": "sha256:"
+                    "99058f5b1a1f25e0c17575931b4263224778e1004344dd0db0d9f7359ccbd6da",
                     "size": 290182191,
                 },
             ],
@@ -49,7 +52,8 @@ TEST_IMAGE_ARCHIVE = {
                         "architecture": "x86_64",
                         "build-date": "2021-11-03T07:56:17.022725",
                         "com.github.commit": "d77102aaefce8b513f034a9937e7e8789ef984c7",
-                        "com.github.url": "https://github.com/submariner-io/submariner-operator.git",
+                        "com.github.url": "https://github.com/submariner-io/"
+                        "submariner-operator.git",
                         "description": "subctl",
                         "distribution-scope": "public",
                         "io.k8s.description": "subctl",
@@ -89,12 +93,14 @@ TEST_IMAGE_ARCHIVE = {
                 },
             },
             "digests": {
-                "application/vnd.docker.distribution.manifest.v2+json": "sha256:e9690a156789266402d21ca4ce498c6392125b458fa537e172dfa2509229c4bb"
+                "application/vnd.docker.distribution.manifest.v2+json": "sha256"
+                ":e9690a156789266402d21ca4ce498c6392125b458fa537e172dfa2509229c4bb"
             },
             "parent_id": "sha256:e7685639f55280ffe8da3724cb1d342091a1ceea79af5eb91a07ce97cd32f221",
         },
     },
-    "filename": "docker-image-sha256:9b0a454a2b9d00f8f7b4a8b1188f0b70ead186b906261b1c13e5e6d75837db7d.x86_64.tar.gz",
+    "filename": "docker-image-sha256:"
+    "9b0a454a2b9d00f8f7b4a8b1188f0b70ead186b906261b1c13e5e6d75837db7d.x86_64.tar.gz",
     "id": 5620578,
     "metadata_only": False,
     "size": 138507819,
@@ -1824,6 +1830,10 @@ KOJI_LIST_RPMS = [
     },
 ]
 
+# Comment describes how to get magic values used in tests
+# Don't change data, or below will be invalidated
+# RPM_IDS_IN_SUBCTL_CONTAINER = [rpm["build_id"] for rpm in KOJI_LIST_RPMS]
+# RPM_BUILD_IDS = list(set(RPM_IDS_IN_SUBCTL_CONTAINER))
 RPM_BUILD_IDS = [
     1207296,
     1724416,
@@ -1916,6 +1926,8 @@ RPM_BUILD_IDS = [
     745979,
 ]
 
+# Different than above - uses rpm["id"] instead of rpm["build_id"]
+# list(set(rpm["id"] for rpm in KOJI_LIST_RPMS))
 NOARCH_RPM_IDS = [
     8215425,
     9859973,
@@ -1929,4 +1941,5 @@ NOARCH_RPM_IDS = [
     6156542,
 ]
 
+# len(RPM_IDS_IN_SUBCTL_CONTAINER)
 NO_RPMS_IN_SUBCTL_CONTAINER = 101

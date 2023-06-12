@@ -1,5 +1,3 @@
-import os
-
 TEST_IMAGE_ARCHIVE = {
     "btype": "image",
     "btype_id": 4,

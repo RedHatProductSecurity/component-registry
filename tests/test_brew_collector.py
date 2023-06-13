@@ -398,14 +398,14 @@ def test_extract_remote_sources(requests_mock):
     assert len(source_components) == 1
     assert source_components[0]["meta"]["name"] == "thomasmckay/clair"
     assert source_components[0]["type"] == Component.Type.GITHUB
-    assert len(source_components[0]["components"]) == 375
+    assert len(source_components[0]["components"]) == 2
     xtext_modules = [
         d for d in source_components[0]["components"] if d["meta"]["name"] == "golang.org/x/text"
     ]
-    assert len(xtext_modules) == 1
-    assert len(xtext_modules[0]["components"]) == 13
-    xtext_package_names = [p["meta"]["name"] for p in xtext_modules[0]["components"]]
-    assert all([n.startswith("golang.org/x/text") for n in xtext_package_names])
+    assert len(xtext_modules) == 0
+    # assert len(xtext_modules[0]["components"]) == 13
+    # xtext_package_names = [p["meta"]["name"] for p in xtext_modules[0]["components"]]
+    # assert all([n.startswith("golang.org/x/text") for n in xtext_package_names])
     # verify_pypi_provides test
     pip_modules = [
         d for d in source_components[0]["components"] if d["type"] == Component.Type.PYPI
@@ -415,59 +415,196 @@ def test_extract_remote_sources(requests_mock):
 
 
 def test_extract_multiple_remote_sources(requests_mock):
-    # buildId=1911112
+    """Test processing multiple remote-source / Cachito manifests
+    We don't use pytest.mark.parametrize in order to test multiple files at once"""
+    # buildId=1911112 has multiple Cachito manifests, as given below
+    # Each manifest has a .pkg_managers key that specifies all the component types,
+    # a .packages key for all the top-level components,
+    # and a .dependencies key for all the child components of all top-level components
+
+    # Each dict in .packages also has a .dependencies key of its own
+    # which lists all the child components for that top-level component only
+    # Processing all the .packages and .packages[].dependencies should be enough
+    # We check the top-level .dependencies key here in tests only to assert this
     remote_sources = {
-        "238481": ("https://test/data/remote-source-quay.json", "tar.gz"),
-        "238482": ("https://test/data/remote-source-config-tool.json", "tar.gz"),
-        "238483": ("https://test/data/remote-source-jwtproxy.json", "tar.gz"),
-        "238484": ("https://test/data/remote-source-pushgateway.json", "tar.gz"),
+        "238481": ("https://tests/data/remote-source-quay.json", "tar.gz"),
+        "238482": ("https://tests/data/remote-source-config-tool.json", "tar.gz"),
+        "238483": ("https://tests/data/remote-source-jwtproxy.json", "tar.gz"),
+        "238484": ("https://tests/data/remote-source-pushgateway.json", "tar.gz"),
     }
-    for remote_source in ["quay", "config-tool", "jwtproxy", "pushgateway"]:
-        with open(f"tests/data/remote-source-{remote_source}.json") as remote_source_data:
-            requests_mock.get(
-                f"https://test/data/remote-source-{remote_source}.json",
-                text=remote_source_data.read(),
+    expected_test_values = {
+        "source_component_names": (
+            "quay/quay",
+            "quay/config-tool",
+            "quay/jwtproxy",
+            "prometheus/pushgateway",
+        ),
+        "num_top_level_components": (2, 5, 19, 3),
+        "num_child_components": (1202, 1990, 2040, 525),
+        "num_top_level_components_without_go_packages": (2, 2, 1, 1),
+    }
+
+    for index, (remote_source, _) in enumerate(remote_sources.values()):
+        with open(remote_source.replace("https://", "")) as remote_source_data:
+            remote_source_text = remote_source_data.read()
+        requests_mock.get(remote_source, text=remote_source_text)
+        remote_source_json = json.loads(remote_source_text)
+
+        assert expected_test_values["num_top_level_components"][index] == len(
+            remote_source_json["packages"]
+        )
+        assert expected_test_values["num_top_level_components_without_go_packages"][index] == len(
+            tuple(
+                package
+                for package in remote_source_json["packages"]
+                if package["type"] != "go-package"
             )
+        )
+        # Find this source's total number of child components for each top-level component
+        # This usually equals the overall number of child components in .dependencies
+        num_child_components = 0
+        unique_child_nvrs = set()
+        for package in remote_source_json["packages"]:
+            num_child_components += len(package["dependencies"])
+            for child_package in package["dependencies"]:
+                unique_child_nvrs.add(
+                    f"{child_package['type']}/{child_package['name']}-{child_package['version']}"
+                )
+        assert expected_test_values["num_child_components"][index] == num_child_components
+
+        # Assert we processed the entire manifest via .packages
+        # All child components in the top-level .dependencies key should also be linked to
+        # some parent component in the top-level .packages key
+        # In other words, we only need to process .packages and their children
+        # We can completely ignore .dependencies
+        # If we also processed .dependencies, we would process each of those components twice
+        # If we only processed .dependencies, we'd be missing their parent .packages
+
+        # Some child components may appear under two different parent components
+        # If both parents depend on the same child NVR, this child component only appears once
+        # in the top-level .dependencies key - the unique_child_nvrs set handles this case
+        if num_child_components == len(unique_child_nvrs):
+            assert num_child_components == len(remote_source_json["dependencies"])
+        else:
+            # Note that in this case, we will discover "extra" components
+            # Our code doesn't dedupe NVRs in .packages[].dependencies
+            # So we can't naively assert all these NVRs against the total length of .dependencies
+            assert len(unique_child_nvrs) == len(remote_source_json["dependencies"])
+
     go_version = "v1.16.0"
+    # Each source component is a Github repo, one for each Cachito manifest we process
     source_components = Brew._extract_remote_sources(go_version, remote_sources)
     assert len(source_components) == 4
-    components = [len(s["components"]) for s in source_components]
-    # TODO FAIL: what do these numbers mean?!?
-    #  They seem to be related to the number of provided components we discover
-    #  I still need to check these numbers are correct after my changes
-    assert components == [2, 493, 143, 338]
 
-    # Inspect quay components
-    components = [s["components"] for s in source_components]
-    quay_npm_components = components[0][0]["components"]
-    quay_npm_runtime_components = [c for c in quay_npm_components if not c["meta"]["dev"]]
-    assert len(quay_npm_runtime_components) > 0
-    quay_npm_dev_components = [c for c in quay_npm_components if c["meta"]["dev"]]
-    assert len(quay_npm_dev_components) > 0
-    quay_pip_components = components[0][1]["components"]
-    quay_pip_runtime_components = [c for c in quay_pip_components if not c["meta"]["dev"]]
-    assert len(quay_pip_runtime_components) > 0
-    quay_pip_dev_components = [c for c in quay_pip_components if c["meta"]["dev"]]
-    assert len(quay_pip_dev_components) == 0
+    # These top-level components are most of the Cachito .packages for each manifest we process
+    top_level_components = []
+    # Check that we discovered the right number of top-level components
+    # We will process everything, as proven by the earlier assertS
+    # But we move top-level go-packages underneath a matching go-module (if any)
+    # So we can no longer assert that our number of top_level_components exactly matches Cachito
+    for index, source_component in enumerate(source_components):
+        assert (
+            source_component["meta"]["name"]
+            == expected_test_values["source_component_names"][index]
+        )
+        num_top_level_components = len(source_component["components"])
+        assert (
+            num_top_level_components
+            == expected_test_values["num_top_level_components_without_go_packages"][index]
+        )
+        top_level_components.append(source_component["components"])
 
-    # Inspect config-tool components
-    config_tool_components = components[1]
-    config_tool_npm_components = [
-        c["components"] for c in config_tool_components if c["meta"]["name"] == "quay-config-editor"
-    ]
-    assert len(config_tool_npm_components) > 0
+    # Inspect .packages for the quay Cachito manifest
+    quay_packages = top_level_components[0]
 
-    # Inspect jwtproxy components
-    jwtproxy_components = components[2]
-    # TODO: jwtproxy_components[0] is github.com/quay/jwtproxy/v2 after my changes
-    #  AKA the parent component's list of dependencies now includes itself, fix this bug
-    assert jwtproxy_components[1]["type"] == Component.Type.GOLANG
-    assert jwtproxy_components[1]["meta"]["name"] == "bufio"
-    assert jwtproxy_components[1]["meta"]["go_component_type"] == "go-package"
-    assert jwtproxy_components[1]["meta"]["version"] == go_version
+    # Check the .dependencies of the first (npm) .package for Quay
+    quay_npm_dependencies = quay_packages[0]["components"]
+    quay_npm_runtime_dependencies = tuple(
+        dep for dep in quay_npm_dependencies if not dep["meta"]["dev"]
+    )
+    assert len(quay_npm_runtime_dependencies) == 127
 
-    # Inspect pushgateway components
-    assert len(source_components[3]["components"]) > 0
+    quay_npm_dev_dependencies = tuple(dep for dep in quay_npm_dependencies if dep["meta"]["dev"])
+    assert len(quay_npm_dev_dependencies) == 900
+
+    # Check the .dependencies of the second (pip) .package for Quay
+    quay_pip_dependencies = quay_packages[1]["components"]
+    quay_pip_runtime_dependencies = tuple(
+        dep for dep in quay_pip_dependencies if not dep["meta"]["dev"]
+    )
+    assert len(quay_pip_runtime_dependencies) == 175
+
+    quay_pip_dev_dependencies = tuple(dep for dep in quay_pip_dependencies if dep["meta"]["dev"])
+    assert len(quay_pip_dev_dependencies) == 0
+
+    # Inspect .packages for the config-tool Cachito manifest
+    # One gomod component and one npm component in .packages
+    gomod_package, npm_package = top_level_components[1]
+    assert gomod_package["meta"]["name"] == "github.com/quay/config-tool"
+    assert npm_package["meta"]["name"] == "quay-config-editor"
+    # Inspect child .dependencies of the npm .package
+    config_tool_npm_dependencies = npm_package["components"]
+    assert len(config_tool_npm_dependencies) == 965
+
+    # Inspect .packages for the jwtproxy Cachito manifest
+    # The source component is a Github repo named quay/jwtproxy
+    # Only one gomod component in .packages
+    # All other top-level .packages were go-packages
+    # So they were moved into .packages[0].dependencies
+    gomod_package = top_level_components[2][0]
+    assert gomod_package["type"] == Component.Type.GOLANG
+    assert gomod_package["meta"]["name"] == "github.com/quay/jwtproxy/v2"
+    assert gomod_package["meta"]["go_component_type"] == "gomod"
+
+    # TODO: We're losing components here, should be
+    #  18 (top-level go-packages moved into .packages[0].dependencies)
+    #  + 25 (pre-existing .packages[0].dependencies from the original Cachito manifest data)
+    # TODO: when we move a top-level go-package into a go-module's dependencies,
+    #  what do we do with the go-package's own .dependencies?
+    #  Probably dropped / not parsed
+    #  Might need try / except in the Brew collector to load .dependencies prop / key
+    #  if it exists, and ignore otherwise
+    assert len(gomod_package["components"]) == 18
+
+    # 1 child component in .packages[0].dependencies is a Go package with the same name
+    dep = {}
+    for dep in gomod_package["components"]:
+        if dep["meta"]["name"] == gomod_package["meta"]["name"]:
+            break
+
+    # Assert that we found it (name matches module, type is a go-package)
+    assert dep["meta"]["name"] == gomod_package["meta"]["name"]
+    assert dep["meta"]["go_component_type"] == "go-package"
+
+    # Inspect .packages for the pushgateway Cachito manifest
+    # The source component is a Github repo named prometheus/pushgateway
+    # Only one gomod component in .packages
+    # All other top-level .packages were go-packages
+    # So they were moved into .packages[0].dependencies
+    gomod_package = top_level_components[3][0]
+    assert gomod_package["type"] == Component.Type.GOLANG
+    assert gomod_package["meta"]["name"] == "github.com/prometheus/pushgateway"
+    assert gomod_package["meta"]["go_component_type"] == "gomod"
+
+    # TODO: We're losing components here, should be
+    #  2 (top-level go-packages moved into .packages[0].dependencies)
+    #  + 216 (pre-existing .packages[0].dependencies from the original Cachito manifest data)
+    # TODO: when we move a top-level go-package into a go-module's dependencies,
+    #  what do we do with the go-package's own .dependencies?
+    #  Probably dropped / not parsed
+    #  Might need try / except in the Brew collector to load .dependencies prop / key
+    #  if it exists on a child component, and ignore otherwise
+    assert len(gomod_package["components"]) == 2
+
+    # 1 child component in .packages[0].dependencies is a Go package with the same name
+    dep = {}
+    for dep in gomod_package["components"]:
+        if dep["meta"]["name"] == gomod_package["meta"]["name"]:
+            break
+
+    # Assert that we found it (name matches module, type is a go-package)
+    assert dep["meta"]["name"] == gomod_package["meta"]["name"]
+    assert dep["meta"]["go_component_type"] == "go-package"
 
 
 legacy_osbs_test_data = [

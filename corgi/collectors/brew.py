@@ -650,11 +650,14 @@ class Brew:
         for typed_pkg in typed_pkgs:
             typed_component: dict[str, Any] = {
                 "type": cls.CACHITO_PKG_TYPE_MAPPING[pkg_type],
+                "namespace": Component.Namespace.UPSTREAM,
                 "meta": {
                     "name": typed_pkg.name,
                     "version": typed_pkg.version,
                 },
             }
+            # Sometimes a top-level package has a "path" key
+            # e.g. for npm or go-package components nested into a subfolder
             try:
                 typed_component["meta"]["path"] = typed_pkg.path
             except AttributeError:
@@ -668,6 +671,7 @@ class Brew:
                 }
                 component = {
                     "type": cls.CACHITO_PKG_TYPE_MAPPING[dep.type],
+                    "namespace": Component.Namespace.UPSTREAM,
                     "meta": component_meta,
                 }
                 # The dev key is only present for Cachito package managers which support

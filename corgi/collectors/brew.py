@@ -690,58 +690,96 @@ class Brew:
     def _extract_golang(
         cls, dependencies: list[SimpleNamespace], go_stdlib_version: str = ""
     ) -> tuple[list[dict[str, Any]], list[SimpleNamespace]]:
+        """Given a list of Golang module and package objects in some Cachito manifest,
+        build and return a list of Golang module and package dicts
+        where any go-package in the Cachito manifest's top-level .packages
+        is moved underneath a Go module in the Cachito manifest's top-level .packages
+        if both names start with the same prefix, like golang.org/x/text"""
         dependants: list[dict[str, Any]] = []
         modules, remaining_deps = cls._filter_by_type(dependencies, "gomod")
         packages, remaining_deps = cls._filter_by_type(remaining_deps, "go-package")
         # Golang packages are related to modules by name.
-        module_packages: dict[tuple, list[dict[str, Any]]] = {}
         # Add all the modules directly to the source.
-        for module in modules:
-            module_packages[module.name, module.version] = []
+        # Keys are a tuple of module name, version strings
+        # Values are a list of packages for that module
+        module_packages: dict[tuple[str, str], list[dict[str, Any]]] = {
+            (module.name, module.version): [] for module in modules
+        }
 
+        # Build a list of package dicts from package objects
+        package_dicts = cls._build_golang_component_dict_from_objs(go_stdlib_version, packages)
         # Nest packages under the module they belong to
-        for pkg in packages:
+        for package_dict in package_dicts:
             found_matching_module = False
-            pkg.name = pkg.name.removeprefix("vendor/")
-            # This indicates it's a stdlib component, and get its version from the golang compiler
-            if not pkg.version:
-                pkg.version = go_stdlib_version
-            package_dependant = {
-                "type": Component.Type.GOLANG,
-                "namespace": Component.Namespace.UPSTREAM,
-                "meta": {
-                    "go_component_type": "go-package",
-                    "name": pkg.name,
-                    "version": pkg.version,
-                },
-            }
+
             for module in modules:
-                if pkg.name.startswith(module.name):
+                if package_dict["meta"]["name"].startswith(module.name):
                     found_matching_module = True
-                    module_packages[module.name, module.version].append(package_dependant)
+                    module_packages[module.name, module.version].append(package_dict)
                     break  # from iterating modules
+
             if not found_matching_module:
                 # Add this package as a direct dependency of the source
                 # Usually these are golang standard library packages
-                dependants.append(package_dependant)
+                dependants.append(package_dict)
 
+        # Build a list of module dicts from module objects
+        module_dicts = cls._build_golang_component_dict_from_objs(go_stdlib_version, modules)
         # Add modules with nested packages
-        module_version: tuple
-        package_list: list[dict[str, Any]]
-        for module_version, package_list in module_packages.items():
-            module_dependant: dict[str, Any] = {
-                "type": Component.Type.GOLANG,
+        for module_dict, package_list in zip(module_dicts, module_packages.values()):
+            # Original Cachito dependencies (module.dependencies)
+            # are listed before go-packages with matching names (package_list)
+
+            # Add go-packages which start with module_name as dependencies of this module
+            if len(package_list) > 0:
+                try:
+                    module_dict["components"].extend(package_list)
+                except KeyError:
+                    # This module had no .dependencies of its own in Cachito
+                    module_dict["components"] = package_list
+
+            dependants.append(module_dict)
+
+        return dependants, remaining_deps
+
+    @classmethod
+    def _build_golang_component_dict_from_objs(
+        cls, go_stdlib_version: str, dependent_obj_list: list[SimpleNamespace]
+    ) -> list[dict[str, Any]]:
+        """Given a list of dependent Golang component objects,
+        build and return a list of dependent Golang component dicts"""
+        dependent_dict_list: list[dict[str, Any]] = []
+        for dep in dependent_obj_list:
+            dependent_dict: dict[str, Any] = {
+                # Should be GOLANG
+                "type": cls.CACHITO_PKG_TYPE_MAPPING[dep.type],
                 "namespace": Component.Namespace.UPSTREAM,
                 "meta": {
-                    "go_component_type": "gomod",
-                    "name": module_version[0],
-                    "version": module_version[1],
+                    # Could be gomod or go-package
+                    "go_component_type": dep.type,
+                    "name": dep.name.removeprefix("vendor/"),
+                    # stdlib components get their versions from the golang compiler
+                    "version": dep.version or go_stdlib_version,
                 },
             }
-            if len(package_list) > 0:
-                module_dependant["components"] = package_list
-            dependants.append(module_dependant)
-        return dependants, remaining_deps
+            # Report dev if it's present, whether it's True or False
+            # Only present for child .dependencies as far as I can tell
+            if hasattr(dep, "dev"):
+                dependent_dict["meta"]["dev"] = dep.dev
+            # Report path if it's not empty / None
+            # Only present for top-level .packages as far as I can tell
+            path = getattr(dep, "path", "")
+            if path:
+                dependent_dict["meta"]["path"] = path
+
+            nested_deps: list[SimpleNamespace] = getattr(dep, "dependencies", [])
+            if nested_deps:
+                dependent_dict["components"] = cls._build_golang_component_dict_from_objs(
+                    go_stdlib_version, nested_deps
+                )
+            dependent_dict_list.append(dependent_dict)
+
+        return dependent_dict_list
 
     @staticmethod
     def _filter_by_type(

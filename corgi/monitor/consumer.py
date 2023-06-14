@@ -26,6 +26,8 @@ class UMBHandler:
     def __init__(self, addresses: dict[str, HandleMethod], selectors: dict[str, str]):
         if not addresses:
             raise ValueError("UMBHandler has no addresses")
+        if not all(callable(handler) for handler in addresses.values()):
+            raise ValueError("UMBHandler is missing handler function(s)")
         # A mapping of virtual topic addresses to functions that handle topic messages
         # as determined by a specific listener.
         self.virtual_topic_addresses = addresses
@@ -55,7 +57,8 @@ class BrewUMBHandler(UMBHandler):
 
         super(BrewUMBHandler, self).__init__(addresses=addresses, selectors=selectors)
 
-    def handle_builds(self, event: Event) -> bool:
+    @staticmethod
+    def handle_builds(event: Event) -> bool:
         """Handle messages about completed Brew builds"""
         logger.info("Handling UMB event for completed builds: %s", event.message.id)
         message = json.loads(event.message.body)
@@ -73,7 +76,8 @@ class BrewUMBHandler(UMBHandler):
         else:
             return True
 
-    def handle_shipped_errata(self, event: Event) -> bool:
+    @staticmethod
+    def handle_shipped_errata(event: Event) -> bool:
         """Handle messages about ET advisories that enter the SHIPPED_LIVE state"""
         logger.info("Handling UMB event for shipped erratum: %s", event.message.id)
         message = json.loads(event.message.body)
@@ -98,7 +102,8 @@ class BrewUMBHandler(UMBHandler):
         else:
             return True
 
-    def handle_tags(self, event: Event) -> bool:
+    @staticmethod
+    def handle_tags(event: Event) -> bool:
         """Handle messages about Brew builds that have tags added or removed"""
         logger.info("Handling UMB event for added or removed tags: %s", event.message.id)
         message = json.loads(event.message.body)

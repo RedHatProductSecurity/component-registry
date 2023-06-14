@@ -31,8 +31,22 @@ def test_dispatcher_requires_addresses():
 
     class NoAddressHandler(UMBHandler):
         def __init__(self):
-            with pytest.raises(ValueError):
-                super(UMBHandler, self).__init__(None, None)
+            super(NoAddressHandler, self).__init__(None, None)
+
+    with pytest.raises(ValueError):
+        NoAddressHandler()
+
+
+def test_dispatcher_requires_handlers():
+    """Test UMBHandler raises ValueError for missing handler functions"""
+
+    class BadHandler(UMBHandler):
+        def __init__(self):
+            addresses = {"UMB_Topic": None}
+            super(BadHandler, self).__init__(addresses, {})
+
+    with pytest.raises(ValueError):
+        BadHandler()
 
 
 def test_brew_umb_handler_defines_settings():

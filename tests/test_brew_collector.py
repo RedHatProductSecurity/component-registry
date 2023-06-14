@@ -414,20 +414,89 @@ def test_extract_remote_sources(requests_mock):
     assert pip_modules[0]["meta"]["name"] == "clair"
 
 
-def test_extract_multiple_remote_sources(requests_mock):
-    # buildId=1911112
-    remote_sources = {
-        "238481": ("https://test/data/remote-source-quay.json", "tar.gz"),
-        "238482": ("https://test/data/remote-source-config-tool.json", "tar.gz"),
-        "238483": ("https://test/data/remote-source-jwtproxy.json", "tar.gz"),
-        "238484": ("https://test/data/remote-source-pushgateway.json", "tar.gz"),
-    }
-    for remote_source in ["quay", "config-tool", "jwtproxy", "pushgateway"]:
-        with open(f"tests/data/remote-source-{remote_source}.json") as remote_source_data:
-            requests_mock.get(
-                f"https://test/data/remote-source-{remote_source}.json",
-                text=remote_source_data.read(),
+# buildId=1911112 has multiple Cachito manifests, as given below
+# Each manifest has a .pkg_managers key that specifies all the component types,
+# a .packages key for all the top-level components,
+# and a .dependencies key for all the child components of all top-level components
+
+# Each dict in .packages also has a .dependencies key of its own
+# which lists all the child components for that top-level component only
+# Processing all the .packages and .packages[].dependencies should be enough
+# We check the top-level .dependencies key here in tests only to assert this
+remote_sources = {
+    "238481": ("https://tests/data/remote-source-quay.json", "tar.gz"),
+    "238482": ("https://tests/data/remote-source-config-tool.json", "tar.gz"),
+    "238483": ("https://tests/data/remote-source-jwtproxy.json", "tar.gz"),
+    "238484": ("https://tests/data/remote-source-pushgateway.json", "tar.gz"),
+}
+expected_test_values = {
+    "source_component_names": (
+        "quay/quay",
+        "quay/config-tool",
+        "quay/jwtproxy",
+        "prometheus/pushgateway",
+    ),
+    "num_top_level_components": (2, 5, 19, 3),
+    "num_child_components": (1202, 1990, 2040, 525),
+    "num_top_level_components_without_go_packages": (2, 2, 1, 1),
+}
+
+
+def test_cachito_manifest_structure(requests_mock):
+    """Test that processing all .packages[].dependencies in a Cachito manifest
+    gives the same results as processing the top-level .dependencies"""
+    for index, (remote_source, _) in enumerate(remote_sources.values()):
+        with open(remote_source.replace("https://", "")) as remote_source_data:
+            remote_source_json = json.load(remote_source_data)
+
+        assert expected_test_values["num_top_level_components"][index] == len(
+            remote_source_json["packages"]
+        )
+        assert expected_test_values["num_top_level_components_without_go_packages"][index] == len(
+            tuple(
+                package
+                for package in remote_source_json["packages"]
+                if package["type"] != "go-package"
             )
+        )
+        # Find this source's total number of child components for each top-level component
+        # This usually equals the overall number of child components in .dependencies
+        num_child_components = 0
+        unique_child_nvrs = set()
+        for package in remote_source_json["packages"]:
+            num_child_components += len(package["dependencies"])
+            for child_package in package["dependencies"]:
+                unique_child_nvrs.add(
+                    f"{child_package['type']}/{child_package['name']}-{child_package['version']}"
+                )
+        assert expected_test_values["num_child_components"][index] == num_child_components
+
+        # Assert we processed the entire manifest via .packages
+        # All child components in the top-level .dependencies key should also be linked to
+        # some parent component in the top-level .packages key
+        # In other words, we only need to process .packages and their children
+        # We can completely ignore .dependencies
+        # If we also processed .dependencies, we would process each of those components twice
+        # If we only processed .dependencies, we'd be missing their parent .packages
+
+        # Some child components may appear under two different parent components
+        # If both parents depend on the same child NVR, this child component only appears once
+        # in the top-level .dependencies key - the unique_child_nvrs set handles this case
+        if num_child_components == len(unique_child_nvrs):
+            assert num_child_components == len(remote_source_json["dependencies"])
+        else:
+            # Note that in this case, we will discover "extra" components
+            # Our code doesn't dedupe NVRs in .packages[].dependencies
+            # So we can't naively assert all these NVRs against the total length of .dependencies
+            assert len(unique_child_nvrs) == len(remote_source_json["dependencies"])
+
+
+def test_extract_multiple_remote_sources(requests_mock):
+    """Test processing multiple remote-source / Cachito manifests
+    We don't use pytest.mark.parametrize in order to test multiple files at once"""
+    for index, (remote_source, _) in enumerate(remote_sources.values()):
+        with open(remote_source.replace("https://", "")) as remote_source_data:
+            requests_mock.get(remote_source, text=remote_source_data.read())
     go_version = "v1.16.0"
     source_components = Brew._extract_remote_sources(go_version, remote_sources)
     assert len(source_components) == 4

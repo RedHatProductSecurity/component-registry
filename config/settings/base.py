@@ -288,6 +288,20 @@ DATABASES = {
         # When running tests, mirror all data from the default DB instead of using migrations
         "TEST": {"MIGRATE": False, "MIRROR": "default"},
     },
+    "graph": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("CORGI_GRAPH_DB_NAME", "corgi-graph-db"),
+        "USER": os.getenv("CORGI_GRAPH_DB_USER", "corgi-db-user"),
+        "PASSWORD": os.getenv("CORGI_GRAPH_DB_PASSWORD", "test"),
+        # Set up a "read-only" DB that defaults to above locally
+        "HOST": os.getenv(
+            "CORGI_GRAPH_DB_HOST_RO", os.getenv("CORGI_GRAPH_DB_HOST", "corgi-graph-db")
+        ),
+        "PORT": os.getenv("CORGI_GRAPH_DB_PORT", "5455"),
+        # Prefer password authentication even if a valid Kerberos ticket exists on the system.
+        # See: https://www.postgresql.org/docs/devel/libpq-connect.html#LIBPQ-CONNECT-GSSENCMODE
+        "OPTIONS": {"gssencmode": "disable"},
+    },
 }
 
 # Default primary key field type

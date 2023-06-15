@@ -26,6 +26,12 @@ from corgi.core.constants import (
     SRPM_CONDITION,
 )
 from corgi.core.files import ComponentManifestFile, ProductManifestFile
+from corgi.core.graph import (
+    create_component_node,
+    create_component_node_edge,
+    create_product_node,
+    create_product_node_edge,
+)
 from corgi.core.mixins import TimeStampedModel
 
 logger = logging.getLogger(__name__)
@@ -175,6 +181,17 @@ class ProductNode(NodeModel):
     ) -> QuerySet["ProductNode"]:
         return cls.get_node_pks_for_type(qs, Channel, lookup=lookup)
 
+    def save(self, *args, **kwargs):
+        pn = create_product_node(
+            self.obj._meta.object_name,
+            self.obj.name,
+            self.obj.ofuri,
+            self.obj.pk,
+        )
+        if self.parent:
+            pne = create_product_node_edge(self.parent.object_id, self.object_id)
+        super().save(*args, **kwargs)
+
 
 class ComponentNode(NodeModel):
     """Component taxonomy node."""
@@ -225,6 +242,17 @@ class ComponentNode(NodeModel):
 
     def save(self, *args, **kwargs):
         self.purl = self.obj.purl
+        cn = create_component_node(
+            self.obj.name,
+            self.purl,
+            self.object_id,
+            self.obj.type,
+            self.obj.namespace,
+            self.obj.version,
+            self.obj.nevra,
+        )
+        if self.parent:
+            create_component_node_edge(self.type, self.parent.object_id, self.object_id)
         super().save(*args, **kwargs)
 
 

@@ -2,6 +2,37 @@ version: '3'
 
 services:
 
+  graph-console:
+    container_name: graph-console
+    hostname: graph-console
+    image: "localhost/age-viewer"
+    ports:
+      - "3000:3000"
+
+  corgi-graph-db:
+    container_name: corgi-graph-db
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    image: docker.io/apache/age
+    hostname: corgi-graph-db
+    environment:
+      PGPORT: 5455
+      POSTGRES_PORT: 5455
+      POSTGRES_DB: "corgi-graph-db"
+      POSTGRES_USER: corgi-db-user
+      POSTGRES_PASSWORD: "test"
+    volumes:
+      - corgi-graph-pg-data:/var/lib/postgresql/data/
+    ports:
+      - "5455:5455"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d corgi-db"]
+      interval: "60s"
+      timeout: "5s"
+      retries: 3
+
   corgi-db:
     container_name: corgi-db
     deploy:
@@ -216,3 +247,4 @@ services:
 
 volumes:
   corgi-pg-data:
+  corgi-graph-pg-data:

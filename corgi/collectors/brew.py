@@ -691,56 +691,20 @@ class Brew:
         cls, dependencies: list[SimpleNamespace], go_stdlib_version: str = ""
     ) -> tuple[list[dict[str, Any]], list[SimpleNamespace]]:
         """Given a list of Golang module and package objects in some Cachito manifest,
-        build and return a list of Golang module and package dicts
-        where any go-package in the Cachito manifest's top-level .packages
-        is moved underneath a Go module in the Cachito manifest's top-level .packages
-        if both names start with the same prefix, like golang.org/x/text"""
-        dependants: list[dict[str, Any]] = []
+        build and return a list of Golang module and package dicts"""
+        # We no longer move go-packages like golang.org/x/text/cases
+        # underneath modules with matching names like golang.org/x/text
+        # because this complicates the code / caused several bugs,
+        # and we should be relying on Cachito's dependency tree anyway
         modules, remaining_deps = cls._filter_by_type(dependencies, "gomod")
         packages, remaining_deps = cls._filter_by_type(remaining_deps, "go-package")
-        # Golang packages are related to modules by name.
-        # Add all the modules directly to the source.
-        # Keys are a tuple of module name, version strings
-        # Values are a list of packages for that module
-        module_packages: dict[tuple[str, str], list[dict[str, Any]]] = {
-            (module.name, module.version): [] for module in modules
-        }
 
         # Build a list of package dicts from package objects
         package_dicts = cls._build_golang_component_dict_from_objs(go_stdlib_version, packages)
-        # Nest packages under the module they belong to
-        for package_dict in package_dicts:
-            found_matching_module = False
-
-            for module in modules:
-                if package_dict["meta"]["name"].startswith(module.name):
-                    found_matching_module = True
-                    module_packages[module.name, module.version].append(package_dict)
-                    break  # from iterating modules
-
-            if not found_matching_module:
-                # Add this package as a direct dependency of the source
-                # Usually these are golang standard library packages
-                dependants.append(package_dict)
-
         # Build a list of module dicts from module objects
         module_dicts = cls._build_golang_component_dict_from_objs(go_stdlib_version, modules)
-        # Add modules with nested packages
-        for module_dict, package_list in zip(module_dicts, module_packages.values()):
-            # Original Cachito dependencies (module.dependencies)
-            # are listed before go-packages with matching names (package_list)
 
-            # Add go-packages which start with module_name as dependencies of this module
-            if len(package_list) > 0:
-                try:
-                    module_dict["components"].extend(package_list)
-                except KeyError:
-                    # This module had no .dependencies of its own in Cachito
-                    module_dict["components"] = package_list
-
-            dependants.append(module_dict)
-
-        return dependants, remaining_deps
+        return [*module_dicts, *package_dicts], remaining_deps
 
     @classmethod
     def _build_golang_component_dict_from_objs(

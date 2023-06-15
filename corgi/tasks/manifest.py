@@ -1,3 +1,5 @@
+import re
+
 from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.conf import settings
@@ -9,6 +11,10 @@ from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 
 logger = get_task_logger(__name__)
 
+# We only manifest GA stream for RHEL 8 and 9, not the z-streams
+# The rhel-7 streams are excluded by skip_manifest tags
+RHEL_MANIFEST = re.compile(r"rhel-[89]{1}(.*)\.0$")
+
 
 @app.task(
     base=Singleton,
@@ -17,10 +23,20 @@ logger = get_task_logger(__name__)
 )
 def update_manifests(fixup=True):
     # Note - temporarily setting fixup=True
-    for ps in ProductStream.objects.annotate(num_components=Count("components")).filter(
-        num_components__gt=0
-    ):
-        cpu_update_ps_manifest.delay(ps.name, fixup=fixup)
+    for ps in (
+        ProductStream.objects.annotate(num_components=Count("components"))
+        .filter(num_components__gt=0, active=True)
+        .exclude(name__startswith="rhel")
+        .exclude(meta_attr__managed_service_components__isnull=False)
+        .exclude(tags__name="skip_manifest")
+        ):
+            cpu_update_ps_manifest.delay(ps.name, fixup=fixup)
+
+
+def update_rhel_manifests():
+    for ps in ProductStream.objects.filter(name__startswith="rhel").exclude(name__startswith="rhel-br"):
+        if RHEL_MANIFEST.match(ps.name) or ps.name == "rhel-7.9.z":
+            cpu_update_ps_manifest.delay(ps.name)
 
 
 @app.task(

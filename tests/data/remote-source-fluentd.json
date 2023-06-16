@@ -1,0 +1,1561 @@
+{
+    "configuration_files": "https://example.com/api/v1/requests/820518/configuration-files",
+    "content_manifest": "https://example.com/api/v1/requests/820518/content-manifest",
+    "dependencies": [
+        {
+            "name": "activemodel",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "6.1.7.3"
+        },
+        {
+            "name": "activesupport",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "6.1.7.3"
+        },
+        {
+            "name": "addressable",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "2.8.0"
+        },
+        {
+            "name": "aes_key_wrap",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.1.0"
+        },
+        {
+            "name": "async",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.30.2"
+        },
+        {
+            "name": "async-http",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "0.56.6"
+        },
+        {
+            "name": "async-io",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.33.0"
+        },
+        {
+            "name": "async-pool",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "0.3.10"
+        },
+        {
+            "name": "attr_required",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.0.1"
+        },
+        {
+            "name": "aws-eventstream",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.2.0"
+        },
+        {
+            "name": "aws-partitions",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.586.0"
+        },
+        {
+            "name": "aws-sdk-cloudwatchlogs",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.52.0"
+        },
+        {
+            "name": "aws-sdk-core",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "3.130.2"
+        },
+        {
+            "name": "aws-sigv4",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.5.0"
+        },
+        {
+            "name": "bigdecimal",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "3.1.2"
+        },
+        {
+            "name": "bindata",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "2.4.10"
+        },
+        {
+            "name": "concurrent-ruby",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.1.10"
+        },
+        {
+            "name": "connection_pool",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "2.2.5"
+        },
+        {
+            "name": "console",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.15.0"
+        },
+        {
+            "name": "cool.io",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.7.1"
+        },
+        {
+            "name": "digest-crc",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "0.6.4"
+        },
+        {
+            "name": "domain_name",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "0.5.20190701"
+        },
+        {
+            "name": "elasticsearch",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "7.17.1"
+        },
+        {
+            "name": "elasticsearch-api",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "7.17.1"
+        },
+        {
+            "name": "elasticsearch-transport",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "7.17.1"
+        },
+        {
+            "name": "ethon",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "0.15.0"
+        },
+        {
+            "name": "excon",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "0.92.3"
+        },
+        {
+            "name": "faraday",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.10.0"
+        },
+        {
+            "name": "faraday-em_http",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.0.0"
+        },
+        {
+            "name": "faraday-em_synchrony",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.0.0"
+        },
+        {
+            "name": "faraday-excon",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.1.0"
+        },
+        {
+            "name": "faraday-httpclient",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.0.1"
+        },
+        {
+            "name": "faraday-multipart",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.0.3"
+        },
+        {
+            "name": "faraday-net_http",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.0.1"
+        },
+        {
+            "name": "faraday-net_http_persistent",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.2.0"
+        },
+        {
+            "name": "faraday-patron",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.0.0"
+        },
+        {
+            "name": "faraday-rack",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.0.0"
+        },
+        {
+            "name": "faraday-retry",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.0.3"
+        },
+        {
+            "name": "ffi",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.15.5"
+        },
+        {
+            "name": "ffi-compiler",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.0.1"
+        },
+        {
+            "name": "fiber-local",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.0.0"
+        },
+        {
+            "name": "filter_elasticsearch_genid_ext",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "./lib"
+        },
+        {
+            "name": "filter_parse_json_field",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "./lib"
+        },
+        {
+            "name": "fluent-config-regexp-type",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.0.0"
+        },
+        {
+            "name": "fluent-mixin-config-placeholders",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "0.4.0"
+        },
+        {
+            "name": "fluent-plugin-cloudwatch-logs",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "0.14.2"
+        },
+        {
+            "name": "fluent-plugin-collected",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "./lib"
+        },
+        {
+            "name": "fluent-plugin-concat",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "2.5.0"
+        },
+        {
+            "name": "fluent-plugin-detect-exceptions",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "0.0.14"
+        },
+        {
+            "name": "fluent-plugin-elasticsearch",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "5.2.2"
+        },
+        {
+            "name": "fluent-plugin-grafana-loki",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.2.18"
+        },
+        {
+            "name": "fluent-plugin-kafka",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "0.19.0"
+        },
+        {
+            "name": "fluent-plugin-kubernetes_metadata_filter",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "3.1.2"
+        },
+        {
+            "name": "fluent-plugin-label-router",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "0.2.10"
+        },
+        {
+            "name": "fluent-plugin-multi-format-parser",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.0.0"
+        },
+        {
+            "name": "fluent-plugin-prometheus",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "2.0.3"
+        },
+        {
+            "name": "fluent-plugin-record-modifier",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "2.1.0"
+        },
+        {
+            "name": "fluent-plugin-remote-syslog",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "./lib"
+        },
+        {
+            "name": "fluent-plugin-remote_syslog",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "./lib"
+        },
+        {
+            "name": "fluent-plugin-rewrite-tag-filter",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "2.4.0"
+        },
+        {
+            "name": "fluent-plugin-splunk-hec",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.2.13"
+        },
+        {
+            "name": "fluent-plugin-systemd",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.0.5"
+        },
+        {
+            "name": "fluent-plugin-viaq_data_model",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "./lib"
+        },
+        {
+            "name": "fluentd",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.14.6"
+        },
+        {
+            "name": "formatter-single-json-value",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "./lib"
+        },
+        {
+            "name": "http",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "4.4.1"
+        },
+        {
+            "name": "http-accept",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.7.0"
+        },
+        {
+            "name": "http-cookie",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.0.4"
+        },
+        {
+            "name": "http-form_data",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "2.3.0"
+        },
+        {
+            "name": "http-parser",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.2.3"
+        },
+        {
+            "name": "http_parser.rb",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "0.8.0"
+        },
+        {
+            "name": "httpclient",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "2.8.3"
+        },
+        {
+            "name": "i18n",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.10.0"
+        },
+        {
+            "name": "jmespath",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.6.1"
+        },
+        {
+            "name": "json-jwt",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.13.0"
+        },
+        {
+            "name": "jsonpath",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.1.2"
+        },
+        {
+            "name": "kubeclient",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "4.9.3"
+        },
+        {
+            "name": "libxml-ruby",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "4.0.0"
+        },
+        {
+            "name": "lru_redux",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.1.0"
+        },
+        {
+            "name": "ltsv",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "0.1.2"
+        },
+        {
+            "name": "mail",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "2.7.1"
+        },
+        {
+            "name": "mime-types",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "3.4.1"
+        },
+        {
+            "name": "mime-types-data",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "3.2022.0105"
+        },
+        {
+            "name": "mini_mime",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.1.2"
+        },
+        {
+            "name": "minitest",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "5.15.0"
+        },
+        {
+            "name": "msgpack",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.5.4"
+        },
+        {
+            "name": "multi_json",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.15.0"
+        },
+        {
+            "name": "multipart-post",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "2.1.1"
+        },
+        {
+            "name": "net-http-persistent",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "4.0.1"
+        },
+        {
+            "name": "netrc",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "0.11.0"
+        },
+        {
+            "name": "nio4r",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "2.5.8"
+        },
+        {
+            "name": "oj",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "3.13.11"
+        },
+        {
+            "name": "openid_connect",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.1.8"
+        },
+        {
+            "name": "parser_viaq_host_audit",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "./lib"
+        },
+        {
+            "name": "prometheus-client",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "4.0.0"
+        },
+        {
+            "name": "protocol-hpack",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.4.2"
+        },
+        {
+            "name": "protocol-http",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "0.22.6"
+        },
+        {
+            "name": "protocol-http1",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "0.14.4"
+        },
+        {
+            "name": "protocol-http2",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "0.14.2"
+        },
+        {
+            "name": "public_suffix",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "4.0.7"
+        },
+        {
+            "name": "rack",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "3.0.6.1"
+        },
+        {
+            "name": "rack-oauth2",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.19.0"
+        },
+        {
+            "name": "rake",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "13.0.6"
+        },
+        {
+            "name": "recursive-open-struct",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.1.3"
+        },
+        {
+            "name": "remote_syslog_sender",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "./lib"
+        },
+        {
+            "name": "rest-client",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "2.1.0"
+        },
+        {
+            "name": "ruby-kafka",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.5.0"
+        },
+        {
+            "name": "ruby2_keywords",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "0.0.5"
+        },
+        {
+            "name": "serverengine",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "2.3.0"
+        },
+        {
+            "name": "sigdump",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "0.2.4"
+        },
+        {
+            "name": "strptime",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "0.2.5"
+        },
+        {
+            "name": "swd",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.3.0"
+        },
+        {
+            "name": "syslog_protocol",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "./lib"
+        },
+        {
+            "name": "systemd-journal",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.4.2"
+        },
+        {
+            "name": "timers",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "4.3.3"
+        },
+        {
+            "name": "traces",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "0.4.1"
+        },
+        {
+            "name": "typhoeus",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.4.0"
+        },
+        {
+            "name": "tzinfo",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "2.0.5"
+        },
+        {
+            "name": "tzinfo-data",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.2022.3"
+        },
+        {
+            "name": "unf",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "0.1.4"
+        },
+        {
+            "name": "unf_ext",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "0.0.8.1"
+        },
+        {
+            "name": "uuidtools",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "2.2.0"
+        },
+        {
+            "name": "validate_email",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "0.1.6"
+        },
+        {
+            "name": "validate_url",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.0.13"
+        },
+        {
+            "name": "webfinger",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.2.0"
+        },
+        {
+            "name": "webrick",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.7.0"
+        },
+        {
+            "name": "yajl-ruby",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "1.4.3"
+        },
+        {
+            "name": "zeitwerk",
+            "replaces": null,
+            "type": "rubygems",
+            "version": "2.5.4"
+        }
+    ],
+    "environment_variables": {},
+    "flags": [],
+    "packages": [
+        {
+            "dependencies": [
+                {
+                    "dev": true,
+                    "name": "activemodel",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "6.1.7.3"
+                },
+                {
+                    "name": "activesupport",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "6.1.7.3"
+                },
+                {
+                    "name": "addressable",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "2.8.0"
+                },
+                {
+                    "name": "aes_key_wrap",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.1.0"
+                },
+                {
+                    "name": "async",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.30.2"
+                },
+                {
+                    "name": "async-http",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "0.56.6"
+                },
+                {
+                    "name": "async-io",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.33.0"
+                },
+                {
+                    "name": "async-pool",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "0.3.10"
+                },
+                {
+                    "name": "attr_required",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.0.1"
+                },
+                {
+                    "name": "aws-eventstream",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.2.0"
+                },
+                {
+                    "name": "aws-partitions",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.586.0"
+                },
+                {
+                    "name": "aws-sdk-cloudwatchlogs",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.52.0"
+                },
+                {
+                    "name": "aws-sdk-core",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "3.130.2"
+                },
+                {
+                    "name": "aws-sigv4",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.5.0"
+                },
+                {
+                    "name": "bigdecimal",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "3.1.2"
+                },
+                {
+                    "name": "bindata",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "2.4.10"
+                },
+                {
+                    "name": "concurrent-ruby",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.1.10"
+                },
+                {
+                    "name": "connection_pool",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "2.2.5"
+                },
+                {
+                    "name": "console",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.15.0"
+                },
+                {
+                    "name": "cool.io",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.7.1"
+                },
+                {
+                    "name": "digest-crc",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "0.6.4"
+                },
+                {
+                    "name": "domain_name",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "0.5.20190701"
+                },
+                {
+                    "name": "elasticsearch",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "7.17.1"
+                },
+                {
+                    "name": "elasticsearch-api",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "7.17.1"
+                },
+                {
+                    "name": "elasticsearch-transport",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "7.17.1"
+                },
+                {
+                    "name": "ethon",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "0.15.0"
+                },
+                {
+                    "name": "excon",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "0.92.3"
+                },
+                {
+                    "name": "faraday",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.10.0"
+                },
+                {
+                    "name": "faraday-em_http",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.0.0"
+                },
+                {
+                    "name": "faraday-em_synchrony",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.0.0"
+                },
+                {
+                    "name": "faraday-excon",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.1.0"
+                },
+                {
+                    "name": "faraday-httpclient",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.0.1"
+                },
+                {
+                    "name": "faraday-multipart",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.0.3"
+                },
+                {
+                    "name": "faraday-net_http",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.0.1"
+                },
+                {
+                    "name": "faraday-net_http_persistent",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.2.0"
+                },
+                {
+                    "name": "faraday-patron",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.0.0"
+                },
+                {
+                    "name": "faraday-rack",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.0.0"
+                },
+                {
+                    "name": "faraday-retry",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.0.3"
+                },
+                {
+                    "name": "ffi",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.15.5"
+                },
+                {
+                    "name": "ffi-compiler",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.0.1"
+                },
+                {
+                    "name": "fiber-local",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.0.0"
+                },
+                {
+                    "name": "filter_elasticsearch_genid_ext",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "./lib"
+                },
+                {
+                    "name": "filter_parse_json_field",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "./lib"
+                },
+                {
+                    "name": "fluent-config-regexp-type",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.0.0"
+                },
+                {
+                    "name": "fluent-mixin-config-placeholders",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "0.4.0"
+                },
+                {
+                    "name": "fluent-plugin-cloudwatch-logs",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "0.14.2"
+                },
+                {
+                    "name": "fluent-plugin-collected",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "./lib"
+                },
+                {
+                    "name": "fluent-plugin-concat",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "2.5.0"
+                },
+                {
+                    "name": "fluent-plugin-detect-exceptions",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "0.0.14"
+                },
+                {
+                    "name": "fluent-plugin-elasticsearch",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "5.2.2"
+                },
+                {
+                    "name": "fluent-plugin-grafana-loki",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.2.18"
+                },
+                {
+                    "name": "fluent-plugin-kafka",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "0.19.0"
+                },
+                {
+                    "name": "fluent-plugin-kubernetes_metadata_filter",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "3.1.2"
+                },
+                {
+                    "name": "fluent-plugin-label-router",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "0.2.10"
+                },
+                {
+                    "name": "fluent-plugin-multi-format-parser",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.0.0"
+                },
+                {
+                    "name": "fluent-plugin-prometheus",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "2.0.3"
+                },
+                {
+                    "name": "fluent-plugin-record-modifier",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "2.1.0"
+                },
+                {
+                    "name": "fluent-plugin-remote-syslog",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "./lib"
+                },
+                {
+                    "name": "fluent-plugin-remote_syslog",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "./lib"
+                },
+                {
+                    "name": "fluent-plugin-rewrite-tag-filter",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "2.4.0"
+                },
+                {
+                    "name": "fluent-plugin-splunk-hec",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.2.13"
+                },
+                {
+                    "name": "fluent-plugin-systemd",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.0.5"
+                },
+                {
+                    "name": "fluent-plugin-viaq_data_model",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "./lib"
+                },
+                {
+                    "name": "fluentd",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.14.6"
+                },
+                {
+                    "name": "formatter-single-json-value",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "./lib"
+                },
+                {
+                    "name": "http",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "4.4.1"
+                },
+                {
+                    "name": "http-accept",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.7.0"
+                },
+                {
+                    "name": "http-cookie",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.0.4"
+                },
+                {
+                    "name": "http-form_data",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "2.3.0"
+                },
+                {
+                    "name": "http-parser",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.2.3"
+                },
+                {
+                    "name": "http_parser.rb",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "0.8.0"
+                },
+                {
+                    "name": "httpclient",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "2.8.3"
+                },
+                {
+                    "name": "i18n",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.10.0"
+                },
+                {
+                    "name": "jmespath",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.6.1"
+                },
+                {
+                    "name": "json-jwt",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.13.0"
+                },
+                {
+                    "name": "jsonpath",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.1.2"
+                },
+                {
+                    "name": "kubeclient",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "4.9.3"
+                },
+                {
+                    "name": "libxml-ruby",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "4.0.0"
+                },
+                {
+                    "name": "lru_redux",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.1.0"
+                },
+                {
+                    "name": "ltsv",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "0.1.2"
+                },
+                {
+                    "name": "mail",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "2.7.1"
+                },
+                {
+                    "name": "mime-types",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "3.4.1"
+                },
+                {
+                    "name": "mime-types-data",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "3.2022.0105"
+                },
+                {
+                    "name": "mini_mime",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.1.2"
+                },
+                {
+                    "name": "minitest",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "5.15.0"
+                },
+                {
+                    "name": "msgpack",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.5.4"
+                },
+                {
+                    "name": "multi_json",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.15.0"
+                },
+                {
+                    "name": "multipart-post",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "2.1.1"
+                },
+                {
+                    "name": "net-http-persistent",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "4.0.1"
+                },
+                {
+                    "name": "netrc",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "0.11.0"
+                },
+                {
+                    "name": "nio4r",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "2.5.8"
+                },
+                {
+                    "name": "oj",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "3.13.11"
+                },
+                {
+                    "name": "openid_connect",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.1.8"
+                },
+                {
+                    "name": "parser_viaq_host_audit",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "./lib"
+                },
+                {
+                    "name": "prometheus-client",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "4.0.0"
+                },
+                {
+                    "name": "protocol-hpack",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.4.2"
+                },
+                {
+                    "name": "protocol-http",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "0.22.6"
+                },
+                {
+                    "name": "protocol-http1",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "0.14.4"
+                },
+                {
+                    "name": "protocol-http2",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "0.14.2"
+                },
+                {
+                    "name": "public_suffix",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "4.0.7"
+                },
+                {
+                    "name": "rack",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "3.0.6.1"
+                },
+                {
+                    "name": "rack-oauth2",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.19.0"
+                },
+                {
+                    "name": "rake",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "13.0.6"
+                },
+                {
+                    "name": "recursive-open-struct",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.1.3"
+                },
+                {
+                    "name": "remote_syslog_sender",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "./lib"
+                },
+                {
+                    "name": "rest-client",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "2.1.0"
+                },
+                {
+                    "name": "ruby-kafka",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.5.0"
+                },
+                {
+                    "name": "ruby2_keywords",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "0.0.5"
+                },
+                {
+                    "name": "serverengine",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "2.3.0"
+                },
+                {
+                    "name": "sigdump",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "0.2.4"
+                },
+                {
+                    "name": "strptime",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "0.2.5"
+                },
+                {
+                    "name": "swd",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.3.0"
+                },
+                {
+                    "name": "syslog_protocol",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "./lib"
+                },
+                {
+                    "name": "systemd-journal",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.4.2"
+                },
+                {
+                    "name": "timers",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "4.3.3"
+                },
+                {
+                    "name": "traces",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "0.4.1"
+                },
+                {
+                    "name": "typhoeus",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.4.0"
+                },
+                {
+                    "name": "tzinfo",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "2.0.5"
+                },
+                {
+                    "name": "tzinfo-data",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.2022.3"
+                },
+                {
+                    "name": "unf",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "0.1.4"
+                },
+                {
+                    "name": "unf_ext",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "0.0.8.1"
+                },
+                {
+                    "name": "uuidtools",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "2.2.0"
+                },
+                {
+                    "name": "validate_email",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "0.1.6"
+                },
+                {
+                    "name": "validate_url",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.0.13"
+                },
+                {
+                    "name": "webfinger",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.2.0"
+                },
+                {
+                    "name": "webrick",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.7.0"
+                },
+                {
+                    "name": "yajl-ruby",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "1.4.3"
+                },
+                {
+                    "dev": false,
+                    "name": "zeitwerk",
+                    "replaces": null,
+                    "type": "rubygems",
+                    "version": "2.5.4"
+                }
+            ],
+            "name": "logging-fluentd/fluentd",
+            "path": "fluentd",
+            "type": "rubygems",
+            "version": "d5a586841539b399ccda32ec14f3a3028d958db3"
+        }
+    ],
+    "pkg_managers": [
+        "rubygems"
+    ],
+    "ref": "d5a586841539b399ccda32ec14f3a3028d958db3",
+    "repo": "https://github.com/ViaQ/logging-fluentd"
+}

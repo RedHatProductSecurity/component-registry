@@ -66,6 +66,7 @@ class Brew:
         "python": Component.Type.PYPI,
         "pip": Component.Type.PYPI,
         "ruby": Component.Type.GEM,
+        "rubygems": Component.Type.GEM,
         "npm": Component.Type.NPM,
         "yarn": Component.Type.NPM,
         "nodejs": Component.Type.NPM,
@@ -547,7 +548,7 @@ class Brew:
                 # The top-level .dependencies are duplicates
                 # of each top-level .package's child .dependencies
                 # We don't need to process them again
-                if pkg_type in ("npm", "pip", "yarn"):
+                if pkg_type in ("npm", "pip", "yarn", "rubygems"):
                     # Convert Cachito-reported package type to Corgi component type.
                     # TODO:  Add logging-kibana6-container-v6.8.1-362 to test data
                     #  use remote-source-kibana6.json manifest from Cachito

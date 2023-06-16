@@ -455,6 +455,46 @@ def test_extract_remote_sources(requests_mock):
     assert pip_packages[0]["meta"]["name"] == "clair"
 
 
+def test_extract_remote_sources_for_rubygems(requests_mock):
+    """Test that Rubygems components in a Cachito manifest are supported"""
+    # buildID=2553491
+    json_url = "https://tests/data/remote-source-fluentd.json"
+    remote_sources_dict = {"820518": (json_url, "tar.gz")}
+    with open(json_url.replace("https://", "")) as remote_source_data:
+        requests_mock.get(json_url, text=remote_source_data.read())
+    source_components = Brew._extract_remote_sources("", remote_sources_dict)
+    assert len(source_components) == 1
+
+    # Source component for the overall container / build / manifest
+    fluentd_component = source_components[0]
+    assert len(fluentd_component["components"]) == 1
+
+    # First / only top-level .package in this Cachito manifest
+    fluentd_package = fluentd_component["components"][0]
+    assert fluentd_package["type"] == Component.Type.GEM
+    # dev key isn't present for top-level .packages (as far as I know)
+    assert "dev" not in fluentd_package["meta"]
+    # Code should set "path" key if present
+    assert fluentd_package["meta"]["path"] == "fluentd"
+
+    # Child .dependencies of the first .package
+    fluentd_dependencies = fluentd_package["components"]
+    assert len(fluentd_dependencies) == 128
+
+    for dependency in fluentd_dependencies:
+        # Assert we map Cachito types like rubygems to Corgi GEM type
+        # Even for child components, which had a bug previously
+        assert dependency["type"] == Component.Type.GEM
+        # path key isn't present for child .dependencies (as far as I know)
+        assert "path" not in dependency["meta"]
+
+    # Assert dev key is set only if present (whether True or False)
+    # I added it manually to the data for this test, it's not present originally
+    assert fluentd_dependencies[0]["meta"]["dev"] is True
+    assert fluentd_dependencies[-1]["meta"]["dev"] is False
+    assert "dev" not in fluentd_dependencies[-2]["meta"]
+
+
 # buildId=1911112 has multiple Cachito manifests, as given below
 # Each manifest has a .pkg_managers key that specifies all the component types,
 # a .packages key for all the top-level components,

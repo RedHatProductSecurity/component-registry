@@ -31,6 +31,9 @@ from corgi.core.graph import (
     create_component_node_edge,
     create_product_node,
     create_product_node_edge,
+    retrieve_component_relationships,
+    retrieve_component_upstream_relationships,
+    retrieve_component_source_relationships,
 )
 from corgi.core.mixins import TimeStampedModel
 
@@ -1533,6 +1536,24 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         self.upstreams.set(upstreams)
         self.provides.set(self.get_provides_nodes(using="default"))
         self.sources.set(self.get_sources_nodes(using="default"))
+
+    @property
+    def get_provides_queryset(self, using: str = "read_only") -> QuerySet[ComponentNode]:
+        """Return the "provides" queryset using the read-only DB"""
+        pks = retrieve_component_relationships(self.purl)
+        return Component.objects.filter(pk__in=pks).using(using)
+
+    @property
+    def get_upstreams_queryset(self, using: str = "read_only") -> QuerySet[ComponentNode]:
+        """Return the "upstreams" queryset using the read-only DB"""
+        pks = retrieve_component_upstream_relationships(self.purl)
+        return Component.objects.filter(pk__in=pks).using(using)
+
+    @property
+    def get_sources_queryset(self, using: str = "read_only") -> QuerySet[ComponentNode]:
+        """Return the "sources" queryset using the read-only DB"""
+        pks = retrieve_component_source_relationships(self.purl)
+        return Component.objects.filter(pk__in=pks).using(using)
 
     @property
     def provides_queryset(self, using: str = "read_only") -> Iterator["Component"]:

@@ -1,4 +1,5 @@
 import logging
+
 from django.db import connections
 
 logger = logging.getLogger(__name__)
@@ -156,4 +157,98 @@ def create_component_node_edge(node_type, pk_parent, pk_child):
             """,
             ["components", str(pk_parent), str(pk_child)],
         )
+    return None
+
+
+def retrieve_component_relationships(purl, flat=True):
+    """return flat list of component ids
+    it is likely that we would want to return Component node data as
+    well as a tree version
+    """
+    conn = connections["graph"]
+    conn.ensure_connection()
+    cursor = conn.connection.cursor()
+    if flat:
+        cursor.execute('SET search_path = ag_catalog, "$user", public')
+        # TODO: Apache Age does not support edge OR condition
+        out = []
+        cursor.execute(
+            """
+            SELECT *
+            FROM cypher(%s, $$
+            MATCH (a:Component {purl:%s})-[r:PROVIDES*]->(b:Component)
+            RETURN b.object_id
+            $$) as (b agtype)
+            """,
+            ["components", purl],
+        )
+        for row in cursor.fetchall():
+            out.extend(row)
+        cursor.execute(
+            """
+            SELECT *
+            FROM cypher(%s, $$
+            MATCH (a:Component {purl:%s})-[r:PROVIDES_DEV*]->(b:Component)
+            RETURN b.object_id
+            $$) as (b agtype)
+            """,
+            ["components", purl],
+        )
+        for row in cursor.fetchall():
+            out.extend(row)
+        return [pk.replace('"', "") for pk in out]
+    return None
+
+
+def retrieve_component_upstream_relationships(purl, flat=True):
+    """return flat list of component ids
+    it is likely that we would want to return Component node data as
+    well as a tree version
+    """
+    conn = connections["graph"]
+    conn.ensure_connection()
+    cursor = conn.connection.cursor()
+    if flat:
+        cursor.execute('SET search_path = ag_catalog, "$user", public')
+        # TODO: Apache Age does not support edge OR condition
+        out = []
+        cursor.execute(
+            """
+            SELECT * from cypher(%s, $$
+                    MATCH (V {purl:%s})-[R:SOURCE]->(V2)
+                    RETURN V2.object_id
+            $$) as (V agtype);
+            """,
+            ["components", purl],
+        )
+        for row in cursor.fetchall():
+            out.extend(row)
+        return [pk.replace('"', "") for pk in out]
+    return None
+
+
+def retrieve_component_source_relationships(purl, flat=True):
+    """return flat list of component ids
+    it is likely that we would want to return Component node data as
+    well as a tree version
+    """
+    conn = connections["graph"]
+    conn.ensure_connection()
+    cursor = conn.connection.cursor()
+    if flat:
+        cursor.execute('SET search_path = ag_catalog, "$user", public')
+        # TODO: Apache Age does not support edge OR condition
+        out = []
+        cursor.execute(
+            """
+            SELECT * from cypher(%s, $$
+                    MATCH (V {purl:%s})-[R:SOURCE]->(V2)
+                    RETURN V2.object_id
+            $$) as (V agtype);
+            """,
+            ["components", purl],
+        )
+        for row in cursor.fetchall():
+            out.extend(row)
+        return [pk.replace('"', "") for pk in out]
     return None

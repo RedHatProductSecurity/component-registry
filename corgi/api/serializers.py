@@ -443,12 +443,14 @@ class ComponentSerializer(ProductTaxonomySerializer):
     # @staticmethod
     def get_provides(self, instance: Component):
         include_exclude_serializer = self.get_include_exclude_serializer(
-            "provides", ComponentSerializer, instance.provides
+            "provides", ComponentSerializer, instance.get_provides_queryset
         )
         if include_exclude_serializer:
             return include_exclude_serializer.data
         return get_component_data_list(
-            instance.provides.values_list("purl", flat=True).using("read_only").iterator()
+            instance.get_provides_queryset.values_list("purl", flat=True)
+            .using("read_only")
+            .iterator()
         )
 
     def get_sources(self, instance: Component):
@@ -463,12 +465,14 @@ class ComponentSerializer(ProductTaxonomySerializer):
 
     def get_upstreams(self, instance: Component):
         include_exclude_serializer = self.get_include_exclude_serializer(
-            "upstreams", ComponentSerializer, instance.upstreams
+            "upstreams", ComponentSerializer, instance.get_upstreams_queryset
         )
         if include_exclude_serializer:
             return include_exclude_serializer.data
         return get_component_data_list(
-            instance.upstreams.values_list("purl", flat=True).using("read_only").iterator()
+            instance.get_upstreams_queryset.values_list("purl", flat=True)
+            .using("read_only")
+            .iterator()
         )
 
     @staticmethod

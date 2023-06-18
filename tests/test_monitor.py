@@ -70,7 +70,7 @@ def test_brew_umb_handler_setup():
 
     # The addresses and selectors of the dispatcher should match those of a handler
     handler = BrewUMBHandler()
-    assert dispatcher.virtual_topic_addresses.keys() == handler.virtual_topic_addresses.keys()
+    assert dispatcher.virtual_topic_addresses == handler.virtual_topic_addresses
     assert dispatcher.selectors == handler.selectors
 
     mock_umb_event = MagicMock()

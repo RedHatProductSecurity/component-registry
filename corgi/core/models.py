@@ -807,6 +807,9 @@ class ProductComponentRelation(TimeStampedModel):
     external_system_id = models.CharField(max_length=200, default="")
     # E.g. product variant for ERRATA, or product stream for COMPOSE
     product_ref = models.CharField(max_length=200, default="")
+    software_build = models.ForeignKey(
+        "SoftwareBuild", on_delete=models.SET_NULL, related_name="relations", null=True
+    )
     build_id = models.CharField(max_length=200, default="")
     build_type = models.CharField(choices=SoftwareBuild.Type.choices, max_length=20)
 

@@ -32,8 +32,9 @@ from corgi.core.graph import (
     create_product_node,
     create_product_node_edge,
     retrieve_component_relationships,
-    retrieve_component_upstream_relationships,
+    retrieve_component_root,
     retrieve_component_source_relationships,
+    retrieve_component_upstream_relationships,
 )
 from corgi.core.mixins import TimeStampedModel
 
@@ -185,14 +186,18 @@ class ProductNode(NodeModel):
         return cls.get_node_pks_for_type(qs, Channel, lookup=lookup)
 
     def save(self, *args, **kwargs):
-        pn = create_product_node(
+        # TODO: channels need an ofuri
+        node_ofuri = self.obj.name
+        if hasattr(self.obj, "ofuri"):
+            node_ofuri = self.obj.ofuri
+        create_product_node(
             self.obj._meta.object_name,
             self.obj.name,
-            self.obj.ofuri,
+            node_ofuri,
             self.obj.pk,
         )
         if self.parent:
-            pne = create_product_node_edge(self.parent.object_id, self.object_id)
+            create_product_node_edge(self.parent.object_id, self.object_id)
         super().save(*args, **kwargs)
 
 
@@ -245,7 +250,7 @@ class ComponentNode(NodeModel):
 
     def save(self, *args, **kwargs):
         self.purl = self.obj.purl
-        cn = create_component_node(
+        create_component_node(
             self.obj.name,
             self.purl,
             self.object_id,
@@ -253,6 +258,7 @@ class ComponentNode(NodeModel):
             self.obj.namespace,
             self.obj.version,
             self.obj.nevra,
+            self.obj.arch,
         )
         if self.parent:
             create_component_node_edge(self.type, self.parent.object_id, self.object_id)
@@ -1532,25 +1538,32 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
     def save_component_taxonomy(self):
         """Link related components together using foreign keys. Avoids repeated MPTT tree lookups"""
-        upstreams = self.get_upstreams_pks(using="default")
-        self.upstreams.set(upstreams)
-        self.provides.set(self.get_provides_nodes(using="default"))
-        self.sources.set(self.get_sources_nodes(using="default"))
+        self.upstreams.set(
+            set([str(pk) for pk in self.get_upstreams_queryset().values_list("pk", flat=True)])
+        )
+        self.provides.set(
+            set([str(pk) for pk in self.get_provides_queryset().values_list("pk", flat=True)])
+        )
+        self.sources.set(
+            set([str(pk) for pk in self.get_sources_queryset().values_list("pk", flat=True)])
+        )
 
-    @property
-    def get_provides_queryset(self, using: str = "read_only") -> QuerySet[ComponentNode]:
+    def get_root(self, using: str = "read_only"):
+        """TODO: should only ever return one "root" queryset using the read-only DB"""
+        pks = retrieve_component_root(self.purl)
+        return Component.objects.filter(pk__in=pks).using(using)
+
+    def get_provides_queryset(self, using: str = "read_only"):
         """Return the "provides" queryset using the read-only DB"""
         pks = retrieve_component_relationships(self.purl)
         return Component.objects.filter(pk__in=pks).using(using)
 
-    @property
-    def get_upstreams_queryset(self, using: str = "read_only") -> QuerySet[ComponentNode]:
+    def get_upstreams_queryset(self, using: str = "read_only"):
         """Return the "upstreams" queryset using the read-only DB"""
         pks = retrieve_component_upstream_relationships(self.purl)
         return Component.objects.filter(pk__in=pks).using(using)
 
-    @property
-    def get_sources_queryset(self, using: str = "read_only") -> QuerySet[ComponentNode]:
+    def get_sources_queryset(self, using: str = "read_only"):
         """Return the "sources" queryset using the read-only DB"""
         pks = retrieve_component_source_relationships(self.purl)
         return Component.objects.filter(pk__in=pks).using(using)
@@ -1558,7 +1571,8 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     @property
     def provides_queryset(self, using: str = "read_only") -> Iterator["Component"]:
         """Return the "provides" queryset using the read-only DB, for use in templates"""
-        return self.provides.get_queryset().using(using).iterator()
+        pks = retrieve_component_relationships(self.purl)
+        return Component.objects.filter(pk__in=pks).using(using).iterator()
 
     def is_srpm(self):
         return self.type == Component.Type.RPM and self.arch == "src"
@@ -1678,6 +1692,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
     def get_roots(self, using: str = "read_only") -> list[ComponentNode]:
         """Return component root entities."""
+        # USED IN get_upstreams_node
         roots: list[ComponentNode] = []
         # If a component does not have a softwarebuild that means it's not built at Red Hat
         # therefore it doesn't need its upstreams listed. If we start using the get_roots property
@@ -1890,6 +1905,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     def get_provides_nodes(self, include_dev: bool = True, using: str = "read_only") -> set[str]:
         """return a set of descendant ids with PROVIDES ComponentNode type"""
         # Used in taxonomies. Returns only PKs
+        # USED IN TESTS
         provides_set = set()
 
         type_list: tuple[ComponentNode.ComponentNodeType, ...] = (
@@ -1937,26 +1953,6 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             .iterator()
         )
 
-    def get_sources_nodes(self, include_dev: bool = True, using: str = "read_only") -> set[str]:
-        """Return a set of ancestors ids for all PROVIDES ComponentNodes"""
-        sources_set = set()
-        type_list: tuple[ComponentNode.ComponentNodeType, ...] = (
-            ComponentNode.ComponentNodeType.PROVIDES,
-        )
-        if include_dev:
-            type_list = ComponentNode.PROVIDES_NODE_TYPES
-        # Return ancestors of only PROVIDES nodes for this component
-        # Sources should be inverse of provides, so don't consider other nodes
-        # Inverting "PROVIDES descendants of all nodes" gives "all ancestors of PROVIDES nodes"
-        for cnode in self.cnodes.filter(type__in=type_list).iterator():
-            sources_set.update(
-                cnode.get_ancestors(include_self=False)
-                .using(using)
-                .values_list("object_id", flat=True)
-                .iterator()
-            )
-        return sources_set
-
     def get_upstreams_nodes(self, using: str = "read_only") -> list[ComponentNode]:
         """return upstreams component ancestors in family trees"""
         # The get_roots logic is too complicated to use only Django filtering
@@ -2001,7 +1997,8 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         return tuple(linked_pks)
 
     def get_upstreams_purls(self, using: str = "read_only") -> set[str]:
-        """Return only the purls from the set of all upstream nodes"""
+        """Return only the purls from the set of all upstream nodes
+        only used in tests"""
         return set(node.purl for node in self.get_upstreams_nodes(using=using))
 
 

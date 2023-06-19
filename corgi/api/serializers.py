@@ -440,7 +440,6 @@ class ComponentSerializer(ProductTaxonomySerializer):
     def get_link(instance: Component) -> str:
         return get_component_purl_link(instance.purl)
 
-    # @staticmethod
     def get_provides(self, instance: Component):
         include_exclude_serializer = self.get_include_exclude_serializer(
             "provides", ComponentSerializer, instance.get_provides_queryset
@@ -448,19 +447,23 @@ class ComponentSerializer(ProductTaxonomySerializer):
         if include_exclude_serializer:
             return include_exclude_serializer.data
         return get_component_data_list(
-            instance.get_provides_queryset.values_list("purl", flat=True)
+            instance.get_provides_queryset()
+            .values_list("purl", flat=True)
             .using("read_only")
             .iterator()
         )
 
     def get_sources(self, instance: Component):
         include_exclude_serializer = self.get_include_exclude_serializer(
-            "sources", ComponentSerializer, instance.sources
+            "sources", ComponentSerializer, instance.get_sources_queryset
         )
         if include_exclude_serializer:
             return include_exclude_serializer.data
         return get_component_data_list(
-            instance.sources.values_list("purl", flat=True).using("read_only").iterator()
+            instance.get_sources_queryset()
+            .values_list("purl", flat=True)
+            .using("read_only")
+            .iterator()
         )
 
     def get_upstreams(self, instance: Component):
@@ -470,7 +473,8 @@ class ComponentSerializer(ProductTaxonomySerializer):
         if include_exclude_serializer:
             return include_exclude_serializer.data
         return get_component_data_list(
-            instance.get_upstreams_queryset.values_list("purl", flat=True)
+            instance.get_upstreams_queryset()
+            .values_list("purl", flat=True)
             .using("read_only")
             .iterator()
         )

@@ -14,19 +14,11 @@ class Command(BaseCommand):
             dest="product_ref",
             help="Fetch unprocessed relations for product reference",
         )
-        parser.add_argument(
-            "-s",
-            "--save_only",
-            action="store_true",
-            help="Call fetch anyway to save the product taxonomy if build already exists",
-        )
 
     def handle(self, *args, **options):
-        processed_builds = 0
         if options["product_ref"]:
             if (
-                not ProductComponentRelation.objects.db_manager("read_only")
-                .filter(product_ref=options["product_ref"])
+                not ProductComponentRelation.objects.filter(product_ref=options["product_ref"])
                 .exists()
             ):
                 self.out.write(
@@ -40,16 +32,14 @@ class Command(BaseCommand):
                     f"Loading unprocessed relations with product ref: {options['product_ref']}",
                 )
             )
-            processed_builds = fetch_unprocessed_relations(
-                product_ref=options["product_ref"], save_only=options["save_only"]
-            )
+            processed_builds = fetch_unprocessed_relations(product_ref=options["product_ref"])
         else:
             self.stdout.write(
                 self.style.SUCCESS(
                     "Loading unprocessed relations",
                 )
             )
-            processed_builds = fetch_unprocessed_relations(save_only=options["save_only"])
+            processed_builds = fetch_unprocessed_relations()
         self.stdout.write(
             self.style.SUCCESS(
                 f"Loaded {processed_builds} unprocessed relations",

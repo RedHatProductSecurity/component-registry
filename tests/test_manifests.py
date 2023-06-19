@@ -436,14 +436,14 @@ def setup_products_and_components_upstreams():
     # The product_ref here is a variant name but below we use it's parent stream
     # to generate the manifest
     ProductComponentRelationFactory(
-        build_id=str(build.build_id),
+        software_build=build,
+        build_id=build.build_id,
         build_type=build.build_type,
         product_ref=variant.name,
         type=ProductComponentRelation.Type.ERRATA,
     )
     ProductComponentRelationFactory(
-        build_id=str(other_build.build_id),
-        build_type=other_build.build_type,
+        software_build=other_build,
         product_ref=variant.name,
         type=ProductComponentRelation.Type.ERRATA,
     )
@@ -493,8 +493,7 @@ def setup_products_and_components_provides(released=True, internal_component=Fal
     # The product_ref here is a variant name but below we use it's parent stream
     # to generate the manifest
     ProductComponentRelationFactory(
-        build_id=str(build.build_id),
-        build_type=build.build_type,
+        software_build=build,
         product_ref=variant.name,
         type=ProductComponentRelation.Type.ERRATA,
     )
@@ -513,8 +512,7 @@ def setup_products_and_rpm_in_containers():
         # The product_ref here is a variant name but below we use it's parent stream
         # to generate the manifest
         ProductComponentRelationFactory(
-            build_id=str(build.build_id),
-            build_type=build.build_type,
+            software_build=build,
             product_ref=variant.name,
             type=ProductComponentRelation.Type.ERRATA,
         )

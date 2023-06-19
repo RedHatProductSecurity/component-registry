@@ -57,9 +57,12 @@ def slow_load_errata(erratum_name: str, force_process: bool = False) -> None:
 
     build_types = set()
     build_ids = set()
-    for build_id, build_type in relation_builds:
+    no_of_processed_builds = 0
+    for build_id, build_type, software_build in relation_builds:
         build_ids.add(build_id)
         build_types.add(build_type)
+        if software_build:
+            no_of_processed_builds += 1
 
     # Errata are not used in community products, and we are not yet attaching other builds types
     # like HACBS to errata. If that changes, we should review this task for correctness
@@ -67,13 +70,6 @@ def slow_load_errata(erratum_name: str, force_process: bool = False) -> None:
         raise ValueError("Multiple build types found for errata %s", erratum_name)
     elif len(build_types) == 0:
         build_type = BUILD_TYPE
-
-    # Check is we have software builds for all of them.
-    # Most of the time will not have all the builds
-    # so we don't load all the software builds at this point
-    no_of_processed_builds = SoftwareBuild.objects.filter(
-        build_id__in=build_ids, build_type=build_type
-    ).count()
 
     # If we have no relations at all, or we want to update them
     if len(build_ids) == 0 or force_process:
@@ -134,7 +130,7 @@ def _get_relation_builds(erratum_id: int) -> QuerySet:
     # Get all the PCR with errata_id
     return ProductComponentRelation.objects.filter(
         type=ProductComponentRelation.Type.ERRATA, external_system_id=erratum_id
-    ).values_list("build_id", "build_type")
+    ).values_list("build_id", "build_type", "software_build")
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)

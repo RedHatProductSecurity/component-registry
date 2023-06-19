@@ -47,7 +47,7 @@ services:
       POSTGRESQL_PASSWORD: "test"
       POSTGRESQL_ADMIN_PASSWORD: "test"
     volumes:
-      - corgi-pg-data:/var/lib/pgsql/data/
+      - corgi-pg-data1:/var/lib/pgsql/data/
       # Config files in below directory are automatically loaded by postgres at startup
       - ${PWD}/etc/pg:/opt/app-root/src/postgresql-cfg:z
     ports:
@@ -247,4 +247,5 @@ services:
 
 volumes:
   corgi-pg-data:
+  corgi-pg-data1:
   corgi-graph-pg-data:

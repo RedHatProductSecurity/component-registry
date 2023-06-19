@@ -31,7 +31,7 @@ from corgi.core.graph import (
     create_component_node_edge,
     create_product_node,
     create_product_node_edge,
-    retrieve_component_relationships,
+    retrieve_component_provides_relationships,
     retrieve_component_root,
     retrieve_component_source_relationships,
     retrieve_component_upstream_relationships,
@@ -187,17 +187,17 @@ class ProductNode(NodeModel):
 
     def save(self, *args, **kwargs):
         # TODO: channels need an ofuri
-        node_ofuri = self.obj.name
-        if hasattr(self.obj, "ofuri"):
-            node_ofuri = self.obj.ofuri
-        create_product_node(
-            self.obj._meta.object_name,
-            self.obj.name,
-            node_ofuri,
-            self.obj.pk,
-        )
-        if self.parent:
-            create_product_node_edge(self.parent.object_id, self.object_id)
+        # node_ofuri = self.obj.name
+        # if hasattr(self.obj, "ofuri"):
+        #     node_ofuri = self.obj.ofuri
+        # create_product_node(
+        #     self.obj._meta.object_name,
+        #     self.obj.name,
+        #     node_ofuri,
+        #     self.obj.pk,
+        # )
+        # if self.parent:
+        #     create_product_node_edge(self.parent.object_id, self.object_id)
         super().save(*args, **kwargs)
 
 
@@ -250,18 +250,18 @@ class ComponentNode(NodeModel):
 
     def save(self, *args, **kwargs):
         self.purl = self.obj.purl
-        create_component_node(
-            self.obj.name,
-            self.purl,
-            self.object_id,
-            self.obj.type,
-            self.obj.namespace,
-            self.obj.version,
-            self.obj.nevra,
-            self.obj.arch,
-        )
-        if self.parent:
-            create_component_node_edge(self.type, self.parent.object_id, self.object_id)
+        # create_component_node(
+        #     self.obj.name,
+        #     self.purl,
+        #     self.object_id,
+        #     self.obj.type,
+        #     self.obj.namespace,
+        #     self.obj.version,
+        #     self.obj.nevra,
+        #     self.obj.arch,
+        # )
+        # if self.parent:
+        #     create_component_node_edge(self.type, self.parent.object_id, self.object_id)
         super().save(*args, **kwargs)
 
 
@@ -1538,15 +1538,16 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
     def save_component_taxonomy(self):
         """Link related components together using foreign keys. Avoids repeated MPTT tree lookups"""
-        self.upstreams.set(
-            set([str(pk) for pk in self.get_upstreams_queryset().values_list("pk", flat=True)])
-        )
-        self.provides.set(
-            set([str(pk) for pk in self.get_provides_queryset().values_list("pk", flat=True)])
-        )
-        self.sources.set(
-            set([str(pk) for pk in self.get_sources_queryset().values_list("pk", flat=True)])
-        )
+        # self.upstreams.set(
+        #     set([str(pk) for pk in self.get_upstreams_queryset().values_list("pk", flat=True)])
+        # )
+        # self.provides.set(
+        #     set([str(pk) for pk in self.get_provides_queryset().values_list("pk", flat=True)])
+        # )
+        # self.sources.set(
+        #     set([str(pk) for pk in self.get_sources_queryset().values_list("pk", flat=True)])
+        # )
+        pass
 
     def get_root(self, using: str = "read_only"):
         """TODO: should only ever return one "root" queryset using the read-only DB"""
@@ -1555,18 +1556,18 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
     def get_provides_queryset(self, using: str = "read_only"):
         """Return the "provides" queryset using the read-only DB"""
-        pks = retrieve_component_relationships(self.purl)
-        return Component.objects.filter(pk__in=pks).using(using)
+        purls = retrieve_component_provides_relationships(self.purl)
+        return Component.objects.filter(purl__in=purls).using(using)
 
     def get_upstreams_queryset(self, using: str = "read_only"):
         """Return the "upstreams" queryset using the read-only DB"""
-        pks = retrieve_component_upstream_relationships(self.purl)
-        return Component.objects.filter(pk__in=pks).using(using)
+        purls = retrieve_component_upstream_relationships(self.purl)
+        return Component.objects.filter(purl__in=purls).using(using)
 
     def get_sources_queryset(self, using: str = "read_only"):
         """Return the "sources" queryset using the read-only DB"""
-        pks = retrieve_component_source_relationships(self.purl)
-        return Component.objects.filter(pk__in=pks).using(using)
+        purls = retrieve_component_source_relationships(self.purl)
+        return Component.objects.filter(purl__in=purls).using(using)
 
     @property
     def provides_queryset(self, using: str = "read_only") -> Iterator["Component"]:

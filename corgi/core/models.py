@@ -1020,11 +1020,14 @@ class ComponentQuerySet(models.QuerySet):
         non_container_source_components = self.exclude(name__endswith="-container-source").using(
             "read_only"
         )
-        released_roots = non_container_source_components.root_components().released_components()
-        if quick:
-            return released_roots
+        if settings.COMMUNITY_MODE_ENABLED:
+            roots = non_container_source_components.root_components()
         else:
-            return released_roots.latest_components()
+            roots = non_container_source_components.root_components().released_components()
+        if quick:
+            return roots
+        else:
+            return roots.latest_components()
 
     def srpms(self, include: bool = True) -> models.QuerySet["Component"]:
         """Show only source RPMs by default, or only non-SRPMs if include=False"""

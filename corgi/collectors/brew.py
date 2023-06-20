@@ -61,20 +61,28 @@ class Brew:
         MODULE_BUILD_TYPE,
     )
 
-    # Map Cachito types to Corgi types
-    CACHITO_PKG_TYPE_MAPPING = {
-        "python": Component.Type.PYPI,
-        "pip": Component.Type.PYPI,
-        "ruby": Component.Type.GEM,
-        "rubygems": Component.Type.GEM,
+    CARGO_TYPE_MAPPING = {"crate": Component.Type.CARGO}
+    GEM_TYPE_MAPPING = {"ruby": Component.Type.GEM, "rubygems": Component.Type.GEM}
+    GOLANG_TYPE_MAPPING = {
+        "golang": Component.Type.GOLANG,
+        "gomod": Component.Type.GOLANG,
+        "go-package": Component.Type.GOLANG,
+    }
+    NPM_TYPE_MAPPING = {
+        "js": Component.Type.NPM,
+        "nodejs": Component.Type.NPM,
         "npm": Component.Type.NPM,
         "yarn": Component.Type.NPM,
-        "nodejs": Component.Type.NPM,
-        "js": Component.Type.NPM,
-        "golang": Component.Type.GOLANG,
-        "go-package": Component.Type.GOLANG,
-        "gomod": Component.Type.GOLANG,
-        "crate": Component.Type.CARGO,
+    }
+    PYPI_TYPE_MAPPING = {"pip": Component.Type.PYPI, "python": Component.Type.PYPI}
+
+    # Map Cachito types to Corgi types
+    CACHITO_PKG_TYPE_MAPPING = {
+        **CARGO_TYPE_MAPPING,
+        **GEM_TYPE_MAPPING,
+        **GOLANG_TYPE_MAPPING,
+        **NPM_TYPE_MAPPING,
+        **PYPI_TYPE_MAPPING,
     }
 
     # A list of component names, for which build analysis will be skipped.
@@ -715,9 +723,16 @@ class Brew:
         build and return a list of dependent Golang component dicts"""
         dependent_dict_list: list[dict[str, Any]] = []
         for dep in dependent_obj_list:
+            # We set properties for this component assuming it's a gomod or go-package
+            # And filter out top-level .packages with different types
+            # But since this method is recursive and processes child .dependencies,
+            # raise an error if we see a non-Golang type
+            # That means some top-level gomod or go-package in .packages
+            # depends on a non-Golang child in .packages[index].dependencies
+            # Probably shouldn't happen but we can't guarantee this
             dependent_dict: dict[str, Any] = {
-                # Should be GOLANG
-                "type": cls.CACHITO_PKG_TYPE_MAPPING[dep.type],
+                # Should be GOLANG, or raise a KeyError if not
+                "type": cls.GOLANG_TYPE_MAPPING[dep.type],
                 "namespace": Component.Namespace.UPSTREAM,
                 "meta": {
                     # Could be gomod or go-package

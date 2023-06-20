@@ -134,7 +134,7 @@ class SbomerUMBHandler(UMBHandler):
 
     def __init__(self):
         addresses = {
-            f"{VIRTUAL_TOPIC_PREFIX}.pnc.sbom.complete": SbomerUMBHandler.sbom_complete,
+            f"{VIRTUAL_TOPIC_PREFIX}.pnc.sbom.spike.complete": SbomerUMBHandler.sbom_complete,
         }
         # By default, listen for all messages on a topic
         selectors = {key: "" for key in addresses}
@@ -190,7 +190,7 @@ class UMBDispatcher(MessagingHandler):
 
         # A list of UMBHandlers to which messages will be dispatched. If you add new handlers,
         # make sure they're added here.
-        self.handlers: list[UMBHandler] = [BrewUMBHandler()]
+        self.handlers: list[UMBHandler] = [BrewUMBHandler(), SbomerUMBHandler()]
 
     @property
     def virtual_topic_addresses(self) -> dict[str, HandleMethod]:

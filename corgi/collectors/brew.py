@@ -556,20 +556,31 @@ class Brew:
                 # The top-level .dependencies are duplicates
                 # of each top-level .package's child .dependencies
                 # We don't need to process them again
-                if pkg_type in ("npm", "pip", "yarn", "rubygems"):
+                if pkg_type in (
+                    *cls.CARGO_TYPE_MAPPING,
+                    *cls.GEM_TYPE_MAPPING,
+                    *cls.NPM_TYPE_MAPPING,
+                    *cls.PYPI_TYPE_MAPPING,
+                ):
                     # Convert Cachito-reported package type to Corgi component type.
                     # TODO:  Add logging-kibana6-container-v6.8.1-362 to test data
                     #  use remote-source-kibana6.json manifest from Cachito
                     provides, remote_source.packages = cls._extract_provides(
                         remote_source.packages, pkg_type
                     )
-                elif pkg_type == "gomod":
+                elif pkg_type in cls.GOLANG_TYPE_MAPPING:
                     provides, remote_source.packages = cls._extract_golang(
                         remote_source.packages, go_stdlib_version
                     )
+                elif pkg_type == "git-submodule":
+                    # Handle this type separately
+                    # It's not necessarily guaranteed to be a GITHUB repo
+                    # So we can't rely on a simple mapping like the other types
+                    provides, remote_source.packages = cls._extract_submodules(
+                        remote_source.packages, pkg_type
+                    )
                 else:
-                    logger.warning("Found unsupported remote-source pkg_manager %s", pkg_type)
-                    continue
+                    raise ValueError(f"Found unsupported remote-source pkg_manager {pkg_type}")
 
                 try:
                     source_component["components"].extend(provides)
@@ -760,6 +771,90 @@ class Brew:
             dependent_dict_list.append(dependent_dict)
 
         return dependent_dict_list
+
+    @classmethod
+    def _extract_submodules(
+        cls, packages: list[SimpleNamespace], pkg_type: str
+    ) -> tuple[list[dict[str, Any]], list[SimpleNamespace]]:
+        """Given a list of git submodules in some Cachito manifest,
+        build and return a list of GITHUB component dicts
+        Raise a ValueError if some component isn't hosted on Github"""
+        # All the examples of this type I saw were for Github repos
+        # Fail to process anything that's not, just in case
+        # In the future, we can add support for other Git services if needed
+        # e.g. Bitbucket, Gitlab, etc.
+        # Raising an error makes these edge cases visible so we know to do this
+        # We won't silently ignore / skip certain components
+        # so we won't need to reprocess all builds with this type later
+
+        components: list[dict[str, Any]] = []
+        typed_pkgs, remaining_packages = cls._filter_by_type(packages, pkg_type)
+        for typed_pkg in typed_pkgs:
+            if not typed_pkg.version.startswith("https://github.com/"):
+                # If we ever see http:// or https://www. or git@github.com:user/repo forms,
+                # let's add logic to handle them later instead of being too permissive
+                raise ValueError(
+                    f"git-submodule package is not hosted on Github: {typed_pkg.version}"
+                )
+
+            # Values are like https://github.com/user_namespace/repo_name#commit_hash
+            name_and_version = typed_pkg.version.rsplit("#", maxsplit=1)
+            if len(name_and_version) == 1:
+                raise ValueError(
+                    f"Couldn't identify version / commit ID for package: {typed_pkg.version}"
+                )
+
+            name, version = name_and_version
+            name = name.replace("https://github.com/", "", 1)
+            if name.endswith(".git"):
+                name = name.replace(".git", "", 1)
+
+            typed_component: dict[str, Any] = {
+                "type": Component.Type.GITHUB,
+                "namespace": Component.Namespace.UPSTREAM,
+                "meta": {
+                    # The name of the submodule in the parent repo
+                    "module_name": typed_pkg.name,
+                    # Should be the name of the child repo we included by this point
+                    "name": name,
+                    # Path to the submodule in the parent repo
+                    # Usually the same as the submodule name, but not always
+                    # e.g. typed_pkg.name == "grpc", typed_pkg.path == "third_party/grpc"
+                    # This path shouldn't be used as a qualifier in this component's purl
+                    # It represents the path in the parent repo / component
+                    # Not the repo / component we're creating here
+                    # TODO: Check the source / root component we create
+                    #  We have Git repo names and commit IDs in Cachito's JSON data
+                    #  in .repo and .ref top-level keys, respectively
+                    #  Are we using them anywhere? We should store in meta_attr at least
+                    "path": typed_pkg.path,
+                    # Should be a commit ID / hash by this point
+                    "version": version,
+                },
+            }
+            if hasattr(typed_pkg, "dev"):
+                typed_component["meta"]["dev"] = typed_pkg.dev
+
+            # This code should be unused
+            # All git-submodule examples I looked at had no child .dependencies
+            dependencies = getattr(typed_pkg, "dependencies", [])
+            if dependencies:
+                typed_component["components"], remaining_dependencies = cls._extract_submodules(
+                    dependencies, pkg_type
+                )
+                if remaining_dependencies:
+                    # We filtered out child .dependencies of this top-level .package
+                    # because they didn't have git-submodule type
+                    # Since they're not top-level .packages themselves,
+                    # they won't get processed anywhere else in our code
+                    # So in theory we'd be missing components
+                    # This shouldn't happen, but raise an error just in case
+                    raise ValueError(
+                        f"Top-level package {typed_pkg.version} had {len(remaining_dependencies)} "
+                        "child dependencies that were not Git submodules"
+                    )
+            components.append(typed_component)
+        return components, remaining_packages
 
     @staticmethod
     def _filter_by_type(

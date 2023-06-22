@@ -213,13 +213,18 @@ class ComponentNode(NodeModel):
                 condition=models.Q(parent__isnull=True),
             ),
         )
-        # 0037_custom_indexes.py contains the following custom performance indexes
-        #    core_componentnode_tree_parent_lft_idx
-        #    core_cn_tree_lft_purl_parent_idx
-        #    core_cn_lft_rght_tree_idx
         indexes = (  # type: ignore[assignment]
             models.Index(fields=("type", "parent", "purl")),
             models.Index(fields=("parent",)),
+            models.Index(
+                fields=("tree_id", "parent_id", "lft"), name="core_cn_tree_parent_lft_idx"
+            ),
+            models.Index(
+                fields=("tree_id", "lft", "purl", "parent_id"),
+                name="core_cn_tree_lft_purl_prnt_idx",
+            ),
+            models.Index(fields=("lft", "tree_id"), name="core_cn_lft_tree_idx"),
+            models.Index(fields=("lft", "rght", "tree_id"), name="core_cn_lft_rght_tree_idx"),
             *NodeModel.Meta.indexes,
         )
 

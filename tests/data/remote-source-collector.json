@@ -1,0 +1,126 @@
+{
+    "configuration_files": "https://example.com/api/v1/requests/819048/configuration-files",
+    "content_manifest": "https://example.com/api/v1/requests/819048/content-manifest",
+    "dependencies": [],
+    "environment_variables": {},
+    "flags": [],
+    "packages": [
+        {
+            "dependencies": [],
+            "name": "collector/proto/third_party/gogoproto",
+            "path": "collector/proto/third_party/gogoproto",
+            "type": "git-submodule",
+            "version": "https://github.com/gogo/protobuf#226206f39bd7276e88ec684ea0028c18ec2c91ae"
+        },
+        {
+            "dependencies": [],
+            "name": "collector/proto/third_party/stackrox",
+            "path": "collector/proto/third_party/stackrox",
+            "type": "git-submodule",
+            "version": "https://github.com/stackrox/stackrox#35a82b87b729f0b3083932b5a24b08193d91d712"
+        },
+        {
+            "dependencies": [],
+            "name": "falcosecurity-libs",
+            "path": "falcosecurity-libs",
+            "type": "git-submodule",
+            "version": "https://github.com/stackrox/falcosecurity-libs#e9991ffd3624a10bcb8b015f18d0cebebef8af3c"
+        },
+        {
+            "dependencies": [],
+            "name": "grpc",
+            "path": "third_party/grpc",
+            "type": "git-submodule",
+            "version": "https://github.com/grpc/grpc#cb81fe0dfaa424eb50de26fb7c904a27a78c3f76"
+        },
+        {
+            "dependencies": [],
+            "name": "third_party/abseil-cpp",
+            "path": "third_party/abseil-cpp",
+            "type": "git-submodule",
+            "version": "https://github.com/abseil/abseil-cpp.git#b832dce8489ef7b6231384909fd9b68d5a5ff2b7"
+        },
+        {
+            "dependencies": [],
+            "name": "third_party/civetweb",
+            "path": "third_party/civetweb",
+            "type": "git-submodule",
+            "version": "https://github.com/civetweb/civetweb.git#eefb26f82b233268fc98577d265352720d477ba4"
+        },
+        {
+            "dependencies": [],
+            "name": "third_party/googleapis",
+            "path": "third_party/googleapis",
+            "type": "git-submodule",
+            "version": "https://github.com/googleapis/googleapis.git#80ed4d0bbf65d57cc267dfc63bd2584557f11f9b"
+        },
+        {
+            "dependencies": [],
+            "name": "third_party/googletest",
+            "path": "third_party/googletest",
+            "type": "git-submodule",
+            "version": "https://github.com/google/googletest.git#703bd9caab50b139428cea1aaff9974ebee5742e"
+        },
+        {
+            "dependencies": [],
+            "name": "third_party/jsoncpp",
+            "path": "third_party/jsoncpp",
+            "type": "git-submodule",
+            "version": "https://github.com/open-source-parsers/jsoncpp.git#ba3fd412929ec4822788b401298e8d9e4950cbab"
+        },
+        {
+            "dependencies": [],
+            "name": "third_party/libb64",
+            "path": "third_party/libb64",
+            "type": "git-submodule",
+            "version": "https://github.com/libb64/libb64.git#c1e3323498e1b5512e509716c5720029853846bc"
+        },
+        {
+            "dependencies": [],
+            "name": "third_party/libbpf",
+            "path": "third_party/libbpf",
+            "type": "git-submodule",
+            "version": "https://github.com/libbpf/libbpf#b362bb6e107aa7fa6b977471dc54055f1d24ad9a"
+        },
+        {
+            "dependencies": [],
+            "name": "third_party/luajit2",
+            "path": "third_party/luajit2",
+            "type": "git-submodule",
+            "version": "https://github.com/openresty/luajit2.git#aa7a7226be72c4ef3e884708a22c37985b8dcf5f"
+        },
+        {
+            "dependencies": [],
+            "name": "third_party/prometheus-cpp",
+            "path": "third_party/prometheus-cpp",
+            "type": "git-submodule",
+            "version": "https://github.com/jupp0r/prometheus-cpp#76470b3ec024c8214e1f4253fb1f4c0b28d3df94"
+        },
+        {
+            "dependencies": [],
+            "name": "third_party/protobuf",
+            "path": "third_party/protobuf",
+            "type": "git-submodule",
+            "version": "https://github.com/protocolbuffers/protobuf.git#21027a27c4c2ec1000859ccbcfff46d83b16e1ed"
+        },
+        {
+            "dependencies": [],
+            "name": "third_party/re2",
+            "path": "third_party/re2",
+            "type": "git-submodule",
+            "version": "https://github.com/google/re2.git#5723bb8950318135ed9cf4fc76bed988a087f536"
+        },
+        {
+            "dependencies": [],
+            "name": "third_party/valijson",
+            "path": "third_party/valijson",
+            "type": "git-submodule",
+            "version": "https://github.com/tristanpenman/valijson.git#2dfc7499a31b84edef71189f4247919268ebc74e"
+        }
+    ],
+    "pkg_managers": [
+        "git-submodule"
+    ],
+    "ref": "ff42ded0b711a840db37d262cc78b5ea035e4d7a",
+    "repo": "https://github.com/stackrox/collector.git"
+}

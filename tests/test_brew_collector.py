@@ -495,6 +495,41 @@ def test_extract_remote_sources_for_rubygems(requests_mock):
     assert "dev" not in fluentd_dependencies[-2]["meta"]
 
 
+def test_extract_remote_sources_for_submodules(requests_mock):
+    """Test that git-submodule components in a Cachito manifest are supported"""
+    # buildID=2553491
+    json_url = "https://tests/data/remote-source-collector.json"
+    remote_sources_dict = {"819048": (json_url, "tar.gz")}
+    with open(json_url.replace("https://", "")) as remote_source_data:
+        requests_mock.get(json_url, text=remote_source_data.read())
+    source_components = Brew._extract_remote_sources("", remote_sources_dict)
+    assert len(source_components) == 1
+
+    # Source component for the overall container / build / manifest
+    stackrox_component = source_components[0]
+    stackrox_packages = stackrox_component["components"]
+    assert len(stackrox_packages) == 16
+
+    # Check all top-level .packages in this Cachito manifest
+    for package in stackrox_packages:
+        assert package["type"] == Component.Type.GITHUB
+        # dev key isn't present for top-level .packages (as far as I know)
+        assert "dev" not in package["meta"]
+        # Git-submodule .packages appear to never have child .dependencies
+        assert "components" not in package
+
+        # Git-submodule .packages appear to always have a path set
+        assert package["meta"]["path"]
+        # pkg.name / module_name in the parent repo should never be an empty "" string
+        assert package["meta"]["module_name"]
+        # The module_name in the parent repo is usually an exact match
+        # or else a substring of the path
+        assert package["meta"]["module_name"] in package["meta"]["path"]
+
+    # Code should set "path" key if present, check the last .package only
+    assert stackrox_packages[-1]["meta"]["path"] == "third_party/valijson"
+
+
 # buildId=1911112 has multiple Cachito manifests, as given below
 # Each manifest has a .pkg_managers key that specifies all the component types,
 # a .packages key for all the top-level components,

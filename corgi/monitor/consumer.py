@@ -9,6 +9,7 @@ from proton.reactor import Container, Selector
 
 from corgi.tasks.brew import slow_fetch_brew_build, slow_update_brew_tags
 from corgi.tasks.errata_tool import slow_handle_shipped_errata
+from corgi.tasks.pnc import slow_fetch_pnc_sbom
 
 logger = logging.getLogger(__name__)
 
@@ -43,10 +44,10 @@ class BrewUMBHandler(UMBHandler):
 
     def __init__(self):
         addresses = {
-            f"{VIRTUAL_TOPIC_PREFIX}.brew.build.complete": self.handle_builds,
-            f"{VIRTUAL_TOPIC_PREFIX}.brew.build.tag": self.handle_tags,
-            f"{VIRTUAL_TOPIC_PREFIX}.brew.build.untag": self.handle_tags,
-            f"{VIRTUAL_TOPIC_PREFIX}.errata.activity.status": self.handle_shipped_errata,
+            f"{VIRTUAL_TOPIC_PREFIX}.brew.build.complete": BrewUMBHandler.handle_builds,
+            f"{VIRTUAL_TOPIC_PREFIX}.brew.build.tag": BrewUMBHandler.handle_tags,
+            f"{VIRTUAL_TOPIC_PREFIX}.brew.build.untag": BrewUMBHandler.handle_tags,
+            f"{VIRTUAL_TOPIC_PREFIX}.errata.activity.status": BrewUMBHandler.handle_shipped_errata,
         }
         # By default, listen for all messages on a topic
         selectors = {key: "" for key in addresses}
@@ -128,6 +129,36 @@ class BrewUMBHandler(UMBHandler):
             return True
 
 
+class SbomerUMBHandler(UMBHandler):
+    """Handle messages from PNC about available SBOMs"""
+
+    def __init__(self):
+        addresses = {
+            f"{VIRTUAL_TOPIC_PREFIX}.pnc.sbom.spike.complete": SbomerUMBHandler.sbom_complete,
+        }
+        # By default, listen for all messages on a topic
+        selectors = {key: "" for key in addresses}
+
+        super(SbomerUMBHandler, self).__init__(addresses=addresses, selectors=selectors)
+
+    @staticmethod
+    def sbom_complete(event: Event) -> bool:
+        logger.info(f"Handling UMB message for PNC SBOM {event.message.id}")
+        message = json.loads(event.message.body)
+        try:
+            slow_fetch_pnc_sbom.delay(
+                message["purl"],
+                message["productConfig"]["errataTool"],
+                message["build"],
+                message["sbom"],
+            )
+        except Exception as e:
+            logger.error(f"Failed to schedule PNC SBOM fetch {event.message.id}: {str(e)}")
+            return False
+        else:
+            return True
+
+
 class UMBDispatcher(MessagingHandler):
     """Maintains a collection of UMBHandlers and dispatches messages to them"""
 
@@ -159,7 +190,7 @@ class UMBDispatcher(MessagingHandler):
 
         # A list of UMBHandlers to which messages will be dispatched. If you add new handlers,
         # make sure they're added here.
-        self.handlers: list[UMBHandler] = [BrewUMBHandler()]
+        self.handlers: list[UMBHandler] = [BrewUMBHandler(), SbomerUMBHandler()]
 
     @property
     def virtual_topic_addresses(self) -> dict[str, HandleMethod]:

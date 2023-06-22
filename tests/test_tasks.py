@@ -1,11 +1,18 @@
-from unittest.mock import call, patch
+import json
+from unittest.mock import Mock, call, patch
 
 import pytest
 
 from corgi.collectors.brew import ADVISORY_REGEX, Brew
+from corgi.collectors.models import (
+    CollectorErrataProduct,
+    CollectorErrataProductVariant,
+    CollectorErrataProductVersion,
+)
 from corgi.core.models import SoftwareBuild
 from corgi.tasks.brew import slow_refresh_brew_build_tags, slow_update_brew_tags
 from corgi.tasks.errata_tool import slow_handle_shipped_errata
+from corgi.tasks.pnc import slow_fetch_pnc_sbom
 
 from .factories import SoftwareBuildFactory
 
@@ -220,3 +227,63 @@ def test_slow_refresh_brew_build_tags():
     assert build.meta_attr["tags"] == CLEAN_TAGS
     assert build.meta_attr["errata_tags"] == CLEAN_ERRATA_TAGS
     assert build.meta_attr["released_errata_tags"] == CLEAN_RELEASED_TAGS
+
+
+def test_slow_fetch_pnc_sbom():
+    """Test fetching SBOMs from PNC"""
+    # A typical "SBOM available" UMB message
+    with open("tests/data/pnc/sbom_complete.json") as complete_file:
+        complete_data = json.load(complete_file)["msg"]
+
+    purl = complete_data["purl"]
+    product_config = complete_data["productConfig"]["errataTool"]
+    build = complete_data["build"]
+    sbom = complete_data["sbom"]
+
+    # Ensure the product variant referenced in the UMB message exists
+    # ...
+    rhbq_product = CollectorErrataProduct.objects.create(
+        et_id=153, name="Red Hat build of Quarkus", short_name="RHBQ"
+    )
+    rhbq_product_version = CollectorErrataProductVersion.objects.create(
+        et_id=1838,
+        name="RHEL-8-RHBQ-2.13",
+        product=rhbq_product,
+        brew_tags=["quarkus-mandrel-22-rhel-8-candidate"],
+    )
+    CollectorErrataProductVariant.objects.create(
+        et_id=4060,
+        name="8Base-RHBQ-2.13",
+        product_version=rhbq_product_version,
+        cpe="cpe:/a:redhat:quarkus:2.13::el8",
+    )
+
+    # The SBOM referenced in the UMB message
+    with open("tests/data/pnc/pnc_sbom.json") as sbom_file:
+        sbom_contents = json.load(sbom_file)
+
+    # Mock response
+    response = Mock()
+    response.status_code = 200
+    response.json.return_value = sbom_contents
+
+    with patch("requests.get", return_value=response) as get_mock:
+        slow_fetch_pnc_sbom(purl, product_config, build, sbom)
+        get_mock.assert_called_once_with(sbom["link"])
+
+    # Test with an SBOM available message that has a PV that
+    # doesn't exist in ET. parse_pnc_sbom shouldn't be called,
+    # because the fetch task should log that the PV doesn't exist
+    # and end early.
+    with patch("corgi.collectors.pnc.parse_pnc_sbom") as parse_sbom_mock:
+        with open("tests/data/pnc/sbom_no_variant.json") as complete_file:
+            complete_data = json.load(complete_file)["msg"]
+
+        slow_fetch_pnc_sbom(
+            complete_data["purl"],
+            complete_data["productConfig"]["errataTool"],
+            complete_data["build"],
+            complete_data["sbom"],
+        )
+
+        parse_sbom_mock.assert_not_called()

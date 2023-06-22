@@ -1,0 +1,59 @@
+{
+  "i": 0,
+  "msg_id": "ID:07055667-13e8-493a-a678-8a0ccbfbdb56:6:5:1-1",
+  "topic": "/topic/VirtualTopic.eng.pnc.sbom.spike.complete",
+  "timestamp": 1686698102.0,
+  "certificate": null,
+  "signature": null,
+  "username": null,
+  "crypto": null,
+  "msg": {
+    "build": {
+      "id": "AZLCRNRPSHQAA",
+      "link": "https://example.com/v2/builds/AZIE75KE6KIAA",
+      "system": "pnc"
+    },
+    "productConfig": {
+      "errataTool": {
+        "productName": "RHBQ",
+        "productVariant": "9Base-RHBQ-9.99",
+        "productVersion": "RHEL-9-RHBQ-9.99"
+      }
+    },
+    "purl": "pkg:maven/com.redhat.quarkus.platform/quarkus-bom@2.13.8.Final-redhat-00003?type=pom",
+    "sbom": {
+      "bom": {
+        "format": "cyclonedx",
+        "link": "https://example.com/api/v1alpha1/sboms/456597260580114432/bom",
+        "version": "1.4"
+      },
+      "id": "456597260580114432",
+      "link": "https://example.com/api/v1alpha1/sboms/456597260580114432"
+    }
+  },
+  "headers": {
+    "JMSXUserID": "pnc-sbomer",
+    "JMS_AMQP_MA_x-opt-jms-dest": "1",
+    "JMS_AMQP_MA_x-opt-jms-msg-type": "5",
+    "JMS_AMQP_MESSAGE_FORMAT": "0",
+    "JMS_AMQP_NATIVE": "false",
+    "amq6100_destination": "queue://Consumer.datanommer.psi-ocp-bm-prod.VirtualTopic.eng.>",
+    "amq6100_originalDestination": "topic://VirtualTopic.eng.pnc.sbom.spike.complete",
+    "correlation-id": "bf49557c-0dc9-481c-9ba9-87c049f0eea2",
+    "destination": "/topic/VirtualTopic.eng.pnc.sbom.spike.complete",
+    "expires": "1686701702523",
+    "message-id": "ID:07055667-13e8-493a-a678-8a0ccbfbdb56:6:5:1-1",
+    "original-destination": "/topic/VirtualTopic.eng.pnc.sbom.spike.complete",
+    "persistent": "true",
+    "pnc_build_id": "AZLCRNRPSHQAA",
+    "priority": "4",
+    "producer": "PNC SBOMer",
+    "purl": "pkg:maven/com.redhat.quarkus.platform/quarkus-bom@2.13.8.Final-redhat-00003?type=pom",
+    "sbom_id": "456597260580114432",
+    "subscription": "/queue/Consumer.datanommer.psi-ocp-bm-prod.VirtualTopic.eng.>",
+    "timestamp": "1686698102523",
+    "type": "GenerationFinishedMessage"
+  },
+  "source_name": "datanommer",
+  "source_version": "0.9.1"
+}

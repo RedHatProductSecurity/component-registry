@@ -1,9 +1,15 @@
+import json
 from unittest.mock import MagicMock, call, patch
 
 import pytest
 from django.conf import settings
 
-from corgi.monitor.consumer import BrewUMBHandler, UMBDispatcher, UMBHandler
+from corgi.monitor.consumer import (
+    BrewUMBHandler,
+    SbomerUMBHandler,
+    UMBDispatcher,
+    UMBHandler,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -70,8 +76,8 @@ def test_brew_umb_handler_setup():
 
     # The addresses and selectors of the dispatcher should match those of a handler
     handler = BrewUMBHandler()
-    assert dispatcher.virtual_topic_addresses.keys() == handler.virtual_topic_addresses.keys()
-    assert dispatcher.selectors == handler.selectors
+    assert set(dispatcher.virtual_topic_addresses).issuperset(set(handler.virtual_topic_addresses))
+    assert set(dispatcher.selectors).issuperset(set(handler.selectors))
 
     mock_umb_event = MagicMock()
     mock_connection_constructor = mock_umb_event.container.connect
@@ -170,7 +176,9 @@ def test_handle_tag_and_untag_messages():
     with patch("corgi.monitor.consumer.SSLDomain"):
         dispatcher = UMBDispatcher()
 
-    addresses = dispatcher.virtual_topic_addresses
+    # Only want addresses from Brew here
+    handler = BrewUMBHandler()
+    addresses = handler.virtual_topic_addresses
     _, tag_address, untag_address, _ = addresses.keys()
     assert ADDRESS_PREFIX in tag_address
     assert ADDRESS_PREFIX in untag_address
@@ -294,3 +302,48 @@ def test_brew_umb_handler_handles_shipped_errata():
             call(args=(mock_id, "SHIPPED_LIVE")),
         )
     )
+
+
+def test_sbomer_umb_handler_setup():
+    """Test that the SbomerUMBHandler class is set up correctly by the UMBDispatcher"""
+    # Stub out the SSLDomain config class to avoid needing real UMB certs in tests
+    with patch("corgi.monitor.consumer.SSLDomain"):
+        dispatcher = UMBDispatcher()
+
+    # The addresses and selectors of the dispatcher should match those of a handler
+    handler = SbomerUMBHandler()
+    assert set(dispatcher.virtual_topic_addresses).issuperset(set(handler.virtual_topic_addresses))
+    assert set(dispatcher.selectors).issuperset(set(handler.selectors))
+
+
+def test_sbomer_handles_sbom_available():
+    """Test that the PNC UMB receiver correctly handles SBOM available messages"""
+    with patch("corgi.monitor.consumer.SSLDomain"):
+        dispatcher = UMBDispatcher()
+
+    mock_event = MagicMock()
+
+    with open("tests/data/pnc/sbom_complete.json") as test_file:
+        test_data = json.load(test_file)
+    mock_event.message.address = test_data["topic"].replace("/topic/", ADDRESS_PREFIX)
+    mock_event.message.body = json.dumps(test_data["msg"])
+
+    # Call first with a valid message, then with a bad SBOM URL
+    fetch_sbom_exceptions = (None, Exception("Bad SBOM URL"))
+
+    with patch(
+        "corgi.monitor.consumer.slow_fetch_pnc_sbom.delay", side_effect=fetch_sbom_exceptions
+    ) as mock_fetch_sbom:
+        with patch.object(dispatcher, "accept") as mock_accept:
+            dispatcher.on_message(mock_event)
+            mock_accept.assert_called_once_with(mock_event.delivery)
+            mock_fetch_sbom.assert_called_once_with(
+                test_data["msg"]["purl"],
+                test_data["msg"]["productConfig"]["errataTool"],
+                test_data["msg"]["build"],
+                test_data["msg"]["sbom"],
+            )
+
+        with patch.object(dispatcher, "release") as mock_release:
+            dispatcher.on_message(mock_event)
+            mock_release.assert_called_once_with(mock_event.delivery, delivered=True)

@@ -579,10 +579,7 @@ def fetch_unprocessed_relations(
 
     if created_since:
         query &= Q(created_at__gte=created_since)
-    relations_query = (
-        ProductComponentRelation.objects.filter(query)
-        .filter(software_build=None)
-    )
+    relations_query = ProductComponentRelation.objects.filter(query).filter(software_build=None)
 
     processed_builds = 0
     for relation in relations_query.iterator():

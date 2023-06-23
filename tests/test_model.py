@@ -183,12 +183,14 @@ def test_component_provides():
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
         obj=upstream,
+        component=upstream,
     )
     dev_comp = ComponentFactory(name="dev", type=Component.Type.NPM)
     ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.PROVIDES_DEV,
         parent=upstream_node,
         obj=dev_comp,
+        component=dev_comp,
     )
     # provides is inverse of sources
     # so calling save_component_taxonomy on either dev_comp or upstream
@@ -214,12 +216,14 @@ def test_get_roots():
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
         obj=srpm,
+        component=srpm,
     )
     rpm = ComponentFactory(name="rpm", type=Component.Type.RPM)
     rpm_cnode = ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=srpm_cnode,
         obj=rpm,
+        component=rpm,
     )
     assert rpm.get_roots(using="default") == [srpm_cnode]
     assert srpm.get_roots(using="default") == [srpm_cnode]
@@ -229,6 +233,7 @@ def test_get_roots():
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=rpm_cnode,
         obj=nested,
+        component=nested,
     )
     assert nested.get_roots(using="default") == [srpm_cnode]
 
@@ -237,12 +242,14 @@ def test_get_roots():
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
         obj=container,
+        component=container,
     )
     container_rpm = ComponentFactory(name="container_rpm", type=Component.Type.RPM)
     ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=container_cnode,
         obj=container_rpm,
+        component=container_rpm,
     )
     assert not container_rpm.get_roots(using="default")
     assert container.get_roots(using="default") == [container_cnode]
@@ -254,6 +261,7 @@ def test_get_roots():
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=container_cnode,
         obj=container_source,
+        component=container_source,
     )
     assert container_source.get_roots(using="default") == [container_cnode]
     container_nested = ComponentFactory(name="container_nested", type=Component.Type.NPM)
@@ -261,6 +269,7 @@ def test_get_roots():
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=container_source_cnode,
         obj=container_nested,
+        component=container_nested,
     )
     assert container_nested.get_roots(using="default") == [container_cnode]
 
@@ -277,7 +286,12 @@ def test_product_component_relations():
         build_type=sb.build_type,
     )
     srpm = SrpmComponentFactory(software_build=sb)
-    ComponentNode.objects.create(type=ComponentNode.ComponentNodeType.SOURCE, parent=None, obj=srpm)
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        obj=srpm,
+        component=srpm,
+    )
     sb.save_product_taxonomy()
     c = Component.objects.get(uuid=srpm.uuid)
     assert rhel_7_1 in c.productstreams.get_queryset()
@@ -295,7 +309,12 @@ def test_product_component_relations_errata():
         software_build=sb,
     )
     srpm = SrpmComponentFactory(software_build=sb)
-    ComponentNode.objects.create(type=ComponentNode.ComponentNodeType.SOURCE, parent=None, obj=srpm)
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        obj=srpm,
+        component=srpm,
+    )
     sb.save_product_taxonomy()
     c = Component.objects.get(uuid=srpm.uuid)
     assert c.productstreams.filter(pk=rhel_8_2.pk).exists()
@@ -362,18 +381,21 @@ def test_get_upstream():
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
         obj=srpm,
+        component=srpm,
     )
     rpm = ComponentFactory(name="rpm", type=Component.Type.RPM)
     ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=srpm_cnode,
         obj=rpm,
+        component=rpm,
     )
     srpm_upstream = ComponentFactory(name="srpm_upstream", namespace=Component.Namespace.UPSTREAM)
     ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=srpm_cnode,
         obj=srpm_upstream,
+        component=srpm_upstream,
     )
     assert sorted(rpm.get_upstreams_purls(using="default")) == [srpm_upstream.purl]
 
@@ -384,12 +406,14 @@ def test_get_upstream_container():
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
         obj=container,
+        component=container,
     )
     container_rpm = ComponentFactory(name="container_rpm", type=Component.Type.RPM)
     ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=container_cnode,
         obj=container_rpm,
+        component=container_rpm,
     )
     assert container_rpm.get_upstreams_purls(using="default") == set()
 
@@ -398,6 +422,7 @@ def test_get_upstream_container():
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=container_cnode,
         obj=container_source,
+        component=container_source,
     )
 
     container_nested = ComponentFactory(name="container_nested", type=Component.Type.NPM)
@@ -405,6 +430,7 @@ def test_get_upstream_container():
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=container_source_cnode,
         obj=container_nested,
+        component=container_nested,
     )
     assert sorted(container_nested.get_upstreams_purls(using="default")) == [container_source.purl]
 
@@ -417,6 +443,7 @@ def test_get_upstream_container():
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=container_cnode,
         obj=container_o_source,
+        component=container_o_source,
     )
 
     container_other_nested = ComponentFactory(
@@ -426,6 +453,7 @@ def test_get_upstream_container():
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=container_o_source_cnode,
         obj=container_other_nested,
+        component=container_other_nested,
     )
     assert sorted(container_other_nested.get_upstreams_purls(using="default")) == [
         container_o_source.purl
@@ -662,15 +690,24 @@ def test_duplicate_insert_fails():
     """Test that DB constraints block inserting nodes with same (type, parent, purl)"""
     component = ComponentFactory()
     root = ComponentNode.objects.create(
-        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, obj=component
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        obj=component,
+        component=component,
     )
     ComponentNode.objects.create(
-        type=ComponentNode.ComponentNodeType.SOURCE, parent=root, obj=component
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=root,
+        obj=component,
+        component=component,
     )
     with pytest.raises(IntegrityError):
         # Inserting the same node a second time should fail with an IntegrityError
         ComponentNode.objects.create(
-            type=ComponentNode.ComponentNodeType.SOURCE, parent=root, obj=component
+            type=ComponentNode.ComponentNodeType.SOURCE,
+            parent=root,
+            obj=component,
+            component=component,
         )
 
 
@@ -678,12 +715,18 @@ def test_duplicate_insert_fails_for_null_parent():
     """Test that DB constraints block inserting nodes with same (type, parent=None, purl)"""
     component = ComponentFactory()
     ComponentNode.objects.create(
-        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, obj=component
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        obj=component,
+        component=component,
     )
     with pytest.raises(IntegrityError):
         # Inserting the same node a second time should fail with an IntegrityError
         ComponentNode.objects.create(
-            type=ComponentNode.ComponentNodeType.SOURCE, parent=None, obj=component
+            type=ComponentNode.ComponentNodeType.SOURCE,
+            parent=None,
+            obj=component,
+            component=component,
         )
 
 
@@ -701,7 +744,7 @@ def test_mptt_properties_are_unordered_by_default():
 
     c = ComponentFactory()
     cnode = ComponentNode.objects.create(
-        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, obj=c
+        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, obj=c, component=c
     )
     assert "Sort " not in c.cnodes.explain()
     assert cnode._meta.ordering == []

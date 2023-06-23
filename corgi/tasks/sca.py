@@ -123,6 +123,7 @@ def save_component(
         purl=obj.purl,
         defaults={
             "obj": obj,
+            "component": obj,
         },
     )
 

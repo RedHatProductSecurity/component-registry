@@ -83,6 +83,7 @@ def test_manifests_exclude_bad_golang_components():
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=containers[0].cnodes.first(),
         obj=bad_golang,
+        component=bad_golang,
     )
     # Link the bad_golang component to its parent container
     containers[0].save_component_taxonomy()
@@ -408,22 +409,28 @@ def setup_products_and_components_upstreams():
         software_build=other_build, type=Component.Type.CONTAINER_IMAGE, arch="noarch"
     )
     cnode = ComponentNode.objects.create(
-        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, obj=component
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        obj=component,
+        component=component,
     )
     other_cnode = ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
         obj=other_component,
+        component=other_component,
     )
     ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=cnode,
         obj=upstream,
+        component=upstream,
     )
     ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=other_cnode,
         obj=upstream,
+        component=upstream,
     )
     # Link the components to each other
     component.save_component_taxonomy()
@@ -469,17 +476,22 @@ def setup_products_and_components_provides(released=True, internal_component=Fal
         software_build=build,
     )
     cnode = ComponentNode.objects.create(
-        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, obj=component
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        obj=component,
+        component=component,
     )
     ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=cnode,
         obj=provided,
+        component=provided,
     )
     ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.PROVIDES_DEV,
         parent=cnode,
         obj=dev_provided,
+        component=dev_provided,
     )
     # Link the components to each other
     component.save_component_taxonomy()
@@ -530,12 +542,16 @@ def _build_rpm_in_containers(rpm_in_container, name=""):
             software_build=build,
         )
     cnode = ComponentNode.objects.create(
-        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, obj=container
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        obj=container,
+        component=container,
     )
     ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=cnode,
         obj=rpm_in_container,
+        component=rpm_in_container,
     )
     # Link the components to each other
     container.save_component_taxonomy()

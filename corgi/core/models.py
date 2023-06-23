@@ -293,13 +293,12 @@ class SoftwareBuild(TimeStampedModel):
         """update ('materialize') product taxonomy on all build components
 
         This method is defined on SoftwareBuild and not Component,
-        because the ProductComponentRelation table refers to build IDs,
+        because the ProductComponentRelation table refers to builds,
         which we use to look up which products a certain component should be linked to
         """
         variant_names = tuple(
             ProductComponentRelation.objects.filter(
-                build_id=self.build_id,
-                build_type=self.build_type,
+                software_build=self,
                 type__in=ProductComponentRelation.VARIANT_TYPES,
             )
             .values_list("product_ref", flat=True)
@@ -308,8 +307,7 @@ class SoftwareBuild(TimeStampedModel):
 
         stream_names = list(
             ProductComponentRelation.objects.filter(
-                build_id=self.build_id,
-                build_type=self.build_type,
+                software_build=self,
                 type__in=ProductComponentRelation.STREAM_TYPES,
             )
             .values_list("product_ref", flat=True)
@@ -389,11 +387,10 @@ class ProductModel(TimeStampedModel):
 
     @property
     def builds(self) -> QuerySet:
-        """Returns unique productcomponentrelations with at least 1 matching variant or stream,
-        ordered by build_id.
-        """
-        # TODO: Can just return self.components.values_list("software_build", flat=True).distinct()
+        """Returns unique productcomponentrelations with at least 1 matching variant or
+        stream, ordered by build_id."""
         product_refs = [self.name]
+
         if isinstance(self, ProductStream):
             # we also want to include child product variants of this product stream
             product_refs.extend(
@@ -408,17 +405,13 @@ class ProductModel(TimeStampedModel):
             product_refs.extend(
                 self.productvariants.values_list("name", flat=True).using("read_only")
             )
-        # else it was a product variant, only look up by self.name
+            # else it was a product variant, only look up by self.name
 
         if product_refs:
-            return (
-                ProductComponentRelation.objects.filter(product_ref__in=product_refs)
-                .values_list("build_id", "build_type")
-                .distinct()
-                .using("read_only")
-            )
+            return SoftwareBuild.objects.filter(relations__product_ref__in=product_refs)
         # Else no product variants or product streams - should never happen
-        return ProductComponentRelation.objects.none()
+
+        return SoftwareBuild.objects.none()
 
     @property
     def cpes(self) -> tuple[str, ...]:
@@ -807,6 +800,9 @@ class ProductComponentRelation(TimeStampedModel):
     external_system_id = models.CharField(max_length=200, default="")
     # E.g. product variant for ERRATA, or product stream for COMPOSE
     product_ref = models.CharField(max_length=200, default="")
+    software_build = models.ForeignKey(
+        "SoftwareBuild", on_delete=models.SET_NULL, related_name="relations", null=True
+    )
     build_id = models.CharField(max_length=200, default="")
     build_type = models.CharField(choices=SoftwareBuild.Type.choices, max_length=20)
 
@@ -1784,9 +1780,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             return []
         errata_qs = (
             ProductComponentRelation.objects.filter(
-                type=ProductComponentRelation.Type.ERRATA,
-                build_id=self.software_build.build_id,
-                build_type=self.software_build.build_type,
+                type=ProductComponentRelation.Type.ERRATA, software_build=self.software_build
             )
             .values_list("external_system_id", flat=True)
             .distinct()

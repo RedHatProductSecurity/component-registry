@@ -1102,10 +1102,12 @@ def test_fetch_rpm_build(mock_load_brew_tags, mock_sca, mock_brew):
         "pkg:rpm/redhat/cockpit-system@251-1.el8?arch=noarch",
         "pkg:rpm/redhat/cockpit@251-1.el8?arch=src",
     ]
-
+    software_build = SoftwareBuild.objects.get(
+        build_id=1705913,
+    )
     # See if we checked the tags for brew_tag relations to streams
     mock_load_brew_tags.assert_called_with(
-        1705913,
+        software_build,
         [
             "rhel-8.5.0-candidate",
             "rhel-8.5.0-Beta-1.0-set",
@@ -1133,13 +1135,13 @@ def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, moc
         name="subctl-container", type=Component.Type.CONTAINER_IMAGE, arch="noarch"
     )
 
-    # Check that new components are related to the build via the brew_tag
-    assert ProductComponentRelation.objects.get(
+    software_build = SoftwareBuild.objects.get(
         build_id="1781353", build_type=SoftwareBuild.Type.BREW
     )
-    assert image_index.productstreams.filter(pk=stream.uuid).exists()
 
-    softwarebuild = SoftwareBuild.objects.get(build_id=1781353, build_type=SoftwareBuild.Type.BREW)
+    # Check that new components are related to the build via the brew_tag
+    assert ProductComponentRelation.objects.get(software_build=software_build)
+    assert image_index.productstreams.filter(pk=stream.uuid).exists()
 
     noarch_rpms = []
     for node in image_index.cnodes.all():
@@ -1171,7 +1173,7 @@ def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, moc
         any_order=True,
     )
     mock_load_errata.assert_called_with("RHEA-2021:4610", force_process=False)
-    mock_sca.assert_called_with(str(softwarebuild.pk), force_process=False)
+    mock_sca.assert_called_with(str(software_build.pk), force_process=False)
 
 
 @pytest.mark.django_db
@@ -1195,7 +1197,8 @@ def test_load_stream_brew_tags(mock_fetch_modular_build, mock_brew):
 @patch("corgi.tasks.brew.slow_fetch_modular_build.delay")
 def test_load_brew_tags(mock_fetch_modular_build, mock_fetch_brew_build):
     stream = ProductStreamFactory(brew_tags={"rhacm-2.4-rhel-8-container-released": True})
-    load_brew_tags("1", ["rhacm-2.4-rhel-8-container-released"])
+    software_build = SoftwareBuildFactory(build_id="1")
+    load_brew_tags(software_build, ["rhacm-2.4-rhel-8-container-released"])
     new_brew_tag_relation = ProductComponentRelation.objects.get(
         build_id="1",
         build_type=SoftwareBuild.Type.BREW,
@@ -1218,8 +1221,9 @@ def test_new_software_build_relation(mock_save_prod_tax):
 @patch("corgi.tasks.brew.slow_fetch_modular_build.delay")
 @patch("corgi.tasks.brew.slow_fetch_brew_build.delay")
 def test_load_unprocessed_relations(mock_fetch_brew_task, mock_fetch_modular_task):
-    # We don't attempt to fetch non brew builds
-    relation = ProductComponentRelationFactory()
+    # We don't attempt to fetch relations where software_build is set
+    sb = SoftwareBuildFactory()
+    relation = ProductComponentRelationFactory(software_build=sb)
     assert not relation.build_id
     assert not fetch_unprocessed_relations()
 
@@ -1232,10 +1236,6 @@ def test_load_unprocessed_relations(mock_fetch_brew_task, mock_fetch_modular_tas
     no_processed = fetch_unprocessed_relations()
     assert no_processed == 1
     mock_fetch_brew_task.assert_called_once()
-
-    # If the build already exists we don't try to fetch it
-    SoftwareBuildFactory(build_type=SoftwareBuild.Type.CENTOS, build_id=1)
-    assert not fetch_unprocessed_relations()
 
     # test fetch by relation_type
     ProductComponentRelationFactory(

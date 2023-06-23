@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Optional
 
-from celery.local import PromiseProxy
 from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.conf import settings
@@ -96,6 +95,11 @@ def slow_fetch_brew_build(
         },
         completion_time=completion_dt,
     )
+    if created:
+        # Create foreign key from Relations to the new SoftwareBuild, where they don't already exist
+        ProductComponentRelation.objects.filter(
+            build_id=build_id, build_type=build_type, software_build__isnull=True
+        ).update(software_build=softwarebuild)
 
     if not force_process and not created:
         # If another task starts while this task is downloading data this can result in processing
@@ -121,7 +125,7 @@ def slow_fetch_brew_build(
     if not build_meta["tags"]:
         logger.info("no brew tags")
     else:
-        new_relations = load_brew_tags(build_id, build_meta["tags"])
+        new_relations = load_brew_tags(softwarebuild, build_meta["tags"])
         logger.info(f"Created {new_relations} for brew tags in {build_type}:{build_id}")
 
     # Allow async call of slow_load_errata task, see CORGI-21
@@ -500,10 +504,18 @@ def load_stream_brew_tags() -> None:
         brew, build_type, refresh_task = _relation_context_for_stream(ps.name)
         for brew_tag, inherit in ps.brew_tags.items():
             builds = brew.get_builds_with_tag(brew_tag, inherit=inherit, latest=False)
-            _create_relations_for_tag(builds, brew_tag, build_type, ps.name, refresh_task)
+            no_of_created = create_relations(
+                builds,
+                build_type,
+                brew_tag,
+                ps.name,
+                ProductComponentRelation.Type.BREW_TAG,
+                refresh_task,
+            )
+            logger.info("Saving %s new builds for %s", no_of_created, brew_tag)
 
 
-def load_brew_tags(build_id: str, brew_tags: list[str]) -> int:
+def load_brew_tags(software_build: SoftwareBuild, brew_tags: list[str]) -> int:
     all_stream_tags = ProductStream.objects.exclude(brew_tags__exact={}).values_list(
         "name", "brew_tags"
     )
@@ -515,27 +527,21 @@ def load_brew_tags(build_id: str, brew_tags: list[str]) -> int:
         for tag in distinct_stream_tags:
             brew, build_type, _ = _relation_context_for_stream(stream_name)
             logger.info(f"Creating relations for {stream_name} and {tag}")
-            no_created += _create_relations_for_tag((build_id,), tag, build_type, stream_name, None)
+            # We do this inline instead of via create_relations function because
+            # it's the only time we call it where we have a software_build object created
+            _, created = ProductComponentRelation.objects.update_or_create(
+                external_system_id=tag,
+                product_ref=stream_name,
+                build_id=software_build.build_id,
+                build_type=build_type,
+                defaults={
+                    "type": ProductComponentRelation.Type.BREW_TAG,
+                    "software_build": software_build,
+                },
+            )
+            if created:
+                no_created += 1
     return no_created
-
-
-def _create_relations_for_tag(
-    build_ids: tuple,
-    brew_tag: str,
-    build_type: SoftwareBuild.Type,
-    stream_name: str,
-    refresh_task: Optional[PromiseProxy],
-):
-    no_of_created = create_relations(
-        build_ids,
-        build_type,
-        brew_tag,
-        stream_name,
-        ProductComponentRelation.Type.BREW_TAG,
-        refresh_task,
-    )
-    logger.info("Saving %s new builds for %s", no_of_created, brew_tag)
-    return no_of_created
 
 
 def _relation_context_for_stream(stream_name: str):
@@ -560,7 +566,6 @@ def fetch_unprocessed_relations(
     product_ref: Optional[str] = "",
     relation_type: Optional[ProductComponentRelation.Type] = None,
     force_process: bool = False,
-    save_only: bool = False,
 ) -> int:
     """Load Brew builds for relations which don't have an associated SoftwareBuild.
     Accepts optional arguments product_ref and relation_type which add query filters"""
@@ -576,35 +581,23 @@ def fetch_unprocessed_relations(
         query &= Q(created_at__gte=created_since)
     relations_query = (
         ProductComponentRelation.objects.filter(query)
-        .values_list("build_id", "build_type")
-        .distinct()
-        .using("read_only")
+        .filter(software_build=None)
     )
 
     processed_builds = 0
-    for build_id, build_type in relations_query.iterator():
-        if not build_id:
-            # build_id defaults to "" and int() will fail in this case
-            continue
-        if (
-            save_only
-            or not SoftwareBuild.objects.filter(build_id=build_id, build_type=build_type)
-            .using("read_only")
-            .exists()
-        ):
-            logger.info("Processing %s relation build with id: %s", relation_type, build_id)
-            if build_type == SoftwareBuild.Type.CENTOS:
-                # This skips use of the Collector models for builds in the CENTOS koji instance
-                # It was done to avoid updating the collector models not to use build_id as
-                # a primary key. It's possible because the only product stream (openstack-rdo)
-                # stored in CENTOS koji doesn't use modules
-                slow_fetch_brew_build.delay(
-                    build_id, SoftwareBuild.Type.CENTOS, force_process=force_process
-                )
-                processed_builds += 1
-                continue
-            slow_fetch_modular_build.delay(build_id, force_process=force_process)
-            processed_builds += 1
+    for relation in relations_query.iterator():
+        logger.info(f"Processing {relation.type} relation build with id: {relation.build_id}")
+        if relation.build_type == SoftwareBuild.Type.CENTOS:
+            # This skips use of the Collector models for builds in the CENTOS koji instance
+            # It was done to avoid updating the collector models not to use build_id as
+            # a primary key. It's possible because the only product stream (openstack-rdo)
+            # stored in CENTOS koji doesn't use modules
+            slow_fetch_brew_build.delay(
+                relation.build_id, SoftwareBuild.Type.CENTOS, force_process=force_process
+            )
+        else:
+            slow_fetch_modular_build.delay(relation.build_id, force_process=force_process)
+        processed_builds += 1
     return processed_builds
 
 

@@ -54,25 +54,19 @@ def get_builds(
     compose_names: Iterable[str] = (), stream_name: str = "", force_process: bool = False
 ) -> int:
     """Get compose build IDs, optionally for only a particular stream or set of composes"""
+    # We exclude CENTOS build_types because the only product stream (openstack-rdo) stored in
+    # CENTOS koji doesn't use modules, and we call slow_fetch_modular_build below
     relations_query = ProductComponentRelation.objects.filter(
-        type=ProductComponentRelation.Type.COMPOSE
-    )
+        type=ProductComponentRelation.Type.COMPOSE, software_build=None
+    ).exclude(build_type=SoftwareBuild.Type.CENTOS)
     if compose_names:
         relations_query = relations_query.filter(external_system_id__in=compose_names)
     elif stream_name:
         relations_query = relations_query.filter(product_ref=stream_name)
 
     processed_builds = 0
-    for build_id, build_type in (
-        relations_query.values_list("build_id", "build_type").distinct().iterator()
-    ):
-        if not build_id:
-            continue
-        if not SoftwareBuild.objects.filter(build_id=build_id, build_type=build_type).exists():
-            logger.info("Processing Compose relation build with id: %s", build_id)
-            if build_type == SoftwareBuild.Type.CENTOS:
-                # We would have to update collector modules to avoid using build_id as primary key
-                raise ValueError("We don't support modular builds in composes for CENTOS")
-            slow_fetch_modular_build.delay(build_id, force_process=force_process)
-            processed_builds += 1
+    for build_id in relations_query.values_list("build_id", flat=True).distinct().iterator():
+        logger.info(f"Processing Compose relation build with id: {build_id}")
+        slow_fetch_modular_build.delay(build_id, force_process=force_process)
+        processed_builds += 1
     return processed_builds

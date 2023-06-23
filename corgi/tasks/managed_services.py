@@ -69,7 +69,7 @@ def cpu_manifest_service(product_stream_id: str, service_components: list):
                 meta_attr__service=service.name,
             )
             for build in past_builds:
-                ProductComponentRelation.objects.filter(build_id=build.build_id).delete()
+                ProductComponentRelation.objects.filter(software_build=build).delete()
                 build.delete()
 
             build_id = now.strftime("%Y%m%d%H%M%S")
@@ -104,6 +104,7 @@ def cpu_manifest_service(product_stream_id: str, service_components: list):
                 product_ref=service.name,
                 build_id=build_id,
                 build_type=SoftwareBuild.Type.APP_INTERFACE,
+                software_build=build,
                 type=ProductComponentRelation.Type.APP_INTERFACE,
             )
 

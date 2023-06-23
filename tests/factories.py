@@ -194,7 +194,7 @@ class SrpmComponentFactory(ComponentFactory):
 
 class ContainerImageComponentFactory(ComponentFactory):
     type = models.Component.Type.CONTAINER_IMAGE
-    namespace = ""
+    namespace = models.Component.Namespace.REDHAT
     arch = "noarch"
 
 

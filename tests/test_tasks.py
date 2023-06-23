@@ -1,6 +1,7 @@
 import json
 from unittest.mock import Mock, call, patch
 
+import koji
 import pytest
 
 from corgi.collectors.brew import ADVISORY_REGEX, Brew
@@ -9,12 +10,29 @@ from corgi.collectors.models import (
     CollectorErrataProductVariant,
     CollectorErrataProductVersion,
 )
-from corgi.core.models import SoftwareBuild
-from corgi.tasks.brew import slow_refresh_brew_build_tags, slow_update_brew_tags
+from corgi.core.models import (
+    Component,
+    ComponentNode,
+    ComponentTag,
+    ProductComponentRelation,
+    SoftwareBuild,
+    SoftwareBuildTag,
+)
+from corgi.tasks.brew import (
+    slow_delete_brew_build,
+    slow_refresh_brew_build_tags,
+    slow_update_brew_tags,
+)
 from corgi.tasks.errata_tool import slow_handle_shipped_errata
 from corgi.tasks.pnc import slow_fetch_pnc_sbom
 
-from .factories import SoftwareBuildFactory
+from .factories import (
+    ComponentFactory,
+    ContainerImageComponentFactory,
+    ProductComponentRelationFactory,
+    SoftwareBuildFactory,
+    SrpmComponentFactory,
+)
 
 pytestmark = [
     pytest.mark.unit,
@@ -227,6 +245,257 @@ def test_slow_refresh_brew_build_tags():
     assert build.meta_attr["tags"] == CLEAN_TAGS
     assert build.meta_attr["errata_tags"] == CLEAN_ERRATA_TAGS
     assert build.meta_attr["released_errata_tags"] == CLEAN_RELEASED_TAGS
+
+
+def test_slow_delete_brew_builds():
+    """Test that Brew builds (and their relations, components, and nodes)
+    are deleted in Corgi when they're deleted in Brew"""
+    build_id = 12345
+    srpm_build = SoftwareBuildFactory(
+        build_type=SoftwareBuild.Type.BREW,
+        build_id=str(build_id),
+    )
+    # When we delete the build, we should also delete all its components and nodes
+    source_rpm = SrpmComponentFactory(software_build=srpm_build)
+    srpm_node = ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        purl=source_rpm.purl,
+        obj=source_rpm,
+    )
+    source_rpm.save_component_taxonomy()
+
+    # This RPM is only upstream of the source RPM we're deleting
+    # So it should get cleaned up
+    unshipped_upstream = ComponentFactory(
+        type=source_rpm.type,
+        namespace=Component.Namespace.UPSTREAM,
+        name=source_rpm.name,
+        epoch=source_rpm.epoch,
+        version=source_rpm.version,
+        release="",
+        arch="noarch",
+        software_build=None,
+    )
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=srpm_node,
+        purl=unshipped_upstream.purl,
+        obj=unshipped_upstream,
+    )
+    unshipped_upstream.save_component_taxonomy()
+
+    # Unrelated builds, as well as components they ship, should not be cleaned up
+    index_container = ContainerImageComponentFactory()
+    oci_node = ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        purl=index_container.purl,
+        obj=index_container,
+    )
+    index_container.save_component_taxonomy()
+
+    # This RPM is upstream of both the SRPM and some container
+    # So it shouldn't get cleaned up
+    # SRPMs don't really have multiple upstreams
+    # Just test we don't delete upstreams that are linked to multiple components
+    shipped_upstream = ComponentFactory(
+        type=source_rpm.type,
+        namespace=Component.Namespace.UPSTREAM,
+        name=source_rpm.name,
+        epoch=source_rpm.epoch,
+        version=source_rpm.version,
+        release="",
+        arch="noarch2",
+        software_build=None,
+    )
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=srpm_node,
+        purl=shipped_upstream.purl,
+        obj=shipped_upstream,
+    )
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=oci_node,
+        purl=shipped_upstream.purl,
+        obj=shipped_upstream,
+    )
+    shipped_upstream.save_component_taxonomy()
+
+    # The ARM binary RPM is only provided by the source RPM we're deleting
+    # So it should get cleaned up
+    unshipped_binary_rpm = ComponentFactory(
+        type=source_rpm.type,
+        namespace=source_rpm.namespace,
+        name=source_rpm.name,
+        epoch=source_rpm.epoch,
+        version=source_rpm.version,
+        release=source_rpm.release,
+        arch="aarch64",
+        software_build=None,
+    )
+    unshipped_binary_rpm_node = ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.PROVIDES,
+        parent=srpm_node,
+        purl=unshipped_binary_rpm.purl,
+        obj=unshipped_binary_rpm,
+    )
+    unshipped_binary_rpm.save_component_taxonomy()
+
+    # This GEM component is provided by both the SRPM
+    # and the binary RPM, but all the source components
+    # are still part of the same build, so it should be cleaned up
+    unshipped_bundled_gem = ComponentFactory(
+        type=Component.Type.GEM, namespace=Component.Namespace.UPSTREAM, software_build=None
+    )
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.PROVIDES,
+        parent=unshipped_binary_rpm_node,
+        purl=unshipped_bundled_gem.purl,
+        obj=unshipped_bundled_gem,
+    )
+    unshipped_bundled_gem.save_component_taxonomy()
+
+    # The X86 binary RPM is provided by both the SRPM and some container
+    # So it shouldn't get cleaned up
+    shipped_binary_rpm = ComponentFactory(
+        type=source_rpm.type,
+        namespace=source_rpm.namespace,
+        name=source_rpm.name,
+        epoch=source_rpm.epoch,
+        version=source_rpm.version,
+        release=source_rpm.release,
+        arch="x86_64",
+        software_build=None,
+    )
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.PROVIDES,
+        parent=srpm_node,
+        purl=shipped_binary_rpm.purl,
+        obj=shipped_binary_rpm,
+    )
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.PROVIDES,
+        parent=oci_node,
+        purl=shipped_binary_rpm.purl,
+        obj=shipped_binary_rpm,
+    )
+    shipped_binary_rpm.save_component_taxonomy()
+
+    # This unprocessed relation isn't linked to the srpm_build (yet)
+    ProductComponentRelationFactory(
+        type=ProductComponentRelation.Type.BREW_TAG,
+        build_type=SoftwareBuild.Type.BREW,
+        build_id=str(build_id),
+    )
+    # This processed relation is linked to the srpm_build
+    ProductComponentRelationFactory(
+        type=ProductComponentRelation.Type.ERRATA,
+        build_type=SoftwareBuild.Type.BREW,
+        build_id=str(build_id),
+        software_build=srpm_build,
+    )
+
+    # One SRPM and one container build
+    build_count = SoftwareBuild.objects.count()
+    assert build_count == 2
+
+    # One tag on both builds automatically created by SoftwareBuildFactory
+    build_tag_count = SoftwareBuildTag.objects.count()
+    assert build_tag_count == build_count
+
+    # One processed and one unprocessed relation for the SRPM build
+    relation_count = ProductComponentRelation.objects.count()
+    assert relation_count == 2
+
+    # One root, provided, and upstream component for both builds
+    # Plus a bundled component for the source RPM
+    component_count = Component.objects.count()
+    assert component_count == 7 == (build_count * 3) + 1
+
+    # One tag on each component automatically created by ComponentFactory
+    component_tag_count = ComponentTag.objects.count()
+    assert component_tag_count == component_count
+
+    # One node for each component above
+    # plus 2 extra nodes for the shipped upstream / binary RPM
+    # which are linked to both builds / appear in both trees
+    node_count = ComponentNode.objects.count()
+    assert node_count == component_count + 2
+
+    # One entry in a "component_source" through table
+    # for the unshipped binary RPM's sources
+    # Two entries for the shipped binary RPM's sources (in two trees)
+    # and the bundled Gem's sources (parent and grandparent in one tree)
+    component_sources_count = Component.sources.through.objects.count()
+    assert component_sources_count == 5
+
+    # One entry in a "component_upstreams" through table
+    # for the source RPM's unshipped_upstream
+    # Plus two entries for the container's shipped_upstream
+    # Which is in both the SRPM and container trees
+    component_upstreams_count = Component.upstreams.through.objects.count()
+    assert component_upstreams_count == 3
+
+    # When we try to delete the build, most of the linked models above should also be deleted
+    # ProductComponentRelations have a ForeignKey to SoftwareBuild, but it has
+    # on_delete=models.SET_NULL instead of on_delete=models.CASCADE
+    # So we delete the relations manually
+    deleted_count = slow_delete_brew_build(build_id, koji.BUILD_STATES["DELETED"])
+    # Don't clean up the index container's build, components, or nodes
+    assert (
+        deleted_count
+        == 24
+        == (
+            # Delete 2, keep the container build and its tag
+            (build_count - 1)
+            + (build_tag_count - 1)
+            # Delete 2
+            + relation_count
+            # Delete 4, keep the container root / provided / upstream components
+            # even if they were also part of the SRPM build
+            + (component_count - 3)
+            # Delete 4, keep one entry in the "sources" through table
+            # for the root container -> shipped binary RPM
+            + (component_sources_count - 1)
+            # Delete 2, keep one entry in the "upstreams" through table
+            # for the root container -> shipped upstream
+            + (component_upstreams_count - 1)
+            # Delete 4, keep the container root / provided / upstream nodes and tags
+            + (component_tag_count - 3)
+            # Delete 6, including 2 SRPM tree nodes linked to the container provided / upstream
+            + (node_count - 3)
+        )
+    )
+    assert SoftwareBuild.objects.count() == 1
+    assert SoftwareBuildTag.objects.count() == 1
+    assert ProductComponentRelation.objects.count() == 0
+
+    components = Component.objects.order_by("created_at")
+    assert components.count() == 3
+    assert components.first().purl == index_container.purl
+    assert components[1].purl == shipped_upstream.purl
+    assert components.last().purl == shipped_binary_rpm.purl
+
+    assert ComponentTag.objects.count() == 3
+    assert ComponentNode.objects.count() == 3
+
+    nodes = ComponentNode.objects.order_by("created_at")
+    assert nodes.count() == 3
+    assert nodes.first().purl == index_container.purl
+    assert nodes[1].purl == shipped_upstream.purl
+    assert nodes.last().purl == shipped_binary_rpm.purl
+
+    # Deleting a nonexistent build will not raise any error
+    deleted_count = slow_delete_brew_build(build_id, koji.BUILD_STATES["DELETED"])
+    assert deleted_count == 0
+
+    # Only clean up builds in the DELETED state, never the COMPLETE (or another) state
+    with pytest.raises(ValueError):
+        slow_delete_brew_build(build_id, koji.BUILD_STATES["COMPLETE"])
+    with pytest.raises(ValueError):
+        slow_delete_brew_build(build_id, koji.BUILD_STATES["FAILED"])
 
 
 def test_slow_fetch_pnc_sbom():

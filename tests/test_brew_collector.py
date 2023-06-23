@@ -3,12 +3,18 @@ import json
 from types import SimpleNamespace
 from unittest.mock import call, patch
 
+import koji
 import pytest
 from django.conf import settings
 from django.db import IntegrityError
 from yaml import safe_load
 
-from corgi.collectors.brew import Brew, BrewBuildTypeNotSupported
+from corgi.collectors.brew import (
+    Brew,
+    BrewBuildInvalidState,
+    BrewBuildNotFound,
+    BrewBuildTypeNotSupported,
+)
 from corgi.core.models import (
     Component,
     ComponentNode,
@@ -1022,6 +1028,57 @@ def test_save_component_skips_duplicates():
         save_component(new_component_with_same_purl, root_node, image_component.software_build)
     # The duplicate should not be saved
     assert Component.objects.filter(name=name).first() is None
+
+
+@pytest.mark.django_db
+def test_get_component_data_handles_errors():
+    """Test that get_component_data raises errors
+    or returns an empty {} dict of component data,
+    for unsupported build types, invalid build states,
+    components with known issues we ignore / skip, etc."""
+    mock_build_id = 12345
+
+    with patch("corgi.collectors.brew.koji.ClientSession") as mock_session_constructor:
+        brew = Brew(SoftwareBuild.Type.BREW)
+        mock_session_instance = mock_session_constructor.return_value
+        # side_effect lets you return different values for each call to getBuild
+        # Subclasses of Exception will be raised instead
+        mock_session_instance.getBuild.side_effect = (
+            # empty dict means no data, should raise BrewBuildNotFound
+            {},
+            # DELETED builds should trigger the slow_delete_brew_build task
+            {"id": mock_build_id, "state": koji.BUILD_STATES["DELETED"]},
+            # Other build states should raise BrewBuildInvalidState
+            {"id": mock_build_id, "state": koji.BUILD_STATES["FAILED"]},
+            # COMPLETED builds with excluded names should be skipped
+            {"id": mock_build_id, "name": "name", "state": koji.BUILD_STATES["COMPLETE"]},
+        )
+
+    with pytest.raises(BrewBuildNotFound):
+        brew.get_component_data(mock_build_id)
+
+    with patch("corgi.collectors.brew.app") as mock_app:
+        brew.get_component_data(mock_build_id)
+        mock_app.send_task.assert_called_once_with(
+            "corgi.tasks.brew.slow_delete_brew_build",
+            args=(mock_build_id, koji.BUILD_STATES["DELETED"]),
+        )
+
+    with pytest.raises(BrewBuildInvalidState):
+        brew.get_component_data(mock_build_id)
+
+    with patch.object(brew, "COMPONENT_EXCLUDES", ["name"]):
+        # When a build["name"] matches an entry in Brew.COMPONENT_EXCLUDES,
+        # return an empty dict instead of the real build's data
+        data = brew.get_component_data(mock_build_id)
+        assert data == {}
+
+    # TODO: Test code returns / raises BrewBuildTypeNotSupported,
+    #  BrewBuildTypeNotSupported again for certain container builds,
+    #  an empty dict for very old builds,
+    #  BrewBuildSourceNotFound for newer builds,
+    #  and BrewBuildTypeNotSupported again for non-container / RPM / module builds
+    #  Let's split this method into multiple to make these tests simpler
 
 
 @patch("koji.ClientSession")

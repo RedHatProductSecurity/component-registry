@@ -1,11 +1,12 @@
 from datetime import datetime, timedelta
 from typing import Optional
 
+import koji
 from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Q, QuerySet
+from django.db.models import Count, Q, QuerySet
 from django.utils import dateformat, dateparse, timezone
 from django.utils.timezone import make_aware
 
@@ -698,3 +699,88 @@ def slow_refresh_brew_build_tags(build_id: int) -> None:
     for erratum_id in sorted(new_errata_tags):
         slow_load_errata.delay(erratum_id)
     logger.info(f"Finished refreshing Brew build tags for {build_id}")
+
+
+@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
+def slow_delete_brew_build(build_id: int, build_state: int) -> int:
+    """Delete a Brew build (and its relations) in Corgi when it's deleted in Brew"""
+    # Shipped builds (which have a Brew tag for any product) are never deleted
+    # Only unshipped builds not part of any product are deleted
+    # For example, builds that failed QE will not become part of a product
+    # We don't need this data for any of our use cases
+    # Keeping it causes other issues when reloading old builds, scanning for licenses, etc.
+
+    logger.info(f"Deleting Brew build {build_id} with state {build_state}")
+    if build_state != koji.BUILD_STATES["DELETED"]:
+        raise ValueError(
+            f"Invalid state for build {build_id}: "
+            f"expected {koji.BUILD_STATES['DELETED']}, received {build_state}"
+        )
+
+    deleted_count = 0
+    with transaction.atomic():
+        # Get a root component's PK, if possible
+        # Build might not exist, or might exist but have no root components (?)
+        # Should only be 1 result if any
+        root_component_qs = (
+            SoftwareBuild.objects.filter(build_id=build_id, build_type=SoftwareBuild.Type.BREW)
+            .exclude(components__isnull=True)
+            .values_list("components", "pk")
+        )
+        if len(root_component_qs) > 1:
+            raise ValueError(
+                f"Brew build {build_id} had multiple root components: {root_component_qs}"
+            )
+
+        root_component_and_build_pks = root_component_qs.first()
+        # Skip deleting child components when build doesn't exist
+        if root_component_and_build_pks:
+            root_component_pk, build_pk = root_component_and_build_pks
+            # The build has a root component, so delete the child components that are
+            # provided by / upstreams of only this build's root, and not any other builds
+            # Deleting the Component will automatically delete the ComponentNodes
+            provided_components = Component.objects.annotate(
+                build_count=Count("sources__software_build_id")
+            ).filter(sources=root_component_pk, build_count=1)
+            deleted_count += _delete_queryset(provided_components, "provided component")
+
+            # Doing .filter(downstreams=root_component_pk)
+            # before .annotate(downstreams_count=Count("downstreams"))
+            # makes Django return the wrong results
+            # https://docs.djangoproject.com/en/3.2/topics/db/aggregation/
+            # #order-of-annotate-and-filter-clauses
+            upstream_components = Component.objects.annotate(
+                build_count=Count("downstreams__software_build_id")
+            ).filter(downstreams=root_component_pk, build_count=1)
+            deleted_count += _delete_queryset(upstream_components, "upstream component")
+
+        # Relations without a linked (NULL) build are "unprocessed"
+        # We process these relations each day by loading their build ID
+        # Deleting the relation avoids reloading the build we are deleting
+        relations = ProductComponentRelation.objects.filter(
+            build_id=build_id, build_type=SoftwareBuild.Type.BREW
+        )
+        deleted_count += _delete_queryset(relations, "relation")
+
+        # Deleting the build automatically deletes the linked root component
+        # But not the child components, so we handled those separately above
+        builds = SoftwareBuild.objects.filter(build_id=build_id, build_type=SoftwareBuild.Type.BREW)
+        deleted_count += _delete_queryset(builds, "build")
+
+    return deleted_count
+
+
+def _delete_queryset(queryset: QuerySet, model_name: str) -> int:
+    """Delete all rows in some queryset, then parse and return the number of deleted objects
+    (including both direct and CASCADE / transitive deletions due to ForeignKeys)"""
+    # When we call .delete() on a queryset, Django returns a tuple with 2 elements
+    # The first element is the total number of models we deleted
+    # The second element is a dict. The keys are this model's name, plus all the related model names
+    # which have a ForeignKey to the deleted model that defines on_delete=models.CASCADE
+    # The values are the number of model instances we deleted either directly or due to a ForeignKey
+    # Note that for ManyToManyFields, the counts / related models include entries
+    # for the "through tables" that are used to map e.g. many provided components to many sources
+    deleted_info: tuple[int, dict[str, int]] = queryset.delete()
+    deleted_count, deleted_links = deleted_info
+    logger.info(f"Deleted {deleted_count} {model_name}(s) and related models: {deleted_links}")
+    return deleted_count

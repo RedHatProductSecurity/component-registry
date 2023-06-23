@@ -1,6 +1,7 @@
 import json
 from unittest.mock import MagicMock, call, patch
 
+import koji
 import pytest
 from django.conf import settings
 
@@ -61,6 +62,7 @@ def test_brew_umb_handler_defines_settings():
     handler = BrewUMBHandler()
     assert handler.virtual_topic_addresses == {
         f"{ADDRESS_PREFIX}VirtualTopic.eng.brew.build.complete": handler.handle_builds,
+        f"{ADDRESS_PREFIX}VirtualTopic.eng.brew.build.deleted": handler.handle_deleted_builds,
         f"{ADDRESS_PREFIX}VirtualTopic.eng.brew.build.tag": handler.handle_tags,
         f"{ADDRESS_PREFIX}VirtualTopic.eng.brew.build.untag": handler.handle_tags,
         f"{ADDRESS_PREFIX}VirtualTopic.eng."
@@ -102,7 +104,7 @@ def test_brew_umb_handler_setup():
         )
         for address in dispatcher.virtual_topic_addresses
     ]
-    assert len(handler.virtual_topic_addresses) == 4
+    assert len(handler.virtual_topic_addresses) == 5
     mock_umb_event.container.create_receiver.assert_has_calls(create_receiver_calls)
 
 
@@ -168,6 +170,52 @@ def test_brew_umb_handler_handles_builds():
     slow_fetch_brew_build_mock.assert_has_calls((call(args=(mock_id,)), call(args=(mock_id,))))
 
 
+def test_brew_umb_handler_deletes_builds():
+    """Test that the BrewUMBHandler class either
+    accepts a "build deleted" message, when no exception is raised
+    OR rejects the message if any exception is raised"""
+    # Stub out the SSLDomain config class to avoid needing real UMB certs in tests
+    with patch("corgi.monitor.consumer.SSLDomain"):
+        dispatcher = UMBDispatcher()
+
+    mock_umb_event = MagicMock()
+    mock_id = 1
+    mock_state = koji.BUILD_STATES["DELETED"]
+    mock_umb_event.message.address = "topic://VirtualTopic.eng.brew.build.deleted"
+    assert (
+        mock_umb_event.message.address.replace("topic://", ADDRESS_PREFIX)
+        in dispatcher.virtual_topic_addresses
+    )
+
+    mock_umb_event.message.body = '{"info": {"build_id": MOCK_ID, "state": STATE}}'.replace(
+        "MOCK_ID", str(mock_id), 1
+    ).replace("STATE", str(mock_state), 1)
+
+    umb_message_exceptions = (None, Exception("Second message received raises an exception"))
+    # side_effect is a list of return values for each call to slow_fetch_brew_build.apply_async()
+    # If any side_effect is an Exception subclass, it will be raised
+    # Any other side_effect is just returned instead
+    with patch(
+        "corgi.monitor.consumer.slow_delete_brew_build.apply_async",
+        side_effect=umb_message_exceptions,
+    ) as slow_delete_brew_build_mock:
+        # First call raises no exception, message should be accepted
+        with patch.object(dispatcher, "accept") as mock_accept:
+            dispatcher.on_message(mock_umb_event)
+            mock_accept.assert_called_once_with(mock_umb_event.delivery)
+
+        # Second call raises exception given above, message should be rejected
+        with patch.object(dispatcher, "release") as mock_release:
+            dispatcher.on_message(mock_umb_event)
+            mock_release.assert_called_once_with(mock_umb_event.delivery, delivered=True)
+
+    # slow_delete_brew_build.apply_async is called once per message
+    # with build_id and build_state (should always be 2 / DELETED) args
+    slow_delete_brew_build_mock.assert_has_calls(
+        (call(args=(mock_id, mock_state)), call(args=(mock_id, mock_state)))
+    )
+
+
 def test_handle_tag_and_untag_messages():
     """Test that the BrewUMBHandler class either
     accepts tag / untag messages, when no exceptions are raised
@@ -179,7 +227,7 @@ def test_handle_tag_and_untag_messages():
     # Only want addresses from Brew here
     handler = BrewUMBHandler()
     addresses = handler.virtual_topic_addresses
-    _, tag_address, untag_address, _ = addresses.keys()
+    _, _, tag_address, untag_address, _ = addresses.keys()
     assert ADDRESS_PREFIX in tag_address
     assert ADDRESS_PREFIX in untag_address
     assert ".tag" in tag_address

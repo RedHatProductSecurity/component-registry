@@ -492,7 +492,7 @@ def save_node(
         type=node_type,
         parent=parent,
         purl=related_component.purl,
-        defaults={"obj": related_component},
+        defaults={"obj": related_component, "component": related_component},
     )
     return node
 

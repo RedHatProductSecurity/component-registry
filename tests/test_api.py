@@ -547,6 +547,7 @@ def test_component_detail_dev(client, api_path):
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
         obj=upstream,
+        component=upstream,
     )
     dev_comp = ComponentFactory(
         name="dev", type=Component.Type.NPM, namespace=Component.Namespace.REDHAT
@@ -555,6 +556,7 @@ def test_component_detail_dev(client, api_path):
         type=ComponentNode.ComponentNodeType.PROVIDES_DEV,
         parent=upstream_node,
         obj=dev_comp,
+        component=dev_comp,
     )
 
     upstream.save_component_taxonomy()
@@ -1123,6 +1125,7 @@ def test_oci_component_provides_sources_upstreams(client, api_path):
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
         obj=root_comp,
+        component=root_comp,
     )
 
     # create upstream child node
@@ -1136,6 +1139,7 @@ def test_oci_component_provides_sources_upstreams(client, api_path):
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=root_node,
         obj=upstream_comp,
+        component=upstream_comp,
     )
 
     # create dep component
@@ -1150,6 +1154,7 @@ def test_oci_component_provides_sources_upstreams(client, api_path):
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=root_node,
         obj=dep_comp,
+        component=dep_comp,
     )
     # create 2nd level dep
     dep2_comp = ComponentFactory(
@@ -1163,6 +1168,7 @@ def test_oci_component_provides_sources_upstreams(client, api_path):
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=dep_provide_node,
         obj=dep2_comp,
+        component=dep2_comp,
     )
 
     # TODO - investigate if invoking any of the following in any order is stable
@@ -1324,6 +1330,7 @@ def test_srpm_component_provides_sources_upstreams(client, api_path):
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
         obj=root_comp,
+        component=root_comp,
     )
 
     # create upstream child node
@@ -1337,6 +1344,7 @@ def test_srpm_component_provides_sources_upstreams(client, api_path):
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=root_node,
         obj=upstream_comp,
+        component=upstream_comp,
     )
     # create dep component
     dep_comp = ComponentFactory(
@@ -1350,6 +1358,7 @@ def test_srpm_component_provides_sources_upstreams(client, api_path):
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=root_node,
         obj=dep_comp,
+        component=dep_comp,
     )
 
     # TODO - investigate if invoking any of the following in any order is stable

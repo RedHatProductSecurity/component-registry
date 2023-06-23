@@ -171,6 +171,8 @@ class ProductNode(NodeModel):
 class ComponentNode(NodeModel):
     """Component taxonomy node."""
 
+    component = models.ForeignKey("Component", on_delete=models.CASCADE, related_name="cnodes")
+
     class ComponentNodeType(models.TextChoices):
         SOURCE = "SOURCE"
         REQUIRES = "REQUIRES"
@@ -217,6 +219,7 @@ class ComponentNode(NodeModel):
             ),
             models.Index(fields=("lft", "tree_id"), name="core_cn_lft_tree_idx"),
             models.Index(fields=("lft", "rght", "tree_id"), name="core_cn_lft_rght_tree_idx"),
+            models.Index(fields=("component", "parent")),
             *NodeModel.Meta.indexes,
         )
 
@@ -1108,10 +1111,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     sources = models.ManyToManyField("Component", related_name="provides")
     provides: models.Manager["Component"]
 
-    # Specify related_query_name to add e.g. component field
-    # that can be used to filter from a cnode to its related component
-    # TODO: Or just switch from GenericForeignKey to regular ForeignKey?
-    cnodes = GenericRelation(ComponentNode, related_query_name="%(class)s")
+    cnodes: TreeManager[ComponentNode]
     software_build = models.ForeignKey(
         SoftwareBuild,
         on_delete=models.CASCADE,

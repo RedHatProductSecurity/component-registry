@@ -968,6 +968,7 @@ def test_save_component():
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
         obj=image_component,
+        component=image_component,
     )
     rpm_dict = {
         "type": Component.Type.RPM,
@@ -984,6 +985,7 @@ def test_save_component():
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
         obj=srpm_component,
+        component=srpm_component,
     )
     rpm_dict = {
         "type": Component.Type.RPM,
@@ -1004,6 +1006,7 @@ def test_save_component_skips_duplicates():
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
         obj=image_component,
+        component=image_component,
     )
     name = "REQUESTS_NTLM"
     new_component = {

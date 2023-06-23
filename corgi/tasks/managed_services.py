@@ -94,6 +94,7 @@ def cpu_manifest_service(product_stream_id: str, service_components: list):
                 type=ComponentNode.ComponentNodeType.SOURCE,
                 parent=None,
                 obj=root_component,
+                component=root_component,
             )
 
             for component in analyzed_components:

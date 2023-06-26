@@ -858,7 +858,6 @@ def get_product_details(variant_names: tuple[str], stream_names: list[str]) -> d
         "productversions": set(),
         "productstreams": set(),
         "productvariants": set(),
-        "channels": set(),
     }
 
     for pnode in ProductNode.objects.filter(
@@ -875,12 +874,25 @@ def get_product_details(variant_names: tuple[str], stream_names: list[str]) -> d
         product_streams = ProductNode.get_product_streams(family)
         product_details["productstreams"].update(product_streams)
 
-        product_variants = ProductNode.get_product_variants(family)
-        product_details["productvariants"].update(product_variants)
+        if not variant_names:
+            # We don't know which variants are the right ones
+            # So we just link all of them
+            # TODO: What can we do instead?
+            product_variants = ProductNode.get_product_variants(family)
+            product_details["productvariants"].update(product_variants)
+        # else we have relations for particular Variants
+        # Link only those Variants (below)
 
-        channels = ProductNode.get_channels(family)
-        product_details["channels"].update(channels)
+    if variant_names:
+        for pnode in ProductNode.objects.filter(
+            level=MODEL_NODE_LEVEL_MAPPING["ProductVariant"], productvariant__name__in=variant_names
+        ):
+            family = pnode.get_family()
+            product_variants = ProductNode.get_product_variants(family)
+            product_details["productvariants"].update(product_variants)
+
     # For some build, return a mapping of ProductModel type to all related ProductModel UUIDs
+    # Except channels, because we can't link these correctly (CORGI-298)
     return product_details
 
 
@@ -1628,7 +1640,11 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         self.productversions.add(*product_pks_dict["productversions"])
         self.productstreams.add(*product_pks_dict["productstreams"])
         self.productvariants.add(*product_pks_dict["productvariants"])
-        self.channels.add(*product_pks_dict["channels"])
+        # Don't link channels for all variants to this component (CORGI-728)
+        # Not every channel has the same content sets / ships this component
+        # We don't know which do and don't, so for now just stop linking
+        # TODO: I need to review description in ticket and other code
+        #  This fix may not be right / complete
         return None
 
     def get_roots(self, using: str = "read_only") -> list[ComponentNode]:

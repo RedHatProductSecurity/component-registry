@@ -17,10 +17,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         if options["product_ref"]:
-            if (
-                not ProductComponentRelation.objects.filter(product_ref=options["product_ref"])
-                .exists()
-            ):
+            if not ProductComponentRelation.objects.filter(
+                product_ref=options["product_ref"]
+            ).exists():
                 self.out.write(
                     self.style.ERROR(
                         f"Could not find relations with product ref: {options['product_ref']}"

@@ -19,9 +19,9 @@ def update_build_to_sb_fk(apps, schema_editor):
         .order_by()
     )
     for build_id, build_type, pk in existing_build_ids.iterator():
-        ProductComponentRelation.filter(build_id=build_id, build_type=build_type).order_by().update(
-            software_build=pk
-        )
+        ProductComponentRelation.objects.filter(
+            build_id=build_id, build_type=build_type
+        ).order_by().update(software_build=pk)
 
 
 class Migration(migrations.Migration):

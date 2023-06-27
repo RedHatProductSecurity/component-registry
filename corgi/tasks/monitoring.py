@@ -50,6 +50,8 @@ def setup_periodic_tasks(sender, **kwargs):
     CrontabSchedule.objects.get_queryset().delete()
     IntervalSchedule.objects.get_queryset().delete()
 
+    # Daily tasks, scheduled to a specific hour. For some reason, using hours=24 may not run the
+    # task at all: https://github.com/celery/django-celery-beat/issues/221
     if settings.COMMUNITY_MODE_ENABLED:
         upsert_cron_task("prod_defs", "update_products", hour=0, minute=0)
         upsert_cron_task("brew", "load_stream_brew_tags", hour=1, minute=0)
@@ -59,12 +61,6 @@ def setup_periodic_tasks(sender, **kwargs):
         upsert_cron_task("manifest", "update_manifests", hour=5, minute=0)
         upsert_cron_task("monitoring", "email_failed_tasks", hour=6, minute=30)
     else:
-        # Once a week on a Saturday fetch relations from all active CDN repos
-        # Revisit if this is still necessary after CORGI-257 is complete
-        upsert_cron_task("pulp", "setup_pulp_relations", minute=0, hour=4, day_of_week=6)
-
-        # Daily tasks, scheduled to a specific hour. For some reason, using hours=24 may not run the
-        # task at all: https://github.com/celery/django-celery-beat/issues/221
         upsert_cron_task("errata_tool", "load_et_products", hour=0, minute=0)
         upsert_cron_task("prod_defs", "update_products", hour=1, minute=0)
         upsert_cron_task("pulp", "update_cdn_repo_channels", hour=2, minute=0)
@@ -72,7 +68,6 @@ def setup_periodic_tasks(sender, **kwargs):
         upsert_cron_task("rhel_compose", "get_builds", hour=4, minute=0)
         upsert_cron_task("brew", "load_stream_brew_tags", hour=5, minute=0)
         upsert_cron_task("brew", "fetch_unprocessed_brew_tag_relations", hour=6, minute=0)
-        upsert_cron_task("pulp", "fetch_unprocessed_cdn_relations", hour=7, minute=0)
         upsert_cron_task("yum", "load_yum_repositories", hour=8, minute=0)
         upsert_cron_task("yum", "fetch_unprocessed_yum_relations", hour=9, minute=0)
         upsert_cron_task("managed_services", "refresh_service_manifests", hour=10, minute=0)

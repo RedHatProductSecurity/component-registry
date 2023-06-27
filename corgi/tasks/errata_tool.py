@@ -141,7 +141,7 @@ def update_variant_repos() -> None:
     can link to the same CDN repo.
     """
     logger.info("Getting variant to CDN repo mapping from Errata Tool")
-    variant_to_repo_map: dict = ErrataTool().get_variant_cdn_repo_mapping()
+    variant_to_repo_map = ErrataTool.get_variant_cdn_repo_mapping()
     with transaction.atomic():
         for name, et_variant_data in variant_to_repo_map.items():
             try:
@@ -152,15 +152,15 @@ def update_variant_repos() -> None:
 
             pv_node = pv.pnodes.get()
 
-            for repo in et_variant_data["repos"]:
+            for repo_name in et_variant_data:
                 # Filter out inactive repos in pulp and get content_set
                 try:
-                    rpm_repo = CollectorRPMRepository.objects.get(name=repo)
+                    rpm_repo = CollectorRPMRepository.objects.get(name=repo_name)
                 except CollectorRPMRepository.DoesNotExist:
-                    logger.debug("Not creating Channel for inactive repo %s", repo)
+                    logger.debug("Not creating Channel for inactive repo %s", repo_name)
                     continue
-                repo, created = Channel.objects.update_or_create(
-                    name=repo,
+                repo_obj, created = Channel.objects.update_or_create(
+                    name=repo_name,
                     defaults={
                         "type": Channel.Type.CDN_REPO,
                         "relative_url": rpm_repo.relative_url,
@@ -168,7 +168,7 @@ def update_variant_repos() -> None:
                     },
                 )
                 if created:
-                    logger.info("Created new channel %s for variant %s", repo, pv.name)
+                    logger.info("Created new channel %s for variant %s", repo_obj, pv.name)
                 # TODO: investigate whether we need to delete CDN repos that were removed from a
                 #  Variant between two different runs of this task.
                 #
@@ -176,11 +176,11 @@ def update_variant_repos() -> None:
                 # CDN repo (since we run update_or_create above) can be linked to
                 # multiple product nodes, each linked to a different Variant.
                 ProductNode.objects.get_or_create(
-                    object_id=repo.pk, parent=pv_node, defaults={"obj": repo}
+                    object_id=repo_obj.pk, parent=pv_node, defaults={"obj": repo_obj}
                 )
                 # Saving the Channel's taxonomy automatically links it to all other models
                 # Those other models don't need to have their taxonomies saved separately
-                repo.save_product_taxonomy()
+                repo_obj.save_product_taxonomy()
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)

@@ -317,10 +317,10 @@ class SoftwareBuild(TimeStampedModel):
         product_details = get_product_details(variant_names, stream_names)
         components = set()
         for component in self.components.get_queryset().iterator():
+            components.add(component)
             # This is needed for container image builds which pull in components not
             # built at Red Hat, and therefore not assigned a build_id
-            for cnode in component.cnodes.get_queryset().prefetch_related("obj").iterator():
-                components.add(cnode.obj)
+            for cnode in component.cnodes.get_queryset().iterator():
                 for d in cnode.get_descendants().iterator():
                     components.add(d.obj)
 

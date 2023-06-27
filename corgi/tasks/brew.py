@@ -221,13 +221,6 @@ def save_component(
     else:
         raise ValueError(f"Tried to create component with invalid component_type: {component_type}")
 
-    # Only save softwarebuild for RPM where they are direct children of SRPMs
-    # This avoids the situation where only the latest build fetched has the softarebuild associated
-    # For example if we were processing a container image with embedded rpms this could be set to
-    # the container build id, whereas we want it also to reflect the build id of the RPM build
-    if not (softwarebuild and parent.obj is not None and parent.obj.is_srpm()):
-        softwarebuild = None
-
     related_url = meta.pop("url", "")
     if not related_url:
         # Only RPMs have a URL header, containers might have below
@@ -254,7 +247,6 @@ def save_component(
             if component_type == Component.Type.RPM
             else Component.Namespace.UPSTREAM,
             "related_url": related_url,
-            "software_build": softwarebuild,
             "epoch": int(meta.pop("epoch", 0)),
         },
     )
@@ -377,7 +369,6 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
                     "filename": image["meta"].pop("filename", ""),
                     "meta_attr": image["meta"],
                     "namespace": Component.Namespace.REDHAT,
-                    "software_build": softwarebuild,
                 },
             )
 

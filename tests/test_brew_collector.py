@@ -992,8 +992,8 @@ def test_save_component():
         "meta": {"name": "mysrpm", "arch": "src"},
     }
     save_component(rpm_dict, root_node, software_build)
-    # Now it should have a software_build
-    assert Component.objects.filter(type=Component.Type.RPM, software_build=software_build).exists()
+    # It should still not have a software_build
+    assert Component.objects.filter(type=Component.Type.RPM, software_build__isnull=True).exists()
 
 
 @pytest.mark.django_db
@@ -1134,7 +1134,8 @@ def test_fetch_rpm_build(mock_load_brew_tags, mock_sca, mock_brew):
         release="1.el8",
         arch="noarch",
     )
-    assert cockpit_system.software_build_id
+    # Only root components should be linked to SoftwareBuilds
+    assert not cockpit_system.software_build_id
     # Cockpit has its own SRPM
     assert (
         cockpit_system.sources.values_list("purl", flat=True).get()

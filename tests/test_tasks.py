@@ -431,6 +431,18 @@ def test_slow_delete_brew_builds():
     component_sources_count = Component.sources.through.objects.count()
     assert component_sources_count == 5
 
+    # Save root / provided component taxonomies after upstream nodes are created
+    # in order to add that component to the downstreams property on the upstream component
+    # This matches what the code does (create upstream nodes first, save taxonomies last)
+
+    # To set the downstreams directly by saving the upstream component's taxonomy,
+    # we'd have to write the inverse function of get_upstreams_pks()
+    # and use it with self.downstreams.set() in save_component_taxonomy()
+    # This function is very complicated, and any bug would cause
+    # downstream components to lose the upstreams we already set correctly
+    index_container.save_component_taxonomy()
+    source_rpm.save_component_taxonomy()
+
     # One entry in a "component_upstreams" through table
     # for the source RPM's unshipped_upstream
     # Plus two entries for the container's shipped_upstream

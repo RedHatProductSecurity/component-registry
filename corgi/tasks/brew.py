@@ -51,8 +51,10 @@ def slow_fetch_brew_build(
             if save_product:
                 logger.info("Only saving product taxonomy for build_id %s", build_id)
                 softwarebuild.save_product_taxonomy()
-                for related_component in softwarebuild.components.get_queryset():
-                    related_component.save_component_taxonomy()
+                # Should only be one root component / node per build
+                for root_component in softwarebuild.components.get_queryset():
+                    root_node = root_component.cnodes.get()
+                    _save_component_taxonomy_for_tree(root_node)
             return
         else:
             logger.info("Fetching brew build with build_id: %s", build_id)
@@ -132,8 +134,9 @@ def slow_fetch_brew_build(
     # Allow async call of slow_load_errata task, see CORGI-21
     if save_product:
         softwarebuild.save_product_taxonomy()
-        for related_component in softwarebuild.components.get_queryset():
-            related_component.save_component_taxonomy()
+        # Save taxonomies for all components in this tree
+        # Saving only the root component taxonomy from softwarebuild.components is not enough
+        _save_component_taxonomy_for_tree(root_node)
 
     # for builds with errata tags set ProductComponentRelation
     # get_component_data always calls _extract_advisory_ids to set tags, but list may be empty
@@ -156,6 +159,28 @@ def slow_fetch_brew_build(
         cpu_software_composition_analysis.delay(str(softwarebuild.pk), force_process=force_process)
 
     logger.info("Finished fetching brew build: (%s, %s)", build_id, build_type)
+
+
+def _save_component_taxonomy_for_tree(root_node: ComponentNode) -> None:
+    """Call node.obj.save_component_taxonomy() for all
+    root and upstream components in some build,
+    all components provided by the root components,
+    all components provided by those provided components, and so on
+    """
+    # This handles the case when a build has many levels of nested components
+    # e.g. for an index container (root component) linked to a build
+    # there are architecture-specific containers not linked to the build
+    # provided components, e.g. Go modules of those containers, which are not linked to the build
+    # children of the provided components, e.g. Go packages and dev_provided components
+    # as found in some Cachito manifest for the build, which are not linked to the build
+    # We have to save the taxonomy for all of them, not just the root components
+    root_node.obj.save_component_taxonomy()  # type: ignore[union-attr]
+
+    # TODO: We can make this faster with a ForeignKey to Component
+    #  instead of a GenericForeignKey
+    #  That will also fix the silly mypy error above we're ignoring
+    for descendant in root_node.get_descendants().iterator():
+        descendant.obj.save_component_taxonomy()
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)

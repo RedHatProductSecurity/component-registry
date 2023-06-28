@@ -7,7 +7,11 @@ from proton import Event, SSLDomain
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, Selector
 
-from corgi.tasks.brew import slow_fetch_brew_build, slow_update_brew_tags
+from corgi.tasks.brew import (
+    slow_delete_brew_build,
+    slow_fetch_brew_build,
+    slow_update_brew_tags,
+)
 from corgi.tasks.errata_tool import slow_handle_shipped_errata
 from corgi.tasks.pnc import slow_fetch_pnc_sbom
 
@@ -45,6 +49,7 @@ class BrewUMBHandler(UMBHandler):
     def __init__(self):
         addresses = {
             f"{VIRTUAL_TOPIC_PREFIX}.brew.build.complete": BrewUMBHandler.handle_builds,
+            f"{VIRTUAL_TOPIC_PREFIX}.brew.build.deleted": BrewUMBHandler.handle_deleted_builds,
             f"{VIRTUAL_TOPIC_PREFIX}.brew.build.tag": BrewUMBHandler.handle_tags,
             f"{VIRTUAL_TOPIC_PREFIX}.brew.build.untag": BrewUMBHandler.handle_tags,
             f"{VIRTUAL_TOPIC_PREFIX}.errata.activity.status": BrewUMBHandler.handle_shipped_errata,
@@ -70,6 +75,26 @@ class BrewUMBHandler(UMBHandler):
         except Exception as exc:
             logger.error(
                 "Failed to schedule slow_fetch_brew_build task for build ID %s: %s",
+                build_id,
+                str(exc),
+            )
+            return False
+        else:
+            return True
+
+    @staticmethod
+    def handle_deleted_builds(event: Event) -> bool:
+        """Handle messages about Brew builds that were deleted"""
+        logger.info("Handling UMB event for deleted builds: %s", event.message.id)
+        message = json.loads(event.message.body)
+        build_id = message["info"]["build_id"]
+        state = message["info"]["state"]
+
+        try:
+            slow_delete_brew_build.apply_async(args=(build_id, state))
+        except Exception as exc:
+            logger.error(
+                "Failed to schedule slow_delete_brew_build task for build ID %s: %s",
                 build_id,
                 str(exc),
             )

@@ -1,11 +1,12 @@
 from datetime import datetime, timedelta
 from typing import Optional
 
+import koji
 from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Q, QuerySet
+from django.db.models import Count, Q, QuerySet
 from django.utils import dateformat, dateparse, timezone
 from django.utils.timezone import make_aware
 
@@ -50,8 +51,10 @@ def slow_fetch_brew_build(
             if save_product:
                 logger.info("Only saving product taxonomy for build_id %s", build_id)
                 softwarebuild.save_product_taxonomy()
-                for related_component in softwarebuild.components.get_queryset():
-                    related_component.save_component_taxonomy()
+                # Should only be one root component / node per build
+                for root_component in softwarebuild.components.get_queryset():
+                    root_node = root_component.cnodes.get()
+                    _save_component_taxonomy_for_tree(root_node)
             return
         else:
             logger.info("Fetching brew build with build_id: %s", build_id)
@@ -131,8 +134,9 @@ def slow_fetch_brew_build(
     # Allow async call of slow_load_errata task, see CORGI-21
     if save_product:
         softwarebuild.save_product_taxonomy()
-        for related_component in softwarebuild.components.get_queryset():
-            related_component.save_component_taxonomy()
+        # Save taxonomies for all components in this tree
+        # Saving only the root component taxonomy from softwarebuild.components is not enough
+        _save_component_taxonomy_for_tree(root_node)
 
     # for builds with errata tags set ProductComponentRelation
     # get_component_data always calls _extract_advisory_ids to set tags, but list may be empty
@@ -155,6 +159,28 @@ def slow_fetch_brew_build(
         cpu_software_composition_analysis.delay(str(softwarebuild.pk), force_process=force_process)
 
     logger.info("Finished fetching brew build: (%s, %s)", build_id, build_type)
+
+
+def _save_component_taxonomy_for_tree(root_node: ComponentNode) -> None:
+    """Call node.obj.save_component_taxonomy() for all
+    root and upstream components in some build,
+    all components provided by the root components,
+    all components provided by those provided components, and so on
+    """
+    # This handles the case when a build has many levels of nested components
+    # e.g. for an index container (root component) linked to a build
+    # there are architecture-specific containers not linked to the build
+    # provided components, e.g. Go modules of those containers, which are not linked to the build
+    # children of the provided components, e.g. Go packages and dev_provided components
+    # as found in some Cachito manifest for the build, which are not linked to the build
+    # We have to save the taxonomy for all of them, not just the root components
+    root_node.obj.save_component_taxonomy()  # type: ignore[union-attr]
+
+    # TODO: We can make this faster with a ForeignKey to Component
+    #  instead of a GenericForeignKey
+    #  That will also fix the silly mypy error above we're ignoring
+    for descendant in root_node.get_descendants().iterator():
+        descendant.obj.save_component_taxonomy()
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
@@ -220,13 +246,6 @@ def save_component(
     else:
         raise ValueError(f"Tried to create component with invalid component_type: {component_type}")
 
-    # Only save softwarebuild for RPM where they are direct children of SRPMs
-    # This avoids the situation where only the latest build fetched has the softarebuild associated
-    # For example if we were processing a container image with embedded rpms this could be set to
-    # the container build id, whereas we want it also to reflect the build id of the RPM build
-    if not (softwarebuild and parent.obj is not None and parent.obj.is_srpm()):
-        softwarebuild = None
-
     related_url = meta.pop("url", "")
     if not related_url:
         # Only RPMs have a URL header, containers might have below
@@ -253,7 +272,6 @@ def save_component(
             if component_type == Component.Type.RPM
             else Component.Namespace.UPSTREAM,
             "related_url": related_url,
-            "software_build": softwarebuild,
             "epoch": int(meta.pop("epoch", 0)),
         },
     )
@@ -376,7 +394,6 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
                     "filename": image["meta"].pop("filename", ""),
                     "meta_attr": image["meta"],
                     "namespace": Component.Namespace.REDHAT,
-                    "software_build": softwarebuild,
                 },
             )
 
@@ -698,3 +715,88 @@ def slow_refresh_brew_build_tags(build_id: int) -> None:
     for erratum_id in sorted(new_errata_tags):
         slow_load_errata.delay(erratum_id)
     logger.info(f"Finished refreshing Brew build tags for {build_id}")
+
+
+@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
+def slow_delete_brew_build(build_id: int, build_state: int) -> int:
+    """Delete a Brew build (and its relations) in Corgi when it's deleted in Brew"""
+    # Shipped builds (which have a Brew tag for any product) are never deleted
+    # Only unshipped builds not part of any product are deleted
+    # For example, builds that failed QE will not become part of a product
+    # We don't need this data for any of our use cases
+    # Keeping it causes other issues when reloading old builds, scanning for licenses, etc.
+
+    logger.info(f"Deleting Brew build {build_id} with state {build_state}")
+    if build_state != koji.BUILD_STATES["DELETED"]:
+        raise ValueError(
+            f"Invalid state for build {build_id}: "
+            f"expected {koji.BUILD_STATES['DELETED']}, received {build_state}"
+        )
+
+    deleted_count = 0
+    with transaction.atomic():
+        # Get a root component's PK, if possible
+        # Build might not exist, or might exist but have no root components (?)
+        # Should only be 1 result if any
+        root_component_qs = (
+            SoftwareBuild.objects.filter(build_id=build_id, build_type=SoftwareBuild.Type.BREW)
+            .exclude(components__isnull=True)
+            .values_list("components", "pk")
+        )
+        if len(root_component_qs) > 1:
+            raise ValueError(
+                f"Brew build {build_id} had multiple root components: {root_component_qs}"
+            )
+
+        root_component_and_build_pks = root_component_qs.first()
+        # Skip deleting child components when build doesn't exist
+        if root_component_and_build_pks:
+            root_component_pk, build_pk = root_component_and_build_pks
+            # The build has a root component, so delete the child components that are
+            # provided by / upstreams of only this build's root, and not any other builds
+            # Deleting the Component will automatically delete the ComponentNodes
+            provided_components = Component.objects.annotate(
+                build_count=Count("sources__software_build_id")
+            ).filter(sources=root_component_pk, build_count=1)
+            deleted_count += _delete_queryset(provided_components, "provided component")
+
+            # Doing .filter(downstreams=root_component_pk)
+            # before .annotate(downstreams_count=Count("downstreams"))
+            # makes Django return the wrong results
+            # https://docs.djangoproject.com/en/3.2/topics/db/aggregation/
+            # #order-of-annotate-and-filter-clauses
+            upstream_components = Component.objects.annotate(
+                build_count=Count("downstreams__software_build_id")
+            ).filter(downstreams=root_component_pk, build_count=1)
+            deleted_count += _delete_queryset(upstream_components, "upstream component")
+
+        # Relations without a linked (NULL) build are "unprocessed"
+        # We process these relations each day by loading their build ID
+        # Deleting the relation avoids reloading the build we are deleting
+        relations = ProductComponentRelation.objects.filter(
+            build_id=build_id, build_type=SoftwareBuild.Type.BREW
+        )
+        deleted_count += _delete_queryset(relations, "relation")
+
+        # Deleting the build automatically deletes the linked root component
+        # But not the child components, so we handled those separately above
+        builds = SoftwareBuild.objects.filter(build_id=build_id, build_type=SoftwareBuild.Type.BREW)
+        deleted_count += _delete_queryset(builds, "build")
+
+    return deleted_count
+
+
+def _delete_queryset(queryset: QuerySet, model_name: str) -> int:
+    """Delete all rows in some queryset, then parse and return the number of deleted objects
+    (including both direct and CASCADE / transitive deletions due to ForeignKeys)"""
+    # When we call .delete() on a queryset, Django returns a tuple with 2 elements
+    # The first element is the total number of models we deleted
+    # The second element is a dict. The keys are this model's name, plus all the related model names
+    # which have a ForeignKey to the deleted model that defines on_delete=models.CASCADE
+    # The values are the number of model instances we deleted either directly or due to a ForeignKey
+    # Note that for ManyToManyFields, the counts / related models include entries
+    # for the "through tables" that are used to map e.g. many provided components to many sources
+    deleted_info: tuple[int, dict[str, int]] = queryset.delete()
+    deleted_count, deleted_links = deleted_info
+    logger.info(f"Deleted {deleted_count} {model_name}(s) and related models: {deleted_links}")
+    return deleted_count

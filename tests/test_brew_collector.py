@@ -1134,6 +1134,14 @@ def test_fetch_rpm_build(mock_load_brew_tags, mock_sca, mock_brew):
         release="1.el8",
         arch="noarch",
     )
+    # TODO: Manually save the component taxonomy to set provides / sources
+    #  for non-root components, which is needed to make the test pass
+    #  We only do this on ingestion if the component is linked to the build
+    #  Binary RPMs stopped being linked to their builds in CORGI-730
+    #  (needed to make build / root component deletion safe)
+    #  Saving component taxonomy for all components is CORGI-739
+    #  Fix attempted as part of CORGI-730, but it caused performance regressions
+    cockpit_system.save_component_taxonomy()
     # Only root components should be linked to SoftwareBuilds
     assert not cockpit_system.software_build_id
     # Cockpit has its own SRPM

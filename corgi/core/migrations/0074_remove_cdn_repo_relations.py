@@ -4,8 +4,7 @@ from django.db import migrations, models
 
 # Non-historical model, i.e. if you change save_product_taxonomy() tomorrow
 # the migration will not run the same code as before (at the time the migration was written)
-from corgi.core.models import ROOT_COMPONENTS_CONDITION
-from corgi.tasks.brew import slow_fetch_brew_build
+from corgi.core.models import SoftwareBuild as CurrentSBModel
 
 
 def remove_cdn_repo_relations(apps, schema_editor):
@@ -13,19 +12,26 @@ def remove_cdn_repo_relations(apps, schema_editor):
     then fix the product taxonomy on all builds / components that had these relations"""
     Component = apps.get_model("core", "Component")
     ProductComponentRelation = apps.get_model("core", "ProductComponentRelation")
-    SoftwareBuild = apps.get_model("core", "SoftwareBuild")
 
+    provides_through = Component.provides.through.objects
+    upstreams_through = Component.upstreams.through.objects
+
+    channels_through = Component.channels.through.objects
+    variants_through = Component.productvariants.through.objects
+    streams_through = Component.productstreams.through.objects
+    versions_through = Component.productversions.through.objects
+    products_through = Component.products.through.objects
+
+    # Hardcoding the constant because we want to remove this type from the model
     for build_pk in (
-        ProductComponentRelation.objects.filter(software_build_id__isnull=False, type="CDN_REPO")
+        ProductComponentRelation.objects.filter(type="CDN_REPO", software_build_id__isnull=False)
         .values_list("software_build_id", flat=True)
         .distinct()
         .iterator()
     ):
         # Fix all components on builds that have CDN_REPO relations
-        root_component = Component.objects.filter(
-            ROOT_COMPONENTS_CONDITION | models.Q(type="RPMMOD")
-        ).get(software_build_id=build_pk)
-        # Fix the root component linked directly to this build
+        root_component = Component.objects.get(software_build_id=build_pk)
+        # Fix the root components linked directly to this build
         # Clear the Variant / Channel links since they're wrong
         # We only append to links when saving taxonomies
         # So to remove bad data and add the right data
@@ -44,43 +50,36 @@ def remove_cdn_repo_relations(apps, schema_editor):
         root_component.productversions.clear()
         root_component.products.clear()
 
-        for provided_component in root_component.provides.get_queryset():
-            # Fix the provided components
-            # They aren't always linked to the build, so can't be handled above
-            provided_component.channels.clear()
-            provided_component.productvariants.clear()
-            provided_component.productstreams.clear()
-            provided_component.productversions.clear()
-            provided_component.products.clear()
+        root_component_provides = provides_through.filter(
+            to_component_id=root_component
+        ).values_list("from_component_id", flat=True)
+        root_component_upstreams = upstreams_through.filter(
+            from_component_id=root_component
+        ).values_list("to_component_id", flat=True)
 
-        for upstream_component in root_component.upstreams.get_queryset():
-            # Fix the upstream components
-            # They aren't ever linked to the build, so can't be handled above
-            upstream_component.channels.clear()
-            upstream_component.productvariants.clear()
-            upstream_component.productstreams.clear()
-            upstream_component.productversions.clear()
-            upstream_component.products.clear()
+        channels_through.filter(component_id__in=root_component_provides).delete()
+        channels_through.filter(component_id__in=root_component_upstreams).delete()
+
+        variants_through.filter(component_id__in=root_component_provides).delete()
+        variants_through.filter(component_id__in=root_component_upstreams).delete()
+
+        streams_through.filter(component_id__in=root_component_provides).delete()
+        streams_through.filter(component_id__in=root_component_upstreams).delete()
+
+        versions_through.filter(component_id__in=root_component_provides).delete()
+        versions_through.filter(component_id__in=root_component_upstreams).delete()
+
+        products_through.filter(component_id__in=root_component_provides).delete()
+        products_through.filter(component_id__in=root_component_upstreams).delete()
 
         # Delete CDN_REPO relations for this build, then fix taxonomies
         ProductComponentRelation.objects.filter(
             software_build_id=build_pk, type="CDN_REPO"
         ).delete()
         # Add the correct Component-Variant links on all Components in this build
-        # Existing builds just have their taxonomies saved
-        build_id, build_type = (
-            SoftwareBuild.objects.filter(pk=build_pk).values_list("build_id", "build_type").get()
-        )
-        slow_fetch_brew_build.delay(build_id, build_type)
-
-    # Delete CDN_REPO relations for builds which haven't been loaded yet (if any)
-    ProductComponentRelation.objects.filter(type="CDN_REPO").delete()
-
-
-if __name__ == "__main__":
-    from django.apps import apps
-
-    remove_cdn_repo_relations(apps, {})
+        # using the current model because we need to call save_product_taxonomy()
+        # but apps.get_model() doesn't let us run custom code
+        CurrentSBModel.objects.get(uuid=build_pk).save_product_taxonomy()
 
 
 class Migration(migrations.Migration):

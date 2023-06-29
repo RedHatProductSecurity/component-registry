@@ -4,7 +4,7 @@ from django.core.management.base import BaseCommand
 from corgi.tasks.brew import load_stream_brew_tags
 from corgi.tasks.errata_tool import load_et_products
 from corgi.tasks.prod_defs import update_products
-from corgi.tasks.pulp import setup_pulp_relations, update_cdn_repo_channels
+from corgi.tasks.pulp import update_cdn_repo_channels
 from corgi.tasks.rhel_compose import save_composes
 from corgi.tasks.yum import load_yum_repositories
 
@@ -24,16 +24,7 @@ class Command(BaseCommand):
             self.do_update_cdn_repo_channels()
             self.do_save_composes()
             self.do_load_brew_tags()
-            self.delay_setup_pulp_relations()
             self.delay_load_yum_repositories()
-
-    def delay_setup_pulp_relations(self):
-        self.stdout.write(
-            self.style.SUCCESS(
-                "Setting up pulp relations",
-            )
-        )
-        setup_pulp_relations.delay()
 
     def do_load_brew_tags(self):
         self.stdout.write(

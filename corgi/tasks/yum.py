@@ -9,7 +9,7 @@ from django.utils import timezone
 from config.celery import app
 from corgi.collectors.yum import Yum
 from corgi.core.models import Channel, ProductComponentRelation, ProductStream
-from corgi.tasks.brew import slow_fetch_modular_build
+from corgi.tasks.brew import fetch_unprocessed_relations, slow_fetch_modular_build
 from corgi.tasks.common import (
     BUILD_TYPE,
     RETRY_KWARGS,
@@ -17,7 +17,6 @@ from corgi.tasks.common import (
     create_relations,
     get_last_success_for_task,
 )
-from corgi.tasks.pulp import fetch_unprocessed_relations
 
 logger = get_task_logger(__name__)
 

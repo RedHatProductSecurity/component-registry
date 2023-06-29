@@ -193,12 +193,12 @@ class ErrataTool:
                 logger.info("Linking repo %s to variant %s", repo_attrs["name"], variant_name)
                 variant_obj.save()
 
-    def get_variant_cdn_repo_mapping(self) -> dict:
-        variants_with_repos = {}
-        for variant in CollectorErrataProductVariant.objects.exclude(repos__len=0):
-            variants_with_repos[variant.name] = {
-                "repos": variant.repos,
-            }
+    @staticmethod
+    def get_variant_cdn_repo_mapping() -> dict[str, list[str]]:
+        variants_with_repos = {
+            variant.name: variant.repos
+            for variant in CollectorErrataProductVariant.objects.exclude(repos__len=0)
+        }
         return variants_with_repos
 
     def normalize_erratum_id(self, name: str) -> int:

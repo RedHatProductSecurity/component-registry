@@ -4,7 +4,7 @@ from django.core.management.base import BaseCommand, CommandParser
 
 from corgi.core.models import ProductComponentRelation, ProductStream
 from corgi.tasks.brew import fetch_modular_builds
-from corgi.tasks.pulp import fetch_unprocessed_cdn_relations
+from corgi.tasks.yum import fetch_unprocessed_yum_relations
 
 
 class Command(BaseCommand):
@@ -35,7 +35,7 @@ class Command(BaseCommand):
                 self.get_builds_by_yum_repo(stream_name=stream_name, force_process=options["force"])
         elif options["all"]:
             self.stdout.write(self.style.NOTICE("Fetching all unprocessed yum relations"))
-            fetch_unprocessed_cdn_relations(force_process=options["force"])
+            fetch_unprocessed_yum_relations(force_process=options["force"])
         else:
             self.stderr.write(self.style.ERROR("Pass either a stream name or the --all argument"))
             sys.exit(1)

@@ -2,6 +2,10 @@
 
 from django.db import migrations, models
 
+# Non-historical model, i.e. if you change save_product_taxonomy() tomorrow
+# the migration will not run the same code as before (at the time the migration was written)
+from corgi.core.models import SoftwareBuild as CurrentSBModel
+
 
 def remove_cdn_repo_relations(apps, schema_editor):
     """Remove CDN_REPO relations created by the Pulp collector,
@@ -52,7 +56,9 @@ def remove_cdn_repo_relations(apps, schema_editor):
         # Delete CDN_REPO relations for this build, then fix taxonomies
         build.relations.get_queryset().filter(type="CDN_REPO").delete()
         # Add the correct Component-Variant links on all Components in this build
-        build.save_product_taxonomy()
+        # using the current model because we need to call save_product_taxonomy()
+        # but apps.get_model() doesn't let us run custom code
+        CurrentSBModel.objects.get(uuid=build.uuid).save_product_taxonomy()
 
 
 class Migration(migrations.Migration):

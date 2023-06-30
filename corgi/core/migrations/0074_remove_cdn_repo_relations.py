@@ -3,58 +3,6 @@
 from django.db import migrations, models
 
 
-def remove_cdn_repo_relations(apps, schema_editor):
-    """Remove CDN_REPO relations created by the Pulp collector,
-    then fix the product taxonomy on all builds / components that had these relations"""
-    SoftwareBuild = apps.get_model("core", "SoftwareBuild")
-
-    # Hardcoding the constant because we want to remove this type from the model
-    for build in SoftwareBuild.objects.filter(relations__type="CDN_REPO").iterator():
-        # Fix all components on builds that have CDN_REPO relations
-        for component in build.components.get_queryset().iterator():
-            # Fix the root components linked directly to this build
-            # Clear the Variant / Channel links since they're wrong
-            # We only append to links when saving taxonomies
-            # So to remove bad data and add the right data
-            # We need to clear first, and then reprocess afterwards
-            component.channels.clear()
-            component.productvariants.clear()
-
-            # Also clear the stream / version / product links
-            # We add the parents of some Variant to this Component
-            # Since the Variant is now gone, remove its parents as well
-            # Should be a no-op in most cases, we'll add back all products
-            # that were removed using other relations
-            # But when a build no longer relates to any Variants
-            # we want to handle this edge case and unlink it from everything
-            component.productstreams.clear()
-            component.productversions.clear()
-            component.products.clear()
-
-            for provided_component in component.provides.get_queryset().iterator():
-                # Fix the provided components
-                # They aren't always linked to the build, so can't be handled above
-                provided_component.channels.clear()
-                provided_component.productvariants.clear()
-                provided_component.productstreams.clear()
-                provided_component.productversions.clear()
-                provided_component.products.clear()
-
-            for upstream_component in component.upstreams.get_queryset().iterator():
-                # Fix the upstream components
-                # They aren't ever linked to the build, so can't be handled above
-                upstream_component.channels.clear()
-                upstream_component.productvariants.clear()
-                upstream_component.productstreams.clear()
-                upstream_component.productversions.clear()
-                upstream_component.products.clear()
-
-        # Delete CDN_REPO relations for this build, then fix taxonomies
-        build.relations.get_queryset().filter(type="CDN_REPO").delete()
-        # Add the correct Component-Variant links on all Components in this build
-        build.save_product_taxonomy()
-
-
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -62,7 +10,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(remove_cdn_repo_relations),
         migrations.AlterField(
             model_name="productcomponentrelation",
             name="type",

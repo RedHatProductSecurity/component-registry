@@ -1285,45 +1285,13 @@ paths:
           description: ''
 components:
   schemas:
-    BuildTypeEnum:
-      enum:
-      - BREW
-      - KOJI
-      - CENTOS
-      - APP_INTERFACE
-      type: string
     Channel:
       type: object
       description: |-
         Show detailed information for Channel(s).
         Add or remove fields using ?include_fields=&exclude_fields=
       properties:
-        uuid:
-          type: string
-          format: uuid
-          readOnly: true
         link:
-          type: string
-          readOnly: true
-        last_changed:
-          type: string
-          format: date-time
-          readOnly: true
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
-        name:
-          type: string
-          readOnly: true
-        relative_url:
-          type: string
-          readOnly: true
-        type:
-          allOf:
-          - $ref: '#/components/schemas/ChannelTypeEnum'
-          readOnly: true
-        description:
           type: string
           readOnly: true
         products:
@@ -1355,121 +1323,28 @@ components:
               type: string
           readOnly: true
       required:
-      - created_at
-      - description
-      - last_changed
       - link
-      - name
       - product_streams
       - product_variants
       - product_versions
       - products
-      - relative_url
-      - type
-      - uuid
-    ChannelTypeEnum:
-      enum:
-      - CDN_REPO
-      - CONTAINER_REGISTRY
-      type: string
     Component:
       type: object
       description: |-
         Show detailed information for a Component.
         Add or remove fields using ?include_fields=&exclude_fields=
       properties:
-        link:
-          type: string
-          readOnly: true
-        download_url:
-          type: string
-          readOnly: true
-        uuid:
-          type: string
-          format: uuid
-          readOnly: true
-        type:
+        software_build:
           allOf:
-          - $ref: '#/components/schemas/ComponentTypeEnum'
-          readOnly: true
-        namespace:
-          allOf:
-          - $ref: '#/components/schemas/NamespaceEnum'
-          readOnly: true
-        purl:
-          type: string
-          readOnly: true
-        name:
-          type: string
-          readOnly: true
-        description:
-          type: string
-          readOnly: true
-        related_url:
-          type: string
+          - $ref: '#/components/schemas/SoftwareBuildSummary'
           readOnly: true
         tags:
           type: array
           items:
             $ref: '#/components/schemas/Tag'
           readOnly: true
-        version:
+        link:
           type: string
-          readOnly: true
-        release:
-          type: string
-          readOnly: true
-        el_match:
-          type: array
-          items:
-            type: string
-            maxLength: 200
-          readOnly: true
-        arch:
-          type: string
-          readOnly: true
-        nvr:
-          type: string
-          readOnly: true
-        nevra:
-          type: string
-          readOnly: true
-        epoch:
-          type: integer
-          readOnly: true
-        copyright_text:
-          type: string
-          readOnly: true
-        license_concluded:
-          type: string
-          readOnly: true
-        license_concluded_list:
-          type: array
-          items:
-            type: string
-          readOnly: true
-        license_declared:
-          type: string
-          readOnly: true
-        license_declared_list:
-          type: array
-          items:
-            type: string
-          readOnly: true
-        openlcs_scan_url:
-          type: string
-          readOnly: true
-        openlcs_scan_version:
-          type: string
-          readOnly: true
-        software_build:
-          allOf:
-          - $ref: '#/components/schemas/SoftwareBuildSummary'
-          readOnly: true
-        errata:
-          type: array
-          items:
-            type: string
           readOnly: true
         products:
           type: array
@@ -1506,10 +1381,10 @@ components:
             additionalProperties:
               type: string
           readOnly: true
-        sources:
+        provides:
           type: string
           readOnly: true
-        provides:
+        sources:
           type: string
           readOnly: true
         upstreams:
@@ -1518,65 +1393,19 @@ components:
         manifest:
           type: string
           readOnly: true
-        filename:
-          type: string
-          readOnly: true
       required:
-      - arch
       - channels
-      - copyright_text
-      - description
-      - download_url
-      - el_match
-      - epoch
-      - errata
-      - filename
-      - license_concluded
-      - license_concluded_list
-      - license_declared
-      - license_declared_list
       - link
       - manifest
-      - name
-      - namespace
-      - nevra
-      - nvr
-      - openlcs_scan_url
-      - openlcs_scan_version
       - product_streams
       - product_variants
       - product_versions
       - products
       - provides
-      - purl
-      - related_url
-      - release
       - software_build
       - sources
       - tags
-      - type
       - upstreams
-      - uuid
-      - version
-    ComponentTypeEnum:
-      enum:
-      - CARGO
-      - OCI
-      - GEM
-      - GENERIC
-      - GITHUB
-      - GOLANG
-      - MAVEN
-      - NPM
-      - RPMMOD
-      - RPM
-      - PYPI
-      type: string
-    NamespaceEnum:
-      enum:
-      - UPSTREAM
-      - REDHAT
-      type: string
     PaginatedChannelList:
       type: object
       properties:
@@ -1723,27 +1552,10 @@ components:
         Show detailed information for Product(s).
         Add or remove fields using ?include_fields=&exclude_fields=
       properties:
-        link:
-          type: string
-          readOnly: true
-        uuid:
-          type: string
-          format: uuid
-          readOnly: true
-        ofuri:
-          type: string
-          readOnly: true
-        name:
-          type: string
-          readOnly: true
-        description:
-          type: string
-          readOnly: true
-        build_count:
-          type: integer
-          readOnly: true
-        builds:
-          type: string
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tag'
           readOnly: true
         components:
           type: string
@@ -1751,10 +1563,14 @@ components:
         upstreams:
           type: string
           readOnly: true
-        tags:
-          type: array
-          items:
-            $ref: '#/components/schemas/Tag'
+        builds:
+          type: string
+          readOnly: true
+        link:
+          type: string
+          readOnly: true
+        build_count:
+          type: integer
           readOnly: true
         channels:
           type: array
@@ -1789,43 +1605,22 @@ components:
       - builds
       - channels
       - components
-      - description
       - link
-      - name
-      - ofuri
       - product_streams
       - product_variants
       - product_versions
       - tags
       - upstreams
-      - uuid
     ProductStream:
       type: object
       description: |-
         Show detailed information for ProductStream(s).
         Add or remove fields using ?include_fields=&exclude_fields=
       properties:
-        link:
-          type: string
-          readOnly: true
-        uuid:
-          type: string
-          format: uuid
-          readOnly: true
-        ofuri:
-          type: string
-          readOnly: true
-        name:
-          type: string
-          readOnly: true
-        description:
-          type: string
-          readOnly: true
-        build_count:
-          type: integer
-          readOnly: true
-        builds:
-          type: string
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tag'
           readOnly: true
         components:
           type: string
@@ -1833,10 +1628,14 @@ components:
         upstreams:
           type: string
           readOnly: true
-        tags:
-          type: array
-          items:
-            $ref: '#/components/schemas/Tag'
+        builds:
+          type: string
+          readOnly: true
+        link:
+          type: string
+          readOnly: true
+        build_count:
+          type: integer
           readOnly: true
         channels:
           type: array
@@ -1845,41 +1644,8 @@ components:
             additionalProperties:
               type: string
           readOnly: true
-        cpe:
-          type: string
-          readOnly: true
-        active:
-          type: boolean
-          readOnly: true
-        brew_tags:
-          type: object
-          additionalProperties: {}
-          readOnly: true
-        yum_repositories:
-          type: array
-          items:
-            type: string
-            maxLength: 200
-          readOnly: true
-        composes:
-          type: object
-          additionalProperties: {}
-          readOnly: true
-        et_product_versions:
-          type: array
-          items:
-            type: string
-            maxLength: 200
-          readOnly: true
         manifest:
           type: string
-          readOnly: true
-        relations:
-          type: array
-          items:
-            type: object
-            additionalProperties:
-              type: string
           readOnly: true
         products:
           type: array
@@ -1902,56 +1668,36 @@ components:
             additionalProperties:
               type: string
           readOnly: true
+        relations:
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
+          readOnly: true
       required:
-      - active
-      - brew_tags
       - build_count
       - builds
       - channels
       - components
-      - composes
-      - cpe
-      - description
-      - et_product_versions
       - link
       - manifest
-      - name
-      - ofuri
       - product_variants
       - product_versions
       - products
       - relations
       - tags
       - upstreams
-      - uuid
-      - yum_repositories
     ProductVariant:
       type: object
       description: |-
         Show detailed information for ProductVariant(s).
         Add or remove fields using ?include_fields=&exclude_fields=
       properties:
-        link:
-          type: string
-          readOnly: true
-        uuid:
-          type: string
-          format: uuid
-          readOnly: true
-        ofuri:
-          type: string
-          readOnly: true
-        name:
-          type: string
-          readOnly: true
-        description:
-          type: string
-          readOnly: true
-        build_count:
-          type: integer
-          readOnly: true
-        builds:
-          type: string
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tag'
           readOnly: true
         components:
           type: string
@@ -1959,19 +1705,16 @@ components:
         upstreams:
           type: string
           readOnly: true
-        tags:
-          type: array
-          items:
-            $ref: '#/components/schemas/Tag'
+        builds:
+          type: string
+          readOnly: true
+        link:
+          type: string
+          readOnly: true
+        build_count:
+          type: integer
           readOnly: true
         channels:
-          type: array
-          items:
-            type: object
-            additionalProperties:
-              type: string
-          readOnly: true
-        relations:
           type: array
           items:
             type: object
@@ -1999,49 +1742,35 @@ components:
             additionalProperties:
               type: string
           readOnly: true
+        relations:
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
+          readOnly: true
       required:
       - build_count
       - builds
       - channels
       - components
-      - description
       - link
-      - name
-      - ofuri
       - product_streams
       - product_versions
       - products
       - relations
       - tags
       - upstreams
-      - uuid
     ProductVersion:
       type: object
       description: |-
         Show detailed information for ProductVersion(s).
         Add or remove fields using ?include_fields=&exclude_fields=
       properties:
-        link:
-          type: string
-          readOnly: true
-        uuid:
-          type: string
-          format: uuid
-          readOnly: true
-        ofuri:
-          type: string
-          readOnly: true
-        name:
-          type: string
-          readOnly: true
-        description:
-          type: string
-          readOnly: true
-        build_count:
-          type: integer
-          readOnly: true
-        builds:
-          type: string
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tag'
           readOnly: true
         components:
           type: string
@@ -2049,10 +1778,14 @@ components:
         upstreams:
           type: string
           readOnly: true
-        tags:
-          type: array
-          items:
-            $ref: '#/components/schemas/Tag'
+        builds:
+          type: string
+          readOnly: true
+        link:
+          type: string
+          readOnly: true
+        build_count:
+          type: integer
           readOnly: true
         channels:
           type: array
@@ -2087,25 +1820,22 @@ components:
       - builds
       - channels
       - components
-      - description
       - link
-      - name
-      - ofuri
       - product_streams
       - product_variants
       - products
       - tags
       - upstreams
-      - uuid
     SoftwareBuild:
       type: object
       description: |-
         Show detailed information for SoftwareBuild(s).
         Add or remove fields using ?include_fields=&exclude_fields=
       properties:
-        uuid:
-          type: string
-          format: uuid
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tag'
           readOnly: true
         link:
           type: string
@@ -2113,32 +1843,6 @@ components:
         web_url:
           type: string
           readOnly: true
-        build_id:
-          type: string
-          readOnly: true
-        build_type:
-          allOf:
-          - $ref: '#/components/schemas/BuildTypeEnum'
-          readOnly: true
-        name:
-          type: string
-          readOnly: true
-        source:
-          type: string
-          readOnly: true
-        tags:
-          type: array
-          items:
-            $ref: '#/components/schemas/Tag'
-          readOnly: true
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
-        last_changed:
-          type: string
-          format: date-time
-          readOnly: true
         components:
           type: array
           items:
@@ -2147,16 +1851,9 @@ components:
               type: string
           readOnly: true
       required:
-      - build_id
-      - build_type
       - components
-      - created_at
-      - last_changed
       - link
-      - name
-      - source
       - tags
-      - uuid
       - web_url
     SoftwareBuildSummary:
       type: object
@@ -2167,25 +1864,8 @@ components:
         link:
           type: string
           readOnly: true
-        build_id:
-          type: string
-          readOnly: true
-        build_type:
-          allOf:
-          - $ref: '#/components/schemas/BuildTypeEnum'
-          readOnly: true
-        name:
-          type: string
-          readOnly: true
-        source:
-          type: string
-          readOnly: true
       required:
-      - build_id
-      - build_type
       - link
-      - name
-      - source
     Tag:
       type: object
       properties:

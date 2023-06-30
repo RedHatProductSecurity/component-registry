@@ -194,7 +194,7 @@ def parse_fields(fields: list[str]) -> tuple[set[str], dict[str, set[str]]]:
     )
 
 
-class IncludeExcludeFieldsSerializer(serializers.ModelSerializer):
+class IncludeExcludeFieldsSerializer(serializers.Serializer):
     """
     Abstract serializer for include/exclude fields logic with nested serializers
 
@@ -331,7 +331,7 @@ class SoftwareBuildSerializer(IncludeExcludeFieldsSerializer):
             "last_changed",
             "components",
         )
-        read_only_fields = fields
+        # read_only_fields = fields
 
 
 class SoftwareBuildSummarySerializer(IncludeExcludeFieldsSerializer):
@@ -347,7 +347,7 @@ class SoftwareBuildSummarySerializer(IncludeExcludeFieldsSerializer):
     class Meta:
         model = SoftwareBuild
         fields = ("link", "build_id", "build_type", "name", "source")
-        read_only_fields = fields
+        # read_only_fields = fields
 
 
 class ProductTaxonomySerializer(IncludeExcludeFieldsSerializer):
@@ -515,7 +515,7 @@ class ComponentSerializer(ProductTaxonomySerializer):
             "manifest",
             "filename",
         )
-        read_only_fields = fields
+        # read_only_fields = fields
 
 
 class ComponentListSerializer(IncludeExcludeFieldsSerializer):
@@ -546,7 +546,7 @@ class ComponentListSerializer(IncludeExcludeFieldsSerializer):
             "nvr",
             "build_completion_dt",
         )
-        read_only_fields = fields
+        # read_only_fields = fields
 
 
 class ProductModelSerializer(ProductTaxonomySerializer):
@@ -606,7 +606,7 @@ class ProductModelSerializer(ProductTaxonomySerializer):
             "tags",
             "channels",
         ]
-        read_only_fields = fields
+        # read_only_fields = fields
 
 
 class ProductSerializer(ProductModelSerializer):
@@ -629,7 +629,7 @@ class ProductSerializer(ProductModelSerializer):
             "product_streams",
             "product_variants",
         ]
-        read_only_fields = fields
+        # read_only_fields = fields
 
 
 class ProductVersionSerializer(ProductModelSerializer):
@@ -652,7 +652,7 @@ class ProductVersionSerializer(ProductModelSerializer):
             "product_streams",
             "product_variants",
         ]
-        read_only_fields = fields
+        # read_only_fields = fields
 
 
 class ProductStreamSerializer(ProductModelSerializer):
@@ -688,7 +688,7 @@ class ProductStreamSerializer(ProductModelSerializer):
             "product_variants",
             "channels",
         ]
-        read_only_fields = fields
+        # read_only_fields = fields
 
 
 class ProductStreamSummarySerializer(ProductModelSerializer):
@@ -711,7 +711,7 @@ class ProductStreamSummarySerializer(ProductModelSerializer):
             "upstreams",
             "manifest",
         ]
-        read_only_fields = fields
+        # read_only_fields = fields
 
 
 class ComponentProductStreamSummarySerializer(ProductModelSerializer):
@@ -745,7 +745,7 @@ class ComponentProductStreamSummarySerializer(ProductModelSerializer):
             "component_link",
             "component_purl",
         ]
-        read_only_fields = fields
+        # read_only_fields = fields
 
 
 class ProductVariantSerializer(ProductModelSerializer):
@@ -772,7 +772,7 @@ class ProductVariantSerializer(ProductModelSerializer):
             "product_streams",
             "channels",
         ]
-        read_only_fields = fields
+        # read_only_fields = fields
 
 
 class ChannelSerializer(ProductTaxonomySerializer):
@@ -801,7 +801,7 @@ class ChannelSerializer(ProductTaxonomySerializer):
             "product_streams",
             "product_variants",
         )
-        read_only_fields = fields
+        # read_only_fields = fields
 
     @staticmethod
     def get_link(instance: ProductVariant) -> str:
@@ -815,4 +815,4 @@ class AppStreamLifeCycleSerializer(IncludeExcludeFieldsSerializer):
     class Meta:
         model = AppStreamLifeCycle
         fields = "__all__"
-        read_only_fields = fields
+        # read_only_fields = fields

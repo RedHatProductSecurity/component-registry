@@ -21,6 +21,7 @@ from corgi.core.models import (
     ProductComponentRelation,
     SoftwareBuild,
 )
+from corgi.tasks import errata_tool
 from corgi.tasks.brew import (
     fetch_unprocessed_relations,
     load_brew_tags,
@@ -1383,3 +1384,12 @@ def test_parse_bundled_provides():
         # Both Go modules and Go packages can be bundled into an RPM
         # There's no easy way for us to tell which type this component is
         assert "go_component_type" not in provided["meta"]
+
+
+@pytest.mark.django_db
+def test_get_relation_builds():
+    errata_relation = ProductComponentRelationFactory(
+        type=ProductComponentRelation.Type.ERRATA, external_system_id="1"
+    )
+    result = errata_tool._get_relation_builds(1).first()
+    assert result == (errata_relation.build_id, errata_relation.build_type, None)

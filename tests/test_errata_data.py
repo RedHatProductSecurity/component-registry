@@ -16,9 +16,18 @@ from corgi.core.models import (
     ProductNode,
     ProductVariant,
 )
-from corgi.tasks.errata_tool import slow_load_errata, update_variant_repos
+from corgi.tasks.errata_tool import (
+    slow_load_errata,
+    slow_save_errata_product_taxonomy,
+    update_variant_repos,
+)
 
-from .factories import ProductStreamFactory, ProductVariantFactory
+from .factories import (
+    ProductComponentRelationFactory,
+    ProductStreamFactory,
+    ProductVariantFactory,
+    SoftwareBuildFactory,
+)
 
 pytestmark = [pytest.mark.unit, pytest.mark.django_db]
 
@@ -212,3 +221,17 @@ def test_save_product_component_for_errata(
     pcr = ProductComponentRelation.objects.filter(external_system_id=erratum_id)
     assert len(pcr) == no_of_objs
     assert mock_send.call_count == no_of_objs
+
+
+@patch("corgi.core.models.SoftwareBuild.save_product_taxonomy")
+def test_slow_save_errata_product_taxonomy(mock_build_save):
+    sb = SoftwareBuildFactory()
+    ProductComponentRelationFactory(
+        type=ProductComponentRelation.Type.ERRATA,
+        external_system_id="1",
+        software_build=sb,
+        build_id=sb.build_id,
+        build_type=sb.build_type,
+    )
+    slow_save_errata_product_taxonomy(1)
+    assert mock_build_save.called

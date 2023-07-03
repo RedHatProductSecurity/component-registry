@@ -39,7 +39,7 @@ def save_variant_cdn_repo_mapping() -> None:
 def slow_save_errata_product_taxonomy(erratum_id: int) -> None:
     logger.info(f"slow_save_errata_product_taxonomy called for {erratum_id}")
     relation_builds = _get_relation_builds(erratum_id)
-    for build_id, build_type in relation_builds:
+    for build_id, build_type, _ in relation_builds:
         logger.info("Saving product taxonomy for build (%s, %s)", build_id, build_type)
         # once all build's components are ingested we must save product taxonomy
         sb = SoftwareBuild.objects.get(build_id=build_id, build_type=build_type)

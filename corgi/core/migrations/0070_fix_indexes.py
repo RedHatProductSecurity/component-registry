@@ -45,14 +45,14 @@ class Migration(migrations.Migration):
         # about the current state of our tables / models
         migrations.RunSQL(
             "CREATE INDEX core_componentnode_parent_id_be93cab7 "
-            "ON public.core_componentnode USING btree (parent_id)"
+            "ON core_componentnode USING btree (parent_id)"
         ),
         migrations.RunSQL(
             "CREATE INDEX core_componentnode_content_type_id_334077a8 "
-            "ON public.core_componentnode USING btree (content_type_id)"
+            "ON core_componentnode USING btree (content_type_id)"
         ),
         migrations.RunSQL(
             "CREATE INDEX core_component_channels_component_id_9c8754af "
-            "ON public.core_component_channels USING btree (component_id)"
+            "ON core_component_channels USING btree (component_id)"
         ),
     )

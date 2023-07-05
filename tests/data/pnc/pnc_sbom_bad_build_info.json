@@ -265,7 +265,7 @@
                 {
                     "type": "build-system",
                     "url": "https://example.com/v2/builds/AZIDE5OTGKIAA",
-                    "comment": "pnc-build-id"
+                    "comment": "abstemious-build-id"
                 },
                 {
                     "type": "build-meta",
@@ -377,6 +377,10 @@
             },
             "externalReferences": [
                 {
+                    "type": "website",
+                    "url": "https://smallrye.io/smallrye-mutiny/mutiny"
+                },
+                {
                     "type": "distribution",
                     "url": "https://maven.repository.redhat.com/ga/"
                 },
@@ -392,11 +396,6 @@
                     "type": "build-system",
                     "url": "https://example.com/v2/builds/AUOMUWXT3VQAA",
                     "comment": "pnc-build-id"
-                },
-                {
-                    "type": "build-system",
-                    "url": "https://example.com/v2/builds/0987654321",
-                    "comment": "brew-build-id"
                 },
                 {
                     "type": "build-meta",

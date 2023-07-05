@@ -95,7 +95,7 @@ ENV/
 env.bak/
 venv.bak/
 .env
-.env-enterprise
+.env*
 
 # Spyder project settings
 .spyderproject
@@ -126,6 +126,7 @@ celerybeat-schedule
 
 # Database dump
 corgi.db
+restore-elements
 
 # UMB certificates
 *.key

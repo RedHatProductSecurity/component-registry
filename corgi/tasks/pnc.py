@@ -48,17 +48,18 @@ def slow_fetch_pnc_sbom(purl: str, product_data, build_data, sbom_data) -> None:
     # Create components
     components = {}
     for component in sbom.components:
-        components[component.bomref], _ = Component.objects.get_or_create(
+        components[component.bomref], _ = Component.objects.update_or_create(
             type=Component.Type.MAVEN,
             name=component["name"],
             version=component["version"],
             release="",
             arch="noarch",
-            purl=component["purl"],
-            namespace=component["namespace"],
-            softwarebuild=builds[component["build_id"]],
-            related_url=component["related_url"],
-            defaults={"meta_attr": component["meta_attr"]},
+            defaults={
+                 "namespace": component["namespace"],
+                 "softwarebuild": builds[component["build_id"]],
+                 "related_url": component["related_url"],
+                 "meta_attr": component["meta_attr"]
+            },
         )
 
     # Link dependencies

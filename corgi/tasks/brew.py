@@ -702,7 +702,12 @@ def slow_refresh_brew_build_tags(build_id: int) -> None:
     logger.info(f"Finished refreshing Brew build tags for {build_id}")
 
 
-@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
+@app.task(
+    base=Singleton,
+    autoretry_for=RETRYABLE_ERRORS,
+    retry_kwargs=RETRY_KWARGS,
+    soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
+)
 def slow_delete_brew_build(build_id: int, build_state: int) -> int:
     """Delete a Brew build (and its relations) in Corgi when it's deleted in Brew"""
     # Shipped builds (which have a Brew tag for any product) are never deleted

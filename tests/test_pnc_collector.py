@@ -3,7 +3,6 @@ import json
 import pytest
 
 from corgi.collectors.pnc import SbomerSbom
-from corgi.core.models import SoftwareBuild
 
 pytestmark = pytest.mark.unit
 
@@ -20,30 +19,28 @@ def test_validate_sbom():
     for bomref, component in sbom.components.items():
         # All Red Hat components should have PNC or Brew info
         if "redhat" in component["purl"]:
-            assert "build_id" in component
-            assert component["build_id"]["type"] in [
-                SoftwareBuild.Type.PNC,
-                SoftwareBuild.Type.BREW,
-            ]
+            assert (
+                "pnc_build_id" in component["meta_attr"]
+                or "brew_build_id" in component["meta_attr"]
+            )
 
     assert len(sbom.components) == 6
 
-    # Check that Brew builds are handled correctly
-    # A component with only a Brew build uses it as the primary build
-    assert sbom.components[
-        "pkg:maven/org.jboss/jboss-transaction-spi@7.6.0.Final-redhat-1?type=jar"
-    ]["build_id"] == {
-        "type": SoftwareBuild.Type.BREW,
-        "id": "1234567890",
-    }
+    assert (
+        sbom.components["pkg:maven/org.jboss/jboss-transaction-spi@7.6.0.Final-redhat-1?type=jar"][
+            "meta_attr"
+        ]["brew_build_id"]
+        == "1234567890"
+    )
 
-    # A component with both PNC and Brew builds stores Brew info in meta
-    assert sbom.components["pkg:maven/io.smallrye.reactive/mutiny@1.7.0.redhat-00001?type=jar"][
-        "build_id"
-    ] == {
-        "type": SoftwareBuild.Type.PNC,
-        "id": "AUOMUWXT3VQAA",
-    }
+    # A component with both PNC and Brew builds stores both
+    assert (
+        sbom.components["pkg:maven/io.smallrye.reactive/mutiny@1.7.0.redhat-00001?type=jar"][
+            "meta_attr"
+        ]["pnc_build_id"]
+        == "AUOMUWXT3VQAA"
+    )
+
     assert (
         sbom.components["pkg:maven/io.smallrye.reactive/mutiny@1.7.0.redhat-00001?type=jar"][
             "meta_attr"

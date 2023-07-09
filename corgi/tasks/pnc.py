@@ -34,42 +34,38 @@ def slow_fetch_pnc_sbom(purl: str, product_data, build_data, sbom_data) -> None:
     # Make sure the SBOM is valid
     sbom = SbomerSbom(response.json())
 
-    builds = {}
-    for build in sbom.pnc_build_ids:
-        builds[build], _ = SoftwareBuild.objects.get_or_create(
-            build_id=build, build_type=SoftwareBuild.Type.PNC
-        )
-
-    for build in sbom.brew_build_ids:
-        builds[build], _ = SoftwareBuild.objects.get_or_create(
-            build_id=build, build_type=SoftwareBuild.Type.BREW
-        )
+    # Create a build for the root component
+    root_build, _ = SoftwareBuild.objects.get_or_create(
+        build_id=sbom.components["root"]["meta_attr"]["pnc_build_id"],
+        build_type=SoftwareBuild.Type.PNC,
+    )
 
     # Create components
     components = {}
-    for component in sbom.components:
-        components[component.bomref], _ = Component.objects.update_or_create(
+    for bomref, component in sbom.components.items():
+        defaults = {"namespace": component["namespace"], "meta_attr": component["meta_attr"]}
+
+        if "related_url" in component:
+            defaults["related_url"] = component["related_url"]
+        if bomref == "root":
+            defaults["software_build"] = root_build
+
+        components[bomref], _ = Component.objects.update_or_create(
             type=Component.Type.MAVEN,
             name=component["name"],
             version=component["version"],
             release="",
             arch="noarch",
-            defaults={
-                 "namespace": component["namespace"],
-                 "softwarebuild": builds[component["build_id"]],
-                 "related_url": component["related_url"],
-                 "meta_attr": component["meta_attr"]
-            },
+            defaults=defaults,
         )
 
     # Link dependencies
     nodes = {}
     # Create the root node from the SBOM's component
     root_component = components.pop("root")
-    nodes["root"], _ = ComponentNode.get_or_create(
+    nodes["root"], _ = ComponentNode.objects.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
-        purl=root_component.purl,
         defaults={"obj": root_component},
     )
 
@@ -78,17 +74,18 @@ def slow_fetch_pnc_sbom(purl: str, product_data, build_data, sbom_data) -> None:
         # Only create a new node for parent if it wasn't already
         # created as a dependency of another component
         if parent not in nodes:
-            nodes[parent], _ = ComponentNode.get_or_create(
+            nodes[parent] = ComponentNode.objects.create(
                 type=ComponentNode.ComponentNodeType.PROVIDES,
                 parent=nodes["root"],
                 purl=components[parent].purl,
-                defaults={"obj": components[parent]},
+                obj=components[parent],
             )
 
+        # Deps may be children of both root and other nodes
         for dep in deps:
-            nodes[dep], _ = ComponentNode.get_or_create(
+            nodes[dep] = ComponentNode.objects.create(
                 type=ComponentNode.ComponentNodeType.PROVIDES,
                 parent=nodes[parent],
                 purl=components[dep].purl,
-                defaults={"obj": components[dep]},
+                obj=components[dep],
             )

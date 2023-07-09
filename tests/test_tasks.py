@@ -544,10 +544,10 @@ def test_slow_fetch_pnc_sbom():
         get_mock.assert_called_once_with(sbom["link"])
 
     # Test with an SBOM available message that has a PV that
-    # doesn't exist in ET. parse_pnc_sbom shouldn't be called,
+    # doesn't exist in ET. An sbom object shouldn't be created,
     # because the fetch task should log that the PV doesn't exist
     # and end early.
-    with patch("corgi.collectors.pnc.parse_pnc_sbom") as parse_sbom_mock:
+    with patch("corgi.collectors.pnc.SbomerSbom.__init__") as parse_sbom_mock:
         with open("tests/data/pnc/sbom_no_variant.json") as complete_file:
             complete_data = json.load(complete_file)["msg"]
 

@@ -494,7 +494,6 @@ def test_slow_delete_brew_builds():
     assert ComponentNode.objects.count() == 3
 
     nodes = ComponentNode.objects.order_by("created_at")
-    assert nodes.count() == 3
     assert nodes.first().purl == index_container.purl
     assert nodes[1].purl == shipped_upstream.purl
     assert nodes.last().purl == shipped_binary_rpm.purl

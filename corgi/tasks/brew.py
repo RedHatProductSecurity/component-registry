@@ -6,12 +6,13 @@ from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Count, Q, QuerySet
+from django.db.models import Q, QuerySet
 from django.utils import dateformat, dateparse, timezone
 from django.utils.timezone import make_aware
 
 from config.celery import app
 from corgi.collectors.brew import ADVISORY_REGEX, Brew, BrewBuildTypeNotSupported
+from corgi.core.constants import ROOT_COMPONENTS_CONDITION
 from corgi.core.models import (
     Component,
     ComponentNode,
@@ -738,28 +739,6 @@ def slow_delete_brew_build(build_id: int, build_state: int) -> int:
                 f"Brew build {build_id} had multiple root components: {root_component_qs}"
             )
 
-        root_component_and_build_pks = root_component_qs.first()
-        # Skip deleting child components when build doesn't exist
-        if root_component_and_build_pks:
-            root_component_pk, build_pk = root_component_and_build_pks
-            # The build has a root component, so delete the child components that are
-            # provided by / upstreams of only this build's root, and not any other builds
-            # Deleting the Component will automatically delete the ComponentNodes
-            provided_components = Component.objects.annotate(
-                build_count=Count("sources__software_build_id")
-            ).filter(sources=root_component_pk, build_count=1)
-            deleted_count += _delete_queryset(provided_components, "provided component")
-
-            # Doing .filter(downstreams=root_component_pk)
-            # before .annotate(downstreams_count=Count("downstreams"))
-            # makes Django return the wrong results
-            # https://docs.djangoproject.com/en/3.2/topics/db/aggregation/
-            # #order-of-annotate-and-filter-clauses
-            upstream_components = Component.objects.annotate(
-                build_count=Count("downstreams__software_build_id")
-            ).filter(downstreams=root_component_pk, build_count=1)
-            deleted_count += _delete_queryset(upstream_components, "upstream component")
-
         # Relations without a linked (NULL) build are "unprocessed"
         # We process these relations each day by loading their build ID
         # Deleting the relation avoids reloading the build we are deleting
@@ -769,9 +748,32 @@ def slow_delete_brew_build(build_id: int, build_state: int) -> int:
         deleted_count += _delete_queryset(relations, "relation")
 
         # Deleting the build automatically deletes the linked root component
-        # But not the child components, so we handled those separately above
+        # Deleting the Component will automatically delete the ComponentNodes
         builds = SoftwareBuild.objects.filter(build_id=build_id, build_type=SoftwareBuild.Type.BREW)
         deleted_count += _delete_queryset(builds, "build")
+
+        # Deleting the build and root component doesn't automatically delete child components
+        # So now we manually delete any child components which have no sources / downstreams
+        # AKA they are not linked to any root component
+        # so these child components were only linked to one root component / build
+        # which was the root component / build we just deleted
+
+        # TODO: Check data, make sure we don't delete anything else
+        #  Can't merge this yet, that bug with generic root components is a blocker
+        child_components_deleted = 1
+        while child_components_deleted:
+            # Delete repeatedly because deleting e.g. an index container above
+            # means arch-specific containers have no sources or downstreams
+            # and will get cleaned up here, but their child provided components
+            # will still have the arch-specific container as a source until it's deleted
+            # so we need another loop iteration for each level in the tree we're deleting
+            child_components = (
+                Component.objects.exclude(ROOT_COMPONENTS_CONDITION)
+                .exclude(type=Component.Type.RPMMOD)
+                .filter(sources__isnull=True, downstreams__isnull=True)
+            )
+            child_components_deleted = _delete_queryset(child_components, "child component")
+            deleted_count += child_components_deleted
 
     return deleted_count
 

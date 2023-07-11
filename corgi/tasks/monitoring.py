@@ -60,6 +60,7 @@ def setup_periodic_tasks(sender, **kwargs):
         upsert_cron_task("yum", "fetch_unprocessed_yum_relations", hour=4, minute=0)
         upsert_cron_task("manifest", "update_manifests", hour=5, minute=0)
         upsert_cron_task("monitoring", "email_failed_tasks", hour=6, minute=30)
+        upsert_cron_task("monitoring", "expire_task_results", hour=7, minute=30)
     else:
         upsert_cron_task("errata_tool", "load_et_products", hour=0, minute=0)
         upsert_cron_task("prod_defs", "update_products", hour=1, minute=0)
@@ -73,11 +74,7 @@ def setup_periodic_tasks(sender, **kwargs):
         upsert_cron_task("managed_services", "refresh_service_manifests", hour=10, minute=0)
         upsert_cron_task("manifest", "update_manifests", hour=11, minute=0)
         upsert_cron_task("monitoring", "email_failed_tasks", hour=12, minute=45)
-
-    # Automatic task result expiration is currently disabled
-    # We are required to keep UMB task results
-    # Only run manually if DB is running out of space, or similar
-    # upsert_cron_task("monitoring", "expire_task_results", hour=13, minute=0)
+        upsert_cron_task("monitoring", "expire_task_results", hour=13, minute=45)
 
 
 @app.task(base=Singleton, autoretry_for=(Exception,), retry_backoff=900, retry_jitter=False)
@@ -133,7 +130,7 @@ def email_failed_tasks():
     ).send()
 
 
-@app.task
+@app.task(base=Singleton)
 def expire_task_results():
     """Delete task results older than 30 days.
 

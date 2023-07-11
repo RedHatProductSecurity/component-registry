@@ -28,7 +28,7 @@ class UMBHandler:
     """Handler to deal with received messages from UMB. Defines topics to listen to and
     methods to invoke for handle messages in those topics."""
 
-    def __init__(self, addresses: dict[str, HandleMethod], selectors: dict[str, str]):
+    def __init__(self, addresses: dict[str, HandleMethod], selectors: dict[str, str]) -> None:
         if not addresses:
             raise ValueError("UMBHandler has no addresses")
         if not all(callable(handler) for handler in addresses.values()):
@@ -46,8 +46,8 @@ class BrewUMBHandler(UMBHandler):
     """Handle messages about completed Brew builds, tagged builds, and untagged builds, listen
     for messages about shipped ET advisories, only to update released tags on Brew builds."""
 
-    def __init__(self):
-        addresses = {
+    def __init__(self) -> None:
+        addresses: dict[str, Callable[[Event], bool]] = {
             f"{VIRTUAL_TOPIC_PREFIX}.brew.build.complete": BrewUMBHandler.handle_builds,
             f"{VIRTUAL_TOPIC_PREFIX}.brew.build.deleted": BrewUMBHandler.handle_deleted_builds,
             f"{VIRTUAL_TOPIC_PREFIX}.brew.build.tag": BrewUMBHandler.handle_tags,
@@ -157,8 +157,8 @@ class BrewUMBHandler(UMBHandler):
 class SbomerUMBHandler(UMBHandler):
     """Handle messages from PNC about available SBOMs"""
 
-    def __init__(self):
-        addresses = {
+    def __init__(self) -> None:
+        addresses: dict[str, Callable[[Event], bool]] = {
             f"{VIRTUAL_TOPIC_PREFIX}.pnc.sbom.spike.complete": SbomerUMBHandler.sbom_complete,
         }
         # By default, listen for all messages on a topic
@@ -187,7 +187,7 @@ class SbomerUMBHandler(UMBHandler):
 class UMBDispatcher(MessagingHandler):
     """Maintains a collection of UMBHandlers and dispatches messages to them"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Set up a handler that listens to many topics and processes messages from each"""
         super(UMBDispatcher, self).__init__()
 
@@ -215,7 +215,7 @@ class UMBDispatcher(MessagingHandler):
 
         # A list of UMBHandlers to which messages will be dispatched. If you add new handlers,
         # make sure they're added here.
-        self.handlers: list[UMBHandler] = [BrewUMBHandler(), SbomerUMBHandler()]
+        self.handlers = [BrewUMBHandler(), SbomerUMBHandler()]
 
     @property
     def virtual_topic_addresses(self) -> dict[str, HandleMethod]:

@@ -8,15 +8,13 @@ from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
-from django.contrib.postgres.aggregates import JSONBAgg
 from django.db import models
 from django.db.models import Q, QuerySet
-from django.db.models.expressions import RawSQL
+from django.db.models.expressions import F, Func, Value
 from mptt.managers import TreeManager
 from mptt.models import MPTTModel, TreeForeignKey
 from packageurl import PackageURL
 from packageurl.contrib import purl2url
-from rpm import labelCompare
 
 from corgi.core.constants import (
     CONTAINER_DIGEST_FORMATS,
@@ -894,104 +892,106 @@ class ComponentQuerySet(models.QuerySet):
 
     def latest_components(
         self,
+        model_type: str = "",
+        ofuri: str = "",
         include: bool = True,
     ) -> "ComponentQuerySet":
-        """Return components from latest builds across all product streams."""
-        latest_components = self.latest_components_q(self)
-        if latest_components:
+        """Return an ofuri's components from latest builds across all product streams."""
+
+        # the concept of 'latest component' is only relevent within product boundaries
+        # we want to constrain by product type/ofuri which is why we pass in model_type and ofuri
+        # into the get_latest_component stored proc annotation
+        latest_component_uuids = list(
+            self.values("namespace", "name", "arch")
+            .distinct()
+            .annotate(
+                latest_version=Func(
+                    Value(model_type),
+                    Value(ofuri),
+                    F("namespace"),
+                    F("name"),
+                    function="get_latest_component",
+                    output_field=models.UUIDField(),
+                )
+            )
+            .values_list("latest_version", flat=True)
+            .using("read_only")
+        )
+
+        if latest_component_uuids:
             if include:
-                return self.filter(latest_components)
+                return (
+                    Component.objects.select_related("software_build")
+                    .filter(pk__in=latest_component_uuids)
+                    .order_by("name")
+                    .using("read_only")
+                )
             else:
-                return self.exclude(latest_components)
+                return (
+                    Component.objects.select_related("software_build")
+                    .exclude(pk__in=latest_component_uuids)
+                    .order_by("name")
+                    .using("read_only")
+                )
         else:
             # Don't modify the ComponentQuerySet
             return self
-
-    @classmethod
-    def latest_components_q(cls, queryset: models.QuerySet) -> Q:
-        component_versions = cls._versions_by_name(queryset)
-        latest_components = Q()
-        # We need to build tuples of the nevras for comparison with the rpm.labelCompare function
-        # We can discard the namespace, name, arch part of results as it was only used for grouping.
-        for _, _, _, versions in component_versions:
-            latest_version = cls._version_dict_to_tuple(versions[0])
-            for version in versions:
-                current_version = cls._version_dict_to_tuple(version)
-                if labelCompare(current_version[1:], latest_version[1:]) == 1:
-                    latest_version = current_version
-            if latest_version:
-                # use the first entry in the tuple (the uuid) in the query
-                latest_components |= Q(pk=latest_version[0])
-        return latest_components
-
-    @staticmethod
-    def _version_dict_to_tuple(version_dict):
-        return (
-            version_dict["uuid"],
-            version_dict["epoch"],
-            version_dict["version"],
-            version_dict["release"],
-        )
-
-    @staticmethod
-    def _versions_by_name(queryset: models.QuerySet) -> Iterator[Any]:
-        """This builds a json object 'nevras' so that we can group multiple
-        epoch/version/release (EVR) by namespace/name/arch.
-        We select the uuid as well to identify the latest EVR for that namespace/name/arch"""
-        return (
-            queryset.values_list("namespace", "name", "arch")
-            .annotate(
-                nevras=JSONBAgg(
-                    RawSQL(
-                        "json_build_object(" "'uuid', core_component.uuid, "
-                        # the rpm.labelCompare function expects the epoch to be a string
-                        "'epoch', epoch::VARCHAR, "
-                        # Avoids AmbiguousColumn: column reference "version" is ambiguous
-                        "'version', core_component.version, " "'release', release)",
-                        (),
-                    )
-                )
-            )
-            .order_by()
-            .distinct()
-            .iterator()
-        )
 
     def latest_components_by_streams(
         self,
         include: bool = True,
     ) -> "ComponentQuerySet":
         """Return only root components from latest builds for each product stream."""
-        product_stream_uuids = (
+        product_stream_ofuris = (
             self.root_components()
             .exclude(productstreams__isnull=True)
-            .values_list("productstreams__uuid", flat=True)
+            .values_list("productstreams__ofuri", flat=True)
             # Clear ordering inherited from parent Queryset, if any
             # So .distinct() works properly and doesn't have duplicates
             .order_by()
             .distinct()
         )
-        query = Q()
-        for ps_uuid in product_stream_uuids:
-            root_components_for_stream = (
-                self.root_components()
-                .prefetch_related("productstreams")
-                .filter(productstreams=ps_uuid)
+        # aggregate up all latest component uuids across all matched product streams
+        latest_components_uuids = []
+        for ps_ofuri in product_stream_ofuris:
+            latest_components_uuids.extend(
+                list(
+                    self.values("namespace", "name", "arch")
+                    .distinct()
+                    .annotate(
+                        latest_version=Func(
+                            Value(ps_ofuri),
+                            F("namespace"),
+                            F("name"),
+                            function="get_latest_component",
+                            output_field=models.UUIDField(),
+                        )
+                    )
+                    .values_list("latest_version", flat=True)
+                    .using("read_only")
+                )
             )
-            query |= self.latest_components_q(root_components_for_stream)
         if include:
             # Show only the latest components
-            if not query:
+            if not latest_components_uuids:
                 # no latest components, don't do any further filtering
                 return Component.objects.none()
-            return self.root_components().filter(query)
+            return (
+                Component.objects.filter(pk__in=latest_components_uuids)
+                .order_by("name")
+                .using("read_only")
+            )
         else:
             # Show only the older / non-latest components
-            if not query:
+            if not latest_components_uuids:
                 # No latest components to hide??
                 # So show everything / return unfiltered queryset
                 return self
-            return self.root_components().exclude(query)
+            return (
+                Component.objects.exclude(pk__in=latest_components_uuids)
+                .order_by("name")
+                .using("read_only")
+            )
 
     def released_components(self, include: bool = True) -> "ComponentQuerySet":
         """Show only released components by default, or unreleased components if include=False"""
@@ -1020,7 +1020,7 @@ class ComponentQuerySet(models.QuerySet):
         # Falsey values return the filtered queryset (only internal components)
         return self.filter(redhat_com_query)
 
-    def manifest_components(self, quick=False) -> "ComponentQuerySet":
+    def manifest_components(self, ofuri: str = "", quick=False) -> "ComponentQuerySet":
         """filter latest components takes a long time, dont bother with that if we're just
         checking there is anything to manifest"""
         non_container_source_components = self.exclude(name__endswith="-container-source").using(
@@ -1033,7 +1033,7 @@ class ComponentQuerySet(models.QuerySet):
         if quick:
             return roots
         else:
-            return roots.latest_components()
+            return roots.latest_components(ofuri)
 
     def srpms(self, include: bool = True) -> models.QuerySet["Component"]:
         """Show only source RPMs by default, or only non-SRPMs if include=False"""

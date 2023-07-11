@@ -15,6 +15,7 @@ addopts = """
 --durations=10
 --nomigrations
 --strict-config --strict-markers
+--migrations
 """
 markers = [
     "django_db",

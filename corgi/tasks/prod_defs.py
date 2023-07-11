@@ -315,45 +315,34 @@ def parse_variants_from_brew_tags(
                     product_variant.productstreams = product_stream
                     product_variant.save()
 
+                    changed_products = None
+                    changed_versions = None
                     if existing_product_name != product.name:
-                        slow_update_builds_for_variant.apply_async(
+                        changed_products = (
+                            product.name,
+                            existing_product_name,
+                        )
+                    if existing_version_name != product_version.name:
+                        changed_versions = (
+                            product_version.name,
+                            existing_version_name,
+                        )
+                    slow_update_builds_for_variant.apply_async(
+                        args=(
+                            # Variant name is always present
                             product_variant.name,
+                            # New and old stream names are always present
                             (
                                 product_stream.name,
                                 existing_stream_name,
                             ),
-                            (
-                                product_version.name,
-                                existing_version_name,
-                            ),
-                            (
-                                product.name,
-                                existing_product_name,
-                            ),
-                            countdown=300,
-                        )
-                    elif existing_version_name != product_version.name:
-                        slow_update_builds_for_variant.apply_async(
-                            product_variant.name,
-                            (
-                                product_stream.name,
-                                existing_stream_name,
-                            ),
-                            (
-                                product_version.name,
-                                existing_version_name,
-                            ),
-                            countdown=300,
-                        )
-                    else:
-                        slow_update_builds_for_variant.apply_async(
-                            product_variant.name,
-                            (
-                                product_stream.name,
-                                existing_stream_name,
-                            ),
-                            countdown=300,
-                        )
+                            # New and old version names might not be present
+                            changed_versions,
+                            # New and old product names might not be present
+                            changed_products,
+                        ),
+                        kwargs={"countdown": 300},
+                    )
 
 
 def parse_errata_info(

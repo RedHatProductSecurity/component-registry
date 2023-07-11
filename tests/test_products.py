@@ -371,15 +371,17 @@ def test_product_variant_index_out_of_range(mock_update_builds, requests_mock):
 
     assert mock_update_builds.call_args_list == [
         call(
-            "1",
-            ("stream", existing_stream.name),
-            ("version", existing_stream.productversions.name),
-            ("product", existing_stream.products.name),
-            countdown=300,
+            args=(
+                "1",
+                ("stream", existing_stream.name),
+                ("version", existing_stream.productversions.name),
+                ("product", existing_stream.products.name),
+            ),
+            kwargs={"countdown": 300},
         ),
         # Variant 1 and 2 are then moved from "stream" to the new_stream
-        call("1", ("new_stream", "stream"), countdown=300),
-        call("2", ("new_stream", "stream"), countdown=300),
+        call(args=("1", ("new_stream", "stream"), None, None), kwargs={"countdown": 300}),
+        call(args=("2", ("new_stream", "stream"), None, None), kwargs={"countdown": 300}),
     ]
 
     # Assert that "new_stream" was created after "stream"

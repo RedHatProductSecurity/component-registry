@@ -224,7 +224,7 @@ class ComponentNode(NodeModel):
         )
 
     def save(self, *args, **kwargs):
-        self.purl = self.obj.purl
+        self.purl = self.component.purl
         super().save(*args, **kwargs)
 
 
@@ -317,7 +317,7 @@ class SoftwareBuild(TimeStampedModel):
             # built at Red Hat, and therefore not assigned a build_id
             for cnode in component.cnodes.iterator():
                 for d in cnode.get_descendants().iterator():
-                    components.add(d.obj)
+                    components.add(d.component)
 
         for component in components:
             component.save_product_taxonomy(product_details)
@@ -1658,7 +1658,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             return roots
         for cnode in self.cnodes.db_manager(using).iterator():
             root = cnode.get_root()
-            if root.obj.type == Component.Type.CONTAINER_IMAGE:
+            if root.component.type == Component.Type.CONTAINER_IMAGE:
                 # TODO if we change the CONTAINER->RPM ComponentNode.type to something besides
                 # 'PROVIDES' we would check for that type here to prevent 'hardcoding' the
                 # container -> rpm relationship here.
@@ -1873,7 +1873,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
                 cnode.get_descendants()
                 .filter(type__in=type_list)
                 .using(using)
-                .values_list("object_id", flat=True)
+                .values_list("component_id", flat=True)
                 .iterator()
             )
         return provides_set
@@ -1902,9 +1902,9 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         return (
             ComponentNode.objects.filter(pk__in=provides_set)
             .using(using)
-            .values_list("purl", "type", "object_id")
+            .values_list("purl", "type", "component_id")
             # Ensure generated manifests only change when content does
-            .order_by("object_id")
+            .order_by("component_id")
             .distinct()
             .iterator()
         )
@@ -1924,7 +1924,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             sources_set.update(
                 cnode.get_ancestors(include_self=False)
                 .using(using)
-                .values_list("object_id", flat=True)
+                .values_list("component_id", flat=True)
                 .iterator()
             )
         return sources_set
@@ -1947,11 +1947,11 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             # Cachito builds nest components under the relevant source component for that
             # container build, eg. buildID=1911112. In that case we need to walk up the
             # tree from the current node to find its relevant source
-            root_obj = root.obj
+            root_component = root.component
             if (
-                root_obj
-                and root_obj.type == Component.Type.CONTAINER_IMAGE
-                and root_obj.arch == "noarch"
+                root_component
+                and root_component.type == Component.Type.CONTAINER_IMAGE
+                and root_component.arch == "noarch"
                 and source_descendants.count() > 1
             ):
                 upstreams.extend(
@@ -1970,7 +1970,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
     def get_upstreams_pks(self, using: str = "read_only") -> tuple[str, ...]:
         """Return only the primary keys from the set of all upstream nodes"""
-        linked_pks = set(str(node.object_id) for node in self.get_upstreams_nodes(using=using))
+        linked_pks = set(str(node.component_id) for node in self.get_upstreams_nodes(using=using))
         return tuple(linked_pks)
 
     def get_upstreams_purls(self, using: str = "read_only") -> set[str]:

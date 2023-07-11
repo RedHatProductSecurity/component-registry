@@ -320,28 +320,25 @@ def recursive_component_node_to_dict(
     node: ComponentNode, component_type: tuple[str, ...]
 ) -> taxonomy_dict_type:
     """Recursively build a dict of purls, links, and children for some ComponentNode"""
-    if not node.obj:
-        raise ValueError(f"Node {node} had no linked obj")
-
-    result = {}
+    result: taxonomy_dict_type = {}
     if node.type in component_type:
         result = {
             "purl": node.purl,
             "node_type": node.type,
-            "node_id": node.pk,
+            "node_id": str(node.pk),
             "obj_link": get_component_purl_link(node.purl),
-            "obj_uuid": node.object_id,
-            "namespace": node.obj.namespace,
-            "type": node.obj.type,
-            "name": node.obj.name,
-            "nvr": node.obj.nvr,
-            "release": node.obj.release,
-            "version": node.obj.version,
-            "arch": node.obj.arch,
+            "obj_uuid": str(node.component.pk),
+            "namespace": node.component.namespace,
+            "type": node.component.type,
+            "name": node.component.name,
+            "nvr": node.component.nvr,
+            "release": node.component.release,
+            "version": node.component.version,
+            "arch": node.component.arch,
         }
     children = tuple(
         recursive_component_node_to_dict(c, component_type)
-        for c in node.get_descendants().prefetch_related("obj").using("read_only")
+        for c in node.get_descendants().select_related("component").using("read_only")
     )
     if children:
         result["provides"] = children

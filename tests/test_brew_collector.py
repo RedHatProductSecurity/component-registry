@@ -1215,8 +1215,8 @@ def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, moc
     noarch_rpms = []
     for node in image_index.cnodes.get_queryset():
         for child in node.get_children():
-            if child.obj.type == Component.Type.RPM:
-                assert child.obj.arch == "noarch"
+            if child.component.type == Component.Type.RPM:
+                assert child.component.arch == "noarch"
                 noarch_rpms.append(child.purl)
     assert len(noarch_rpms) == len(NOARCH_RPM_IDS)
 
@@ -1224,10 +1224,10 @@ def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, moc
     for node in image_index.cnodes.get_queryset():
         for child in node.get_children():
             arch_specific_rpms = []
-            if child.obj.type == Component.Type.CONTAINER_IMAGE:
+            if child.component.type == Component.Type.CONTAINER_IMAGE:
                 child_containers.append(child.purl)
                 for grandchild in child.get_children():
-                    assert grandchild.obj.type == Component.Type.RPM
+                    assert grandchild.component.type == Component.Type.RPM
                     arch_specific_rpms.append(grandchild.purl)
                 assert len(arch_specific_rpms) == NO_RPMS_IN_SUBCTL_CONTAINER - len(NOARCH_RPM_IDS)
     assert len(child_containers) == 3

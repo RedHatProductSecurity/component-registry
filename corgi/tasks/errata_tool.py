@@ -108,12 +108,12 @@ def slow_load_errata(erratum_name: str, force_process: bool = False) -> None:
             # We set save_product argument to False because it reads from the
             # ProductComponentRelations table which this function writes to. We've seen contention
             # on this database table causes by recursive looping of this task, and the
-            # slow_fetch_brew_build task, eg CORGI-21. We call save_product_taxonomy from
+            # slow_fetch_modular_build task, eg CORGI-21. We call save_product_taxonomy from
             # this task only after all the builds in the errata have been loaded instead.
-            logger.info("Calling slow_fetch_brew_build for %s", build_id)
+            logger.info("Calling slow_fetch_modular_build for %s", build_id)
             app.send_task(
-                "corgi.tasks.brew.slow_fetch_brew_build",
-                args=(build_id, build_type),
+                "corgi.tasks.brew.slow_fetch_modular_build",
+                args=(build_id,),
                 # Do not pass force_process through to child tasks
                 # Or Celery will get stuck in an infinite loop
                 # processing the same Brew builds / errata repeatedly

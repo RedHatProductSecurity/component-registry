@@ -169,7 +169,9 @@ def slow_fetch_brew_build(
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def slow_fetch_modular_build(build_id: str, force_process: bool = False) -> None:
+def slow_fetch_modular_build(
+    build_id: str, save_product: bool = True, force_process: bool = False
+) -> None:
     logger.info("Fetch modular build called with build id: %s", build_id)
     rhel_module_data = Brew.fetch_rhel_module(build_id)
     # Some compose build_ids in the relations table will be for SRPMs, skip those here
@@ -205,7 +207,7 @@ def slow_fetch_modular_build(build_id: str, force_process: bool = False) -> None
         if "brew_build_id" in c:
             slow_fetch_brew_build.delay(c["brew_build_id"])
         save_component(c, node)
-    slow_fetch_brew_build.delay(build_id, force_process=force_process)
+    slow_fetch_brew_build.delay(build_id, save_product=save_product, force_process=force_process)
     logger.info("Finished fetching modular build: %s", build_id)
 
 

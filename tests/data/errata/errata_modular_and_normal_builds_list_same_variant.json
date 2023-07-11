@@ -1,0 +1,55 @@
+{
+  "CERTSYS-10.4-RHEL-8": {
+    "name": "CERTSYS-10.4-RHEL-8",
+    "description": "Red Hat Certificate System 10.4 for RHEL-8",
+    "builds": [
+      {
+        "redhat-pki-10-8060020220420152504.07fb4edf": {
+          "nvr": "redhat-pki-10-8060020220420152504.07fb4edf",
+          "nevr": "redhat-pki-0:10-8060020220420152504.07fb4edf",
+          "id": 1979262,
+          "is_module": true,
+          "variant_arch": {
+            "8Base-CertSys-10.4": {
+              "noarch": [
+                "idm-console-framework-1.3.0-1.module+el8pki+14677+1ef79a68.noarch.rpm",
+                "ldapjdk-4.23.0-1.module+el8pki+14677+1ef79a68.noarch.rpm",
+                "python3-redhat-pki-10.13.0-2.module+el8pki+14894+cc476c07.noarch.rpm",
+                "tomcatjss-7.7.2-1.module+el8pki+14677+1ef79a68.noarch.rpm"
+              ],
+              "SRPMS": [
+                "idm-console-framework-1.3.0-1.module+el8pki+14677+1ef79a68.src.rpm",
+                "jss-4.9.2-1.module+el8pki+14677+1ef79a68.src.rpm",
+                "ldapjdk-4.23.0-1.module+el8pki+14677+1ef79a68.src.rpm",
+                "redhat-pki-10.13.0-2.module+el8pki+14894+cc476c07.src.rpm",
+                "tomcatjss-7.7.2-1.module+el8pki+14677+1ef79a68.src.rpm"
+              ],
+              "x86_64": [
+                "jss-4.9.2-1.module+el8pki+14677+1ef79a68.x86_64.rpm",
+                "redhat-pki-10.13.0-2.module+el8pki+14894+cc476c07.x86_64.rpm"
+              ]
+            }
+          }
+        }
+      },
+      {
+          "polkit-0.112-18.el7_6.3": {
+            "nvr": "polkit-0.112-18.el7_6.3",
+            "nevr": "polkit-0:0.112-18.el7_6.3",
+            "id": 1848203,
+            "is_module": false,
+            "variant_arch": {
+              "8Base-CertSys-10.4": {
+                "SRPMS": [
+                  "polkit-0.112-18.el7_6.3.src.rpm"
+                ],
+                "x86_64": [
+                  "polkit-0.112-18.el7_6.3.x86_64.rpm"
+                ]
+              }
+            }
+          }
+        }
+    ]
+  }
+}

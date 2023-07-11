@@ -1,9 +1,12 @@
+from collections import defaultdict
 from unittest.mock import patch
 
 import pytest
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 
+from corgi.collectors.brew import Brew
+from corgi.collectors.errata_tool import ErrataTool
 from corgi.collectors.models import (
     CollectorErrataProduct,
     CollectorErrataProductVariant,
@@ -235,3 +238,157 @@ def test_slow_save_errata_product_taxonomy(mock_build_save):
     )
     slow_save_errata_product_taxonomy(1)
     assert mock_build_save.called
+
+
+@patch("corgi.collectors.brew.Brew.persist_modules")
+def test_parse_modular_builds(mock_persist_modules):
+    # Modified modular build from Errata api/v1/erratum/92462/builds_list.json
+    modular_build = {
+        "8Base-CertSys-10.4": {
+            "noarch": ["redhat-pki-base-10.13.0-2.module+el8pki+14894+cc476c07.noarch.rpm"],
+            "SRPMS": ["redhat-pki-10.13.0-2.module+el8pki+14894+cc476c07.src.rpm"],
+            "x86_64": ["redhat-pki-10.13.0-2.module+el8pki+14894+cc476c07.x86_64.rpm"],
+        }
+    }
+    build_id = "1979262"
+    et = ErrataTool()
+    results = defaultdict(list)
+    mock_persist_modules.return_value = [build_id]
+    et._parse_module(
+        "redhat-pki-10-8060020220420152504.07fb4edf", modular_build, Brew("BREW"), results
+    )
+    assert mock_persist_modules.called_with(
+        {
+            "redhat-pki-10-8060020220420152504.07fb4edf": [
+                "redhat-pki-base-10.13.0-2.module+el8pki+14894+cc476c07.noarch.rpm",
+                "redhat-pki-10.13.0-2.module+el8pki+14894+cc476c07.x86_64.rpm",
+            ]
+        }
+    )
+    expected = defaultdict(list)
+    expected["8Base-CertSys-10.4"].append(
+        {
+            build_id: [
+                "redhat-pki-base-10.13.0-2.module+el8pki+14894+cc476c07.noarch",
+                "redhat-pki-10.13.0-2.module+el8pki+14894+cc476c07.x86_64",
+            ]
+        }
+    )
+    assert results == expected
+
+
+@patch("corgi.collectors.brew.Brew.persist_modules")
+def test_parse_module_errata_components(mock_persist_modules, requests_mock):
+    erratum_id = 92462
+    build_id = "1979262"
+    mock_persist_modules.return_value = [build_id]
+    with open("tests/data/errata/errata_modular_builds_list.json", "r") as remote_source_data:
+        requests_mock.get(
+            f"{settings.ERRATA_TOOL_URL}/api/v1/erratum/{erratum_id}/builds_list.json",
+            text=remote_source_data.read(),
+        )
+    results = ErrataTool().get_erratum_components(erratum_id)
+    assert "8Base-CertSys-10.4" in results.keys()
+    assert build_id in results["8Base-CertSys-10.4"][0]
+
+
+@patch("corgi.collectors.brew.Brew.persist_modules")
+def test_parse_module_and_normal_errata_components(mock_persist_modules, requests_mock):
+    erratum_id = "92462"
+    build_id = 1979262
+    mock_persist_modules.return_value = [build_id]
+    with open(
+        "tests/data/errata/errata_modular_and_normal_builds_list.json", "r"
+    ) as remote_source_data:
+        requests_mock.get(
+            f"{settings.ERRATA_TOOL_URL}/api/v1/erratum/{erratum_id}/builds_list.json",
+            text=remote_source_data.read(),
+        )
+    results = ErrataTool().get_erratum_components(erratum_id)
+    assert "8Base-CertSys-10.4" in results.keys()
+    expected_certsys_104_results = {
+        build_id: [
+            "idm-console-framework-1.3.0-1.module+el8pki+14677+1ef79a68.noarch",
+            "ldapjdk-4.23.0-1.module+el8pki+14677+1ef79a68.noarch",
+            "python3-redhat-pki-10.13.0-2.module+el8pki+14894+cc476c07.noarch",
+            "tomcatjss-7.7.2-1.module+el8pki+14677+1ef79a68.noarch",
+            "jss-4.9.2-1.module+el8pki+14677+1ef79a68.x86_64",
+            "redhat-pki-10.13.0-2.module+el8pki+14894+cc476c07.x86_64",
+        ]
+    }
+    assert [expected_certsys_104_results] == results["8Base-CertSys-10.4"]
+    assert "7Server-7.6.AUS" in results.keys()
+    assert [
+        {1848203: ["polkit-0.112-18.el7_6.3.src.rpm", "polkit-0.112-18.el7_6.3.x86_64.rpm"]}
+    ] == results["7Server-7.6.AUS"]
+
+
+@patch("corgi.collectors.brew.Brew.persist_modules")
+def test_parse_module_and_normal_errata_components_same_variant(
+    mock_persist_modules, requests_mock
+):
+    erratum_id = "92462"
+    build_id = 1979262
+    mock_persist_modules.return_value = [build_id]
+    with open(
+        "tests/data/errata/errata_modular_and_normal_builds_list_same_variant.json", "r"
+    ) as remote_source_data:
+        requests_mock.get(
+            f"{settings.ERRATA_TOOL_URL}/api/v1/erratum/{erratum_id}/builds_list.json",
+            text=remote_source_data.read(),
+        )
+    results = ErrataTool().get_erratum_components(erratum_id)
+    assert "8Base-CertSys-10.4" in results.keys()
+    expected_certsys_104_results = {
+        build_id: [
+            "idm-console-framework-1.3.0-1.module+el8pki+14677+1ef79a68.noarch",
+            "ldapjdk-4.23.0-1.module+el8pki+14677+1ef79a68.noarch",
+            "python3-redhat-pki-10.13.0-2.module+el8pki+14894+cc476c07.noarch",
+            "tomcatjss-7.7.2-1.module+el8pki+14677+1ef79a68.noarch",
+            "jss-4.9.2-1.module+el8pki+14677+1ef79a68.x86_64",
+            "redhat-pki-10.13.0-2.module+el8pki+14894+cc476c07.x86_64",
+        ]
+    }
+    assert expected_certsys_104_results in results["8Base-CertSys-10.4"]
+    assert {
+        1848203: ["polkit-0.112-18.el7_6.3.src.rpm", "polkit-0.112-18.el7_6.3.x86_64.rpm"]
+    } in results["8Base-CertSys-10.4"]
+
+
+@patch("corgi.collectors.brew.Brew.persist_modules")
+def test_parse_module_and_normal_errata_components_mixed_variants(
+    mock_persist_modules, requests_mock
+):
+    erratum_id = "92462"
+    build_id = 1979262
+    mock_persist_modules.return_value = [build_id]
+    with open(
+        "tests/data/errata/errata_modular_and_normal_builds_list_mixed_variants.json", "r"
+    ) as remote_source_data:
+        requests_mock.get(
+            f"{settings.ERRATA_TOOL_URL}/api/v1/erratum/{erratum_id}/builds_list.json",
+            text=remote_source_data.read(),
+        )
+    results = ErrataTool().get_erratum_components(erratum_id)
+    assert mock_persist_modules.call_count == 2
+    assert "8Base-CertSys-10.4" in results.keys()
+    expected_certsys_104_results = {
+        build_id: [
+            "idm-console-framework-1.3.0-1.module+el8pki+14677+1ef79a68.noarch",
+            "ldapjdk-4.23.0-1.module+el8pki+14677+1ef79a68.noarch",
+            "tomcatjss-7.7.2-1.module+el8pki+14677+1ef79a68.noarch",
+            "jss-4.9.2-1.module+el8pki+14677+1ef79a68.x86_64",
+        ]
+    }
+    assert expected_certsys_104_results in results["8Base-CertSys-10.4"]
+    assert "7Server-7.6.AUS" in results.keys()
+    assert {
+        1848203: ["polkit-0.112-18.el7_6.3.src.rpm", "polkit-0.112-18.el7_6.3.x86_64.rpm"]
+    } in results["7Server-7.6.AUS"]
+    expected_7server_76_aus_results = {
+        build_id: [
+            "python3-redhat-pki-10.13.0-2.module+el8pki+14894+cc476c07.noarch",
+            "redhat-pki-10.13.0-2.module+el8pki+14894+cc476c07.x86_64",
+        ]
+    }
+    assert expected_7server_76_aus_results in results["7Server-7.6.AUS"]

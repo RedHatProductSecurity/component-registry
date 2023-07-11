@@ -113,7 +113,7 @@ def test_displaying_pregenerated_manifest() -> None:
 def generate_manifest_with_many_components() -> dict:
     """Helper method for timeit to generate a manifest with many components"""
     large_component_purl = (
-        "pkg:oci/redhat/ubi9-container"
+        "pkg:oci/ubi9-container"
         "@sha256:276b287ff6143f807342296908cc4ae09bfd584d66ba35dab5efc726b7be097b"
         "?repository_url=registry.redhat.io/ubi9&tag=9.1.0-1822"
     )

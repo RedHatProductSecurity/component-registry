@@ -341,7 +341,8 @@ def parse_variants_from_brew_tags(
                             # New and old product names might not be present
                             changed_products,
                         ),
-                        kwargs={"countdown": 300},
+                        # kwarg for Celery, not the task
+                        countdown=300,
                     )
 
 

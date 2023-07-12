@@ -87,7 +87,7 @@ class Command(BaseCommand):
                                             f"Found variant {variant} in {erratum['id']}"
                                         )
                                     )
-                                    all_errata.add(erratum["id"])
+                                    all_errata.add(str(erratum["id"]))
 
             for erratum in all_errata:
                 self.stdout.write(self.style.SUCCESS(f"Loading erratum: {erratum}"))

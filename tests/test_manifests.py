@@ -82,7 +82,6 @@ def test_manifests_exclude_bad_golang_components():
     ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=containers[0].cnodes.first(),
-        purl=bad_golang.purl,
         obj=bad_golang,
     )
     # Link the bad_golang component to its parent container
@@ -409,24 +408,21 @@ def setup_products_and_components_upstreams():
         software_build=other_build, type=Component.Type.CONTAINER_IMAGE, arch="noarch"
     )
     cnode = ComponentNode.objects.create(
-        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=component.purl, obj=component
+        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, obj=component
     )
     other_cnode = ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
-        purl=other_component.purl,
         obj=other_component,
     )
     ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=cnode,
-        purl=upstream.purl,
         obj=upstream,
     )
     ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=other_cnode,
-        purl=upstream.purl,
         obj=upstream,
     )
     # Link the components to each other
@@ -473,18 +469,16 @@ def setup_products_and_components_provides(released=True, internal_component=Fal
         software_build=build,
     )
     cnode = ComponentNode.objects.create(
-        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=component.purl, obj=component
+        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, obj=component
     )
     ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=cnode,
-        purl=provided.purl,
         obj=provided,
     )
     ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.PROVIDES_DEV,
         parent=cnode,
-        purl=dev_provided.purl,
         obj=dev_provided,
     )
     # Link the components to each other
@@ -536,12 +530,11 @@ def _build_rpm_in_containers(rpm_in_container, name=""):
             software_build=build,
         )
     cnode = ComponentNode.objects.create(
-        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, purl=container.purl, obj=container
+        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, obj=container
     )
     ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=cnode,
-        purl=rpm_in_container.purl,
         obj=rpm_in_container,
     )
     # Link the components to each other

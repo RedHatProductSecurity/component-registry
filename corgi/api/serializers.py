@@ -732,7 +732,7 @@ class ComponentProductStreamSummarySerializer(ProductModelSerializer):
 
     @staticmethod
     def get_component_link(instance: Component) -> str:
-        return get_component_purl_link(instance.component_purl)  # type: ignore
+        return get_component_purl_link(instance.component_purl)  # type: ignore[attr-defined]
 
     class Meta(ProductModelSerializer.Meta):
         model = ProductStream

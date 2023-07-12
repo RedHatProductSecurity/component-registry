@@ -202,7 +202,7 @@ def parse_variants_from_brew_tags(
                     et_pv.name,
                     brew_tag,
                 )
-                for et_variant in et_pv.variants.all():
+                for et_variant in et_pv.variants.get_queryset():
                     logger.info(
                         "Assigning Variant %s to product stream %s",
                         et_variant.name,

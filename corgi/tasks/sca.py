@@ -122,7 +122,6 @@ def save_component(
         parent=parent,
         purl=obj.purl,
         defaults={
-            "object_id": obj.pk,
             "obj": obj,
         },
     )

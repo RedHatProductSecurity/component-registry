@@ -352,7 +352,7 @@ def get_component_taxonomy(
     obj: Component, component_types: tuple[str, ...]
 ) -> tuple[taxonomy_dict_type, ...]:
     """Look up and return the taxonomy for a particular Component."""
-    root_nodes = cache_tree_children(obj.cnodes.get_queryset().all().using("read_only"))
+    root_nodes = cache_tree_children(obj.cnodes.get_queryset().using("read_only"))
     dicts = tuple(
         recursive_component_node_to_dict(
             node,
@@ -603,10 +603,8 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
                     .filter(name=component_name)
                     .prefetch_related("productstreams")
                 ):
-                    annotated_ps_qs = (
-                        c.productstreams.get_queryset()
-                        .annotate(component_purl=Value(c.purl))
-                        .using("read_only")
+                    annotated_ps_qs = c.productstreams.annotate(component_purl=Value(c.purl)).using(
+                        "read_only"
                     )
                     product_streams_arr.append(annotated_ps_qs)
 

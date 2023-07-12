@@ -260,7 +260,6 @@ def test_slow_delete_brew_builds():
     srpm_node = ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
-        purl=source_rpm.purl,
         obj=source_rpm,
     )
     source_rpm.save_component_taxonomy()
@@ -280,7 +279,6 @@ def test_slow_delete_brew_builds():
     ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=srpm_node,
-        purl=unshipped_upstream.purl,
         obj=unshipped_upstream,
     )
     unshipped_upstream.save_component_taxonomy()
@@ -290,7 +288,6 @@ def test_slow_delete_brew_builds():
     oci_node = ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
-        purl=index_container.purl,
         obj=index_container,
     )
     index_container.save_component_taxonomy()
@@ -312,13 +309,11 @@ def test_slow_delete_brew_builds():
     ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=srpm_node,
-        purl=shipped_upstream.purl,
         obj=shipped_upstream,
     )
     ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=oci_node,
-        purl=shipped_upstream.purl,
         obj=shipped_upstream,
     )
     shipped_upstream.save_component_taxonomy()
@@ -338,7 +333,6 @@ def test_slow_delete_brew_builds():
     unshipped_binary_rpm_node = ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=srpm_node,
-        purl=unshipped_binary_rpm.purl,
         obj=unshipped_binary_rpm,
     )
     unshipped_binary_rpm.save_component_taxonomy()
@@ -352,7 +346,6 @@ def test_slow_delete_brew_builds():
     ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=unshipped_binary_rpm_node,
-        purl=unshipped_bundled_gem.purl,
         obj=unshipped_bundled_gem,
     )
     unshipped_bundled_gem.save_component_taxonomy()
@@ -372,13 +365,11 @@ def test_slow_delete_brew_builds():
     ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=srpm_node,
-        purl=shipped_binary_rpm.purl,
         obj=shipped_binary_rpm,
     )
     ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=oci_node,
-        purl=shipped_binary_rpm.purl,
         obj=shipped_binary_rpm,
     )
     shipped_binary_rpm.save_component_taxonomy()

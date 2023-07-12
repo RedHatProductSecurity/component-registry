@@ -543,20 +543,18 @@ def test_component_detail_dev(client, api_path):
         namespace=Component.Namespace.UPSTREAM,
         related_url="https://example.org/related",
     )
-    upstream_node, _ = ComponentNode.objects.get_or_create(
+    upstream_node = ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
-        purl=upstream.purl,
-        defaults={"obj": upstream},
+        obj=upstream,
     )
     dev_comp = ComponentFactory(
         name="dev", type=Component.Type.NPM, namespace=Component.Namespace.REDHAT
     )
-    ComponentNode.objects.get_or_create(
+    ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.PROVIDES_DEV,
         parent=upstream_node,
-        purl=dev_comp.purl,
-        defaults={"obj": dev_comp},
+        obj=dev_comp,
     )
 
     upstream.save_component_taxonomy()
@@ -1121,11 +1119,10 @@ def test_oci_component_provides_sources_upstreams(client, api_path):
         namespace=Component.Namespace.REDHAT,
         related_url="https://example.org/related",
     )
-    root_node, _ = ComponentNode.objects.get_or_create(
+    root_node = ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
-        purl=root_comp.purl,
-        defaults={"obj": root_comp},
+        obj=root_comp,
     )
 
     # create upstream child node
@@ -1135,11 +1132,10 @@ def test_oci_component_provides_sources_upstreams(client, api_path):
         namespace=Component.Namespace.UPSTREAM,
         related_url="https://example.org/related",
     )
-    ComponentNode.objects.get_or_create(
+    ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=root_node,
-        purl=upstream_comp.purl,
-        defaults={"obj": upstream_comp},
+        obj=upstream_comp,
     )
 
     # create dep component
@@ -1150,11 +1146,10 @@ def test_oci_component_provides_sources_upstreams(client, api_path):
         namespace=Component.Namespace.REDHAT,
     )
     # make it a child of root OCI component
-    dep_provide_node, _ = ComponentNode.objects.get_or_create(
+    dep_provide_node = ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=root_node,
-        purl=dep_comp.purl,
-        defaults={"obj": dep_comp},
+        obj=dep_comp,
     )
     # create 2nd level dep
     dep2_comp = ComponentFactory(
@@ -1164,11 +1159,10 @@ def test_oci_component_provides_sources_upstreams(client, api_path):
         namespace=Component.Namespace.REDHAT,
     )
     # making it a child node of dep1_component
-    ComponentNode.objects.get_or_create(
+    ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=dep_provide_node,
-        purl=dep2_comp.purl,
-        defaults={"obj": dep2_comp},
+        obj=dep2_comp,
     )
 
     # TODO - investigate if invoking any of the following in any order is stable
@@ -1326,11 +1320,10 @@ def test_srpm_component_provides_sources_upstreams(client, api_path):
         namespace=Component.Namespace.REDHAT,
         related_url="https://example.org/related",
     )
-    root_node, _ = ComponentNode.objects.get_or_create(
+    root_node = ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
-        purl=root_comp.purl,
-        defaults={"obj": root_comp},
+        obj=root_comp,
     )
 
     # create upstream child node
@@ -1340,11 +1333,10 @@ def test_srpm_component_provides_sources_upstreams(client, api_path):
         namespace=Component.Namespace.UPSTREAM,
         related_url="https://example.org/related",
     )
-    ComponentNode.objects.get_or_create(
+    ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=root_node,
-        purl=upstream_comp.purl,
-        defaults={"obj": upstream_comp},
+        obj=upstream_comp,
     )
     # create dep component
     dep_comp = ComponentFactory(
@@ -1354,11 +1346,10 @@ def test_srpm_component_provides_sources_upstreams(client, api_path):
         namespace=Component.Namespace.REDHAT,
     )
     # make it a child of root OCI component
-    dep_provide_node, _ = ComponentNode.objects.get_or_create(
+    ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=root_node,
-        purl=dep_comp.purl,
-        defaults={"obj": dep_comp},
+        obj=dep_comp,
     )
 
     # TODO - investigate if invoking any of the following in any order is stable

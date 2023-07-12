@@ -67,14 +67,6 @@ class NodeModel(MPTTModel, TimeStampedModel):
             models.Index(fields=("content_type", "object_id")),
         )
 
-    @property
-    def name(self):
-        return self.obj.name
-
-    @property
-    def desc(self):
-        return self.obj.description
-
 
 class ProductNode(NodeModel):
     """Product taxonomy node."""
@@ -316,11 +308,11 @@ class SoftwareBuild(TimeStampedModel):
 
         product_details = get_product_details(variant_names, stream_names)
         components = set()
-        for component in self.components.get_queryset().iterator():
+        for component in self.components.iterator():
             components.add(component)
             # This is needed for container image builds which pull in components not
             # built at Red Hat, and therefore not assigned a build_id
-            for cnode in component.cnodes.get_queryset().iterator():
+            for cnode in component.cnodes.iterator():
                 for d in cnode.get_descendants().iterator():
                     components.add(d.obj)
 
@@ -1536,7 +1528,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     @property
     def provides_queryset(self, using: str = "read_only") -> Iterator["Component"]:
         """Return the "provides" queryset using the read-only DB, for use in templates"""
-        return self.provides.get_queryset().using(using).iterator()
+        return self.provides.db_manager(using).iterator()
 
     def is_srpm(self):
         return self.type == Component.Type.RPM and self.arch == "src"
@@ -1664,7 +1656,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         # for functions other than get_upstreams we might need to revisit this check
         if not self.software_build:
             return roots
-        for cnode in self.cnodes.get_queryset().using(using).iterator():
+        for cnode in self.cnodes.db_manager(using).iterator():
             root = cnode.get_root()
             if root.obj.type == Component.Type.CONTAINER_IMAGE:
                 # TODO if we change the CONTAINER->RPM ComponentNode.type to something besides
@@ -1875,7 +1867,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         )
         if include_dev:
             type_list = ComponentNode.PROVIDES_NODE_TYPES
-        for cnode in self.cnodes.get_queryset().iterator():
+        for cnode in self.cnodes.iterator():
             provides_set.update(
                 cnode.get_descendants()
                 .filter(type__in=type_list)
@@ -1889,7 +1881,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         self, include_dev: bool = True, using: str = "read_only"
     ) -> QuerySet[ComponentNode]:
         """return a QuerySet of descendants with PROVIDES ComponentNode type"""
-        # Used in manifests. Returns a QuerySet of (node type, linked component UUID)
+        # Used in manifests. Returns a QuerySet of (node_purl, node type, linked component UUID)
         type_list: tuple[ComponentNode.ComponentNodeType, ...] = (
             ComponentNode.ComponentNodeType.PROVIDES,
         )
@@ -1897,7 +1889,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             type_list = ComponentNode.PROVIDES_NODE_TYPES
 
         provides_set = set()
-        for cnode in self.cnodes.get_queryset().iterator():
+        for cnode in self.cnodes.iterator():
             provides_set.update(
                 cnode.get_descendants()
                 .filter(type__in=type_list)

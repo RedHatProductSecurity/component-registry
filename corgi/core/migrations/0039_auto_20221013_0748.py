@@ -8,7 +8,7 @@ from django.utils.timezone import make_aware
 
 def set_software_build_completion_time(apps, schema_editor):
     SoftwareBuild = apps.get_model("core", "SoftwareBuild")
-    for sb in SoftwareBuild.objects.all().iterator():
+    for sb in SoftwareBuild.objects.iterator():
         sb.completion_time = make_aware(
             dateparse.parse_datetime(sb.meta_attr["completion_time"].split(".")[0])
         )

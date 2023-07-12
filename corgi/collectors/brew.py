@@ -1181,7 +1181,7 @@ class Brew:
         }
         nested_builds: set[int] = set()
         rpm_components: list[dict] = []
-        for rpm in rhel_module.collectorrpm_set.all():
+        for rpm in rhel_module.collectorrpm_set.get_queryset():
             srpm_build_id = rpm.srpm.build_id
             nested_builds.add(srpm_build_id)
             name, version, release = Brew.split_nvr(rpm.nvra)

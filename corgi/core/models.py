@@ -586,6 +586,8 @@ class ProductStream(ProductModel):
     active = models.BooleanField(default=False)
     et_product_versions = fields.ArrayField(models.CharField(max_length=200), default=list)
 
+    exclude_components = fields.ArrayField(models.CharField(max_length=200), default=list)
+
     products = models.ForeignKey("Product", on_delete=models.CASCADE, related_name="productstreams")
     productversions = models.ForeignKey(
         "ProductVersion",

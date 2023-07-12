@@ -1871,6 +1871,12 @@ components:
             type: string
             maxLength: 200
           readOnly: true
+        exclude_components:
+          type: array
+          items:
+            type: string
+            maxLength: 200
+          readOnly: true
         manifest:
           type: string
           readOnly: true
@@ -1913,6 +1919,7 @@ components:
       - cpe
       - description
       - et_product_versions
+      - exclude_components
       - link
       - manifest
       - name

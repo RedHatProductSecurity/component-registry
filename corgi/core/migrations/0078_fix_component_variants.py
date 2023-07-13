@@ -2,18 +2,28 @@
 
 from django.db import migrations
 
+# Non-historical model, i.e. if you change save_product_taxonomy() tomorrow
+# the migration will not run the same code as before (at the time the migration was written)
+from corgi.core.models import SoftwareBuild as CurrentSBModel
+
 
 def fix_variant_component_links(apps, schema_editor):
     """Clear and reprocess all Variant-Component links for Variant-type relations"""
-    SoftwareBuild = apps.get_model("core", "SoftwareBuild")
+    Component = apps.get_model("core", "Component")
+    ProductComponentRelation = apps.get_model("core", "ProductComponentRelation")
 
     # ERRATA relations are the only Variant-type relation
     # after we removed CDN_REPO relations in migration #0074
     # We still need to clear links created by old code
     # See commit history or CORGI-566 for details
-    for build in SoftwareBuild.objects.filter(relations__type="ERRATA").iterator():
-        # Fix all components on builds that have Variant-type relations
-        for root_component in build.components.iterator():
+    for build_pk in (
+        ProductComponentRelation.objects.filter(type="ERRATA", software_build_id__isnull=False)
+        .values_list("software_build_id", flat=True)
+        .distinct()
+        .iterator()
+    ):
+        # Fix all components on builds that have ERRATA relations
+        for root_component in Component.objects.filter(software_build_id=build_pk).iterator():
             # Fix the root components linked directly to this build
             # Clear the Variant / Channel links since they're wrong
             # We only append to links when saving taxonomies
@@ -47,7 +57,9 @@ def fix_variant_component_links(apps, schema_editor):
                 upstream_component.products.clear()
 
         # Add the correct Component-Variant links on all Components in this build
-        build.save_product_taxonomy()
+        # using the current model because we need to call save_product_taxonomy()
+        # but apps.get_model() doesn't let us run custom code
+        CurrentSBModel.objects.get(uuid=build_pk).save_product_taxonomy()
 
 
 class Migration(migrations.Migration):

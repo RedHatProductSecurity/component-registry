@@ -179,6 +179,7 @@ def parse_product_stream(
     yum_repos = pd_product_stream.pop("yum_repositories", [])
     composes = pd_product_stream.pop("composes", [])
     brew_tags_dict = {brew_tag["tag"]: brew_tag["inherit"] for brew_tag in brew_tags}
+    exclude_components = pd_product_stream.pop("exclude_components", [])
     composes_dict = {}
     for compose in composes:
         composes_dict[compose["url"]] = compose["variants"]
@@ -198,6 +199,7 @@ def parse_product_stream(
             "meta_attr": pd_product_stream,
             "yum_repositories": yum_repos,
             "composes": composes_dict,
+            "exclude_components": exclude_components,
         },
     )
     product_stream_node, _ = ProductNode.objects.get_or_create(

@@ -681,6 +681,7 @@ class ProductStreamSerializer(ProductModelSerializer):
             "yum_repositories",
             "composes",
             "et_product_versions",
+            "exclude_components",
             "manifest",
             "relations",
             "products",

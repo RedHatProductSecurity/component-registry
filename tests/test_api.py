@@ -1457,3 +1457,14 @@ def test_srpm_component_provides_sources_upstreams(client, api_path):
     for provide in response.json()["sources"]:
         assert "name" in provide
         assert "purl" in provide
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_product_streams_exclude_components(client, api_path):
+    stream = ProductStreamFactory(
+        name="rhel-7", version="7", exclude_components=["starfish", "seahorse"]
+    )
+    response = client.get(f"{api_path}/product_streams?ofuri={stream.ofuri}")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["exclude_components"] == ["starfish", "seahorse"]

@@ -111,21 +111,3 @@ def test_skip_brew_tag_linking_for_buggy_products(requests_mock):
     assert len(sat_610_variants) == 2
     for variant in sat_610_variants:
         assert variant.name in ("7Server-Capsule610", "7Server-Satellite610")
-
-
-def _create_builds_and_components(stream):
-    stream_build = SoftwareBuildFactory()
-    stream_component = ComponentFactory(software_build=stream_build)
-    stream_component_node = ComponentNode.objects.create(
-        parent=None, obj=stream_component, type=ComponentNode.ComponentNodeType.SOURCE
-    )
-    stream_child_component = ComponentFactory()
-    ComponentNode.objects.create(
-        parent=stream_component_node,
-        obj=stream_child_component,
-        type=ComponentNode.ComponentNodeType.PROVIDES,
-    )
-    stream_component.productstreams.add(stream)
-    stream_component.productversions.add(stream.productversions)
-    stream_component.products.add(stream.products)
-    return stream_build, stream_component, stream_child_component

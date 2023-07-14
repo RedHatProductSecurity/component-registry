@@ -1048,7 +1048,8 @@ def test_get_component_data_handles_errors():
             # empty dict means no data, should raise BrewBuildNotFound
             {},
             # DELETED builds should trigger the slow_delete_brew_build task
-            {"id": mock_build_id, "state": koji.BUILD_STATES["DELETED"]},
+            # Disabled due to DB performance issues - see notes in task
+            # {"id": mock_build_id, "state": koji.BUILD_STATES["DELETED"]},
             # Other build states should raise BrewBuildInvalidState
             {"id": mock_build_id, "state": koji.BUILD_STATES["FAILED"]},
             # COMPLETED builds with excluded names should be skipped
@@ -1058,12 +1059,13 @@ def test_get_component_data_handles_errors():
     with pytest.raises(BrewBuildNotFound):
         brew.get_component_data(mock_build_id)
 
-    with patch("corgi.collectors.brew.app") as mock_app:
-        brew.get_component_data(mock_build_id)
-        mock_app.send_task.assert_called_once_with(
-            "corgi.tasks.brew.slow_delete_brew_build",
-            args=(mock_build_id, koji.BUILD_STATES["DELETED"]),
-        )
+    # Disabled due to DB performance issues - see notes in task
+    # with patch("corgi.collectors.brew.app") as mock_app:
+    #     brew.get_component_data(mock_build_id)
+    #     mock_app.send_task.assert_called_once_with(
+    #         "corgi.tasks.brew.slow_delete_brew_build",
+    #         args=(mock_build_id, koji.BUILD_STATES["DELETED"]),
+    #     )
 
     with pytest.raises(BrewBuildInvalidState):
         brew.get_component_data(mock_build_id)

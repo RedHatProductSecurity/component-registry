@@ -49,7 +49,8 @@ class BrewUMBHandler(UMBHandler):
     def __init__(self) -> None:
         addresses: dict[str, Callable[[Event], bool]] = {
             f"{VIRTUAL_TOPIC_PREFIX}.brew.build.complete": BrewUMBHandler.handle_builds,
-            f"{VIRTUAL_TOPIC_PREFIX}.brew.build.deleted": BrewUMBHandler.handle_deleted_builds,
+            # Disabled due to DB performance issues - see notes in task
+            # f"{VIRTUAL_TOPIC_PREFIX}.brew.build.deleted": BrewUMBHandler.handle_deleted_builds,
             f"{VIRTUAL_TOPIC_PREFIX}.brew.build.tag": BrewUMBHandler.handle_tags,
             f"{VIRTUAL_TOPIC_PREFIX}.brew.build.untag": BrewUMBHandler.handle_tags,
             f"{VIRTUAL_TOPIC_PREFIX}.errata.activity.status": BrewUMBHandler.handle_shipped_errata,

@@ -712,6 +712,10 @@ def slow_refresh_brew_build_tags(build_id: int) -> None:
 )
 def slow_delete_brew_build(build_id: int, build_state: int) -> int:
     """Delete a Brew build (and its relations) in Corgi when it's deleted in Brew"""
+    # TODO: Make this faster, then reenable running this task automatically
+    #  Right now this query uses up all temporary storage in our DB, which causes many issues
+    #  Code left in place so we can still run manually, but we no longer trigger from UMB
+    #  or when trying to reload a deleted build
     # Shipped builds (which have a Brew tag for any product) are never deleted
     # Only unshipped builds not part of any product are deleted
     # For example, builds that failed QE will not become part of a product
@@ -747,6 +751,11 @@ def slow_delete_brew_build(build_id: int, build_state: int) -> int:
             # The build has a root component, so delete the child components that are
             # provided by / upstreams of only this build's root, and not any other builds
             # Deleting the Component will automatically delete the ComponentNodes
+            # TODO: The logic is correct but very inefficient, so only run the task manually
+            #  Component.objects.filter(sources__isnull=True, downstreams__isnull=True).delete()
+            #  may be slightly better, but this will delete other components
+            #  which were accidentally created without a root component (CORGI-617)
+            #  We should fix that bug first before making changes here
             provided_components = Component.objects.annotate(
                 build_count=Count("sources__software_build_id")
             ).filter(sources=root_component_pk, build_count=1)
@@ -757,6 +766,11 @@ def slow_delete_brew_build(build_id: int, build_state: int) -> int:
             # makes Django return the wrong results
             # https://docs.djangoproject.com/en/3.2/topics/db/aggregation/
             # #order-of-annotate-and-filter-clauses
+            # TODO: The logic is correct but very inefficient, so only run the task manually
+            #  Component.objects.filter(sources__isnull=True, downstreams__isnull=True).delete()
+            #  may be slightly better, but this will delete other components
+            #  which were accidentally created without a root component (CORGI-617)
+            #  We should fix that bug first before making changes here
             upstream_components = Component.objects.annotate(
                 build_count=Count("downstreams__software_build_id")
             ).filter(downstreams=root_component_pk, build_count=1)

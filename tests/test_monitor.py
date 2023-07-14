@@ -62,7 +62,8 @@ def test_brew_umb_handler_defines_settings():
     handler = BrewUMBHandler()
     assert handler.virtual_topic_addresses == {
         f"{ADDRESS_PREFIX}VirtualTopic.eng.brew.build.complete": handler.handle_builds,
-        f"{ADDRESS_PREFIX}VirtualTopic.eng.brew.build.deleted": handler.handle_deleted_builds,
+        # Disabled due to DB performance issues - see notes in task
+        # f"{ADDRESS_PREFIX}VirtualTopic.eng.brew.build.deleted": handler.handle_deleted_builds,
         f"{ADDRESS_PREFIX}VirtualTopic.eng.brew.build.tag": handler.handle_tags,
         f"{ADDRESS_PREFIX}VirtualTopic.eng.brew.build.untag": handler.handle_tags,
         f"{ADDRESS_PREFIX}VirtualTopic.eng."
@@ -104,7 +105,7 @@ def test_brew_umb_handler_setup():
         )
         for address in dispatcher.virtual_topic_addresses
     ]
-    assert len(handler.virtual_topic_addresses) == 5
+    assert len(handler.virtual_topic_addresses) == 4
     mock_umb_event.container.create_receiver.assert_has_calls(create_receiver_calls)
 
 
@@ -170,10 +171,11 @@ def test_brew_umb_handler_handles_builds():
     slow_fetch_brew_build_mock.assert_has_calls((call(args=(mock_id,)), call(args=(mock_id,))))
 
 
-def test_brew_umb_handler_deletes_builds():
+def brew_umb_handler_deletes_builds():
     """Test that the BrewUMBHandler class either
     accepts a "build deleted" message, when no exception is raised
     OR rejects the message if any exception is raised"""
+    # Disabled due to DB performance issues - see notes in task
     # Stub out the SSLDomain config class to avoid needing real UMB certs in tests
     with patch("corgi.monitor.consumer.SSLDomain"):
         dispatcher = UMBDispatcher()
@@ -227,7 +229,7 @@ def test_handle_tag_and_untag_messages():
     # Only want addresses from Brew here
     handler = BrewUMBHandler()
     addresses = handler.virtual_topic_addresses
-    _, _, tag_address, untag_address, _ = addresses.keys()
+    _, tag_address, untag_address, _ = addresses.keys()
     assert ADDRESS_PREFIX in tag_address
     assert ADDRESS_PREFIX in untag_address
     assert ".tag" in tag_address

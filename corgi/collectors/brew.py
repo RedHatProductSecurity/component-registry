@@ -12,7 +12,6 @@ import requests
 import yaml
 from django.conf import settings
 
-from config.celery import app
 from corgi.collectors.models import CollectorRhelModule, CollectorRPM, CollectorSRPM
 from corgi.core.constants import CONTAINER_REPOSITORY
 from corgi.core.models import Component, SoftwareBuild
@@ -954,13 +953,14 @@ class Brew:
         build_id = build["id"]
         # Determine build state
         state = build.get("state")
-        if state == koji.BUILD_STATES["DELETED"]:
-            app.send_task(
-                "corgi.tasks.brew.slow_delete_brew_build",
-                args=(build_id, state),
-            )
-            return {}
-        elif state != koji.BUILD_STATES["COMPLETE"]:
+        # Disabled due to DB performance issues - see notes in task
+        # if state == koji.BUILD_STATES["DELETED"]:
+        #     app.send_task(
+        #         "corgi.tasks.brew.slow_delete_brew_build",
+        #         args=(build_id, state),
+        #     )
+        #     return {}
+        if state != koji.BUILD_STATES["COMPLETE"]:
             raise BrewBuildInvalidState(f"Build {build_id} state is {state}; skipping!")
 
         if build["name"] in self.COMPONENT_EXCLUDES:

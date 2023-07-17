@@ -8,9 +8,8 @@ from corgi.collectors.models import (
     CollectorErrataProductVariant,
     CollectorErrataProductVersion,
 )
-from corgi.core.models import ComponentNode, Product, ProductStream
+from corgi.core.models import Product, ProductStream
 from corgi.tasks.prod_defs import update_products
-from tests.factories import ComponentFactory, SoftwareBuildFactory
 
 pytestmark = pytest.mark.unit
 
@@ -49,7 +48,7 @@ def test_products(requests_mock):
 
     update_products()
 
-    assert Product.objects.count() == 4
+    assert Product.objects.count() == 5
 
     rhel_product = Product.objects.get(name="rhel")
     assert rhel_product.name == "rhel"
@@ -113,19 +112,40 @@ def test_skip_brew_tag_linking_for_buggy_products(requests_mock):
         assert variant.name in ("7Server-Capsule610", "7Server-Satellite610")
 
 
-def _create_builds_and_components(stream):
-    stream_build = SoftwareBuildFactory()
-    stream_component = ComponentFactory(software_build=stream_build)
-    stream_component_node = ComponentNode.objects.create(
-        parent=None, obj=stream_component, type=ComponentNode.ComponentNodeType.SOURCE
+# We stip -candidate from tags before persisting Collector models
+brew_tag_streams = [
+    # In the actual ET data the brew tag is gitops-1.7-rhel-8-candidate
+    # This matches ps_update_stream gitops-1.7, which has a brew tag
+    # gitops-1.7-rhel-8-candidate
+    ("8Base-GitOps-1.7", "gitops-1.7-rhel-8", "gitops-1.7"),
+    # In the actual ET data the brew tag is rhaos-4.10-rhel-8-candidate
+    # This matches ps_update_stream openshift-4.10.z, which has a brew tag
+    # rhaos-4.10-rhel-8-container-released
+    ("OSE-4.10-RHEL-8", "rhaos-4.10-rhel-8", "openshift-4.10.z"),
+    # In the actual ET data the brew tag is rhacm-2.4-rhel-7-container-candidate
+    # This matches the ps_update_stream rhacm-2.4.z, which has a brew tag
+    # rhacm-2.4-rhel-7-container-released
+    ("RHACM-2.4", "rhacm-2.4-rhel-7-container", "rhacm-2.4.z"),
+]
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("variant_name,brew_tag,stream_name", brew_tag_streams)
+def test_brew_tag_matching(variant_name, brew_tag, stream_name, requests_mock):
+    et_product = CollectorErrataProduct.objects.create(et_id=1, name="product")
+    et_product_version = CollectorErrataProductVersion.objects.create(
+        et_id=10, name="product_version", product=et_product, brew_tags=[brew_tag]
     )
-    stream_child_component = ComponentFactory()
-    ComponentNode.objects.create(
-        parent=stream_component_node,
-        obj=stream_child_component,
-        type=ComponentNode.ComponentNodeType.PROVIDES,
+    CollectorErrataProductVariant.objects.create(
+        et_id=100, name=variant_name, product_version=et_product_version
     )
-    stream_component.productstreams.add(stream)
-    stream_component.productversions.add(stream.productversions)
-    stream_component.products.add(stream.products)
-    return stream_build, stream_component, stream_child_component
+
+    with open("tests/data/product-definitions.json") as prod_defs:
+        requests_mock.get(
+            f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=(prod_defs.read())
+        )
+
+    update_products()
+
+    stream = ProductStream.objects.get(name=stream_name)
+    assert stream.productvariants.first().name == variant_name

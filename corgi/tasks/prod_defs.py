@@ -186,9 +186,14 @@ def parse_variants_from_brew_tags(
         )
         for brew_tag in brew_tags.keys():
             # Also match brew tags in prod_defs with those from ET
-            trimmed_brew_tag = brew_tag.removesuffix("-released")
+            # Brew tags in ET
+            trimmed_brew_tag = brew_tag.removesuffix("-candidate")
+            trimmed_brew_tag = trimmed_brew_tag.removesuffix("-released")
+            # This is a special case for 'rhaos-4-*` brew tags which don't have the -container
+            # suffix in ET, but do have that suffix in product_definitions
+            sans_container_released = brew_tag.removesuffix("-container-released")
             et_pvs = CollectorErrataProductVersion.objects.filter(
-                brew_tags__contains=[trimmed_brew_tag]
+                brew_tags__overlap=[trimmed_brew_tag, sans_container_released]
             )
 
             for et_pv in et_pvs:

@@ -150,6 +150,16 @@
           ]
         }
       ]
+    },
+    "gitops-1.7": {
+      "pp_label": "gitops-1.7",
+      "version": "1.7.2",
+      "brew_tags": [
+        {
+          "tag": "gitops-1.7-rhel-8-candidate",
+          "inherit": false
+        }
+      ]
     }
   },
   "ps_modules": {
@@ -334,40 +344,71 @@
       "risk": null
     },
     "rhn_satellite_6": {
-			"public_description": "Red Hat Satellite 6",
-			"ps_update_streams": ["rhn_satellite_6.7", "rhn_satellite_6.10"],
-			"active_ps_update_streams": ["rhn_satellite_6.10"],
-			"default_ps_update_streams": ["rhn_satellite_6.10"],
-			"unacked_ps_update_stream": "rhn_satellite_6-default",
-			"bts": {
-				"name": "bugzilla",
-				"key": "Red Hat Satellite",
-				"groups": {
-					"public": ["redhat"],
-					"embargoed": ["security", "qe_staff"]
-				}
-			},
-			"allow_defer": false,
-			"default_cc": ["+sat6"],
-			"component_cc": {},
-			"components": {
-				"default": "Security"
-			},
-			"autofile_trackers": false,
-			"private_trackers_allowed": true,
-			"lifecycle": {
-				"supported_from": null,
-				"supported_until": null
-			},
-			"cpe": ["cpe:/a:redhat:satellite:6",
-				"cpe:/a:redhat:satellite_capsule:6",
-				"cpe:/a:redhat:rhel_satellite_tools:*"],
-			"risk": null,
-			"checklist": null,
-			"exceptions": [],
-			"opengrok": false,
-			"manifest": true
-		}
+      "public_description": "Red Hat Satellite 6",
+      "ps_update_streams": [
+        "rhn_satellite_6.7",
+        "rhn_satellite_6.10"
+      ],
+      "active_ps_update_streams": [
+        "rhn_satellite_6.10"
+      ],
+      "default_ps_update_streams": [
+        "rhn_satellite_6.10"
+      ],
+      "unacked_ps_update_stream": "rhn_satellite_6-default",
+      "bts": {
+        "name": "bugzilla",
+        "key": "Red Hat Satellite",
+        "groups": {
+          "public": [
+            "redhat"
+          ],
+          "embargoed": [
+            "security",
+            "qe_staff"
+          ]
+        }
+      },
+      "allow_defer": false,
+      "default_cc": [
+        "+sat6"
+      ],
+      "component_cc": {},
+      "components": {
+        "default": "Security"
+      },
+      "autofile_trackers": false,
+      "private_trackers_allowed": true,
+      "lifecycle": {
+        "supported_from": null,
+        "supported_until": null
+      },
+      "cpe": [
+        "cpe:/a:redhat:satellite:6",
+        "cpe:/a:redhat:satellite_capsule:6",
+        "cpe:/a:redhat:rhel_satellite_tools:*"
+      ],
+      "risk": null,
+      "checklist": null,
+      "exceptions": [],
+      "opengrok": false,
+      "manifest": true
+    },
+    "gitops-1": {
+      "public_description": "Red Hat OpenShift GitOps",
+      "ps_update_streams": [
+        "gitops-1.7"
+      ],
+      "active_ps_update_streams": [
+        "gitops-1.7"
+      ],
+      "default_ps_update_streams": [
+        "gitops-1.7"
+      ],
+      "cpe": [
+        "cpe:/a:redhat:openshift_gitops:1"
+      ]
+    }
   },
   "ps_products": {
     "rhel": {
@@ -426,6 +467,18 @@
         "SATELLITE",
         "SAT-TOOLS",
         "Satellite Client"
+      ]
+    },
+    "gitops": {
+      "name": "Red Hat OpenShift GitOps",
+      "team": "codeready",
+      "lifecycle_url": "https://access.redhat.com/support/policy/updates/openshift/#gitops",
+      "ps_modules": [
+        "gitops-1"
+      ],
+      "business_unit": "Core Developer",
+      "errata_product_tags": [
+        "GitOps"
       ]
     }
   },

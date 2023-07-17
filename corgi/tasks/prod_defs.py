@@ -4,6 +4,7 @@ from typing import Any
 from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.db import transaction
+from django.db.models import Q
 
 from config.celery import app
 from corgi.collectors.models import (
@@ -67,6 +68,22 @@ def update_products() -> None:
                 parse_product_version(pd_product_version, product, product_node)
 
 
+def _find_by_cpe(cpe_patterns: list[str]) -> list[str]:
+    """Given a list of CPE patterns find all the CPEs from ET Variants which match it"""
+    if not cpe_patterns:
+        return []
+
+    regexes: list = []
+    for pattern in cpe_patterns:
+        regexes.append(pattern.replace(".", "\\.").replace("*", ".*"))
+
+    query = Q()
+    for regex in regexes:
+        query |= Q(cpe__regex=regex)
+
+    return list(CollectorErrataProductVariant.objects.filter(query).values_list("cpe", flat=True))
+
+
 def parse_product_version(
     pd_product_version: dict[str, Any], product: Product, product_node: ProductNode
 ):
@@ -76,6 +93,8 @@ def parse_product_version(
     if match_version := RE_VERSION_LIKE_STRING.search(name):
         version = match_version.group()
     description = pd_product_version.pop("public_description", [])
+    cpes = pd_product_version.pop("cpe", [])
+    cpes_matching_patterns = _find_by_cpe(cpes)
     logger.debug(
         "Creating or updating Product Version: name=%s, description=%s",
         name,
@@ -87,6 +106,8 @@ def parse_product_version(
             "version": version,
             "description": description,
             "products": product,
+            "cpe_patterns": cpes,
+            "cpes_matching_patterns": cpes_matching_patterns,
             "meta_attr": pd_product_version,
         },
     )

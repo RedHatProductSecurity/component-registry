@@ -8,7 +8,7 @@ from corgi.collectors.models import (
     CollectorErrataProductVariant,
     CollectorErrataProductVersion,
 )
-from corgi.core.models import Product, ProductStream
+from corgi.core.models import Product, ProductStream, ProductVersion
 from corgi.tasks.prod_defs import update_products
 
 pytestmark = pytest.mark.unit
@@ -76,6 +76,47 @@ def test_products(requests_mock):
     # Stream "cpes" is a dynamically-generated property, different than the "cpe" field
     # Which should include the stream's CPE + all the child variant CPEs (if any)
     assert et_variant.cpe in rhacm24z.cpes
+
+
+@pytest.mark.django_db
+def test_cpe_parsing(requests_mock):
+    with open("tests/data/product-definitions.json") as prod_defs:
+        text = prod_defs.read()
+        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+
+    update_products()
+
+    openshift_4 = ProductVersion.objects.get(name="openshift-4")
+    assert openshift_4.cpe_patterns == ["cpe:/a:redhat:openshift:4"]
+
+
+@pytest.mark.django_db
+def test_match_cpe_patterns(requests_mock):
+    et_variant_cpes = [
+        "cpe:/a:redhat:openshift_gitops:1::el8",
+        "cpe:/a:redhat:openshift_gitops:1.1::el8",
+        "cpe:/a:redhat:openshift_gitops:1.10::el8",
+    ]
+
+    product = CollectorErrataProduct.objects.create(name="product", et_id=1)
+    product_version = CollectorErrataProductVersion.objects.create(
+        name="product_version", et_id=10, product=product
+    )
+    et_id = 100
+    for cpe in et_variant_cpes:
+        CollectorErrataProductVariant.objects.create(
+            name=str(et_id), et_id=et_id, product_version=product_version, cpe=cpe
+        )
+        et_id += 1
+
+    with open("tests/data/product-definitions.json") as prod_defs:
+        text = prod_defs.read()
+        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+
+    update_products()
+
+    product_version = ProductVersion.objects.get(name="gitops-1")
+    assert sorted(product_version.cpes_matching_patterns) == sorted(et_variant_cpes)
 
 
 @pytest.mark.django_db

@@ -675,7 +675,6 @@ class ProductStreamSerializer(ProductModelSerializer):
         model = ProductStream
         fields = [
             *ProductModelSerializer.Meta.fields,
-            "cpe",
             "active",
             "brew_tags",
             "yum_repositories",

@@ -1845,9 +1845,6 @@ components:
             additionalProperties:
               type: string
           readOnly: true
-        cpe:
-          type: string
-          readOnly: true
         active:
           type: boolean
           readOnly: true
@@ -1916,7 +1913,6 @@ components:
       - channels
       - components
       - composes
-      - cpe
       - description
       - et_product_versions
       - exclude_components

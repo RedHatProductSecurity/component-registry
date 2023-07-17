@@ -83,7 +83,6 @@ class ProductStreamFactory(factory.django.DjangoModelFactory):
     name = factory.Faker("word")
     version = "8.2.0.z"
     description = factory.Faker("word")
-    cpe = "cpe:/o:redhat:enterprise_linux:8"
     # link model using relationship to parent model
     products = factory.SubFactory(
         ProductFactory,

@@ -123,7 +123,6 @@ def save_component(
         purl=obj.purl,
         defaults={
             "obj": obj,
-            "component": obj,
         },
     )
 
@@ -204,7 +203,7 @@ def _scan_files(anchor_node, sources) -> int:
     detected_components = Syft.scan_files(sources)
     # get go version from container meta_attr
     go_packages = GoList.scan_files(sources)
-    _assign_go_stdlib_version(anchor_node.component, go_packages)
+    _assign_go_stdlib_version(anchor_node.obj, go_packages)
 
     for component in detected_components:
         if save_component(component, anchor_node):

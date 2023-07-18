@@ -261,7 +261,6 @@ def test_slow_delete_brew_builds():
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
         obj=source_rpm,
-        component=source_rpm,
     )
     source_rpm.save_component_taxonomy()
 
@@ -281,7 +280,6 @@ def test_slow_delete_brew_builds():
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=srpm_node,
         obj=unshipped_upstream,
-        component=unshipped_upstream,
     )
     unshipped_upstream.save_component_taxonomy()
 
@@ -291,7 +289,6 @@ def test_slow_delete_brew_builds():
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
         obj=index_container,
-        component=index_container,
     )
     index_container.save_component_taxonomy()
 
@@ -313,13 +310,11 @@ def test_slow_delete_brew_builds():
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=srpm_node,
         obj=shipped_upstream,
-        component=shipped_upstream,
     )
     ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=oci_node,
         obj=shipped_upstream,
-        component=shipped_upstream,
     )
     shipped_upstream.save_component_taxonomy()
 
@@ -339,7 +334,6 @@ def test_slow_delete_brew_builds():
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=srpm_node,
         obj=unshipped_binary_rpm,
-        component=unshipped_binary_rpm,
     )
     unshipped_binary_rpm.save_component_taxonomy()
 
@@ -353,7 +347,6 @@ def test_slow_delete_brew_builds():
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=unshipped_binary_rpm_node,
         obj=unshipped_bundled_gem,
-        component=unshipped_bundled_gem,
     )
     unshipped_bundled_gem.save_component_taxonomy()
 
@@ -373,13 +366,11 @@ def test_slow_delete_brew_builds():
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=srpm_node,
         obj=shipped_binary_rpm,
-        component=shipped_binary_rpm,
     )
     ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
         parent=oci_node,
         obj=shipped_binary_rpm,
-        component=shipped_binary_rpm,
     )
     shipped_binary_rpm.save_component_taxonomy()
 

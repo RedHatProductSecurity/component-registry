@@ -94,7 +94,6 @@ def test_add_go_stdlib_version(go_list_scan_files):
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
         obj=root_component,
-        component=root_component,
     )
     _scan_files(anchor_node, [])
     # Verify we can look-up the detected go package with stdlib version added from root node
@@ -112,7 +111,6 @@ def test_anchor_node_without_go_stdlib_version(go_list_scan_files):
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
         obj=root_component,
-        component=root_component,
     )
     _scan_files(anchor_node, [])
     go_package = Component.objects.get(type=Component.Type.GOLANG, name="go-package")
@@ -134,7 +132,6 @@ def test_go_package_with_version(go_list_scan_files):
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
         obj=root_component,
-        component=root_component,
     )
     _scan_files(anchor_node, [])
     go_package = Component.objects.get(type=Component.Type.GOLANG, name="go-package")
@@ -160,7 +157,6 @@ def test_go_package_type(go_list_scan_files):
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
         obj=root_component,
-        component=root_component,
     )
     _scan_files(anchor_node, [])
     go_package = Component.objects.get(type=Component.Type.GOLANG, name="go-package")
@@ -423,7 +419,6 @@ def test_slow_software_composition_analysis(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
         obj=root_component,
-        component=root_component,
     )
     assert not Component.objects.filter(purl=expected_purl).exists()
 
@@ -494,7 +489,6 @@ def test_save_component_skips_duplicates():
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
         obj=image_component,
-        component=image_component,
     )
 
     new_component = {

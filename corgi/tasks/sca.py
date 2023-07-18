@@ -242,10 +242,10 @@ def _clone_source(source_url: str, build_uuid: str) -> Tuple[Path, str, str]:
     # (scheme, netloc, path, parameters, query, fragment)
     url = urlparse(source_url)
 
-    # We only support git, git+https, git+ssh
-    if not url.scheme.startswith("git"):
+    # We only support git, git+https, git+ssh, etc. and https
+    if not url.scheme.startswith("git") and url.scheme != "https":
         raise ValueError(
-            f"Build {build_uuid} had a source_url with a non-git protocol: {source_url}"
+            f"Build {build_uuid} had a source_url with a non-git, non-HTTPS protocol: {source_url}"
         )
 
     protocol = url.scheme

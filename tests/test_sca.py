@@ -183,12 +183,12 @@ def test_clone_source(mock_subprocess):
 
 
 archive_source_test_data_for_failures = (
-    # Fails due to ValueError - only git:// protocol supported
+    # Fails due to ValueError - only git://, git+https://, etc. or https:// protocol supported
     (
-        "https://src.fedoraproject.org/rpms/nodejs",
+        "http://src.fedoraproject.org/rpms/nodejs",
         "3cbed2be4171502499d0d89bea1ead91690af7d2",
         "nodejs",
-        1,
+        "1",
         "/tmp/1",
         False,
     ),
@@ -197,7 +197,7 @@ archive_source_test_data_for_failures = (
         "git://src.fedoraproject.org/tooshort",
         "3cbed2be4171502499d0d89bea1ead91690af7d2",
         "nodejs",
-        1,
+        "1",
         "/tmp/1",
         False,
     ),
@@ -206,7 +206,17 @@ archive_source_test_data_for_failures = (
         "git+https://src.fedoraproject.org/rpms/nodejs",
         "3cbed2be4171502499d0d89bea1ead91690af7d2",
         "nodejs",
-        1,
+        "1",
+        "/tmp/1",
+        True,
+    ),
+    # Fails due to FileExistsError
+    # AKA https:// URLs get past the "is this scheme supported?" check
+    (
+        "https://src.fedoraproject.org/rpms/nodejs",
+        "3cbed2be4171502499d0d89bea1ead91690af7d2",
+        "nodejs",
+        "1",
         "/tmp/1",
         True,
     ),

@@ -70,6 +70,8 @@ def slow_load_errata(erratum_name: str, force_process: bool = False) -> None:
         raise ValueError("Multiple build types found for errata %s", erratum_name)
     elif len(build_types) == 0:
         build_type = BUILD_TYPE
+    else:
+        build_type = build_types.pop()
 
     # If we have no relations at all, or we want to update them
     if len(build_ids) == 0 or force_process:

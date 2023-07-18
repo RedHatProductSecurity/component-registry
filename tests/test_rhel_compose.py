@@ -86,7 +86,7 @@ def test_fetch_compose_build(mock_fetch_brew):
     module_obj = Component.objects.get(type=Component.Type.RPMMOD)
     assert module_obj
     assert module_obj.nvr == modular_rpm.rhel_module.first().nvr
-    assert len(module_obj.cnodes.all()) == 1
+    assert module_obj.cnodes.count() == 1
     modular_rpm_obj = Component.objects.get(type=Component.Type.RPM)
     assert modular_rpm_obj
     assert not modular_rpm_obj.software_build

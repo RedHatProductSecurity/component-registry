@@ -98,7 +98,7 @@ class CreateUserTokenTest(TestCase):
 
     def test_updates(self):
         ash = User.objects.create_user("ash", "ash@example.com")
-        token = Token.objects.create(user=ash, key="123456")
+        Token.objects.create(user=ash, key="123456")
 
         call_command(
             "create_user_with_token",

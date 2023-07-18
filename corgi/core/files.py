@@ -77,7 +77,9 @@ class ProductManifestFile(ManifestFile):
             "released_components": released_components,
             "distinct_provides": distinct_provides,
             "distinct_upstreams": distinct_upstreams,
-            "cpes": cpe_lookup(self.obj.name) if cpe_mapping else self.obj.cpes,  # type: ignore[attr-defined] # noqa
+            "cpes": cpe_lookup(self.obj.name)  # type: ignore[attr-defined]
+            if cpe_mapping
+            else self.obj.cpes,  # type: ignore[attr-defined]
         }
 
         content = render_to_string(self.file_name, kwargs_for_template)

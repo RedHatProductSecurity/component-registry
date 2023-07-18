@@ -964,11 +964,11 @@ def test_save_component():
 
     # Simulate saving an RPM in a Container
     image_component = ContainerImageComponentFactory(name="image_component")
-    root_node, _ = ComponentNode.objects.get_or_create(
+    root_node = ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
-        purl=image_component.purl,
-        defaults={"obj": image_component},
+        obj=image_component,
+        component=image_component,
     )
     rpm_dict = {
         "type": Component.Type.RPM,
@@ -981,11 +981,11 @@ def test_save_component():
 
     # Add an SRPM component for that same RPM.
     srpm_component = SrpmComponentFactory(name="srpm_component")
-    root_node, _ = ComponentNode.objects.get_or_create(
+    root_node = ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
-        purl=srpm_component.purl,
-        defaults={"obj": srpm_component},
+        obj=srpm_component,
+        component=srpm_component,
     )
     rpm_dict = {
         "type": Component.Type.RPM,
@@ -1002,11 +1002,11 @@ def test_save_component_skips_duplicates():
     """Test that component names which only differ by dash / underscore,
     or different casing, do not create duplicate purls"""
     image_component = ContainerImageComponentFactory(name="image_component")
-    root_node, _ = ComponentNode.objects.get_or_create(
+    root_node = ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
-        purl=image_component.purl,
-        defaults={"obj": image_component},
+        obj=image_component,
+        component=image_component,
     )
     name = "REQUESTS_NTLM"
     new_component = {
@@ -1213,22 +1213,22 @@ def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, moc
     assert image_index.productstreams.filter(pk=stream.uuid).exists()
 
     noarch_rpms = []
-    for node in image_index.cnodes.all():
+    for node in image_index.cnodes.get_queryset():
         for child in node.get_children():
-            if child.obj.type == Component.Type.RPM:
-                assert child.obj.arch == "noarch"
-                noarch_rpms.append(child.obj.purl)
+            if child.component.type == Component.Type.RPM:
+                assert child.component.arch == "noarch"
+                noarch_rpms.append(child.purl)
     assert len(noarch_rpms) == len(NOARCH_RPM_IDS)
 
     child_containers = []
-    for node in image_index.cnodes.all():
+    for node in image_index.cnodes.get_queryset():
         for child in node.get_children():
             arch_specific_rpms = []
-            if child.obj.type == Component.Type.CONTAINER_IMAGE:
-                child_containers.append(child.obj.purl)
+            if child.component.type == Component.Type.CONTAINER_IMAGE:
+                child_containers.append(child.purl)
                 for grandchild in child.get_children():
-                    assert grandchild.obj.type == Component.Type.RPM
-                    arch_specific_rpms.append(grandchild.obj.purl)
+                    assert grandchild.component.type == Component.Type.RPM
+                    arch_specific_rpms.append(grandchild.purl)
                 assert len(arch_specific_rpms) == NO_RPMS_IN_SUBCTL_CONTAINER - len(NOARCH_RPM_IDS)
     assert len(child_containers) == 3
 

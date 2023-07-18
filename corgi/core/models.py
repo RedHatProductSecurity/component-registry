@@ -67,14 +67,6 @@ class NodeModel(MPTTModel, TimeStampedModel):
             models.Index(fields=("content_type", "object_id")),
         )
 
-    @property
-    def name(self):
-        return self.obj.name
-
-    @property
-    def desc(self):
-        return self.obj.description
-
 
 class ProductNode(NodeModel):
     """Product taxonomy node."""
@@ -179,6 +171,8 @@ class ProductNode(NodeModel):
 class ComponentNode(NodeModel):
     """Component taxonomy node."""
 
+    component = models.ForeignKey("Component", on_delete=models.CASCADE, related_name="cnodes")
+
     class ComponentNodeType(models.TextChoices):
         SOURCE = "SOURCE"
         REQUIRES = "REQUIRES"
@@ -225,11 +219,12 @@ class ComponentNode(NodeModel):
             ),
             models.Index(fields=("lft", "tree_id"), name="core_cn_lft_tree_idx"),
             models.Index(fields=("lft", "rght", "tree_id"), name="core_cn_lft_rght_tree_idx"),
+            models.Index(fields=("component", "parent")),
             *NodeModel.Meta.indexes,
         )
 
     def save(self, *args, **kwargs):
-        self.purl = self.obj.purl
+        self.purl = self.component.purl
         super().save(*args, **kwargs)
 
 
@@ -316,13 +311,13 @@ class SoftwareBuild(TimeStampedModel):
 
         product_details = get_product_details(variant_names, stream_names)
         components = set()
-        for component in self.components.get_queryset().iterator():
+        for component in self.components.iterator():
             components.add(component)
             # This is needed for container image builds which pull in components not
             # built at Red Hat, and therefore not assigned a build_id
-            for cnode in component.cnodes.get_queryset().iterator():
+            for cnode in component.cnodes.iterator():
                 for d in cnode.get_descendants().iterator():
-                    components.add(d.obj)
+                    components.add(d.component)
 
         for component in components:
             component.save_product_taxonomy(product_details)
@@ -1116,10 +1111,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     sources = models.ManyToManyField("Component", related_name="provides")
     provides: models.Manager["Component"]
 
-    # Specify related_query_name to add e.g. component field
-    # that can be used to filter from a cnode to its related component
-    # TODO: Or just switch from GenericForeignKey to regular ForeignKey?
-    cnodes = GenericRelation(ComponentNode, related_query_name="%(class)s")
+    cnodes: TreeManager[ComponentNode]
     software_build = models.ForeignKey(
         SoftwareBuild,
         on_delete=models.CASCADE,
@@ -1536,7 +1528,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     @property
     def provides_queryset(self, using: str = "read_only") -> Iterator["Component"]:
         """Return the "provides" queryset using the read-only DB, for use in templates"""
-        return self.provides.get_queryset().using(using).iterator()
+        return self.provides.db_manager(using).iterator()
 
     def is_srpm(self):
         return self.type == Component.Type.RPM and self.arch == "src"
@@ -1664,9 +1656,9 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         # for functions other than get_upstreams we might need to revisit this check
         if not self.software_build:
             return roots
-        for cnode in self.cnodes.get_queryset().using(using).iterator():
+        for cnode in self.cnodes.db_manager(using).iterator():
             root = cnode.get_root()
-            if root.obj.type == Component.Type.CONTAINER_IMAGE:
+            if root.component.type == Component.Type.CONTAINER_IMAGE:
                 # TODO if we change the CONTAINER->RPM ComponentNode.type to something besides
                 # 'PROVIDES' we would check for that type here to prevent 'hardcoding' the
                 # container -> rpm relationship here.
@@ -1868,6 +1860,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     def get_provides_nodes(self, include_dev: bool = True, using: str = "read_only") -> set[str]:
         """return a set of descendant ids with PROVIDES ComponentNode type"""
         # Used in taxonomies. Returns only PKs
+        # TODO: Check
         provides_set = set()
 
         type_list: tuple[ComponentNode.ComponentNodeType, ...] = (
@@ -1875,12 +1868,12 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         )
         if include_dev:
             type_list = ComponentNode.PROVIDES_NODE_TYPES
-        for cnode in self.cnodes.get_queryset().iterator():
+        for cnode in self.cnodes.iterator():
             provides_set.update(
                 cnode.get_descendants()
                 .filter(type__in=type_list)
                 .using(using)
-                .values_list("object_id", flat=True)
+                .values_list("component_id", flat=True)
                 .iterator()
             )
         return provides_set
@@ -1889,7 +1882,8 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         self, include_dev: bool = True, using: str = "read_only"
     ) -> QuerySet[ComponentNode]:
         """return a QuerySet of descendants with PROVIDES ComponentNode type"""
-        # Used in manifests. Returns a QuerySet of (node type, linked component UUID)
+        # Used in manifests. Returns a QuerySet of (node_purl, node type, linked component UUID)
+        # TODO: Check
         type_list: tuple[ComponentNode.ComponentNodeType, ...] = (
             ComponentNode.ComponentNodeType.PROVIDES,
         )
@@ -1897,7 +1891,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             type_list = ComponentNode.PROVIDES_NODE_TYPES
 
         provides_set = set()
-        for cnode in self.cnodes.get_queryset().iterator():
+        for cnode in self.cnodes.iterator():
             provides_set.update(
                 cnode.get_descendants()
                 .filter(type__in=type_list)
@@ -1908,9 +1902,9 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         return (
             ComponentNode.objects.filter(pk__in=provides_set)
             .using(using)
-            .values_list("purl", "type", "object_id")
+            .values_list("purl", "type", "component_id")
             # Ensure generated manifests only change when content does
-            .order_by("object_id")
+            .order_by("component_id")
             .distinct()
             .iterator()
         )
@@ -1930,7 +1924,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             sources_set.update(
                 cnode.get_ancestors(include_self=False)
                 .using(using)
-                .values_list("object_id", flat=True)
+                .values_list("component_id", flat=True)
                 .iterator()
             )
         return sources_set
@@ -1942,6 +1936,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         # which forces us to use Python in this + all other get_upstreams_* methods
         upstreams = []
         roots = self.get_roots(using=using)
+        # TODO: Simplify this
         for root in roots:
             # For SRPM/RPMS, and noarch containers, these are the cnodes we want.
             source_descendants = (
@@ -1952,11 +1947,11 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             # Cachito builds nest components under the relevant source component for that
             # container build, eg. buildID=1911112. In that case we need to walk up the
             # tree from the current node to find its relevant source
-            root_obj = root.obj
+            root_component = root.component
             if (
-                root_obj
-                and root_obj.type == Component.Type.CONTAINER_IMAGE
-                and root_obj.arch == "noarch"
+                root_component
+                and root_component.type == Component.Type.CONTAINER_IMAGE
+                and root_component.arch == "noarch"
                 and source_descendants.count() > 1
             ):
                 upstreams.extend(
@@ -1975,7 +1970,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
     def get_upstreams_pks(self, using: str = "read_only") -> tuple[str, ...]:
         """Return only the primary keys from the set of all upstream nodes"""
-        linked_pks = set(str(node.object_id) for node in self.get_upstreams_nodes(using=using))
+        linked_pks = set(str(node.component_id) for node in self.get_upstreams_nodes(using=using))
         return tuple(linked_pks)
 
     def get_upstreams_purls(self, using: str = "read_only") -> set[str]:

@@ -21,7 +21,7 @@
       "SPDXID": "SPDXRef-{{component.uuid}}",
       "supplier": "Organization: Red Hat",
       "versionInfo": "{{component.nevra|escapejs}}"
-    },{% endfor %}{% if obj.type != obj.Type.RPM %}{% for upstream in obj.upstreams.get_queryset.iterator %}{# RPM upstream data is human-generated and unreliable #}{
+    },{% endfor %}{% if obj.type != obj.Type.RPM %}{% for upstream in obj.upstreams.iterator %}{# RPM upstream data is human-generated and unreliable #}{
       "copyrightText": {% if upstream.copyright_text %}"{{upstream.copyright_text|escapejs}}"{% else %}"NOASSERTION"{% endif %},
       "downloadLocation": {% if upstream.download_url %}"{{upstream.download_url|escapejs}}"{% else %}"NOASSERTION"{% endif %},
       "externalRefs": [

@@ -90,8 +90,11 @@ def test_add_go_stdlib_version(go_list_scan_files):
     root_component = ContainerImageComponentFactory(
         meta_attr={"go_stdlib_version": GO_STDLIB_VERSION}
     )
-    anchor_node = root_component.cnodes.create(
-        parent=None, object_id=root_component.pk, obj=root_component
+    anchor_node = ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        obj=root_component,
+        component=root_component,
     )
     _scan_files(anchor_node, [])
     # Verify we can look-up the detected go package with stdlib version added from root node
@@ -105,8 +108,11 @@ def test_anchor_node_without_go_stdlib_version(go_list_scan_files):
         {"type": Component.Type.GOLANG, "meta": {"name": "go-package"}, "analysis_meta": {}}
     ]
     root_component = ContainerImageComponentFactory()
-    anchor_node = root_component.cnodes.create(
-        parent=None, object_id=root_component.pk, obj=root_component
+    anchor_node = ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        obj=root_component,
+        component=root_component,
     )
     _scan_files(anchor_node, [])
     go_package = Component.objects.get(type=Component.Type.GOLANG, name="go-package")
@@ -124,8 +130,11 @@ def test_go_package_with_version(go_list_scan_files):
         }
     ]
     root_component = ContainerImageComponentFactory()
-    anchor_node = root_component.cnodes.create(
-        parent=None, object_id=root_component.pk, obj=root_component
+    anchor_node = ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        obj=root_component,
+        component=root_component,
     )
     _scan_files(anchor_node, [])
     go_package = Component.objects.get(type=Component.Type.GOLANG, name="go-package")
@@ -147,8 +156,11 @@ def test_go_package_type(go_list_scan_files):
         }
     ]
     root_component = ContainerImageComponentFactory()
-    anchor_node = root_component.cnodes.create(
-        parent=None, object_id=root_component.pk, obj=root_component
+    anchor_node = ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        obj=root_component,
+        component=root_component,
     )
     _scan_files(anchor_node, [])
     go_package = Component.objects.get(type=Component.Type.GOLANG, name="go-package")
@@ -407,11 +419,11 @@ def test_slow_software_composition_analysis(
         if is_container
         else SrpmComponentFactory(name="root_component", software_build=sb)
     )
-    ComponentNode.objects.get_or_create(
+    ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
-        purl=root_component.purl,
-        defaults={"obj": root_component},
+        obj=root_component,
+        component=root_component,
     )
     assert not Component.objects.filter(purl=expected_purl).exists()
 
@@ -456,11 +468,9 @@ def test_slow_software_composition_analysis(
     assert mock_syft.call_args_list == expected_syft_call_arg_list
     expected_component = Component.objects.get(purl=expected_purl)
     if is_container:
-        root_component = Component.objects.get(
-            type=Component.Type.CONTAINER_IMAGE, arch="noarch", software_build=sb
-        )
+        Component.objects.get(type=Component.Type.CONTAINER_IMAGE, arch="noarch", software_build=sb)
     else:
-        root_component = Component.objects.srpms().get(software_build=sb)
+        Component.objects.srpms().get(software_build=sb)
     assert expected_component.meta_attr["source"] == ["syft-0.60.1"]
     mock_save_prod_tax.assert_called_once()
 
@@ -480,11 +490,11 @@ def test_save_component_skips_duplicates():
         arch="",
     )
     image_component = ContainerImageComponentFactory(name="image_component")
-    root_node, _ = ComponentNode.objects.get_or_create(
+    root_node = ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
-        purl=image_component.purl,
-        defaults={"obj": image_component},
+        obj=image_component,
+        component=image_component,
     )
 
     new_component = {

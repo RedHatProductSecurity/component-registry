@@ -3,7 +3,6 @@ from unittest.mock import patch
 
 import pytest
 from django.conf import settings
-from django.contrib.contenttypes.models import ContentType
 
 from corgi.collectors.brew import Brew
 from corgi.collectors.errata_tool import ErrataTool
@@ -13,6 +12,7 @@ from corgi.collectors.models import (
     CollectorErrataProductVersion,
     CollectorRPMRepository,
 )
+from corgi.core.constants import MODEL_NODE_LEVEL_MAPPING
 from corgi.core.models import (
     Channel,
     ProductComponentRelation,
@@ -50,7 +50,7 @@ def test_update_variant_repos():
         "rhel-8-for-aarch64-highavailability-debug-rpms__8",
         "rhel-8-for-aarch64-highavailability-rpms__8",
     ]
-    ps = ProductStreamFactory.create(name="rhel", version="8.2.0")
+    ps = ProductStreamFactory(name="rhel", version="8.2.0")
     product_node = ProductNode.objects.create(parent=None, obj=ps.products)
     pv_node = ProductNode.objects.create(parent=product_node, obj=ps.productversions)
     ps_node = ProductNode.objects.create(parent=pv_node, obj=ps)
@@ -84,7 +84,7 @@ def test_update_variant_repos():
             channel.pnodes.order_by("id")
             .first()
             .get_ancestors()
-            .filter(content_type=ContentType.objects.get_for_model(ProductVariant))
+            .filter(level=MODEL_NODE_LEVEL_MAPPING["ProductVariant"])
             .first()
             .obj.name
             == "HighAvailability-8.2.0.GA"
@@ -93,7 +93,7 @@ def test_update_variant_repos():
             channel.pnodes.order_by("id")
             .last()
             .get_ancestors()
-            .filter(content_type=ContentType.objects.get_for_model(ProductVariant))
+            .filter(level=MODEL_NODE_LEVEL_MAPPING["ProductVariant"])
             .first()
             .obj.name
             == "HighAvailability-8.3.0.GA"
@@ -108,13 +108,14 @@ def setup_models_for_variant_repos(repos, ps_node, variant, et_id):
         et_id=et_id, name=f"name-{et_id}", product=et_product
     )
     CollectorErrataProductVariant.objects.create(
-        name=variant, repos=repos, et_id=et_id, product_version=et_product_version
+        et_id=et_id, name=variant, product_version=et_product_version, repos=repos
     )
     for repo in repos:
+        # Some already exist and some don't, so can't do only .get() or .create()
         CollectorRPMRepository.objects.get_or_create(name=repo)
 
     pv = ProductVariantFactory.create(name=variant)
-    ProductNode.objects.create(object_id=pv.pk, obj=pv, parent=ps_node)
+    ProductNode.objects.create(parent=ps_node, obj=pv)
 
 
 # id, no_of_obj

@@ -1,3 +1,4 @@
+import json
 from unittest.mock import MagicMock, call, patch
 
 import pytest
@@ -296,3 +297,39 @@ def test_umb_receiver_handles_shipped_errata():
             call(args=(mock_id, "SHIPPED_LIVE")),
         )
     )
+
+
+def test_sbomer_handles_sbom_available():
+    """Test that the UMB receiver correctly handles SBOM available messages"""
+    listener = UMBListener()
+    with patch("corgi.monitor.consumer.SSLDomain"):
+        receiver = UMBReceiverHandler(
+            virtual_topic_addresses=listener.virtual_topic_addresses, selectors=listener.selectors
+        )
+
+    mock_event = MagicMock()
+
+    with open("tests/data/pnc/sbom_complete.json") as test_file:
+        test_data = json.load(test_file)
+    mock_event.message.address = test_data["topic"].replace("/topic/", VIRTUAL_TOPIC_ADDRESS_PREFIX)
+    mock_event.message.body = json.dumps(test_data["msg"])
+
+    # Call first with a valid message, then with a bad SBOM URL
+    fetch_sbom_exceptions = (None, Exception("Bad SBOM URL"))
+
+    with patch(
+        "corgi.monitor.consumer.slow_fetch_pnc_sbom.delay", side_effect=fetch_sbom_exceptions
+    ) as mock_fetch_sbom:
+        with patch.object(receiver, "accept") as mock_accept:
+            receiver.on_message(mock_event)
+            mock_accept.assert_called_once_with(mock_event.delivery)
+            mock_fetch_sbom.assert_called_once_with(
+                test_data["msg"]["purl"],
+                test_data["msg"]["productConfig"]["errataTool"],
+                test_data["msg"]["build"],
+                test_data["msg"]["sbom"],
+            )
+
+        with patch.object(receiver, "release") as mock_release:
+            receiver.on_message(mock_event)
+            mock_release.assert_called_once_with(mock_event.delivery, delivered=True)

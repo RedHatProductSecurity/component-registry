@@ -9,7 +9,7 @@ ALLOWED_HOSTS = [
     # Allow local host's IP address and hostname for health probes
     socket.gethostname(),
     socket.gethostbyname(socket.gethostname()),
-    CORGI_DOMAIN_BASE,  # noqa: F405
+    CORGI_DOMAIN,  # noqa: F405
 ]
 
 CSP_UPGRADE_INSECURE_REQUESTS = True

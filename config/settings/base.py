@@ -404,11 +404,6 @@ UMB_BROKER_URL = os.getenv("CORGI_UMB_BROKER_URL")
 # https://docs.python.org/3/distutils/apiref.html#distutils.util.strtobool
 UMB_BREW_MONITOR_ENABLED = strtobool(os.getenv("CORGI_UMB_BREW_MONITOR_ENABLED", "true"))
 
-if CORGI_DOMAIN.endswith(".fedoraproject.org"):
-    CORGI_DOMAIN_BASE = ".fedoraproject.org"
-else:
-    CORGI_DOMAIN_BASE = ".prodsec.redhat.com"
-
 # Brew
 BREW_URL = os.getenv("CORGI_BREW_URL")
 BREW_WEB_URL = os.getenv("CORGI_BREW_WEB_URL")

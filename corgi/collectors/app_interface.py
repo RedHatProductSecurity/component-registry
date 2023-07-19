@@ -42,6 +42,7 @@ class AppInterface:
         """
         response = requests.post(
             f"{settings.APP_INTERFACE_URL}/graphql",
+            auth=(settings.APP_INTERFACE_USERNAME, settings.APP_INTERFACE_PASSWORD),
             json={"query": repo_query},
         )
         response.raise_for_status()

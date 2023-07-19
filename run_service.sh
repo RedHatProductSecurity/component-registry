@@ -9,9 +9,4 @@
 python3 manage.py collectstatic --noinput
 
 # start gunicorn
-if [[ $1 == dev ]]; then
-    exec gunicorn config.wsgi --config gunicorn_config.py --reload
-else
-    exec gunicorn config.wsgi --config gunicorn_config.py
-fi
-
+exec gunicorn config.wsgi --config gunicorn_config.py

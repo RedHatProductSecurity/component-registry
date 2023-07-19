@@ -21,3 +21,6 @@ timeout = 300
 if not running_dev():
     # Saves memory in the worker process, but breaks --reload
     preload_app = True
+else:
+    # Support hot-reloading of Gunicorn / Django when files change
+    reload = True

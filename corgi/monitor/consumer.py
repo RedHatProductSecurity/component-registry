@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Optional
+from collections.abc import Callable
 
 from django.conf import settings
 from proton import Event, SSLDomain
@@ -9,14 +9,19 @@ from proton.reactor import Container, Selector
 
 from corgi.tasks.brew import slow_fetch_brew_build, slow_update_brew_tags
 from corgi.tasks.errata_tool import slow_handle_shipped_errata
+from corgi.tasks.pnc import slow_fetch_pnc_sbom
 
 logger = logging.getLogger(__name__)
+
+# A method which receives an event, and returns true if the message was accepted,
+# or false if it should be released back into the queue.
+HandleMethod = Callable[[Event], bool]
 
 
 class UMBReceiverHandler(MessagingHandler):
     """Handler to deal with received messages from UMB."""
 
-    def __init__(self, virtual_topic_addresses: dict[str, str], selectors: dict[str, str]):
+    def __init__(self, virtual_topic_addresses: dict[str, HandleMethod], selectors: dict[str, str]):
         """Set up a handler that listens to many topics and processes messages from each"""
         super(UMBReceiverHandler, self).__init__()
 
@@ -71,23 +76,30 @@ class UMBReceiverHandler(MessagingHandler):
 
         # Turn function name (str) into callable so we can pass event to it below
         # We don't pass the callable itself because it needs a self arg
-        callback_name = self.virtual_topic_addresses.get(address, "")
-        callback_function = getattr(self, callback_name, None)
+        callback = self.virtual_topic_addresses.get(address)
 
         if not address:
             raise ValueError(f"UMB event {event.message.id} had no address!")
-        elif callback_function:
-            callback_function(event)
+        elif callback:
+            handled = callback(event)
         else:
             raise ValueError(
                 f"UMB event {event.message.id} had unrecognized address: {event.message.address}"
             )
 
+        if handled:
+            # Accept the delivered message to remove it from the queue.
+            self.accept(event.delivery)
+        else:
+            # Release message back to the queue but report back that it was delivered. The
+            # message will be re-delivered to any available client again.
+            self.release(event.delivery, delivered=True)
 
-class BrewUMBReceiverHandler(UMBReceiverHandler):
-    """Handle messages about completed Brew builds, tagged builds, and untagged builds"""
-
-    def handle_builds(self, event: Event) -> None:
+    ##########################
+    # Message Handlers: Brew #
+    ##########################
+    @staticmethod
+    def brew_builds(event: Event) -> bool:
         """Handle messages about completed Brew builds"""
         logger.info("Handling UMB event for completed builds: %s", event.message.id)
         message = json.loads(event.message.body)
@@ -101,14 +113,40 @@ class BrewUMBReceiverHandler(UMBReceiverHandler):
                 build_id,
                 str(exc),
             )
-            # Release message back to the queue but report back that it was delivered. The
-            # message will be re-delivered to any available client again.
-            self.release(event.delivery, delivered=True)
+            return False
         else:
-            # Accept the delivered message to remove it from the queue.
-            self.accept(event.delivery)
+            return True
 
-    def handle_shipped_errata(self, event: Event) -> None:
+    @staticmethod
+    def brew_tags(event: Event) -> bool:
+        """Handle messages about Brew builds that have tags added or removed"""
+        logger.info("Handling UMB event for added or removed tags: %s", event.message.id)
+        message = json.loads(event.message.body)
+        build_id = message["build"]["build_id"]
+
+        tag_added_or_removed = message["tag"]["name"]
+        if event.message.address.endswith(".tag"):
+            kwargs = {"tag_added": tag_added_or_removed}
+        else:
+            kwargs = {"tag_removed": tag_added_or_removed}
+
+        try:
+            slow_update_brew_tags.apply_async(args=(build_id,), kwargs=kwargs)
+        except Exception as exc:
+            logger.error(
+                "Failed to schedule slow_update_brew_tags task for build ID %s: %s",
+                build_id,
+                str(exc),
+            )
+            return False
+        else:
+            return True
+
+    ########################
+    # Message Handlers: ET #
+    ########################
+    @staticmethod
+    def et_shipped_errata(event: Event) -> bool:
         """Handle messages about ET advisories that enter the SHIPPED_LIVE state"""
         logger.info("Handling UMB event for shipped erratum: %s", event.message.id)
         message = json.loads(event.message.body)
@@ -129,79 +167,58 @@ class BrewUMBReceiverHandler(UMBReceiverHandler):
                 errata_id,
                 str(exc),
             )
-            # Release message back to the queue but report back that it was delivered. The
-            # message will be re-delivered to any available client again.
-            self.release(event.delivery, delivered=True)
+            return False
         else:
-            # Accept the delivered message to remove it from the queue.
-            self.accept(event.delivery)
+            return True
 
-    def handle_tags(self, event: Event) -> None:
-        """Handle messages about Brew builds that have tags added or removed"""
-        logger.info("Handling UMB event for added or removed tags: %s", event.message.id)
+    ############################
+    # Message Handlers: SBOMer #
+    ############################
+    @staticmethod
+    def sbomer_complete(event: Event) -> bool:
+        logger.info(f"Handling UMB message for PNC SBOM {event.message.id}")
         message = json.loads(event.message.body)
-        build_id = message["build"]["build_id"]
-
-        tag_added_or_removed = message["tag"]["name"]
-        if event.message.address.endswith(".tag"):
-            kwargs = {"tag_added": tag_added_or_removed}
-        else:
-            kwargs = {"tag_removed": tag_added_or_removed}
-
         try:
-            slow_update_brew_tags.apply_async(args=(build_id,), kwargs=kwargs)
-        except Exception as exc:
-            logger.error(
-                "Failed to schedule slow_update_brew_tags task for build ID %s: %s",
-                build_id,
-                str(exc),
+            slow_fetch_pnc_sbom.delay(
+                message["purl"],
+                message["productConfig"]["errataTool"],
+                message["build"],
+                message["sbom"],
             )
-            # Release message back to the queue but report back that it was delivered. The
-            # message will be re-delivered to any available client again.
-            self.release(event.delivery, delivered=True)
+        except Exception as e:
+            logger.error(f"Failed to schedule PNC SBOM fetch {event.message.id}: {str(e)}")
+            return False
         else:
-            # Accept the delivered message to remove it from the queue.
-            self.accept(event.delivery)
+            return True
 
 
 class UMBListener:
     """Base class that listens for and handles messages on certain UMB topics"""
 
     VIRTUAL_TOPIC_PREFIX = f"Consumer.{settings.UMB_CONSUMER}.VirtualTopic.eng"
-    handler_class: Optional[MessagingHandler] = None
-    virtual_topic_addresses: dict[str, str] = {}
+    virtual_topic_addresses = {
+        # Brew Addresses
+        f"{VIRTUAL_TOPIC_PREFIX}.brew.build.complete": UMBReceiverHandler.brew_builds,
+        f"{VIRTUAL_TOPIC_PREFIX}.brew.build.tag": UMBReceiverHandler.brew_tags,
+        f"{VIRTUAL_TOPIC_PREFIX}.brew.build.untag": UMBReceiverHandler.brew_tags,
+        # ET Addresses
+        f"{VIRTUAL_TOPIC_PREFIX}.errata.activity.status": UMBReceiverHandler.et_shipped_errata,
+        # SBOMer Addresses
+        f"{VIRTUAL_TOPIC_PREFIX}.pnc.sbom.spike.complete": UMBReceiverHandler.sbomer_complete,
+    }
     # By default, listen for all messages on a topic
-    selectors: dict[str, str] = {}
+    selectors = {key: "" for key in virtual_topic_addresses}
+    # ET Selectors
+    # Only listen for messages about SHIPPED_LIVE errata
+    selectors[f"{VIRTUAL_TOPIC_PREFIX}.errata.activity.status"] = "errata_status = 'SHIPPED_LIVE'"
 
     @classmethod
     def consume(cls):
         """Run a single message handler, which can listen to multiple virtual topic addresses"""
-        if not cls.handler_class or not cls.virtual_topic_addresses:
-            raise NotImplementedError(
-                "Subclass must define handler class and virtual topic address(es)"
-            )
-
         logger.info("Starting consumer for virtual topic(s): %s", cls.virtual_topic_addresses)
-        handler = cls.handler_class(
-            virtual_topic_addresses=cls.virtual_topic_addresses, selectors=cls.selectors
-        )
-        Container(handler).run()
-
-
-class BrewUMBListener(UMBListener):
-    """Listen for messages about completed Brew builds, tagged builds, and untagged builds.
-    Listen for messages about shipped ET advisories, only to update released tags on Brew builds."""
-
-    handler_class = BrewUMBReceiverHandler
-    virtual_topic_addresses = {
-        f"{UMBListener.VIRTUAL_TOPIC_PREFIX}.brew.build.complete": "handle_builds",
-        f"{UMBListener.VIRTUAL_TOPIC_PREFIX}.brew.build.tag": "handle_tags",
-        f"{UMBListener.VIRTUAL_TOPIC_PREFIX}.brew.build.untag": "handle_tags",
-        f"{UMBListener.VIRTUAL_TOPIC_PREFIX}.errata.activity.status": "handle_shipped_errata",
-    }
-    # By default, listen for all messages on a topic
-    selectors = {key: "" for key in virtual_topic_addresses}
-    # Only listen for messages about SHIPPED_LIVE errata
-    selectors[
-        f"{UMBListener.VIRTUAL_TOPIC_PREFIX}.errata.activity.status"
-    ] = "errata_status = 'SHIPPED_LIVE'"
+        Container(
+            UMBReceiverHandler(
+                virtual_topic_addresses=cls.virtual_topic_addresses,
+                selectors=cls.selectors,
+            )
+        ).run()

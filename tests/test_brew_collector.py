@@ -28,6 +28,7 @@ from corgi.tasks.brew import (
     load_stream_brew_tags,
     save_component,
     slow_fetch_brew_build,
+    slow_save_taxonomy,
 )
 from corgi.tasks.common import BUILD_TYPE
 from tests.conftest import setup_product
@@ -1109,7 +1110,16 @@ def test_extract_image_components(mock_koji_session, monkeypatch):
 def test_fetch_rpm_build(mock_load_brew_tags, mock_sca, mock_brew):
     with open("tests/data/brew/1705913/component_data.json", "r") as component_data_file:
         mock_brew.return_value.get_component_data.return_value = json.load(component_data_file)
-    slow_fetch_brew_build(1705913)
+    with patch(
+        "corgi.tasks.brew.slow_save_taxonomy.delay", wraps=slow_save_taxonomy
+    ) as wrapped_save_taxonomy:
+        # Wrap the mocked object, and call its methods directly
+        # So that doing task.delay(*args, **kwargs) becomes task(*args, **kwargs)
+        # and we can test the same logic as before without a separate test
+        # and without the Celery task's wrapper layer getting in the way
+        build_id = "1705913"
+        slow_fetch_brew_build(build_id)
+        wrapped_save_taxonomy.assert_called_once_with(build_id, SoftwareBuild.Type.BREW)
     srpm = Component.objects.srpms().get(name="cockpit")
     assert srpm.description
     assert srpm.license_declared_raw
@@ -1196,7 +1206,16 @@ def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, moc
     stream.brew_tags = {"rhacm-2.4-rhel-8-container-released": True}
     stream.save()
 
-    slow_fetch_brew_build("1781353", SoftwareBuild.Type.BREW)
+    with patch(
+        "corgi.tasks.brew.slow_save_taxonomy.delay", wraps=slow_save_taxonomy
+    ) as wrapped_save_taxonomy:
+        # Wrap the mocked object, and call its methods directly
+        # So that doing task.delay(*args, **kwargs) becomes task(*args, **kwargs)
+        # and we can test the same logic as before without a separate test
+        # and without the Celery task's wrapper layer getting in the way
+        build_id = "1781353"
+        slow_fetch_brew_build(build_id, SoftwareBuild.Type.BREW)
+        wrapped_save_taxonomy.assert_called_once_with(build_id, SoftwareBuild.Type.BREW)
     image_index = Component.objects.get(
         name="subctl-container", type=Component.Type.CONTAINER_IMAGE, arch="noarch"
     )
@@ -1279,7 +1298,15 @@ def test_load_brew_tags(mock_fetch_modular_build, mock_fetch_brew_build):
 @patch("corgi.core.models.SoftwareBuild.save_product_taxonomy")
 def test_new_software_build_relation(mock_save_prod_tax):
     sb = SoftwareBuildFactory()
-    slow_fetch_brew_build(sb.build_id, sb.build_type)
+    with patch(
+        "corgi.tasks.brew.slow_save_taxonomy.delay", wraps=slow_save_taxonomy
+    ) as wrapped_save_taxonomy:
+        # Wrap the mocked object, and call its methods directly
+        # So that doing task.delay(*args, **kwargs) becomes task(*args, **kwargs)
+        # and we can test the same logic as before without a separate test
+        # and without the Celery task's wrapper layer getting in the way
+        slow_fetch_brew_build(sb.build_id, sb.build_type)
+        wrapped_save_taxonomy.assert_called_once_with(sb.build_id, sb.build_type)
     mock_save_prod_tax.assert_called_once_with()
 
 

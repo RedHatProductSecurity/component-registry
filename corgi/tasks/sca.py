@@ -178,9 +178,10 @@ def cpu_software_composition_analysis(build_uuid, force_process: bool = False):
                 f"Root component {root_component.purl} for build {build_uuid}"
                 "had child components that were not found in remote-sources.json!"
             )
-        software_build.save_product_taxonomy()
-        for component in software_build.components.get_queryset():
-            component.save_component_taxonomy()
+        app.send_task(
+            "corgi.tasks.brew.slow_save_taxonomy",
+            args=(software_build.build_id, software_build.build_type),
+        )
 
     # clean up source code so that we don't have to deal with reuse and an ever growing disk
     for source in distgit_sources:

@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand, CommandParser
 
 from corgi.core.models import SoftwareBuild
+from corgi.tasks.brew import slow_save_taxonomy
 
 
 class Command(BaseCommand):
@@ -36,6 +37,6 @@ class Command(BaseCommand):
                     f"updating {sb.build_id}: {sb.name}",
                 )
             )
-            sb.save_product_taxonomy()
-            for component in sb.components.get_queryset():
-                component.save_component_taxonomy()
+            # Reuse code, but run inline instead of scheduling task
+            # This may take a long time for large / many builds
+            slow_save_taxonomy(sb.build_id, sb.build_type)

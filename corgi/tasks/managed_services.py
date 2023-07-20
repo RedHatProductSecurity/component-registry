@@ -13,6 +13,7 @@ from corgi.core.models import (
     ProductStream,
     SoftwareBuild,
 )
+from corgi.tasks.brew import slow_save_taxonomy
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 from corgi.tasks.sca import save_component
 
@@ -107,6 +108,4 @@ def cpu_manifest_service(product_stream_id: str, service_components: list):
                 type=ProductComponentRelation.Type.APP_INTERFACE,
             )
 
-            build.save_product_taxonomy()
-            for component_obj in build.components.get_queryset().iterator():
-                component_obj.save_component_taxonomy()
+            slow_save_taxonomy.delay(build.build_id, build.build_type)

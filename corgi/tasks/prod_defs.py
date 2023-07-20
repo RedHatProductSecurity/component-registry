@@ -1,10 +1,11 @@
 import re
+from collections import defaultdict
 from typing import Any
 
 from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, QuerySet
 
 from config.celery import app
 from corgi.collectors.models import (
@@ -73,15 +74,85 @@ def _find_by_cpe(cpe_patterns: list[str]) -> list[str]:
     if not cpe_patterns:
         return []
 
-    regexes: list = []
+    regex_query = Q()
     for pattern in cpe_patterns:
-        regexes.append(pattern.replace(".", "\\.").replace("*", ".*"))
+        regex = pattern.replace(".", "\\.").replace("*", ".*")
+        regex_query |= Q(cpe__regex=regex)
 
-    query = Q()
-    for regex in regexes:
-        query |= Q(cpe__regex=regex)
+    return list(
+        CollectorErrataProductVariant.objects.filter(regex_query).values_list("cpe", flat=True)
+    )
 
-    return list(CollectorErrataProductVariant.objects.filter(query).values_list("cpe", flat=True))
+
+def _match_stream_version_to_cpe_version(
+    version_streams: QuerySet[ProductStream],
+    cpe_version: str,
+    cpe: str,
+    el_by_cpe: defaultdict[str, list],
+    cpes_by_stream: defaultdict[str, list],
+):
+    """Iterate product stream versions, looking for matches to the cpe_version passed in.
+    If a match is found, store it in cpes_by_streams dict along with any el suffixes."""
+    cpe_version_with_z = f"{cpe_version}.z"
+    for version_stream_name in version_streams.filter(
+        Q(version=cpe_version) | Q(version=cpe_version_with_z)
+    ).values_list("name", flat=True):
+        if cpe in el_by_cpe:
+            for el in el_by_cpe[cpe]:
+                cpes_by_stream[version_stream_name].append(cpe + "::" + el)
+        else:
+            cpes_by_stream[version_stream_name].append(cpe)
+
+
+def _split_cpe_version(cpe_part: str, versions_by_cpe: defaultdict[str, set]):
+    version_split = cpe_part.rsplit(":", 1)
+    if len(version_split) != 2:
+        logger.warning(f"Didn't find ':' in cpe_part: {cpe_part}")
+        return
+    cpe_name = version_split[0]
+    cpe_version = version_split[1]
+    versions_by_cpe[cpe_name].add(cpe_version)
+
+
+def _split_cpe(cpe: str, versions_by_cpe: defaultdict[str, set], el_by_cpe: defaultdict[str, list]):
+    """Splits a cpe such as 'cpe:/a:redhat:openshift_ironic:4.13:el9' into
+    'cpe:/a:redhat:openshift_ironic', '4.13', and 'el9'
+    It builds 2 dictionaries, one with a set of versions grouped by cpe_name and another
+    with el suffixes grouped by 'cpe_name + version'.
+    We do this so that we can iterate versions looking for matches without el suffixes. Once
+    we find a match, we add back the suffixes"""
+    variant_split = cpe.rsplit("::")
+    if len(variant_split) == 2:
+        el_part = variant_split[1]
+        cpe_part = variant_split[0]
+        el_by_cpe[cpe_part].append(el_part)
+        _split_cpe_version(cpe_part, versions_by_cpe)
+    elif len(variant_split) == 1:
+        _split_cpe_version(cpe, versions_by_cpe)
+    else:
+        raise ValueError(f"More than one el qualifier '::' in {cpe}")
+
+
+def _match_and_save_stream_cpes(product_version: ProductVersion) -> None:
+    """Given a Product Version with Product Stream foreign keys and cpes_matching_patterns
+    This will match those cpes to the stream children using the stream versions, and save the cpes
+    to the cpes_matching_patterns attribute of the streams."""
+    versions_by_cpe: defaultdict[str, set] = defaultdict(set)
+    el_suffix_by_cpe: defaultdict[str, list] = defaultdict(list)
+    for cpe in product_version.cpes_matching_patterns:
+        _split_cpe(cpe, versions_by_cpe, el_suffix_by_cpe)
+
+    cpes_by_stream: defaultdict[str, list] = defaultdict(list)
+    version_streams = product_version.productstreams.get_queryset()
+    for cpe_name, versions in versions_by_cpe.items():
+        for cpe_version in versions:
+            cpe = cpe_name + ":" + cpe_version
+            _match_stream_version_to_cpe_version(
+                version_streams, cpe_version, cpe, el_suffix_by_cpe, cpes_by_stream
+            )
+
+    for stream, cpes in cpes_by_stream.items():
+        ProductStream.objects.filter(name=stream).update(cpes_matching_patterns=cpes)
 
 
 def parse_product_version(
@@ -93,8 +164,8 @@ def parse_product_version(
     if match_version := RE_VERSION_LIKE_STRING.search(name):
         version = match_version.group()
     description = pd_product_version.pop("public_description", [])
-    cpes = pd_product_version.pop("cpe", [])
-    cpes_matching_patterns = _find_by_cpe(cpes)
+    cpe_patterns = pd_product_version.pop("cpe", [])
+    cpes_matching_patterns = _find_by_cpe(cpe_patterns)
     logger.debug(
         "Creating or updating Product Version: name=%s, description=%s",
         name,
@@ -106,7 +177,7 @@ def parse_product_version(
             "version": version,
             "description": description,
             "products": product,
-            "cpe_patterns": cpes,
+            "cpe_patterns": cpe_patterns,
             "cpes_matching_patterns": cpes_matching_patterns,
             "meta_attr": pd_product_version,
         },
@@ -122,6 +193,8 @@ def parse_product_version(
         parse_product_stream(
             pd_product_stream, product, product_version, product_version_node, version
         )
+    if cpes_matching_patterns:
+        _match_and_save_stream_cpes(product_version)
 
 
 def parse_product_stream(
@@ -159,6 +232,8 @@ def parse_product_stream(
             "yum_repositories": yum_repos,
             "composes": composes_dict,
             "exclude_components": exclude_components,
+            # reset by _match_and_save_stream_cpes
+            "cpes_matching_patterns": [],
         },
     )
     product_stream_node, _ = ProductNode.objects.get_or_create(

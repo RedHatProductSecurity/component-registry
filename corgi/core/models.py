@@ -407,10 +407,10 @@ class ProductModel(TimeStampedModel):
 
     @property
     def cpes(self) -> tuple[str, ...]:
-        """Return CPEs for child streams / variants."""
+        """Return CPEs for all descendant variants."""
         variant_cpes = (
             self.pnodes.get_queryset()
-            .get_descendants()
+            .get_descendants(include_self=True)
             .using("read_only")
             .filter(level=MODEL_NODE_LEVEL_MAPPING["ProductVariant"])
             .values_list("productvariant__cpe", flat=True)
@@ -580,6 +580,8 @@ class ProductStream(ProductModel):
     et_product_versions = fields.ArrayField(models.CharField(max_length=200), default=list)
 
     exclude_components = fields.ArrayField(models.CharField(max_length=200), default=list)
+
+    cpes_matching_patterns = fields.ArrayField(models.CharField(max_length=1000), default=list)
 
     products = models.ForeignKey("Product", on_delete=models.CASCADE, related_name="productstreams")
     productversions = models.ForeignKey(

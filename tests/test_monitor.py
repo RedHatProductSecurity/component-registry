@@ -16,20 +16,22 @@ def test_umb_listener_defines_settings():
     and handles them with correct class"""
     listener = UMBListener()
     assert listener.virtual_topic_addresses == {
-        f"{VIRTUAL_TOPIC_ADDRESS_PREFIX}VirtualTopic.eng.brew.build.complete": "brew_builds",
-        f"{VIRTUAL_TOPIC_ADDRESS_PREFIX}VirtualTopic.eng.brew.build.tag": "brew_tags",
-        f"{VIRTUAL_TOPIC_ADDRESS_PREFIX}VirtualTopic.eng.brew.build.untag": "brew_tags",
         f"{VIRTUAL_TOPIC_ADDRESS_PREFIX}VirtualTopic.eng."
-        f"errata.activity.status": "et_shipped_errata",
+        f"brew.build.complete": UMBReceiverHandler.brew_builds,
         f"{VIRTUAL_TOPIC_ADDRESS_PREFIX}VirtualTopic.eng."
-        f"pnc.sbom.spike.complete": "sbomer_complete",
+        f"brew.build.tag": UMBReceiverHandler.brew_tags,
+        f"{VIRTUAL_TOPIC_ADDRESS_PREFIX}VirtualTopic.eng."
+        f"brew.build.untag": UMBReceiverHandler.brew_tags,
+        f"{VIRTUAL_TOPIC_ADDRESS_PREFIX}VirtualTopic.eng."
+        f"errata.activity.status": UMBReceiverHandler.et_shipped_errata,
+        f"{VIRTUAL_TOPIC_ADDRESS_PREFIX}VirtualTopic.eng."
+        f"pnc.sbom.spike.complete": UMBReceiverHandler.sbomer_complete,
     }
-    assert listener.handler_class == UMBReceiverHandler
 
     # Stub out the real Container class with a mock we can assert on
     with patch("corgi.monitor.consumer.Container") as mock_container_constructor:
         # Stub out a different class that we don't want to test here
-        with patch.object(UMBListener, "handler_class") as mock_receiver_constructor:
+        with patch("corgi.monitor.consumer.UMBReceiverHandler") as mock_receiver_constructor:
             listener.consume()
 
     # We call the UMBReceiverHandler() constructor with the class's virtual topic addresses

@@ -1,5 +1,6 @@
 import json
 import logging
+from collections.abc import Callable
 
 from django.conf import settings
 from proton import Event, SSLDomain
@@ -12,11 +13,15 @@ from corgi.tasks.pnc import slow_fetch_pnc_sbom
 
 logger = logging.getLogger(__name__)
 
+# A method which receives an event, and returns true if the message was accepted,
+# or false if it should be released back into the queue.
+HandleMethod = Callable[[Event], bool]
+
 
 class UMBReceiverHandler(MessagingHandler):
     """Handler to deal with received messages from UMB."""
 
-    def __init__(self, virtual_topic_addresses: dict[str, str], selectors: dict[str, str]):
+    def __init__(self, virtual_topic_addresses: dict[str, HandleMethod], selectors: dict[str, str]):
         """Set up a handler that listens to many topics and processes messages from each"""
         super(UMBReceiverHandler, self).__init__()
 
@@ -71,22 +76,30 @@ class UMBReceiverHandler(MessagingHandler):
 
         # Turn function name (str) into callable so we can pass event to it below
         # We don't pass the callable itself because it needs a self arg
-        callback_name = self.virtual_topic_addresses.get(address, "")
-        callback_function = getattr(self, callback_name, None)
+        callback = self.virtual_topic_addresses.get(address)
 
         if not address:
             raise ValueError(f"UMB event {event.message.id} had no address!")
-        elif callback_function:
-            callback_function(event)
+        elif callback:
+            handled = callback(event)
         else:
             raise ValueError(
                 f"UMB event {event.message.id} had unrecognized address: {event.message.address}"
             )
 
+        if handled:
+            # Accept the delivered message to remove it from the queue.
+            self.accept(event.delivery)
+        else:
+            # Release message back to the queue but report back that it was delivered. The
+            # message will be re-delivered to any available client again.
+            self.release(event.delivery, delivered=True)
+
     ##########################
     # Message Handlers: Brew #
     ##########################
-    def brew_builds(self, event: Event) -> None:
+    @staticmethod
+    def brew_builds(event: Event) -> bool:
         """Handle messages about completed Brew builds"""
         logger.info("Handling UMB event for completed builds: %s", event.message.id)
         message = json.loads(event.message.body)
@@ -100,14 +113,12 @@ class UMBReceiverHandler(MessagingHandler):
                 build_id,
                 str(exc),
             )
-            # Release message back to the queue but report back that it was delivered. The
-            # message will be re-delivered to any available client again.
-            self.release(event.delivery, delivered=True)
+            return False
         else:
-            # Accept the delivered message to remove it from the queue.
-            self.accept(event.delivery)
+            return True
 
-    def brew_tags(self, event: Event) -> None:
+    @staticmethod
+    def brew_tags(event: Event) -> bool:
         """Handle messages about Brew builds that have tags added or removed"""
         logger.info("Handling UMB event for added or removed tags: %s", event.message.id)
         message = json.loads(event.message.body)
@@ -127,17 +138,15 @@ class UMBReceiverHandler(MessagingHandler):
                 build_id,
                 str(exc),
             )
-            # Release message back to the queue but report back that it was delivered. The
-            # message will be re-delivered to any available client again.
-            self.release(event.delivery, delivered=True)
+            return False
         else:
-            # Accept the delivered message to remove it from the queue.
-            self.accept(event.delivery)
+            return True
 
     ########################
     # Message Handlers: ET #
     ########################
-    def et_shipped_errata(self, event: Event) -> None:
+    @staticmethod
+    def et_shipped_errata(event: Event) -> bool:
         """Handle messages about ET advisories that enter the SHIPPED_LIVE state"""
         logger.info("Handling UMB event for shipped erratum: %s", event.message.id)
         message = json.loads(event.message.body)
@@ -158,17 +167,15 @@ class UMBReceiverHandler(MessagingHandler):
                 errata_id,
                 str(exc),
             )
-            # Release message back to the queue but report back that it was delivered. The
-            # message will be re-delivered to any available client again.
-            self.release(event.delivery, delivered=True)
+            return False
         else:
-            # Accept the delivered message to remove it from the queue.
-            self.accept(event.delivery)
+            return True
 
     ############################
     # Message Handlers: SBOMer #
     ############################
-    def sbomer_complete(self, event: Event):
+    @staticmethod
+    def sbomer_complete(event: Event) -> bool:
         logger.info(f"Handling UMB message for PNC SBOM {event.message.id}")
         message = json.loads(event.message.body)
         try:
@@ -180,25 +187,24 @@ class UMBReceiverHandler(MessagingHandler):
             )
         except Exception as e:
             logger.error(f"Failed to schedule PNC SBOM fetch {event.message.id}: {str(e)}")
-            self.release(event.delivery, delivered=True)
+            return False
         else:
-            self.accept(event.delivery)
+            return True
 
 
 class UMBListener:
     """Base class that listens for and handles messages on certain UMB topics"""
 
     VIRTUAL_TOPIC_PREFIX = f"Consumer.{settings.UMB_CONSUMER}.VirtualTopic.eng"
-    handler_class = UMBReceiverHandler
     virtual_topic_addresses = {
         # Brew Addresses
-        f"{VIRTUAL_TOPIC_PREFIX}.brew.build.complete": "brew_builds",
-        f"{VIRTUAL_TOPIC_PREFIX}.brew.build.tag": "brew_tags",
-        f"{VIRTUAL_TOPIC_PREFIX}.brew.build.untag": "brew_tags",
+        f"{VIRTUAL_TOPIC_PREFIX}.brew.build.complete": UMBReceiverHandler.brew_builds,
+        f"{VIRTUAL_TOPIC_PREFIX}.brew.build.tag": UMBReceiverHandler.brew_tags,
+        f"{VIRTUAL_TOPIC_PREFIX}.brew.build.untag": UMBReceiverHandler.brew_tags,
         # ET Addresses
-        f"{VIRTUAL_TOPIC_PREFIX}.errata.activity.status": "et_shipped_errata",
+        f"{VIRTUAL_TOPIC_PREFIX}.errata.activity.status": UMBReceiverHandler.et_shipped_errata,
         # SBOMer Addresses
-        f"{VIRTUAL_TOPIC_PREFIX}.pnc.sbom.spike.complete": "sbomer_complete",
+        f"{VIRTUAL_TOPIC_PREFIX}.pnc.sbom.spike.complete": UMBReceiverHandler.sbomer_complete,
     }
     # By default, listen for all messages on a topic
     selectors = {key: "" for key in virtual_topic_addresses}
@@ -210,7 +216,9 @@ class UMBListener:
     def consume(cls):
         """Run a single message handler, which can listen to multiple virtual topic addresses"""
         logger.info("Starting consumer for virtual topic(s): %s", cls.virtual_topic_addresses)
-        handler = cls.handler_class(
-            virtual_topic_addresses=cls.virtual_topic_addresses, selectors=cls.selectors
-        )
-        Container(handler).run()
+        Container(
+            UMBReceiverHandler(
+                virtual_topic_addresses=cls.virtual_topic_addresses,
+                selectors=cls.selectors,
+            )
+        ).run()

@@ -9,9 +9,5 @@
 python3 manage.py collectstatic --noinput
 
 # start gunicorn
-if [[ $1 == dev ]]; then
-    exec gunicorn config.wsgi --config gunicorn_config.py --reload
-else
-    exec gunicorn config.wsgi --config gunicorn_config.py
-fi
-
+# set env var so we monkeypatch ssl module before preloading app
+RUNNING_GUNICORN=true exec gunicorn config.wsgi --config gunicorn_config.py

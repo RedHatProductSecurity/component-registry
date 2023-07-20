@@ -423,6 +423,8 @@ PULP_URL = os.getenv("CORGI_PULP_URL")
 
 # App-Interface
 APP_INTERFACE_URL = os.getenv("CORGI_APP_INTERFACE_URL", "")
+APP_INTERFACE_USERNAME = os.getenv("CORGI_APP_INTERFACE_USERNAME", "")
+APP_INTERFACE_PASSWORD = os.getenv("CORGI_APP_INTERFACE_PASSWORD", "")
 
 # Settings for the drf-spectacular package
 SPECTACULAR_SETTINGS = {

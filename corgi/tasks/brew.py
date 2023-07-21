@@ -41,26 +41,19 @@ def slow_fetch_brew_build(
 ):
     logger.info("Fetch brew build called with build id: %s", build_id)
 
-    try:
-        softwarebuild = SoftwareBuild.objects.get(build_id=build_id, build_type=build_type)
-    except SoftwareBuild.DoesNotExist:
-        pass
-    else:
+    if SoftwareBuild.objects.filter(build_id=build_id, build_type=build_type).exists():
+        logger.info("Already processed build_id %s", build_id)
+
+        # Build exists, and we don't want to reload it
         if not force_process:
-            logger.info("Already processed build_id %s", build_id),
+            # But we want to save the taxonomy again
             if save_product:
                 logger.info("Only saving product taxonomy for build_id %s", build_id)
-                softwarebuild.save_product_taxonomy()
-                # Below only saves the component taxonomy for the root component
-                # Should only be one root component / node per build
-                # TODO: Save the taxonomy for all components in the tree, CORGI-739
-                #  We tried to do this in CORGI-730 but it caused SoftTimeLimitExceeded errors
-                #  We may need to switch from GenericForeignKey to regular ForeignKey first
-                for related_component in softwarebuild.components.get_queryset():
-                    related_component.save_component_taxonomy()
+                slow_save_taxonomy.delay(build_id, build_type)
             return
-        else:
-            logger.info("Fetching brew build with build_id: %s", build_id)
+        # Else build exists, but we do want to reload it
+    # Else build doesn't exist
+    logger.info("Fetching brew build with build_id: %s", build_id)
 
     try:
         component = Brew(build_type).get_component_data(int(build_id))
@@ -136,14 +129,7 @@ def slow_fetch_brew_build(
 
     # Allow async call of slow_load_errata task, see CORGI-21
     if save_product:
-        softwarebuild.save_product_taxonomy()
-        # Below only saves the component taxonomy for the root component
-        # Should only be one root component / node per build
-        # TODO: Save the taxonomy for all components in the tree, CORGI-739
-        #  We tried to do this in CORGI-730 but it caused SoftTimeLimitExceeded errors
-        #  We may need to switch from GenericForeignKey to regular ForeignKey first
-        for related_component in softwarebuild.components.get_queryset():
-            related_component.save_component_taxonomy()
+        slow_save_taxonomy.delay(build_id, build_type)
 
     # for builds with errata tags set ProductComponentRelation
     # get_component_data always calls _extract_advisory_ids to set tags, but list may be empty
@@ -209,6 +195,32 @@ def slow_fetch_modular_build(
         save_component(c, node)
     slow_fetch_brew_build.delay(build_id, save_product=save_product, force_process=force_process)
     logger.info("Finished fetching modular build: %s", build_id)
+
+
+@app.task(
+    base=Singleton,
+    autoretry_for=RETRYABLE_ERRORS,
+    retry_kwargs=RETRY_KWARGS,
+    soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
+)
+def slow_save_taxonomy(build_id: str, build_type: str) -> None:
+    """Helper function to call save_product_taxonomy()
+    and save_component_taxonomy() in a separate task
+    to reduce the risk of timeouts in slow_fetch_brew_build"""
+    logger.info(f"Saving product taxonomy for {build_type} build {build_id}")
+    build = SoftwareBuild.objects.get(build_id=build_id, build_type=build_type)
+    build.save_product_taxonomy()
+
+    # Below only saves the component taxonomy for the root component
+    # There should only be one root component / node per build
+    # but there are some historical data issues
+    # TODO: Save the taxonomy for all components in the tree, CORGI-739
+    #  We tried to do this in CORGI-730 but it caused SoftTimeLimitExceeded errors
+    #  We may need to switch from GenericForeignKey to regular ForeignKey first
+    logger.info(f"Saving component taxonomy for {build_type} build {build_id}")
+    for root_component in build.components.get_queryset():
+        root_component.save_component_taxonomy()
+    logger.info(f"Finished saving taxonomies for {build_type} build {build_id}")
 
 
 def save_component(

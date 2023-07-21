@@ -395,9 +395,7 @@ def mock_clone(package_name: str, build_uuid: str) -> Tuple[Path, str, str]:
 # mock the syft call to avoid having to have actual source code for the test
 @patch("subprocess.check_output")
 @patch("corgi.tasks.sca._clone_source", side_effect=mock_clone)
-@patch("corgi.core.models.SoftwareBuild.save_product_taxonomy")
 def test_slow_software_composition_analysis(
-    mock_save_prod_tax,
     mock_clone_source,
     mock_syft,
     build_id,
@@ -428,7 +426,14 @@ def test_slow_software_composition_analysis(
 
     with open(syft_results, "r") as mock_scan_results:
         mock_syft.return_value = mock_scan_results.read()
-    cpu_software_composition_analysis(str(sb.pk))
+
+    with patch("corgi.tasks.sca.app") as mock_app:
+        cpu_software_composition_analysis(str(sb.pk))
+        mock_app.send_task.assert_called_once_with(
+            "corgi.tasks.brew.slow_save_taxonomy", args=(str(sb.build_id), sb.build_type)
+        )
+
+    mock_clone_source.assert_called_once_with(package_name, str(sb.pk))
     expected_syft_call_arg_list = [
         call(
             [
@@ -467,7 +472,6 @@ def test_slow_software_composition_analysis(
     else:
         Component.objects.srpms().get(software_build=sb)
     assert expected_component.meta_attr["source"] == ["syft-0.60.1"]
-    mock_save_prod_tax.assert_called_once()
 
 
 @pytest.mark.django_db

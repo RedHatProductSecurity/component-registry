@@ -294,9 +294,9 @@ class SoftwareBuildSerializer(IncludeExcludeFieldsSerializer):
 
     tags = TagSerializer(many=True, read_only=True)
 
-    link = serializers.SerializerMethodField()
-    web_url = serializers.SerializerMethodField()
-    components = serializers.SerializerMethodField()
+    link = serializers.SerializerMethodField(read_only=True)
+    web_url = serializers.SerializerMethodField(read_only=True)
+    components = serializers.SerializerMethodField(read_only=True)
 
     @staticmethod
     def get_link(instance: SoftwareBuild) -> str:
@@ -338,7 +338,7 @@ class SoftwareBuildSummarySerializer(IncludeExcludeFieldsSerializer):
     """Show summary information for a SoftwareBuild.
     Add or remove fields using ?include_fields=&exclude_fields="""
 
-    link = serializers.SerializerMethodField()
+    link = serializers.SerializerMethodField(read_only=True)
 
     @staticmethod
     def get_link(instance: SoftwareBuild) -> str:
@@ -352,13 +352,13 @@ class SoftwareBuildSummarySerializer(IncludeExcludeFieldsSerializer):
 
 class ProductTaxonomySerializer(IncludeExcludeFieldsSerializer):
     tags = TagSerializer(many=True, read_only=True)
-    link = serializers.SerializerMethodField()
+    link = serializers.SerializerMethodField(read_only=True)
 
-    products = serializers.SerializerMethodField()
-    product_versions = serializers.SerializerMethodField()
-    product_streams = serializers.SerializerMethodField()
-    product_variants = serializers.SerializerMethodField()
-    channels = serializers.SerializerMethodField()
+    products = serializers.SerializerMethodField(read_only=True)
+    product_versions = serializers.SerializerMethodField(read_only=True)
+    product_streams = serializers.SerializerMethodField(read_only=True)
+    product_variants = serializers.SerializerMethodField(read_only=True)
+    channels = serializers.SerializerMethodField(read_only=True)
 
     @staticmethod
     @abstractmethod
@@ -421,13 +421,13 @@ class ComponentSerializer(ProductTaxonomySerializer):
     """Show detailed information for a Component.
     Add or remove fields using ?include_fields=&exclude_fields="""
 
-    software_build = serializers.SerializerMethodField()
+    software_build = serializers.SerializerMethodField(read_only=True)
 
-    provides = serializers.SerializerMethodField()
-    sources = serializers.SerializerMethodField()
-    upstreams = serializers.SerializerMethodField()
+    provides = serializers.SerializerMethodField(read_only=True)
+    sources = serializers.SerializerMethodField(read_only=True)
+    upstreams = serializers.SerializerMethodField(read_only=True)
 
-    manifest = serializers.SerializerMethodField()
+    manifest = serializers.SerializerMethodField(read_only=True)
 
     @extend_schema_field(SoftwareBuildSummarySerializer(many=False, read_only=True))
     def get_software_build(self, obj):
@@ -526,8 +526,8 @@ class ComponentSerializer(ProductTaxonomySerializer):
 class ComponentListSerializer(IncludeExcludeFieldsSerializer):
     """List all Components. Add or remove fields using ?include_fields=&exclude_fields="""
 
-    link = serializers.SerializerMethodField()
-    build_completion_dt = serializers.SerializerMethodField()
+    link = serializers.SerializerMethodField(read_only=True)
+    build_completion_dt = serializers.SerializerMethodField(read_only=True)
 
     @staticmethod
     def get_build_completion_dt(instance: Component) -> Optional[datetime.datetime]:
@@ -555,10 +555,10 @@ class ComponentListSerializer(IncludeExcludeFieldsSerializer):
 
 
 class ProductModelSerializer(ProductTaxonomySerializer):
-    components = serializers.SerializerMethodField()
-    upstreams = serializers.SerializerMethodField()
-    builds = serializers.SerializerMethodField()
-    build_count = serializers.SerializerMethodField()
+    components = serializers.SerializerMethodField(read_only=True)
+    upstreams = serializers.SerializerMethodField(read_only=True)
+    builds = serializers.SerializerMethodField(read_only=True)
+    build_count = serializers.SerializerMethodField(read_only=True)
 
     @staticmethod
     def get_components(instance: ProductModel) -> str:
@@ -650,8 +650,8 @@ class ProductStreamSerializer(ProductModelSerializer):
     Add or remove fields using ?include_fields=&exclude_fields="""
 
     cpes = serializers.ListField(child=serializers.CharField(max_length=1000), read_only=True)
-    manifest = serializers.SerializerMethodField()
-    relations = serializers.SerializerMethodField()
+    manifest = serializers.SerializerMethodField(read_only=True)
+    relations = serializers.SerializerMethodField(read_only=True)
 
     @staticmethod
     def get_link(instance: ProductStream) -> str:
@@ -683,7 +683,7 @@ class ProductStreamSummarySerializer(ProductModelSerializer):
     """Show summary information for a ProductStream.
     Add or remove fields using ?include_fields=&exclude_fields="""
 
-    manifest = serializers.SerializerMethodField()
+    manifest = serializers.SerializerMethodField(read_only=True)
 
     @staticmethod
     def get_link(instance: ProductStream) -> str:
@@ -705,9 +705,9 @@ class ProductStreamSummarySerializer(ProductModelSerializer):
 class ComponentProductStreamSummarySerializer(ProductModelSerializer):
     """custom component view displaying product information."""
 
-    component_link = serializers.SerializerMethodField()
-    manifest = serializers.SerializerMethodField()
-    component_purl = serializers.CharField()
+    component_link = serializers.SerializerMethodField(read_only=True)
+    manifest = serializers.SerializerMethodField(read_only=True)
+    component_purl = serializers.CharField(read_only=True)
 
     @staticmethod
     def get_link(instance: ProductStream) -> str:
@@ -736,7 +736,7 @@ class ProductVariantSerializer(ProductModelSerializer):
     """Show detailed information for ProductVariant(s).
     Add or remove fields using ?include_fields=&exclude_fields="""
 
-    relations = serializers.SerializerMethodField()
+    relations = serializers.SerializerMethodField(read_only=True)
 
     @staticmethod
     def get_link(instance: ProductVariant) -> str:

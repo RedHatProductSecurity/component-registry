@@ -377,7 +377,6 @@ class ProductDataViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled u
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend, filters.SearchFilter]
     search_fields = ["name", "description", "meta_attr"]
     filterset_class = ProductDataFilter
-    lookup_url_kwarg = "uuid"
     ordering_field = "name"
 
 
@@ -492,8 +491,8 @@ class ProductStreamViewSetSet(ProductDataViewSet):
             raise Http404
 
     @action(methods=["get"], detail=True)
-    def manifest(self, request: Request, uuid: Union[str, None] = None) -> Response:
-        obj = self.queryset.filter(uuid=uuid).first()
+    def manifest(self, request: Request, pk: str = "") -> Response:
+        obj = self.queryset.filter(pk=pk).first()
         if not obj:
             return Response(status=status.HTTP_404_NOT_FOUND)
         manifest = json.loads(obj.manifest)
@@ -539,7 +538,6 @@ class ChannelViewSet(ReadOnlyModelViewSet):
     serializer_class = ChannelSerializer
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend, filters.SearchFilter]
     filterset_class = ChannelFilter
-    lookup_url_kwarg = "uuid"
 
 
 @INCLUDE_EXCLUDE_FIELDS_SCHEMA
@@ -557,7 +555,6 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
     search_fields = ["name", "description", "release", "version", "meta_attr"]
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend, filters.SearchFilter]
     filterset_class = ComponentFilter
-    lookup_url_kwarg = "uuid"
 
     def get_queryset(self) -> QuerySet[Component]:
         # 'latest' and 'root components' filter automagically turn on
@@ -630,14 +627,14 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
                 component = Component.objects.db_manager("read_only").get(purl=purl)
             else:
                 pk = req.path.split("/")[-1]  # there must be better ways ...
-                component = Component.objects.db_manager("read_only").get(uuid=pk)
+                component = Component.objects.db_manager("read_only").get(pk=pk)
             return component
         except Component.DoesNotExist:
             raise Http404
 
     @action(methods=["get"], detail=True)
-    def manifest(self, request: Request, uuid: str = "") -> Response:
-        obj = self.queryset.filter(uuid=uuid).first()
+    def manifest(self, request: Request, pk: str = "") -> Response:
+        obj = self.queryset.filter(pk=pk).first()
         if not obj:
             return Response(status=status.HTTP_404_NOT_FOUND)
         manifest = json.loads(obj.manifest)
@@ -649,11 +646,11 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         authentication_classes=[TokenAuthentication],
         permission_classes=[IsAuthenticatedOrReadOnly],
     )
-    def update_license(self, request: Request, uuid: Union[str, None] = None) -> Response:
+    def update_license(self, request: Request, pk: str = "") -> Response:
         """Allow OpenLCS to upload copyright text / license scan results for a component"""
         # In the future these could be separate endpoints
         # For testing we'll just keep it under one endpoint
-        component = self.queryset.filter(uuid=uuid).using("default").first()
+        component = self.queryset.filter(pk=pk).using("default").first()
         if not component:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
@@ -693,8 +690,8 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         return response
 
     @action(methods=["get"], detail=True)
-    def provides(self, request: Request, uuid: Union[str, None] = None) -> Response:
-        obj = self.queryset.filter(uuid=uuid).first()
+    def provides(self, request: Request, pk: str = "") -> Response:
+        obj = self.queryset.filter(pk=pk).first()
         if not obj:
             return Response(status=status.HTTP_404_NOT_FOUND)
         dicts = get_component_taxonomy(
@@ -704,8 +701,8 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         return Response(dicts)
 
     @action(methods=["get"], detail=True)
-    def taxonomy(self, request: Request, uuid: Union[str, None] = None) -> Response:
-        obj = self.queryset.filter(uuid=uuid).first()
+    def taxonomy(self, request: Request, pk: str = "") -> Response:
+        obj = self.queryset.filter(pk=pk).first()
         if not obj:
             return Response(status=status.HTTP_404_NOT_FOUND)
         dicts = get_component_taxonomy(obj, tuple(ComponentNode.ComponentNodeType.values))

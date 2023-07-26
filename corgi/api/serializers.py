@@ -423,9 +423,11 @@ class ComponentSerializer(ProductTaxonomySerializer):
 
     software_build = serializers.SerializerMethodField(read_only=True)
 
-    provides = serializers.SerializerMethodField(read_only=True)
-    sources = serializers.SerializerMethodField(read_only=True)
-    upstreams = serializers.SerializerMethodField(read_only=True)
+    provides = serializers.HyperlinkedIdentityField(view_name="component-provides", read_only=True)
+    sources = serializers.HyperlinkedIdentityField(view_name="component-sources", read_only=True)
+    upstreams = serializers.HyperlinkedIdentityField(
+        view_name="component-upstreams", read_only=True
+    )
 
     manifest = serializers.SerializerMethodField(read_only=True)
 
@@ -444,37 +446,6 @@ class ComponentSerializer(ProductTaxonomySerializer):
     @staticmethod
     def get_link(instance: Component) -> str:
         return get_component_purl_link(instance.purl)
-
-    # @staticmethod
-    def get_provides(self, instance: Component):
-        include_exclude_serializer = self.get_include_exclude_serializer(
-            "provides", ComponentSerializer, instance.provides
-        )
-        if include_exclude_serializer:
-            return include_exclude_serializer.data
-        return get_component_data_list(
-            instance.provides.values_list("purl", flat=True).using("read_only").iterator()
-        )
-
-    def get_sources(self, instance: Component):
-        include_exclude_serializer = self.get_include_exclude_serializer(
-            "sources", ComponentSerializer, instance.sources
-        )
-        if include_exclude_serializer:
-            return include_exclude_serializer.data
-        return get_component_data_list(
-            instance.sources.values_list("purl", flat=True).using("read_only").iterator()
-        )
-
-    def get_upstreams(self, instance: Component):
-        include_exclude_serializer = self.get_include_exclude_serializer(
-            "upstreams", ComponentSerializer, instance.upstreams
-        )
-        if include_exclude_serializer:
-            return include_exclude_serializer.data
-        return get_component_data_list(
-            instance.upstreams.values_list("purl", flat=True).using("read_only").iterator()
-        )
 
     @staticmethod
     def get_manifest(instance: Component) -> str:

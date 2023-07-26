@@ -254,6 +254,8 @@ def save_component(
         related_url = ""
 
     license_declared_raw = meta.pop("license", "")
+    version = meta.pop("version", "")
+    namespace = Brew.check_red_hat_namespace(component_type, version)
     # We can't build a purl before the component is saved,
     # so we can't handle an IntegrityError (duplicate purl) here like we do in the SCA task
     # But that's OK - this task shouldn't ever raise an IntegrityError
@@ -262,14 +264,12 @@ def save_component(
     obj, _ = Component.objects.update_or_create(
         type=component_type,
         name=meta.pop("name", ""),
-        version=meta.pop("version", ""),
+        version=version,
         release=meta.pop("release", ""),
         arch=meta.pop("arch", "noarch"),
         defaults={
             "description": meta.pop("description", ""),
-            "namespace": Component.Namespace.REDHAT
-            if component_type == Component.Type.RPM
-            else Component.Namespace.UPSTREAM,
+            "namespace": namespace,
             "related_url": related_url,
             "epoch": int(meta.pop("epoch", 0)),
         },

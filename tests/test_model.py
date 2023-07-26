@@ -610,14 +610,14 @@ def test_purl2url():
     # maven with group_id
     component = ComponentFactory(
         type=Component.Type.MAVEN,
-        namespace=Component.Namespace.REDHAT,
+        namespace=Component.Namespace.UPSTREAM,
         meta_attr={"group_id": "io.prestosql.benchto"},
         name="benchto-driver",
         version="0.7",
         release=release,
     )
     assert (
-        component.download_url == "https://repo1.maven.org/maven2/io/prestosql/benchto/"
+        component.download_url == "https://repo.maven.apache.org/maven2/io/prestosql/benchto/"
         "benchto-driver/0.7"
     )
     assert (

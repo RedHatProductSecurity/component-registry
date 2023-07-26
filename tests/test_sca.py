@@ -11,6 +11,7 @@ from packageurl import PackageURL
 
 from corgi.collectors.go_list import GoList
 from corgi.collectors.syft import Syft
+from corgi.core.constants import RED_HAT_MAVEN_REPOSITORY
 from corgi.core.models import Component, ComponentNode
 from corgi.tasks.sca import (
     _clone_source,
@@ -369,7 +370,7 @@ slow_software_composition_analysis_test_data = [
         "md5/587372e4c72d1eddfab8e848457f574e/"
         "hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar",
         "tests/data/hawkular-metrics-schema-installer-syft.json",
-        "pkg:maven/com.github.jnr/jffi@1.2.10.redhat-1",
+        f"pkg:maven/com.github.jnr/jffi@1.2.10.redhat-1?repository_url={RED_HAT_MAVEN_REPOSITORY}",
     ),
 ]
 

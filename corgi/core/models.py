@@ -22,6 +22,7 @@ from corgi.core.constants import (
     CONTAINER_DIGEST_FORMATS,
     EL_MATCH_RE,
     MODEL_NODE_LEVEL_MAPPING,
+    RED_HAT_MAVEN_REPOSITORY,
     ROOT_COMPONENTS_CONDITION,
     SRPM_CONDITION,
 )
@@ -1063,6 +1064,9 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         else "https://catalog.redhat.com/software/containers/search"
     )
 
+    # Types with custom purl-building logic for components in the REDHAT namespace
+    # Every other type just gets "redhat/" appended after "pkg:type/"
+    CUSTOM_NAMESPACE_TYPES = (Type.CONTAINER_IMAGE, Type.MAVEN)
     REMOTE_SOURCE_COMPONENT_TYPES = (
         Type.CARGO,
         Type.GEM,
@@ -1199,11 +1203,13 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         # BUT https://github.com/package-url/purl-spec/blob/master/PURL-TYPES.rst#oci
         # "OCI purls do not contain a namespace, although,
         # repository_url may contain a namespace as part of the physical location of the package."
+        # BUT https://github.com/package-url/purl-spec/blob/master/PURL-TYPES.rst#maven
+        # "The group id is the namespace", so we use repository_url instead
         if (
             self.namespace == Component.Namespace.REDHAT
-            and self.type != Component.Type.CONTAINER_IMAGE
+            and self.type not in Component.CUSTOM_NAMESPACE_TYPES
         ):
-            # Don't wipe out Maven / other purl namespaces if they already exist
+            # Don't wipe out purl namespaces if they already exist
             existing_namespace = purl_data.get("namespace", "")
             purl_data["namespace"] = f"{Component.Namespace.REDHAT.lower()}/{existing_namespace}"
 
@@ -1211,12 +1217,17 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
     def _build_maven_purl(self) -> dict[str, Union[str, dict[str, str]]]:
         qualifiers = {}
+
         classifier = self.meta_attr.get("classifier")
         if classifier:
             qualifiers["classifier"] = classifier
+
         extension = self.meta_attr.get("type")
         if extension:
             qualifiers["type"] = extension
+
+        if self.namespace == Component.Namespace.REDHAT:
+            qualifiers["repository_url"] = RED_HAT_MAVEN_REPOSITORY
 
         purl_data: dict[str, Union[str, dict[str, str]]] = {
             "name": self.name,
@@ -1289,11 +1300,11 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         """Remove "redhat/" that we prepend to namespace strings in our purls"""
         if (
             self.namespace == Component.Namespace.REDHAT
-            and self.type != Component.Type.CONTAINER_IMAGE
+            and self.type not in Component.CUSTOM_NAMESPACE_TYPES
             and purl
         ):
             # purls like pkg:golang/redhat/otherstuff cause issues with purl2url
-            # Container images don't have a /redhat/ namespace in their purl
+            # Container and Maven components don't have a /redhat/ namespace in their purl
             # Trying to strip this value anyway might cause other issues
             # if the purl contains e.g. ?repository_url=example.com/redhat/path/
             purl = purl.replace("/redhat/", "/", 1)
@@ -1454,7 +1465,11 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         # Based on existing url2purl logic for Maven, and official docs:
         # https://maven.apache.org/repositories/layout.html
         purl_data = PackageURL.from_string(purl)
-        central_maven_server = "https://repo1.maven.org/maven2"
+        # Red Hat components use the repository_url from their purl
+        # Upstream components use the default repository_url from the purl spec
+        repository_url = (
+            purl_data.qualifiers.get("repository_url") or "https://repo.maven.apache.org/maven2"
+        )
 
         namespace = purl_data.namespace
         if namespace:
@@ -1463,8 +1478,6 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
         name = purl_data.name
         version = purl_data.version
-        if version and (".redhat" in version or "-redhat" in version):
-            central_maven_server = "https://maven.repository.redhat.com/ga"
 
         classifier = purl_data.qualifiers.get("classifier")
         classifier = f"-{classifier}" if classifier else ""
@@ -1472,12 +1485,12 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
         if namespace and name and version and extension:
             return (
-                f"{central_maven_server}/{namespace}/{name}/{version}/"
+                f"{repository_url}/{namespace}/{name}/{version}/"
                 f"{name}-{version}{classifier}.{extension}"
             )
 
         elif namespace and name and version:
-            return f"{central_maven_server}/{namespace}/{name}/{version}"
+            return f"{repository_url}/{namespace}/{name}/{version}"
 
         else:
             return ""
@@ -1489,6 +1502,9 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         # Based on existing url2purl logic for Maven, and official docs:
         # https://maven.apache.org/repositories/layout.html
         purl_data = PackageURL.from_string(purl)
+
+        # All components use an upstream site, never the Red Hat repo
+        # since the repo doesn't have any human-readable "about page" / info
         central_maven_server = "https://mvnrepository.com/artifact"
 
         namespace = purl_data.namespace

@@ -167,7 +167,7 @@ class Brew:
             c = component
         else:
             return ""
-        # Strip right parens
+        # Strip right parens, even if we didn't strip prefix
         return c.replace(")", "")
 
     @staticmethod
@@ -292,9 +292,9 @@ class Brew:
         # TODO: list all components used as build requirements
         return srpm_component
 
-    @staticmethod
+    @classmethod
     def _parse_bundled_provides(
-        bundled_provides: list[tuple[Component.Type, str, str]], rpm_info: dict[str, str]
+        cls, bundled_provides: list[tuple[Component.Type, str, str]], rpm_info: dict[str, str]
     ) -> list[dict[str, Union[str, dict[str, Union[str, list[str]]]]]]:
         """Parse a list of (type, name, version) tuples, build a list of bundled component dicts"""
         id_counter = 0
@@ -310,7 +310,7 @@ class Brew:
 
             bundled_component: dict[str, Union[str, dict[str, Union[str, list[str]]]]] = {
                 "type": component_type,
-                "namespace": Component.Namespace.UPSTREAM,
+                "namespace": cls.check_red_hat_namespace(component_type, version),
                 "meta": bundled_component_meta,
             }
             # We can't set go_component_type here for Golang components
@@ -318,6 +318,19 @@ class Brew:
             # There's no easy way for us to tell which type this component is
             parsed_provides.append(bundled_component)
         return parsed_provides
+
+    @staticmethod
+    def check_red_hat_namespace(component_type, version) -> Component.Namespace:
+        """Given a component type and version, return the correct namespace"""
+        if component_type == Component.Type.RPM:
+            # RPMs are always built at Red Hat
+            return Component.Namespace.REDHAT
+        elif component_type == Component.Type.MAVEN and "redhat" in version:
+            # .redhat or -redhat in the version string indicate this Maven component
+            # was built in a Red Hat build system (e.g. by PNC / for a Middleware product)
+            return Component.Namespace.REDHAT
+        else:
+            return Component.Namespace.UPSTREAM
 
     @staticmethod
     def _build_archive_dl_url(filename: str, build_info: dict[str, str]) -> str:
@@ -671,9 +684,10 @@ class Brew:
         components: list[dict[str, Any]] = []
         typed_pkgs, remaining_packages = cls._filter_by_type(packages, pkg_type)
         for typed_pkg in typed_pkgs:
+            component_type = cls.CACHITO_PKG_TYPE_MAPPING[pkg_type]
             typed_component: dict[str, Any] = {
-                "type": cls.CACHITO_PKG_TYPE_MAPPING[pkg_type],
-                "namespace": Component.Namespace.UPSTREAM,
+                "type": component_type,
+                "namespace": cls.check_red_hat_namespace(component_type, typed_pkg.version),
                 "meta": {
                     "name": typed_pkg.name,
                     "version": typed_pkg.version,
@@ -692,9 +706,10 @@ class Brew:
                     "name": dep.name,
                     "version": dep.version,
                 }
+                component_type = cls.CACHITO_PKG_TYPE_MAPPING[dep.type]
                 component = {
-                    "type": cls.CACHITO_PKG_TYPE_MAPPING[dep.type],
-                    "namespace": Component.Namespace.UPSTREAM,
+                    "type": component_type,
+                    "namespace": cls.check_red_hat_namespace(component_type, dep.version),
                     "meta": component_meta,
                 }
                 # The dev key is only present for Cachito package managers which support
@@ -867,24 +882,6 @@ class Brew:
                 filtered.append(dep)
                 remaining_deps.remove(dep)
         return filtered, remaining_deps
-
-    @staticmethod
-    def get_maven_build_data(
-        build_info: dict[str, Any], build_type_info: dict[str, Any]
-    ) -> dict[str, Any]:
-        component = {
-            "type": Component.Type.MAVEN,
-            "namespace": Component.Namespace.REDHAT,
-            "meta": {
-                # Strip release since it's not technically part of the unique GAV identifier
-                "gav": build_info["nvr"].rsplit("-", maxsplit=1)[0],
-                "group_id": build_type_info["maven"]["group_id"],
-                "artifact_id": build_type_info["maven"]["artifact_id"],
-                "version": build_type_info["maven"]["version"],
-            },
-        }
-        # TODO: add more info
-        return component
 
     @staticmethod
     def extract_advisory_ids(build_tags: list[str]) -> list[str]:

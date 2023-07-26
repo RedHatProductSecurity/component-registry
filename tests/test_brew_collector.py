@@ -1107,9 +1107,10 @@ def test_extract_image_components(mock_koji_session, monkeypatch):
 @patch("corgi.tasks.brew.Brew")
 @patch("corgi.tasks.sca.cpu_software_composition_analysis.delay")
 @patch("corgi.tasks.brew.load_brew_tags")
-def test_fetch_rpm_build(mock_load_brew_tags, mock_sca, mock_brew):
+def test_fetch_rpm_build(mock_load_brew_tags, mock_sca, mock_brew_constructor):
+    mock_brew_obj = mock_brew_constructor.return_value
     with open("tests/data/brew/1705913/component_data.json", "r") as component_data_file:
-        mock_brew.return_value.get_component_data.return_value = json.load(component_data_file)
+        mock_brew_obj.get_component_data.return_value = json.load(component_data_file)
     with patch(
         "corgi.tasks.brew.slow_save_taxonomy.delay", wraps=slow_save_taxonomy
     ) as wrapped_save_taxonomy:
@@ -1117,8 +1118,12 @@ def test_fetch_rpm_build(mock_load_brew_tags, mock_sca, mock_brew):
         # So that doing task.delay(*args, **kwargs) becomes task(*args, **kwargs)
         # and we can test the same logic as before without a separate test
         # and without the Celery task's wrapper layer getting in the way
-        build_id = "1705913"
-        slow_fetch_brew_build(build_id)
+        with patch(
+            "corgi.tasks.brew.Brew.check_red_hat_namespace", wraps=Brew.check_red_hat_namespace
+        ) as wrapped_check_namespace:
+            build_id = "1705913"
+            slow_fetch_brew_build(build_id)
+            wrapped_check_namespace.assert_called()
         wrapped_save_taxonomy.assert_called_once_with(build_id, SoftwareBuild.Type.BREW)
     srpm = Component.objects.srpms().get(name="cockpit")
     assert srpm.description
@@ -1191,6 +1196,7 @@ def test_fetch_rpm_build(mock_load_brew_tags, mock_sca, mock_brew):
             "kpatch-kernel-4.18.0-339.el8-build",
         ],
     )
+    mock_sca.assert_called_once_with(str(software_build.uuid), force_process=False)
 
 
 @pytest.mark.django_db
@@ -1213,8 +1219,12 @@ def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, moc
         # So that doing task.delay(*args, **kwargs) becomes task(*args, **kwargs)
         # and we can test the same logic as before without a separate test
         # and without the Celery task's wrapper layer getting in the way
-        build_id = "1781353"
-        slow_fetch_brew_build(build_id, SoftwareBuild.Type.BREW)
+        with patch(
+            "corgi.tasks.brew.Brew.check_red_hat_namespace", wraps=Brew.check_red_hat_namespace
+        ) as wrapped_check_namespace:
+            build_id = "1781353"
+            slow_fetch_brew_build(build_id, SoftwareBuild.Type.BREW)
+            wrapped_check_namespace.assert_called()
         wrapped_save_taxonomy.assert_called_once_with(build_id, SoftwareBuild.Type.BREW)
     image_index = Component.objects.get(
         name="subctl-container", type=Component.Type.CONTAINER_IMAGE, arch="noarch"
@@ -1419,3 +1429,32 @@ def test_get_relation_builds():
     )
     result = errata_tool._get_relation_builds(1).first()
     assert result == (errata_relation.build_id, errata_relation.build_type, None)
+
+
+# We only use this function for non-root components
+# So it doesn't need to handle OCI / RPMMOD types
+# We could handle these anyway just for safety
+@pytest.mark.parametrize(
+    "component_type,version,expected_value",
+    (
+        # RPMs are always built in a Red Hat build system
+        (Component.Type.RPM, "", Component.Namespace.REDHAT),
+        (Component.Type.RPM, "1.2.3.redhat.0001", Component.Namespace.REDHAT),
+        (Component.Type.RPM, "1.2.3-redhat.0002", Component.Namespace.REDHAT),
+        # Maven types were built in a Red Hat build system
+        # only if they have "redhat" somewhere in their version string
+        # usually like .redhat or -redhat in the data I checked
+        # Otherwise we assume they're built upstream
+        (Component.Type.MAVEN, "", Component.Namespace.UPSTREAM),
+        (Component.Type.MAVEN, "1.2.3-0003", Component.Namespace.UPSTREAM),
+        (Component.Type.MAVEN, "1.2.3.redhat-0004", Component.Namespace.REDHAT),
+        (Component.Type.MAVEN, "1.2.3-redhat.0005", Component.Namespace.REDHAT),
+        # PYPI and all other types are always built upstream
+        (Component.Type.PYPI, "", Component.Namespace.UPSTREAM),
+        (Component.Type.PYPI, "1.2.3.redhat-0006", Component.Namespace.UPSTREAM),
+        (Component.Type.PYPI, "1.2.3-redhat-0007", Component.Namespace.UPSTREAM),
+    ),
+)
+def test_check_red_hat_namespace(component_type, version, expected_value):
+    """Test that we return the right namespace using component type and version"""
+    assert Brew.check_red_hat_namespace(component_type, version) == expected_value

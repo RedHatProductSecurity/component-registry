@@ -15,8 +15,10 @@ from packageurl import PackageURL
 from requests import Response
 
 from config.celery import app
+from corgi.collectors.brew import Brew
 from corgi.collectors.go_list import GoList
 from corgi.collectors.syft import Syft
+from corgi.core.constants import RED_HAT_MAVEN_REPOSITORY
 from corgi.core.models import Component, ComponentNode, SoftwareBuild
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 
@@ -75,7 +77,7 @@ def save_component(
     component: dict[str, Any], parent: ComponentNode, is_go_package: bool = False
 ) -> bool:
     meta = component.get("meta", {})
-    if component["type"] not in Component.Type:
+    if component["type"] not in Component.Type.values:
         logger.warning("Tried to save component with unknown type: %s", component["type"])
         return False
 
@@ -87,24 +89,34 @@ def save_component(
 
     created = False
     name = meta.pop("name", "")
+    version = meta.pop("version", "")
+
+    namespace = Brew.check_red_hat_namespace(component["type"], version)
+    if namespace == Component.Namespace.REDHAT:
+        # Add an extra &repository_url= qualifier to the end
+        # if any other qualifiers are already present
+        # Otherwise add the first (only) qualifier, ?repository_url=
+        # TODO: Check Syft isn't encoding these weirdly
+        suffix = "&" if "?" in syft_purl else "?"
+        syft_purl = f"{syft_purl}{suffix}{RED_HAT_MAVEN_REPOSITORY}"
+
+    if component["type"] == Component.Type.GOLANG:
+        # Syft doesn't support go-package detection
+        # "go list" does, so we need to know which called this function
+        meta["go_component_type"] = "go-package" if is_go_package else "gomod"
+
     try:
-        if component["type"] == Component.Type.GOLANG:
-            # Syft doesn't support go-package detection
-            # "go list" does, so we need to know which called this function
-            meta["go_component_type"] = "go-package" if is_go_package else "gomod"
         # Use all fields from Component index and uniqueness constraint
         # Don't update_or_create since Syft's metadata shouldn't override Brew's
         obj, created = Component.objects.get_or_create(
             type=component["type"],
             name=name,
-            version=meta.pop("version", ""),
+            version=version,
             release="",
             arch="noarch",
             defaults={
                 "meta_attr": meta,
-                "namespace": Component.Namespace.REDHAT
-                if component["type"] == Component.Type.RPM
-                else Component.Namespace.UPSTREAM,
+                "namespace": namespace,
             },
         )
     except django.db.IntegrityError:
@@ -115,6 +127,7 @@ def save_component(
         obj = find_duplicate_component(name, syft_purl)
 
     if syft_purl and syft_purl != obj.purl:
+        # TODO: This warning appears a lot due to encoding / escaping differences
         logger.warning("Saved component purl %s, does not match Syft purl: %s", obj.purl, syft_purl)
 
     node, node_created = ComponentNode.objects.get_or_create(

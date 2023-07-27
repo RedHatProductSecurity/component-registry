@@ -648,6 +648,7 @@ class ProductVersionSerializer(ProductModelSerializer):
         model = ProductVersion
         fields = [
             *ProductModelSerializer.Meta.fields,
+            "cpe_patterns",
             "products",
             "product_streams",
             "product_variants",
@@ -659,6 +660,7 @@ class ProductStreamSerializer(ProductModelSerializer):
     """Show detailed information for ProductStream(s).
     Add or remove fields using ?include_fields=&exclude_fields="""
 
+    cpes = serializers.ListField(child=serializers.CharField(max_length=1000), read_only=True)
     manifest = serializers.SerializerMethodField()
 
     products = serializers.SerializerMethodField()
@@ -677,6 +679,8 @@ class ProductStreamSerializer(ProductModelSerializer):
             *ProductModelSerializer.Meta.fields,
             "active",
             "brew_tags",
+            "cpes",
+            "cpes_matching_patterns",
             "yum_repositories",
             "composes",
             "et_product_versions",

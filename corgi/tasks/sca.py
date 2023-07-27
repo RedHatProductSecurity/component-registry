@@ -260,12 +260,16 @@ def _clone_source(source_url: str, build_uuid: str) -> Tuple[Path, str, str]:
         raise ValueError(
             f"Build {build_uuid} had a source_url with a non-git, non-HTTPS protocol: {source_url}"
         )
+    path = url.path
+    if "kernel-rt.git" in path:
+        # Source URLs from Brew are incorrect, give 404
+        path = path.replace("kernel-rt.git", "kernel-rt")
 
     protocol = url.scheme
     if protocol.startswith("git+"):
         protocol = protocol.removeprefix("git+")
-    git_remote = f"{protocol}://{url.netloc}{url.path}"
-    path_parts = url.path.rsplit("/", 2)
+    git_remote = f"{protocol}://{url.netloc}{path}"
+    path_parts = path.rsplit("/", 2)
     if len(path_parts) != 3:
         raise ValueError(f"Build {build_uuid} had a source_url with a too-short path: {source_url}")
     package_type = path_parts[1]

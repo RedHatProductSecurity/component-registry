@@ -1,5 +1,5 @@
 from collections import defaultdict
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 import pytest
 from django.conf import settings
@@ -227,9 +227,10 @@ def test_save_product_component_for_errata(
     assert mock_send.call_count == no_of_objs
 
 
-@patch("corgi.core.models.SoftwareBuild.save_product_taxonomy")
-def test_slow_save_errata_product_taxonomy(mock_build_save):
+@patch("corgi.tasks.errata_tool.app")
+def test_slow_save_errata_product_taxonomy(mock_app):
     sb = SoftwareBuildFactory()
+    sb2 = SoftwareBuildFactory()
     ProductComponentRelationFactory(
         type=ProductComponentRelation.Type.ERRATA,
         external_system_id="1",
@@ -237,8 +238,20 @@ def test_slow_save_errata_product_taxonomy(mock_build_save):
         build_id=sb.build_id,
         build_type=sb.build_type,
     )
+    ProductComponentRelationFactory(
+        type=ProductComponentRelation.Type.ERRATA,
+        external_system_id="1",
+        software_build=sb2,
+        build_id=sb2.build_id,
+        build_type=sb2.build_type,
+    )
     slow_save_errata_product_taxonomy(1)
-    assert mock_build_save.called
+    send_task_calls = [
+        call("corgi.tasks.brew.slow_save_taxonomy", args=(sb.build_id, sb.build_type)),
+        call("corgi.tasks.brew.slow_save_taxonomy", args=(sb2.build_id, sb2.build_type)),
+    ]
+    # Calls happen based on build ID / UUID ordering, which is random
+    mock_app.send_task.assert_has_calls(send_task_calls, any_order=True)
 
 
 @patch("corgi.collectors.brew.Brew.persist_modules")

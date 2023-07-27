@@ -488,7 +488,6 @@ def test_save_component_skips_duplicates():
     or different casing, do not create duplicate purls"""
     # Only type=PYPI doesn't distinguish between dash and underscore
     # Only type=PYPI and type=GITHUB don't distinguish between uppercase and lowercase
-    # We have no Github components
     old_component = ComponentFactory(
         type=Component.Type.PYPI,
         namespace=Component.Namespace.UPSTREAM,
@@ -520,11 +519,11 @@ def test_save_component_skips_duplicates():
     # Create a new node and link it to the root
     assert old_component.cnodes.count() == 0
     assert save_component(new_component, root_node) is True
-    assert Component.objects.filter(name=new_component["name"]).first() is None
+    assert not Component.objects.filter(name=new_component["name"]).exists()
     assert old_component.cnodes.count() == 1
 
     # Find the existing component, don't create a duplicate
     # Find the existing node, don't create a duplicate
     assert save_component(new_component_with_purl, root_node) is False
-    assert Component.objects.filter(name=new_component_with_purl["name"]).first() is None
+    assert not Component.objects.filter(name=new_component_with_purl["name"]).exists()
     assert old_component.cnodes.count() == 1

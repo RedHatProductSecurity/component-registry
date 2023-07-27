@@ -5,7 +5,7 @@ import koji
 from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.conf import settings
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Count, Q, QuerySet
 from django.utils import dateformat, dateparse, timezone
 from django.utils.timezone import make_aware
@@ -15,6 +15,7 @@ from corgi.collectors.brew import ADVISORY_REGEX, Brew, BrewBuildTypeNotSupporte
 from corgi.core.models import (
     Component,
     ComponentNode,
+    ComponentQuerySet,
     ProductComponentRelation,
     ProductStream,
     SoftwareBuild,
@@ -38,7 +39,7 @@ def slow_fetch_brew_build(
     build_type: str = BUILD_TYPE,
     save_product: bool = True,
     force_process: bool = False,
-):
+) -> bool:
     logger.info("Fetch brew build called with build id: %s", build_id)
 
     if SoftwareBuild.objects.filter(build_id=build_id, build_type=build_type).exists():
@@ -50,7 +51,7 @@ def slow_fetch_brew_build(
             if save_product:
                 logger.info("Only saving product taxonomy for build_id %s", build_id)
                 slow_save_taxonomy.delay(build_id, build_type)
-            return
+            return False
         # Else build exists, but we do want to reload it
     # Else build doesn't exist
     logger.info("Fetching brew build with build_id: %s", build_id)
@@ -59,11 +60,11 @@ def slow_fetch_brew_build(
         component = Brew(build_type).get_component_data(int(build_id))
     except BrewBuildTypeNotSupported as exc:
         logger.warning(str(exc))
-        return
+        return False
 
     if not component:
         logger.info("No data fetched for build %s from Brew, exiting...", build_id)
-        return
+        return False
 
     build_meta = component["build_meta"]["build_info"]
     build_meta["corgi_ingest_start_dt"] = dateformat.format(timezone.now(), "Y-m-d H:i:s")
@@ -84,7 +85,7 @@ def slow_fetch_brew_build(
     # TODO: Should we update_or_create to pick up changed build_meta?
     #  Sometimes builds are deleted in Brew
     #  In that case, don't wipe out data - test this
-    softwarebuild, created = SoftwareBuild.objects.get_or_create(
+    softwarebuild, build_created = SoftwareBuild.objects.get_or_create(
         build_id=build_id,
         build_type=build_type,
         defaults={
@@ -94,30 +95,31 @@ def slow_fetch_brew_build(
         },
         completion_time=completion_dt,
     )
-    if created:
+    if build_created:
         # Create foreign key from Relations to the new SoftwareBuild, where they don't already exist
         ProductComponentRelation.objects.filter(
             build_id=build_id, build_type=build_type, software_build__isnull=True
         ).update(software_build=softwarebuild)
 
-    if not force_process and not created:
+    if not force_process and not build_created:
         # If another task starts while this task is downloading data this can result in processing
         # the same build twice, let's just bail out here to save cpu
         logger.warning("SoftwareBuild with build_id %s already existed, not reprocessing", build_id)
-        return
+        return False
 
     if component["type"] == Component.Type.RPM:
-        root_node = save_srpm(softwarebuild, component)
+        root_node, root_created = save_srpm(softwarebuild, component)
     elif component["type"] == Component.Type.CONTAINER_IMAGE:
-        root_node = save_container(softwarebuild, component)
+        root_node, root_created = save_container(softwarebuild, component)
     elif component["type"] == Component.Type.RPMMOD:
-        root_node = save_module(softwarebuild, component)
+        root_node, root_created = save_module(softwarebuild, component)
     else:
         logger.warning(f"Build {build_id} type is not supported: {component['type']}")
-        return
+        return False
 
+    any_child_created = False
     for child_component in component.get("components", []):
-        save_component(child_component, root_node, softwarebuild)
+        any_child_created |= save_component(child_component, root_node)
 
     # for builds with any tag, check if the tag is used for product stream relations, and create the
     # relations if so.
@@ -151,20 +153,29 @@ def slow_fetch_brew_build(
     if settings.SCA_ENABLED:
         cpu_software_composition_analysis.delay(str(softwarebuild.pk), force_process=force_process)
 
+    logger.info(
+        "Created build (%s) or root (%s) or child(ren) (%s) for brew build: (%s, %s)",
+        build_created,
+        root_created,
+        any_child_created,
+        build_id,
+        build_type,
+    )
     logger.info("Finished fetching brew build: (%s, %s)", build_id, build_type)
+    return build_created or root_created or any_child_created
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def slow_fetch_modular_build(
     build_id: str, save_product: bool = True, force_process: bool = False
-) -> None:
+) -> bool:
     logger.info("Fetch modular build called with build id: %s", build_id)
     rhel_module_data = Brew.fetch_rhel_module(build_id)
     # Some compose build_ids in the relations table will be for SRPMs, skip those here
     if not rhel_module_data:
         logger.info("No module data fetched for build %s from Brew, exiting...", build_id)
         slow_fetch_brew_build.delay(build_id, force_process=force_process)
-        return
+        return False
     # Note: module builds don't include arch information, only the individual RPMs that make up a
     # module are built for specific architectures.
     # TODO: Merge below with similar logic in save_module() if possible
@@ -184,17 +195,19 @@ def slow_fetch_modular_build(
     # This should result in a lookup if slow_fetch_brew_build has already processed this module.
     # Likewise if slow_fetch_brew_build processes the module subsequently we should not create
     # a new ComponentNode, instead the same one will be looked up and used as the root node
-    node = save_node(ComponentNode.ComponentNodeType.SOURCE, None, obj)
+    node, node_created = save_node(ComponentNode.ComponentNodeType.SOURCE, None, obj)
 
+    any_child_created = False
     for c in rhel_module_data.get("components", []):
         # Request fetch of the SRPM build_ids here to ensure software_builds are created and linked
         # to the RPM components. We don't link the SRPM into the tree because some of it's RPMs
         # might not be included in the module
         if "brew_build_id" in c:
             slow_fetch_brew_build.delay(c["brew_build_id"])
-        save_component(c, node)
+        any_child_created |= save_component(c, node)
     slow_fetch_brew_build.delay(build_id, save_product=save_product, force_process=force_process)
     logger.info("Finished fetching modular build: %s", build_id)
+    return created or node_created or any_child_created
 
 
 @app.task(
@@ -223,9 +236,7 @@ def slow_save_taxonomy(build_id: str, build_type: str) -> None:
     logger.info(f"Finished saving taxonomies for {build_type} build {build_id}")
 
 
-def save_component(
-    component: dict, parent: ComponentNode, softwarebuild: Optional[SoftwareBuild] = None
-):
+def save_component(component: dict, parent: ComponentNode) -> bool:
     logger.debug("Called save component with component %s", component)
     component_type = component.pop("type")
     meta = component.get("meta", {})
@@ -254,26 +265,47 @@ def save_component(
         related_url = ""
 
     license_declared_raw = meta.pop("license", "")
+
+    name = meta.pop("name", "")
     version = meta.pop("version", "")
+    release = meta.pop("release", "")
+    arch = meta.pop("arch", "noarch")
+
+    epoch = int(meta.pop("epoch", 0))
+    description = meta.pop("description", "")
     namespace = Brew.check_red_hat_namespace(component_type, version)
-    # We can't build a purl before the component is saved,
-    # so we can't handle an IntegrityError (duplicate purl) here like we do in the SCA task
-    # But that's OK - this task shouldn't ever raise an IntegrityError
-    # The "original" component should be created here as part of normal ingestion
-    # The duplicate components (new name, same purl) are created by Syft / the SCA task later
-    obj, _ = Component.objects.update_or_create(
-        type=component_type,
-        name=meta.pop("name", ""),
-        version=version,
-        release=meta.pop("release", ""),
-        arch=meta.pop("arch", "noarch"),
-        defaults={
-            "description": meta.pop("description", ""),
-            "namespace": namespace,
-            "related_url": related_url,
-            "epoch": int(meta.pop("epoch", 0)),
-        },
-    )
+
+    if epoch:
+        nevra = f"{name}:{epoch}-{version}"
+    else:
+        nevra = f"{name}-{version}"
+
+    if release:
+        nevra = f"{nevra}-{release}.{arch}"
+    else:
+        nevra = f"{nevra}.{arch}"
+
+    defaults = {
+        "description": description,
+        "epoch": epoch,
+        "namespace": namespace,
+        "related_url": related_url,
+    }
+    try:
+        obj, created = Component.objects.update_or_create(
+            type=component_type,
+            name=name,
+            version=version,
+            release=release,
+            arch=arch,
+            defaults=defaults,
+        )
+    except IntegrityError:
+        # Return a queryset we can .update(), but there's only one match
+        match = handle_duplicate_component(component_type, name, nevra)
+        match.update(**defaults)
+        obj = match.get()
+        created = False
 
     set_license_declared_safely(obj, license_declared_raw)
 
@@ -283,11 +315,129 @@ def save_component(
         obj.meta_attr = obj.meta_attr | meta
         obj.save()
 
-    node = save_node(node_type, parent, obj)
-    recurse_components(component, node)
+    node, node_created = save_node(node_type, parent, obj)
+    any_child_created = recurse_components(component, node)
+    return created or node_created or any_child_created
 
 
-def save_srpm(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
+def handle_duplicate_component(
+    component_type: Component.Type, name: str, nevra: str
+) -> ComponentQuerySet:
+    """Handle an IntegrityError when saving a "new" Component
+    which is really a duplicate Component that almost matches an existing NEVRA
+    and which generates the same purl"""
+    # "Same purl for different NEVRAs" should happen only for Github and Python components
+    # These purls are always lowercase, but NEVRAs can be lowercase or mixed-case
+    # Finding the existing Component fails due to the mismatched casing in the name
+    # and creating a new Component fails due to an IntegrityError / duplicate purl values
+
+    # We can't easily build a purl before the component is saved,
+    # so we can't handle the IntegrityError (duplicate purl) here like we do in the SCA task
+    # Instead, let's try to find the same component's NEVRA with a different case
+    # and reuse / update that component
+    possible_matches = Component.objects.filter(type=component_type, nevra__iexact=nevra)
+    # TODO: Add test for - dash / _ underscore that both get converted to - in purls
+    #  e.g. for build 2617813 / NEVRA typing_extensions-3.10.0.2.noarch
+    #  and purl pkg:pypi/typing-extensions@3.10.0.2
+    if len(possible_matches) > 1:
+        # There can be multiple results for one NEVRA if e.g. a binary RPM and PyPI package
+        # have the same name, version, and arch (PyYAML 5.4.1 noarch)
+        # We also filter by type above, so this code should never get hit
+        raise ValueError(
+            f"New edge case when handling duplicate {component_type} component {name}: "
+            f"too many case-insensitive matches for NEVRA {nevra} ({len(possible_matches)})"
+        )
+    elif len(possible_matches) == 0:
+        possible_matches = handle_dash_underscore_confusion(component_type, name, nevra)
+
+    # else there was only one match initially, so extra logic above isn't needed
+    # Now that we have only one possible match, return it so it can be updated instead of created
+    return possible_matches
+
+
+def handle_dash_underscore_confusion(
+    component_type: Component.Type, name: str, nevra: str
+) -> ComponentQuerySet:
+    """Handle an IntegrityError when saving a "new" Component
+    which is really a duplicate Component that matches an existing NEVRA
+    except for dashes vs. underscores, and which generates the same purl"""
+    # Couldn't find a match for "same NEVRA, different case" that caused IntegrityError
+    # Underscores and dashes in names are converted to dashes in PyPI purls only
+    # So two components with different NEVRAs may still end up with the same purl
+    # TODO: check logic against SCA task
+    name_with_dash = name.replace("_", "-")
+    name_with_underscore = name.replace("-", "_")
+    nevra_with_dash = nevra.replace(name, name_with_dash, 1)
+    nevra_with_underscore = nevra.replace(name, name_with_underscore, 1)
+    dash_count = 0
+    underscore_count = 0
+
+    if "-" in name and "_" in name:
+        # Check for both possible variants - only dashes, only underscores
+        dash_matches = Component.objects.filter(type=component_type, nevra__iexact=nevra_with_dash)
+        dash_count = len(dash_matches)
+        underscore_matches = Component.objects.filter(
+            type=component_type, nevra__iexact=nevra_with_underscore
+        )
+        underscore_count = len(underscore_matches)
+
+        if dash_count > 0 and underscore_count > 0:
+            # There are PyPI / Github / RPM components in stage today
+            # with both dashes and underscores in their names
+            # In that case, we don't know the right NEVRA to use
+            possible_matches = dash_matches.union(underscore_matches)
+        elif dash_count == 1:
+            possible_matches = dash_matches
+        elif underscore_count == 1:
+            possible_matches = underscore_matches
+        else:
+            # There's a duplicate of this component / purl,
+            # but we couldn't find the same NEVRA with a different case,
+            # and we couldn't find a similar NEVRA with only dashes or underscores in it
+            # We shouldn't get here, but if we do, it's an edge case we're not handling
+            raise ValueError(
+                f"New edge case when handling duplicate {component_type} component {name}: "
+                f"no case-insensitive matches for NEVRAs {nevra} or "
+                f"{nevra_with_dash} or {nevra_with_underscore}"
+            )
+
+    elif "-" in name:
+        # Only dashes in name, check for same NEVRA with underscores
+        possible_matches = Component.objects.filter(
+            type=component_type, nevra__iexact=nevra_with_underscore
+        )
+        underscore_count = len(possible_matches)
+
+    elif "_" in name:
+        # Only underscores in name, check for same NEVRA with dashes
+        possible_matches = Component.objects.filter(
+            type=component_type, nevra__iexact=nevra_with_dash
+        )
+        dash_count = len(possible_matches)
+
+    else:
+        # There's a duplicate of this component / purl,
+        # but we couldn't find the same NEVRA with a different case,
+        # and the name didn't have any dashes or underscores in it
+        # We shouldn't get here, but if we do, it's an edge case we're not handling
+        raise ValueError(
+            f"New edge case when handling duplicate {component_type} component {name}: "
+            f"no case-insensitive matches for NEVRA {nevra} "
+            "which has no dashes or underscores"
+        )
+
+    if len(possible_matches) != 1:
+        raise ValueError(
+            f"New edge case when handling duplicate {component_type} component {name}: "
+            f"no case-insensitive matches for NEVRA {nevra} "
+            f"and too many matches ({len(possible_matches)}) "
+            f"for {nevra_with_dash} ({dash_count}) or {nevra_with_underscore} ({underscore_count})"
+        )
+
+    return possible_matches
+
+
+def save_srpm(softwarebuild: SoftwareBuild, build_data: dict) -> tuple[ComponentNode, bool]:
     name = build_data["meta"].pop("name")
     version = build_data["meta"].pop("version")
     related_url = build_data["meta"].pop("url", "")
@@ -316,10 +466,13 @@ def save_srpm(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
             "epoch": int(epoch),
         },
     )
-    node = save_node(ComponentNode.ComponentNodeType.SOURCE, None, obj)
+    node, node_created = save_node(ComponentNode.ComponentNodeType.SOURCE, None, obj)
+    upstream_created = False
     if related_url:
-        save_upstream(build_data["type"], name, version, build_data["meta"], extra, node)
-    return node
+        _, _, upstream_created = save_upstream(
+            build_data["type"], name, version, build_data["meta"], extra, node
+        )
+    return node, created or node_created or upstream_created
 
 
 def process_image_components(image):
@@ -345,14 +498,14 @@ def set_license_declared_safely(obj: Component, license_declared_raw: str) -> No
         obj.save()
 
 
-def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentNode:
+def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> tuple[ComponentNode, bool]:
     license_declared_raw = build_data["meta"].pop("license", "")
     related_url = build_data["meta"].get("repository_url", "")
     if not related_url:
         # Handle case when key is present but value is None
         related_url = ""
 
-    obj, created = Component.objects.update_or_create(
+    obj, root_created = Component.objects.update_or_create(
         type=build_data["type"],
         name=build_data["meta"].pop("name"),
         version=build_data["meta"].pop("version"),
@@ -369,20 +522,26 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
     )
 
     set_license_declared_safely(obj, license_declared_raw)
-    root_node = save_node(ComponentNode.ComponentNodeType.SOURCE, None, obj)
+    root_node, root_node_created = save_node(ComponentNode.ComponentNodeType.SOURCE, None, obj)
+    any_image_created = any_image_node_created = False
+    any_go_module_created = any_rpm_created = False
+    any_source_created = any_cachito_created = False
 
     if "upstream_go_modules" in build_data["meta"]:
         meta_attr = {"go_component_type": "gomod", "source": ["collectors/brew"]}
         for module in build_data["meta"]["upstream_go_modules"]:
             # the upstream commit is included in the dist-git commit history, but is not
             # exposed anywhere in the brew data that I can find, so can't set version
-            save_upstream(Component.Type.GOLANG, module, "", meta_attr, {}, root_node)
+            _, _, temp_created = save_upstream(
+                Component.Type.GOLANG, module, "", meta_attr, {}, root_node
+            )
+            any_go_module_created |= temp_created
 
     if "image_components" in build_data:
         for image in build_data["image_components"]:
             license_declared_raw = image["meta"].pop("license", "")
 
-            obj, created = Component.objects.update_or_create(
+            obj, temp_created = Component.objects.update_or_create(
                 type=image["type"],
                 name=image["meta"].pop("name"),
                 version=image["meta"].pop("version"),
@@ -395,6 +554,7 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
                     "namespace": Component.Namespace.REDHAT,
                 },
             )
+            any_image_created |= temp_created
 
             set_license_declared_safely(obj, license_declared_raw)
             # Based on a conversation with the container factory team,
@@ -404,11 +564,14 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
             # So we should probably still use PROVIDES here, and not PROVIDES_DEV
             # Unless we can distinguish between these two types of components
             # using some other Brew metadata
-            image_arch_node = save_node(ComponentNode.ComponentNodeType.PROVIDES, root_node, obj)
+            image_arch_node, temp_created = save_node(
+                ComponentNode.ComponentNodeType.PROVIDES, root_node, obj
+            )
+            any_image_node_created |= temp_created
 
             if "rpm_components" in image:
                 for rpm in image["rpm_components"]:
-                    save_component(rpm, image_arch_node)
+                    any_rpm_created |= save_component(rpm, image_arch_node)
                     # SRPMs are loaded using nested_builds
 
     if "sources" in build_data:
@@ -431,25 +594,34 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> ComponentN
                 source["meta"]["go_component_type"] = "gomod"
 
             extra = {"related_url": related_url}
-            _, upstream_node = save_upstream(
+            _, upstream_node, temp_created = save_upstream(
                 source["type"], component_name, component_version, source["meta"], extra, root_node
             )
+            any_source_created |= temp_created
 
             # Collect the Cachito dependencies
-            recurse_components(source, upstream_node)
-    return root_node
+            temp_created = recurse_components(source, upstream_node)
+            any_cachito_created |= temp_created
+    return root_node, (
+        (root_created or root_node_created)
+        or (any_image_created or any_image_node_created)
+        or (any_go_module_created or any_rpm_created)
+        or (any_source_created or any_cachito_created)
+    )
 
 
-def recurse_components(component: dict, parent: ComponentNode):
+def recurse_components(component: dict, parent: ComponentNode) -> bool:
+    any_child_created = False
     if not parent:
         logger.warning(f"Failed to create ComponentNode for component: {component}")
     else:
         if "components" in component:
             for child in component["components"]:
-                save_component(child, parent)
+                any_child_created |= save_component(child, parent)
+    return any_child_created
 
 
-def save_module(softwarebuild, build_data) -> ComponentNode:
+def save_module(softwarebuild, build_data) -> tuple[ComponentNode, bool]:
     """Upstreams are not created because modules have no related source code. They are a
     collection of RPMs from other SRPMS. The upstreams can be looked up from all the RPM children.
     No child components are created here because we don't have enough data in Brew to determine
@@ -470,16 +642,16 @@ def save_module(softwarebuild, build_data) -> ComponentNode:
             "software_build": softwarebuild,
         },
     )
-    node = save_node(ComponentNode.ComponentNodeType.SOURCE, None, obj)
+    node, node_created = save_node(ComponentNode.ComponentNodeType.SOURCE, None, obj)
 
-    return node
+    return node, created or node_created
 
 
 def save_upstream(
     component_type: str, name: str, version: str, meta_attr: dict, extra: dict, node: ComponentNode
-) -> tuple[Component, ComponentNode]:
+) -> tuple[Component, ComponentNode, bool]:
     """Helper function to save an upstream component and create a node for it"""
-    upstream_component, _ = Component.objects.update_or_create(
+    upstream_component, created = Component.objects.update_or_create(
         type=component_type,
         name=name,
         version=version,
@@ -491,22 +663,24 @@ def save_upstream(
             "namespace": Component.Namespace.UPSTREAM,
         },
     )
-    upstream_node = save_node(ComponentNode.ComponentNodeType.SOURCE, node, upstream_component)
+    upstream_node, node_created = save_node(
+        ComponentNode.ComponentNodeType.SOURCE, node, upstream_component
+    )
 
-    return upstream_component, upstream_node
+    return upstream_component, upstream_node, created or node_created
 
 
 def save_node(
     node_type: str, parent: Optional[ComponentNode], related_component: Component
-) -> ComponentNode:
+) -> tuple[ComponentNode, bool]:
     """Helper function that wraps ComponentNode creation"""
-    node, _ = ComponentNode.objects.get_or_create(
+    node, created = ComponentNode.objects.get_or_create(
         type=node_type,
         parent=parent,
         purl=related_component.purl,
         defaults={"obj": related_component},
     )
-    return node
+    return node, created
 
 
 @app.task(

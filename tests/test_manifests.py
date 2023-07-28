@@ -196,7 +196,9 @@ def test_product_manifest_excludes_unreleased_components():
     component, stream, provided, dev_provided = setup_products_and_components_provides(
         released=False
     )
-
+    # Use a stream from corgi.core.fixups supported_cpe_map to test cpe_fixups
+    stream.name = "quay-3.6"
+    stream.save()
     manifest = json.loads(stream.manifest)
 
     # No released components linked to this product
@@ -214,8 +216,7 @@ def test_product_manifest_excludes_unreleased_components():
 
     assert product_data["SPDXID"] == f"SPDXRef-{stream.uuid}"
     assert product_data["name"] == stream.name
-    for index, cpe in enumerate(stream.cpes):
-        assert product_data["externalRefs"][index]["referenceLocator"] == cpe
+    assert product_data["externalRefs"][0]["referenceLocator"] == "cpe:/a:redhat:quay:3::el8"
 
     # Only one "document describes product" relationship for the whole document at the end
     assert len(manifest["relationships"]) == 1
@@ -251,6 +252,10 @@ def test_product_manifest_properties():
     """Test that all models inheriting from ProductModel have a .manifest property
     And that it generates valid JSON."""
     component, stream, provided, dev_provided = setup_products_and_components_provides()
+    assert stream.cpes
+    stream.cpes_matching_patterns = ["cpe:/a:redhat:test:1"]
+    stream.save()
+    # assert all those are in the manifest too
 
     manifest = json.loads(stream.manifest)
 
@@ -276,8 +281,10 @@ def test_product_manifest_properties():
 
     assert product_data["SPDXID"] == f"SPDXRef-{stream.uuid}"
     assert product_data["name"] == stream.name
-    for index, cpe in enumerate(stream.cpes):
-        assert product_data["externalRefs"][index]["referenceLocator"] == cpe
+    cpes_in_manifest = set(ref["referenceLocator"] for ref in product_data["externalRefs"])
+    stream_cpes = set(stream.cpes)
+    stream_cpes.update(stream.cpes_matching_patterns)
+    assert cpes_in_manifest == stream_cpes
 
     document_describes_product = {
         "relatedSpdxElement": f"SPDXRef-{stream.uuid}",

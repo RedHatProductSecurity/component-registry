@@ -1845,15 +1845,24 @@ components:
             additionalProperties:
               type: string
           readOnly: true
-        cpe:
-          type: string
-          readOnly: true
         active:
           type: boolean
           readOnly: true
         brew_tags:
           type: object
           additionalProperties: {}
+          readOnly: true
+        cpes:
+          type: array
+          items:
+            type: string
+            maxLength: 1000
+          readOnly: true
+        cpes_matching_patterns:
+          type: array
+          items:
+            type: string
+            maxLength: 1000
           readOnly: true
         yum_repositories:
           type: array
@@ -1916,7 +1925,8 @@ components:
       - channels
       - components
       - composes
-      - cpe
+      - cpes
+      - cpes_matching_patterns
       - description
       - et_product_versions
       - exclude_components
@@ -2068,6 +2078,12 @@ components:
             additionalProperties:
               type: string
           readOnly: true
+        cpe_patterns:
+          type: array
+          items:
+            type: string
+            maxLength: 1000
+          readOnly: true
         products:
           type: array
           items:
@@ -2094,6 +2110,7 @@ components:
       - builds
       - channels
       - components
+      - cpe_patterns
       - description
       - link
       - name

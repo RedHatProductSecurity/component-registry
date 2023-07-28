@@ -407,23 +407,17 @@ class ProductModel(TimeStampedModel):
 
     @property
     def cpes(self) -> tuple[str, ...]:
-        """Return CPEs for child streams / variants."""
-        # include_self=True so we don't have to override this property for streams
-        descendants = (
-            self.pnodes.get_queryset().get_descendants(include_self=True).using("read_only")
-        )
-        stream_cpes = (
-            descendants.filter(level=MODEL_NODE_LEVEL_MAPPING["ProductStream"])
-            .values_list("productstream__cpe", flat=True)
-            .distinct()
-        )
+        """Return CPEs for all descendant variants."""
         variant_cpes = (
-            descendants.filter(level=MODEL_NODE_LEVEL_MAPPING["ProductVariant"])
+            self.pnodes.get_queryset()
+            .get_descendants(include_self=True)
+            .using("read_only")
+            .filter(level=MODEL_NODE_LEVEL_MAPPING["ProductVariant"])
             .values_list("productvariant__cpe", flat=True)
             .distinct()
         )
         # Omit CPEs like "", but GenericForeignKeys only support .filter(), not .exclude()??
-        return tuple(cpe for cpe in (*stream_cpes, *variant_cpes) if cpe)
+        return tuple(cpe for cpe in variant_cpes if cpe)
 
     @abstractmethod
     def get_ofuri(self) -> str:
@@ -530,6 +524,13 @@ class ProductTag(Tag):
 
 
 class ProductVersion(ProductModel):
+    # This is read from product_definitions ps_module cpe field. See
+    # product-definitions/-/blob/master/docs/data_model.md#psmodule
+    cpe_patterns = fields.ArrayField(models.CharField(max_length=1000), default=list)
+    # This is a collection of Errata Tool CPE values matching the above patterns
+    # It is populated by the corgi.tasks.prod_defs.update_products task
+    cpes_matching_patterns = fields.ArrayField(models.CharField(max_length=1000), default=list)
+
     products = models.ForeignKey(
         "Product", on_delete=models.CASCADE, related_name="productversions"
     )
@@ -568,8 +569,7 @@ class ProductVersionTag(Tag):
 
 
 class ProductStream(ProductModel):
-    cpe = models.CharField(max_length=1000, default="")
-
+    cpes_matching_patterns = fields.ArrayField(models.CharField(max_length=1000), default=list)
     # NOTE brew_tags and yum_repositories values shouldn't be exposed outside of Red Hat
     brew_tags = models.JSONField(default=dict)
     yum_repositories = fields.ArrayField(models.CharField(max_length=200), default=list)
@@ -579,6 +579,8 @@ class ProductStream(ProductModel):
     et_product_versions = fields.ArrayField(models.CharField(max_length=200), default=list)
 
     exclude_components = fields.ArrayField(models.CharField(max_length=200), default=list)
+
+    cpes_matching_patterns = fields.ArrayField(models.CharField(max_length=1000), default=list)
 
     products = models.ForeignKey("Product", on_delete=models.CASCADE, related_name="productstreams")
     productversions = models.ForeignKey(
@@ -616,13 +618,7 @@ class ProductStream(ProductModel):
     @property
     def manifest(self) -> str:
         """Return an SPDX-style manifest in JSON format."""
-        return ProductManifestFile(self).render_content(cpe_mapping=False)
-
-    # TODO remove this, and get the CPE in an a fashion which is easier to maintain
-    @property
-    def manifest_with_cpe_fixup(self) -> str:
-        """Return an SPDX-style manifest in JSON format."""
-        return ProductManifestFile(self).render_content(cpe_mapping=True)
+        return ProductManifestFile(self).render_content()
 
     @property
     def provides_queryset(self, using: str = "read_only") -> QuerySet["Component"]:

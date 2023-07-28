@@ -8,8 +8,13 @@ from corgi.collectors.models import (
     CollectorErrataProductVariant,
     CollectorErrataProductVersion,
 )
-from corgi.core.models import Product, ProductStream
-from corgi.tasks.prod_defs import update_products
+from corgi.core.models import Product, ProductStream, ProductVersion
+from corgi.tasks.prod_defs import (
+    _find_by_cpe,
+    _match_and_save_stream_cpes,
+    update_products,
+)
+from tests.factories import ProductStreamFactory, ProductVersionFactory
 
 pytestmark = pytest.mark.unit
 
@@ -76,6 +81,137 @@ def test_products(requests_mock):
     # Stream "cpes" is a dynamically-generated property, different than the "cpe" field
     # Which should include the stream's CPE + all the child variant CPEs (if any)
     assert et_variant.cpe in rhacm24z.cpes
+
+
+@pytest.mark.django_db
+def test_cpe_parsing(requests_mock):
+    with open("tests/data/product-definitions.json") as prod_defs:
+        text = prod_defs.read()
+        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+
+    update_products()
+
+    openshift_4 = ProductVersion.objects.get(name="openshift-4")
+    assert openshift_4.cpe_patterns == ["cpe:/a:redhat:openshift:4"]
+
+
+@pytest.mark.django_db
+def test_match_cpe_patterns(requests_mock):
+    et_variant_cpes = [
+        "cpe:/a:redhat:openshift_gitops:1::el8",
+        "cpe:/a:redhat:openshift_gitops:1.1::el8",
+        "cpe:/a:redhat:openshift_gitops:1.10::el8",
+    ]
+
+    product = CollectorErrataProduct.objects.create(name="product", et_id=1)
+    product_version = CollectorErrataProductVersion.objects.create(
+        name="product_version", et_id=10, product=product
+    )
+    et_id = 100
+    for cpe in et_variant_cpes:
+        CollectorErrataProductVariant.objects.create(
+            name=str(et_id), et_id=et_id, product_version=product_version, cpe=cpe
+        )
+        et_id += 1
+
+    with open("tests/data/product-definitions.json") as prod_defs:
+        text = prod_defs.read()
+        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+
+    update_products()
+
+    product_version = ProductVersion.objects.get(name="gitops-1")
+    assert sorted(product_version.cpes_matching_patterns) == sorted(et_variant_cpes)
+
+
+@pytest.mark.django_db
+def test_match_stream_version_cpe_patterns_matching_prefix():
+    product_version = ProductVersionFactory(
+        cpes_matching_patterns=[
+            "cpe:/a:redhat:openshift_ironic:4.12::el9",
+            "cpe:/a:redhat:openshift:4.1::el8",
+            "cpe:/a:redhat:openshift:4.1::el7",
+            "cpe:/a:redhat:openshift:4.12::el9",
+            "cpe:/a:redhat:openshift:4.12::el8",
+        ]
+    )
+
+    ProductStreamFactory(productversions=product_version, version="4.1", name="stream_41")
+    ProductStreamFactory(productversions=product_version, version="4.12", name="stream_412")
+
+    _match_and_save_stream_cpes(product_version)
+
+    stream41 = ProductStream.objects.get(name="stream_41")
+    stream412 = ProductStream.objects.get(name="stream_412")
+
+    assert stream41.cpes_matching_patterns == [
+        "cpe:/a:redhat:openshift:4.1::el8",
+        "cpe:/a:redhat:openshift:4.1::el7",
+    ]
+    assert stream412.cpes_matching_patterns == [
+        "cpe:/a:redhat:openshift_ironic:4.12::el9",
+        "cpe:/a:redhat:openshift:4.12::el9",
+        "cpe:/a:redhat:openshift:4.12::el8",
+    ]
+
+
+@pytest.mark.django_db
+def test_match_stream_version_cpe_patterns_no_el_suffix():
+    product_version = ProductVersionFactory(
+        cpes_matching_patterns=[
+            "cpe:/a:redhat:network_satellite_managed_db:5.8::el6",
+            "cpe:/a:redhat:network_satellite:5.8::el6",
+            "cpe:/a:redhat:network_proxy:5.8::el6",
+            "cpe:/a:redhat:rhel_rhn_tools:5",
+        ]
+    )
+
+    ProductStreamFactory(productversions=product_version, version="5", name="stream_5")
+    ProductStreamFactory(productversions=product_version, version="5.8", name="stream_58")
+
+    _match_and_save_stream_cpes(product_version)
+
+    stream5 = ProductStream.objects.get(name="stream_5")
+    stream58 = ProductStream.objects.get(name="stream_58")
+
+    assert stream5.cpes_matching_patterns == ["cpe:/a:redhat:rhel_rhn_tools:5"]
+    assert stream58.cpes_matching_patterns == [
+        "cpe:/a:redhat:network_satellite_managed_db:5.8::el6",
+        "cpe:/a:redhat:network_satellite:5.8::el6",
+        "cpe:/a:redhat:network_proxy:5.8::el6",
+    ]
+
+
+@pytest.mark.django_db
+def test_find_by_cpe():
+    product = CollectorErrataProduct.objects.create(name="product", et_id=1)
+    product_version = CollectorErrataProductVersion.objects.create(
+        name="product_version", et_id=10, product=product
+    )
+    cpe = "cpe:/a:redhat:quay:3::el8"
+    CollectorErrataProductVariant.objects.create(
+        name="product_variant", et_id=100, product_version=product_version, cpe=cpe
+    )
+
+    results = _find_by_cpe(["cpe:/a:redhat:quay:3"])
+
+    assert cpe in results
+
+
+@pytest.mark.django_db
+def test_find_by_cpe_substring():
+    product = CollectorErrataProduct.objects.create(name="product", et_id=1)
+    product_version = CollectorErrataProductVersion.objects.create(
+        name="product_version", et_id=10, product=product
+    )
+    cpe = "cpe:/a:redhat:openshift_pipelines:1.7::el8"
+    CollectorErrataProductVariant.objects.create(
+        name="product_variant", et_id=100, product_version=product_version, cpe=cpe
+    )
+
+    results = _find_by_cpe(["cpe:/a:redhat:openshift_pipelines:1"])
+
+    assert cpe in results
 
 
 @pytest.mark.django_db

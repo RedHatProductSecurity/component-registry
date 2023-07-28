@@ -46,7 +46,6 @@ def test_productstream_model():
     p1 = ProductStreamFactory(name="RHEL")
     assert ProductStream.objects.get(name="RHEL") == p1
     assert p1.ofuri == "o:redhat:RHEL:8.2.0.z"
-    assert p1.cpe == "cpe:/o:redhat:enterprise_linux:8"
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
@@ -58,10 +57,15 @@ def test_cpes():
     ps2 = ProductStreamFactory(name="Ansercaerulescens", products=p1, productversions=pv2)
     ps3 = ProductStreamFactory(
         name="Brantabernicla",
-        cpe="cpe:/o:redhat:Brantabernicla:8",
         description="The brant or brent goose is a small goose of the genus Branta.",
         products=p1,
         productversions=pv2,
+    )
+    pvariant1 = ProductVariantFactory(
+        cpe="cpe:/o:redhat:enterprise_linux:7", products=p1, productversions=pv1, productstreams=ps1
+    )
+    pvariant2 = ProductVariantFactory(
+        cpe="cpe:/o:redhat:Brantabernicla:8", products=p1, productversions=pv2, productstreams=ps3
     )
 
     p1node = ProductNode.objects.create(parent=None, obj=p1)
@@ -76,11 +80,18 @@ def test_cpes():
     assert ps2node
     ps3node = ProductNode.objects.create(parent=pv2node, obj=ps3)
     assert ps3node
+    pvariant1node = ProductNode.objects.create(parent=ps1node, obj=pvariant1)
+    assert pvariant1node
+    pvariant2node = ProductNode.objects.create(parent=ps3node, obj=pvariant2)
+    assert pvariant2node
 
-    assert pv1.cpes == ("cpe:/o:redhat:enterprise_linux:8",)
+    # Version 1 for RHEL 7 has 1 child variant, so 1 CPE is reported
+    assert pv1.cpes == ("cpe:/o:redhat:enterprise_linux:7",)
+    # Product 1 for RHEL has 2 child variants, one for each RHEL version
+    # So 1 CPE for RHEL 7 and 1 CPE for RHEL 8 is reported
     assert sorted(p1.cpes) == [
         "cpe:/o:redhat:Brantabernicla:8",
-        "cpe:/o:redhat:enterprise_linux:8",
+        "cpe:/o:redhat:enterprise_linux:7",
     ]
 
 
@@ -132,9 +143,7 @@ def create_product_hierarchy():
     rhel_8_1 = ProductStreamFactory(name="rhel-8.1", products=rhel, productversions=rhel_8)
     ProductNode.objects.create(parent=rhel_8_node, obj=rhel_8_1)
 
-    rhel_8_2 = ProductStreamFactory(
-        name="rhel-8.2", cpe="cpe:/o:redhat:8.2", products=rhel, productversions=rhel_8
-    )
+    rhel_8_2 = ProductStreamFactory(name="rhel-8.2", products=rhel, productversions=rhel_8)
     rhel_8_2_node = ProductNode.objects.create(parent=rhel_8_node, obj=rhel_8_2)
 
     rhel_8_2_base = ProductVariantFactory(

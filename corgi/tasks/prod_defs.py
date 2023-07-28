@@ -160,9 +160,12 @@ def parse_product_version(
 ):
     """Parse the product versions from ps_modules in product-definitions.json"""
     pd_product_streams = pd_product_version.pop("product_streams", [])
+
     name = pd_product_version.pop("id")
+    version = ""
     if match_version := RE_VERSION_LIKE_STRING.search(name):
         version = match_version.group()
+
     description = pd_product_version.pop("public_description", [])
     cpe_patterns = pd_product_version.pop("cpe", [])
     cpes_matching_patterns = _find_by_cpe(cpe_patterns)
@@ -208,16 +211,19 @@ def parse_product_stream(
     active = pd_product_stream.pop("active")
     errata_info = pd_product_stream.pop("errata_info", [])
     brew_tags = pd_product_stream.pop("brew_tags", [])
+    brew_tags_dict = {brew_tag["tag"]: brew_tag["inherit"] for brew_tag in brew_tags}
+
     yum_repos = pd_product_stream.pop("yum_repositories", [])
     composes = pd_product_stream.pop("composes", [])
-    brew_tags_dict = {brew_tag["tag"]: brew_tag["inherit"] for brew_tag in brew_tags}
+    composes_dict = {compose["url"]: compose["variants"] for compose in composes}
     exclude_components = pd_product_stream.pop("exclude_components", [])
-    composes_dict = {}
-    for compose in composes:
-        composes_dict[compose["url"]] = compose["variants"]
     name = pd_product_stream.pop("id")
+
+    # If no match is found in the stream's name, use version from the parent ProductVersion's name
+    # If no match was found in the parent PV's name, use the empty string (should never happen)
     if match_version := RE_VERSION_LIKE_STRING.search(name):
         version = match_version.group()
+
     logger.debug("Creating or updating Product Stream: name=%s", name)
     product_stream, _ = ProductStream.objects.update_or_create(
         name=name,

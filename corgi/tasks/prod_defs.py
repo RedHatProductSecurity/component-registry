@@ -67,6 +67,7 @@ def update_products() -> None:
 
             for pd_product_version in pd_product_versions:
                 parse_product_version(pd_product_version, product, product_node)
+            product.save_product_taxonomy()
 
 
 def _find_by_cpe(cpe_patterns: list[str]) -> list[str]:
@@ -196,6 +197,7 @@ def parse_product_version(
         parse_product_stream(
             pd_product_stream, product, product_version, product_version_node, version
         )
+    product_version.save_product_taxonomy()
     if cpes_matching_patterns:
         _match_and_save_stream_cpes(product_version)
 
@@ -253,6 +255,7 @@ def parse_product_stream(
         brew_tags_dict, name, product, product_stream, product_stream_node, product_version
     )
     parse_errata_info(errata_info, product, product_stream, product_stream_node, product_version)
+    product_stream.save_product_taxonomy()
 
 
 def parse_variants_from_brew_tags(
@@ -385,6 +388,7 @@ def parse_errata_info(
                         "obj": product_variant,
                     },
                 )
+                product_variant.save_product_taxonomy()
     # persist et_product_versions plucked from errata_info
     product_stream.et_product_versions = sorted(et_product_versions_set)
     product_stream.save()

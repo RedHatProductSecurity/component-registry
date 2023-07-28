@@ -570,7 +570,6 @@ class ProductVersionTag(Tag):
 
 
 class ProductStream(ProductModel):
-    cpes_matching_patterns = fields.ArrayField(models.CharField(max_length=1000), default=list)
     # NOTE brew_tags and yum_repositories values shouldn't be exposed outside of Red Hat
     brew_tags = models.JSONField(default=dict)
     yum_repositories = fields.ArrayField(models.CharField(max_length=200), default=list)

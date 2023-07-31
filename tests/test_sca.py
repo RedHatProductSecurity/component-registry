@@ -171,7 +171,7 @@ archive_source_test_data = (
     "/containers/openshift-enterprise-console",
     "f95972ce68d2850ae20c10fbf87182a17fa24b19",
     "openshift-enterprise-console",
-    2,
+    "2",
     "/tmp/2",
 )
 
@@ -185,7 +185,14 @@ def test_clone_source(mock_subprocess):
     _clone_source(f"{source_url}#{commit}", build_id)
     mock_subprocess.assert_has_calls(
         (
-            call(["/usr/bin/git", "clone", source_url, PosixPath(expected_path)]),
+            call(
+                [
+                    "/usr/bin/git",
+                    "clone",
+                    source_url.replace("git://", "https://", 1),
+                    PosixPath(expected_path),
+                ]
+            ),
             call(["/usr/bin/git", "checkout", commit], cwd=PosixPath(expected_path), stderr=-3),
         )
     )

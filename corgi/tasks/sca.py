@@ -255,7 +255,8 @@ def _clone_source(source_url: str, build_uuid: str) -> Tuple[Path, str, str]:
     # (scheme, netloc, path, parameters, query, fragment)
     url = urlparse(source_url)
 
-    # We only support git, git+https, git+ssh, etc. and https
+    # Older builds have git, git+https, git+ssh, etc.
+    # Newer builds have https
     if not url.scheme.startswith("git") and url.scheme != "https":
         raise ValueError(
             f"Build {build_uuid} had a source_url with a non-git, non-HTTPS protocol: {source_url}"
@@ -267,7 +268,14 @@ def _clone_source(source_url: str, build_uuid: str) -> Tuple[Path, str, str]:
 
     protocol = url.scheme
     if protocol.startswith("git+"):
+        # Make git+https, git+ssh, etc. into just https, ssh, etc.
         protocol = protocol.removeprefix("git+")
+    elif protocol == "git":
+        # dist-git now requires us to use https when cloning
+        protocol = "https"
+    # Else protocol was already https
+    # Other protocols will raise an error above
+
     git_remote = f"{protocol}://{url.netloc}{path}"
     path_parts = path.rsplit("/", 2)
     if len(path_parts) != 3:

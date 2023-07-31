@@ -34,6 +34,12 @@ MODEL_NODE_LEVEL_MAPPING = {
     value.title().replace("_", ""): key for key, value in NODE_LEVEL_MODEL_MAPPING.items()
 }
 
+# Map node levels defined above to component many-to-many attribute names as defined in models.py
+# "product_version" -> "productversions"
+NODE_LEVEL_ATTRIBUTE_MAPPING = {
+    key: value.replace("_", "") + "s" for key, value in NODE_LEVEL_MODEL_MAPPING.items()
+}
+
 # Take a model name like ProductVariant, make it lowercase
 # then add an underscore to match the product_variants= filter in the API
 MODEL_FILTER_NAME_MAPPING = {

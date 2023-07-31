@@ -1,0 +1,40 @@
+{
+  "ps_update_streams": {
+    "stream": {
+      "brew_tags": [
+        {
+          "tag": "test_tag",
+          "inherit": false
+        }
+      ]
+    },
+    "new_stream": {}
+  },
+  "ps_modules": {
+    "version": {
+      "active_ps_update_streams": [
+        "new_stream"
+      ],
+      "ps_update_streams": [
+        "new_stream"
+      ]
+    },
+    "new_version": {
+      "active_ps_update_streams": [
+        "stream"
+      ],
+      "ps_update_streams": [
+        "stream"
+      ]
+    }
+  },
+  "ps_products": {
+    "product": {
+      "name": "product",
+      "ps_modules": [
+        "version", "new_version"
+      ],
+      "business_unit": "test"
+    }
+  }
+}

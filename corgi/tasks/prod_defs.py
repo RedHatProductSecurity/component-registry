@@ -19,6 +19,7 @@ from corgi.core.models import (
     ProductStream,
     ProductVariant,
     ProductVersion,
+    SoftwareBuild,
 )
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 
@@ -26,6 +27,11 @@ logger = get_task_logger(__name__)
 # Find a substring that looks like a version (e.g. "3", "3.5", "3-5", "1.2.z") at the end of a
 # searched string.
 RE_VERSION_LIKE_STRING = re.compile(r"\d[\dz.-]*$|$")
+
+
+@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
+def slow_remove_product_from_build(build_pk: str, product_model_name: str, product_pk: str) -> None:
+    SoftwareBuild.objects.get(pk=build_pk).disassociate_with_product(product_model_name, product_pk)
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
@@ -193,11 +199,14 @@ def parse_product_version(
             "obj": product_version,
         },
     )
+
     for pd_product_stream in pd_product_streams:
         parse_product_stream(
             pd_product_stream, product, product_version, product_version_node, version
         )
+
     product_version.save_product_taxonomy()
+
     if cpes_matching_patterns:
         _match_and_save_stream_cpes(product_version)
 
@@ -267,10 +276,9 @@ def parse_variants_from_brew_tags(
     product_version: ProductVersion,
 ):
     """Match streams using brew_tags to Errata Tool Product Versions and their Variants"""
-    # quay-3 Errata Tool product version Quay-3-RHEL-8 list too many brew tags
-    # Linking quay streams to the 8Base-Quay-3 variant here via brew tags leads
-    # to builds from later streams being included in earlier ones,
-    # see PROJQUAY-5312.
+    # quay-3 streams brew_tags all share a single variant, and we have a one-to-many
+    # cardinality between streams and variants. quay-3 streams should probably be consolidated
+    # into a single stream in prod_defs. See also PROJQUAY-5312.
     # The rhn_satellite_6 streams have brew tags, but those brew tags are associated
     # with the RHEL-7-SATELLITE-6.10 ET Product Version. We skip them
     # here to ensure the rhn_satelite_6.10 variants only get linked with that stream

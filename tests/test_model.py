@@ -362,6 +362,176 @@ def test_product_stream_builds():
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_disassociate_component():
+    """Tests that a component only participating in one product hierarchy has all of it's product
+    many-to-many relationships removed if it's variant is removed"""
+    product, _, _, product_version, _, product_stream, product_variant = create_product_hierarchy()
+    sb = SoftwareBuildFactory()
+    component = ComponentFactory(software_build=sb)
+    ProductComponentRelation.objects.create(
+        type=ProductComponentRelation.Type.ERRATA,
+        product_ref=product_variant.name,
+        software_build=sb,
+    )
+    sb.save_product_taxonomy()
+    assert component.products.filter(pk=product.pk).exists()
+    assert component.productversions.filter(pk=product_version.pk).exists()
+    assert component.productstreams.filter(pk=product_stream.pk).exists()
+    assert component.productvariants.filter(pk=product_variant.pk).exists()
+
+    component.disassociate_with_product(product_variant)
+    assert not component.products.filter(pk=product_variant.pk).exists()
+    assert not component.productversions.filter(pk=product_version.pk).exists()
+    assert not component.productstreams.filter(pk=product_stream.pk).exists()
+    assert not component.productvariants.filter(pk=product_variant.pk).exists()
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_disassociate_build_with_stream():
+    """Tests that a software build with multiple components only participating in one product
+    hierarchy has all of it's child component product many-to-many relationships removed if it's
+    stream is removed"""
+    product, _, _, product_version, _, product_stream, _ = create_product_hierarchy()
+    sb = SoftwareBuildFactory()
+    component = ComponentFactory(software_build=sb)
+    cnode = ComponentNode.objects.create(parent=None, obj=component)
+    sub_component = ComponentFactory()
+    ComponentNode.objects.create(parent=cnode, obj=sub_component)
+    ProductComponentRelation.objects.create(
+        type=ProductComponentRelation.Type.BREW_TAG,
+        product_ref=product_stream.name,
+        software_build=sb,
+    )
+    sb.save_product_taxonomy()
+    assert component.productstreams.filter(pk=product_stream.pk).exists()
+    assert sub_component.productstreams.filter(pk=product_stream.pk).exists()
+    sb.disassociate_with_product(type(product_stream).__name__, product_stream.pk)
+    assert not component.products.filter(pk=product.pk).exists()
+    assert not component.productversions.filter(pk=product_version.pk).exists()
+    assert not component.productstreams.filter(pk=product_stream.pk).exists()
+
+    assert not sub_component.products.filter(pk=product.pk).exists()
+    assert not sub_component.productversions.filter(pk=product_version.pk).exists()
+    assert not sub_component.productstreams.filter(pk=product_stream.pk).exists()
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_disassociate_build_with_variant():
+    """Tests that a software build with multiple components only participating in one product
+    hierarchy has all of it's child component product many-to-many relationships removed if it's
+    variant is removed"""
+    product, _, _, product_version, _, product_stream, product_variant = create_product_hierarchy()
+    sb = SoftwareBuildFactory()
+    component = ComponentFactory(software_build=sb)
+    cnode = ComponentNode.objects.create(parent=None, obj=component)
+    sub_component = ComponentFactory()
+    ComponentNode.objects.create(parent=cnode, obj=sub_component)
+    ProductComponentRelation.objects.create(
+        type=ProductComponentRelation.Type.ERRATA,
+        product_ref=product_variant.name,
+        software_build=sb,
+    )
+    sb.save_product_taxonomy()
+    assert component.productvariants.filter(pk=product_variant.pk).exists()
+    assert sub_component.productvariants.filter(pk=product_variant.pk).exists()
+    sb.disassociate_with_product(type(product_variant).__name__, product_variant.pk)
+    assert not component.products.filter(pk=product.pk).exists()
+    assert not component.productversions.filter(pk=product_version.pk).exists()
+    assert not component.productvariants.filter(pk=product_variant.pk).exists()
+    assert not component.productstreams.filter(pk=product_stream.pk).exists()
+
+    assert not sub_component.productvariants.filter(pk=product_variant.pk).exists()
+    assert not sub_component.productstreams.filter(pk=product_stream.pk).exists()
+    assert not sub_component.productversions.filter(pk=product_version.pk).exists()
+    assert not sub_component.products.filter(pk=product.pk).exists()
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_disassociate_build_with_shared_product():
+    """Tests that a software build with one component participating in multiple product
+    hierarchies has child variant and no other product streams removed when one product's version is
+    removed"""
+    rhel, rhel_7, rhel_7_1, rhel_8, rhel_8_2, _, rhel_8_2_base = create_product_hierarchy()
+    sb = SoftwareBuildFactory()
+    component = ComponentFactory(software_build=sb)
+    ProductComponentRelation.objects.create(
+        type=ProductComponentRelation.Type.YUM_REPO,
+        product_ref=rhel_7_1.name,
+        software_build=sb,
+    )
+    ProductComponentRelation.objects.create(
+        type=ProductComponentRelation.Type.ERRATA,
+        product_ref=rhel_8_2_base.name,
+        software_build=sb,
+    )
+    sb.save_product_taxonomy()
+    assert component.products.filter(pk=rhel.pk).exists()
+    assert component.productstreams.filter(pk=rhel_7_1.pk).exists()
+    assert component.productvariants.filter(pk=rhel_8_2_base.pk).exists()
+    sb.disassociate_with_product(type(rhel_7).__name__, rhel_7.pk)
+    assert component.products.filter(pk=rhel.pk).exists()
+    assert not component.productstreams.filter(pk=rhel_7_1.pk).exists()
+    assert component.productvariants.filter(pk=rhel_8_2_base.pk).exists()
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_disassociate_build_with_shared_product_version():
+    """Tests that a software build with one component participating in multiple product
+    hierarchies has child streams and no other product variants removed when one product's
+    version is removed"""
+    rhel, rhel_7, rhel_7_1, rhel_8, rhel_8_2, _, rhel_8_2_base = create_product_hierarchy()
+    sb = SoftwareBuildFactory()
+    component = ComponentFactory(software_build=sb)
+    ProductComponentRelation.objects.create(
+        type=ProductComponentRelation.Type.YUM_REPO,
+        product_ref=rhel_7_1.name,
+        software_build=sb,
+    )
+    ProductComponentRelation.objects.create(
+        type=ProductComponentRelation.Type.ERRATA,
+        product_ref=rhel_8_2_base.name,
+        software_build=sb,
+    )
+    sb.save_product_taxonomy()
+    assert component.products.filter(pk=rhel.pk).exists()
+    assert component.productstreams.filter(pk=rhel_7_1.pk).exists()
+    assert component.productvariants.filter(pk=rhel_8_2_base.pk).exists()
+    sb.disassociate_with_product(type(rhel_7_1).__name__, rhel_7_1.pk)
+    assert component.products.filter(pk=rhel.pk).exists()
+    assert not component.productstreams.filter(pk=rhel_7_1.pk).exists()
+    assert component.productvariants.filter(pk=rhel_8_2_base.pk).exists()
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_disassociate_build_with_shared_product_streams():
+    """Tests that a software build with one component participating in multiple product
+    hierarchies other product, or versions removed when one product's variant is removed"""
+    rhel, rhel_7, rhel_7_1, rhel_8, _, rhel_8_2, rhel_8_2_base = create_product_hierarchy()
+    sb = SoftwareBuildFactory()
+    component = ComponentFactory(software_build=sb)
+    ProductComponentRelation.objects.create(
+        type=ProductComponentRelation.Type.YUM_REPO,
+        product_ref=rhel_7_1.name,
+        software_build=sb,
+    )
+    ProductComponentRelation.objects.create(
+        type=ProductComponentRelation.Type.ERRATA,
+        product_ref=rhel_8_2_base.name,
+        software_build=sb,
+    )
+    sb.save_product_taxonomy()
+    assert component.products.filter(pk=rhel.pk).exists()
+    assert component.productversions.filter(pk=rhel_7.pk).exists()
+    assert component.productstreams.filter(pk=rhel_8_2.pk).exists()
+    assert component.productvariants.filter(pk=rhel_8_2_base.pk).exists()
+    sb.disassociate_with_product(type(rhel_8_2_base).__name__, rhel_8_2_base.pk)
+    assert component.products.filter(pk=rhel.pk).exists()
+    assert component.productversions.filter(pk=rhel_7.pk).exists()
+    assert not component.productstreams.filter(pk=rhel_8_2.pk).exists()
+    assert not component.productvariants.filter(pk=rhel_8_2_base.pk).exists()
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_brew_tag_variant_linking():
     _, _, _, _, _, product_stream, product_variant = create_product_hierarchy()
     sb = SoftwareBuildFactory()

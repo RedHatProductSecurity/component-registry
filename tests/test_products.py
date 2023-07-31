@@ -21,7 +21,7 @@ pytestmark = pytest.mark.unit
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_products(requests_mock):
-    with open("tests/data/product-definitions.json") as prod_defs:
+    with open("tests/data/prod_defs/product-definitions.json") as prod_defs:
         text = prod_defs.read()
         text = text.replace("{CORGI_TEST_DOWNLOAD_URL}", os.getenv("CORGI_TEST_DOWNLOAD_URL"))
         text = text.replace("{CORGI_PULP_URL}", os.getenv("CORGI_PULP_URL"))
@@ -85,7 +85,7 @@ def test_products(requests_mock):
 
 @pytest.mark.django_db
 def test_cpe_parsing(requests_mock):
-    with open("tests/data/product-definitions.json") as prod_defs:
+    with open("tests/data/prod_defs/product-definitions.json") as prod_defs:
         text = prod_defs.read()
         requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
 
@@ -114,7 +114,7 @@ def test_match_cpe_patterns(requests_mock):
         )
         et_id += 1
 
-    with open("tests/data/product-definitions.json") as prod_defs:
+    with open("tests/data/prod_defs/product-definitions.json") as prod_defs:
         text = prod_defs.read()
         requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
 
@@ -219,7 +219,7 @@ def test_skip_brew_tag_linking_for_buggy_products(requests_mock):
     """RHEL-7-SATELLITE-6.10 has a brew_tag for 6.7 version, which means the 7Server-Satellite67
     ProductVariant gets incorrectly associated with the rhn_satellite_6.7 product stream"""
 
-    with open("tests/data/product-definitions.json") as prod_defs:
+    with open("tests/data/prod_defs/product-definitions.json") as prod_defs:
         text = prod_defs.read()
         text = text.replace("{CORGI_TEST_DOWNLOAD_URL}", os.getenv("CORGI_TEST_DOWNLOAD_URL"))
         text = text.replace("{CORGI_PULP_URL}", os.getenv("CORGI_PULP_URL"))
@@ -276,7 +276,7 @@ def test_brew_tag_matching(variant_name, brew_tag, stream_name, requests_mock):
         et_id=100, name=variant_name, product_version=et_product_version
     )
 
-    with open("tests/data/product-definitions.json") as prod_defs:
+    with open("tests/data/prod_defs/product-definitions.json") as prod_defs:
         requests_mock.get(
             f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=(prod_defs.read())
         )

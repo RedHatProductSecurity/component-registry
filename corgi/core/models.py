@@ -4,6 +4,7 @@ import uuid as uuid
 from abc import abstractmethod
 from typing import Any, Iterator, Union
 
+from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
@@ -22,6 +23,7 @@ from corgi.core.constants import (
     CONTAINER_DIGEST_FORMATS,
     EL_MATCH_RE,
     MODEL_NODE_LEVEL_MAPPING,
+    NODE_LEVEL_ATTRIBUTE_MAPPING,
     RED_HAT_MAVEN_REPOSITORY,
     ROOT_COMPONENTS_CONDITION,
     SRPM_CONDITION,
@@ -321,6 +323,17 @@ class SoftwareBuild(TimeStampedModel):
             component.save_product_taxonomy(product_details)
 
         return None
+
+    def disassociate_with_product(self, product_model_name: str, product_pk: str) -> None:
+        """Remove the product references from all components associated with this build."""
+        product_model = apps.get_model("core", product_model_name)
+        product = product_model.objects.get(pk=product_pk)
+
+        for component in self.components.iterator():
+            component.disassociate_with_product(product)
+            for cnode in component.cnodes.iterator():
+                for descendant in cnode.get_descendants().iterator():
+                    descendant.obj.disassociate_with_product(product)
 
 
 class SoftwareBuildTag(Tag):
@@ -1984,6 +1997,63 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     def get_upstreams_purls(self, using: str = "read_only") -> set[str]:
         """Return only the purls from the set of all upstream nodes"""
         return set(node.purl for node in self.get_upstreams_nodes(using=using))
+
+    def disassociate_with_product(self, product_ref: ProductModel) -> None:
+        """Disassociate this component with the passed in ProductModel and any child ProductModels
+        in that product's hierarchy. This is the reverse of what happens in save_product_taxonomy.
+        """
+        if isinstance(product_ref, Product):
+            self.productvariants.remove(*product_ref.productvariants.get_queryset())
+            self.productstreams.remove(*product_ref.productstreams.get_queryset())
+            self.productversions.remove(*product_ref.productversions.get_queryset())
+            self.products.remove(product_ref)
+        elif isinstance(product_ref, ProductVersion):
+            self.productvariants.remove(*product_ref.productvariants.get_queryset())
+            self.productstreams.remove(*product_ref.productstreams.get_queryset())
+            self.productversions.remove(product_ref)
+            self._check_and_remove_orphaned_product_refs(product_ref, "Product")
+        elif isinstance(product_ref, ProductStream):
+            self.productvariants.remove(*product_ref.productvariants.get_queryset())
+            self.productstreams.remove(product_ref)
+            self._check_and_remove_orphaned_product_refs(product_ref, "ProductVersion")
+            self._check_and_remove_orphaned_product_refs(product_ref, "Product")
+        elif isinstance(product_ref, ProductVariant):
+            self.productvariants.remove(product_ref)
+            self._check_and_remove_orphaned_product_refs(product_ref, "ProductStream")
+            self._check_and_remove_orphaned_product_refs(product_ref, "ProductVersion")
+            self._check_and_remove_orphaned_product_refs(product_ref, "Product")
+        else:
+            raise NotImplementedError(
+                f"Add class {type(product_ref)} to Component.disassociate_with_product()"
+            )
+
+    def _check_and_remove_orphaned_product_refs(
+        self, product_ref: ProductModel, ancestor_model_name: str
+    ) -> None:
+        """Remove product_models from this component where there are no remaining children of
+        product_ref or the remaining children of product_ref don't share this product_ref as an
+        ancestor"""
+        # For an ancestor_model_name like "ProductVersion", this is 1
+        ancestor_node_level = MODEL_NODE_LEVEL_MAPPING[ancestor_model_name]
+        # and this will be "productversions"
+        ancestor_attribute = NODE_LEVEL_ATTRIBUTE_MAPPING[ancestor_node_level]
+        # this will be "productstreams", after looking up 1 + 1 AKA 2
+        child_of_ancestor_attribute = NODE_LEVEL_ATTRIBUTE_MAPPING[ancestor_node_level + 1]
+        # e.g.this_component.productstreams.get_queryset()
+        # we get the list of remaining streams, we've already removed this_variant's parent stream
+        children_of_ancestor = getattr(self, child_of_ancestor_attribute).get_queryset()
+        # children_of_ancestor AKA child_streams_qs.values_list("productversions", flat=True)
+        # gives us just the PKs of the parent versions
+        ancestors_of_remaining_siblings = children_of_ancestor.values_list(
+            ancestor_attribute, flat=True
+        ).distinct()
+        # AKA this_variant.productversions.pk - there's only one
+        ancestor_of_product_ref = getattr(product_ref, ancestor_attribute).pk
+        # If the (grand)parent version of this_variant is not in the list of (grand)parent versions
+        # for parent streams
+        if ancestor_of_product_ref not in ancestors_of_remaining_siblings:
+            # this_component.productversions.remove(PK for grandparent_version_of_this_variant)
+            getattr(self, ancestor_attribute).remove(ancestor_of_product_ref)
 
 
 class ComponentTag(Tag):

@@ -362,6 +362,21 @@ def test_product_stream_builds():
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_brew_tag_variant_linking():
+    _, _, _, _, _, product_stream, product_variant = create_product_hierarchy()
+    sb = SoftwareBuildFactory()
+    c = ComponentFactory(software_build=sb)
+    ProductComponentRelation.objects.create(
+        type=ProductComponentRelation.Type.BREW_TAG,
+        product_ref=product_stream.name,
+        software_build=sb,
+    )
+    sb.save_product_taxonomy()
+    assert c.productstreams.filter(pk=product_stream.pk).exists()
+    assert not c.productvariants.filter(pk=product_variant.pk).exists()
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_component_errata():
     sb = SoftwareBuildFactory()
     c = ComponentFactory(software_build=sb)

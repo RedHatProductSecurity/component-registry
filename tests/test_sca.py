@@ -11,6 +11,7 @@ from packageurl import PackageURL
 
 from corgi.collectors.go_list import GoList
 from corgi.collectors.syft import Syft
+from corgi.core.constants import RED_HAT_MAVEN_REPOSITORY
 from corgi.core.models import Component, ComponentNode
 from corgi.tasks.sca import (
     _clone_source,
@@ -170,7 +171,7 @@ archive_source_test_data = (
     "/containers/openshift-enterprise-console",
     "f95972ce68d2850ae20c10fbf87182a17fa24b19",
     "openshift-enterprise-console",
-    2,
+    "2",
     "/tmp/2",
 )
 
@@ -184,7 +185,14 @@ def test_clone_source(mock_subprocess):
     _clone_source(f"{source_url}#{commit}", build_id)
     mock_subprocess.assert_has_calls(
         (
-            call(["/usr/bin/git", "clone", source_url, PosixPath(expected_path)]),
+            call(
+                [
+                    "/usr/bin/git",
+                    "clone",
+                    source_url.replace("git://", "https://", 1),
+                    PosixPath(expected_path),
+                ]
+            ),
             call(["/usr/bin/git", "checkout", commit], cwd=PosixPath(expected_path), stderr=-3),
         )
     )
@@ -369,7 +377,7 @@ slow_software_composition_analysis_test_data = [
         "md5/587372e4c72d1eddfab8e848457f574e/"
         "hawkular-metrics-schema-installer-0.31.0.Final-redhat-1.jar",
         "tests/data/hawkular-metrics-schema-installer-syft.json",
-        "pkg:maven/com.github.jnr/jffi@1.2.10.redhat-1",
+        f"pkg:maven/com.github.jnr/jffi@1.2.10.redhat-1?repository_url={RED_HAT_MAVEN_REPOSITORY}",
     ),
 ]
 

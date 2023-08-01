@@ -13,6 +13,12 @@ CONTAINER_REPOSITORY = "registry.redhat.io"
 CORGI_PRODUCT_TAXONOMY_VERSION = "v1"
 CORGI_COMPONENT_TAXONOMY_VERSION = "v1"
 
+# Assume Red Hat Maven components are always located in the GA repo
+# There's also an Early Access repo: https://maven.repository.redhat.com/earlyaccess/all
+# But anything in there should become GA eventually
+# and we don't want the purls to change over time / we don't know when GA will happen
+RED_HAT_MAVEN_REPOSITORY = "https://maven.repository.redhat.com/ga"
+
 # Map MPTT node levels in our product taxonomy to model names as defined in models.py
 NODE_LEVEL_MODEL_MAPPING = {
     0: "product",

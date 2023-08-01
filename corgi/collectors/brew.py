@@ -178,6 +178,19 @@ class Brew:
             return Component.Type.MAVEN, component.replace(":", "/"), version
         return None
 
+    @staticmethod
+    def _check_npm_component(
+        component: str, version: str
+    ) -> Optional[tuple[Component.Type, str, str]]:
+        # NPM bundled packages appear to follow the pattern of
+        # "rh-nodejsXX-component", where component is something
+        # other than "nodejs"
+        if "nodejs" in component:
+            component_match = re.match(r"^rh-nodejs\d+(?!-nodejs)-(.*)", component)
+            if component_match:
+                return Component.Type.NPM, component_match.group(1), version
+        return None
+
     @classmethod
     def _get_bundled_component_type(
         cls, component_type: str, component: str
@@ -206,6 +219,10 @@ class Brew:
             if not component:
                 continue
             bundled_component = cls._check_maven_component(component, version)
+            if bundled_component:
+                bundled_components.append(bundled_component)
+                continue
+            bundled_component = cls._check_npm_component(component, version)
             if bundled_component:
                 bundled_components.append(bundled_component)
                 continue

@@ -349,6 +349,9 @@ CELERY_WORKER_CONCURRENCY = 5  # defaults to CPU core count, which breaks in Ope
 # Disable task prefetching, which caused connection timeouts and other odd task failures in SDEngine
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 
+# Send task-related events, so that tasks can be monitored using tools like Flower
+CELERY_WORKER_SEND_TASK_EVENTS = True
+
 # Store the return values of each task in the TaskResult.result attribute; can be used for
 # informational logging.
 CELERY_TASK_IGNORE_RESULT = False

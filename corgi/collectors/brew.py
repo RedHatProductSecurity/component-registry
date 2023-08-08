@@ -176,6 +176,28 @@ class Brew:
     ) -> Optional[tuple[Component.Type, str, str]]:
         if ":" in component:
             return Component.Type.MAVEN, component.replace(":", "/"), version
+        elif component.startswith("maven"):
+            return Component.Type.MAVEN, component, version
+        elif component.startswith("apache-commons"):
+            return Component.Type.MAVEN, component, version
+        elif component.startswith("java-"):
+            return Component.Type.MAVEN, component, version
+        return None
+
+    @staticmethod
+    def _check_npm_component(
+        component: str, version: str
+    ) -> Optional[tuple[Component.Type, str, str]]:
+        if component.startswith("js-"):
+            return Component.Type.NPM, component[len("js-") :], version
+        elif component.startswith("npm-"):
+            return Component.Type.NPM, component[len("npm-") :], version
+        elif component.startswith("nodejs-"):
+            return Component.Type.NPM, component[len("nodejs-") :], version
+        else:
+            component_match = re.match(r"^nodejs\d+-(.*)", component)
+            if component_match:
+                return Component.Type.NPM, component, version
         return None
 
     @classmethod
@@ -205,7 +227,13 @@ class Brew:
             component = cls._bundled_or_golang(component)
             if not component:
                 continue
+            if component.startswith("rh-"):
+                component = component[3:]
             bundled_component = cls._check_maven_component(component, version)
+            if bundled_component:
+                bundled_components.append(bundled_component)
+                continue
+            bundled_component = cls._check_npm_component(component, version)
             if bundled_component:
                 bundled_components.append(bundled_component)
                 continue

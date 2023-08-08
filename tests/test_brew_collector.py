@@ -885,7 +885,7 @@ def test_parsing_bundled_provides():
         (Component.Type.PYPI, "django-stubs"),
         (Component.Type.PYPI, "selectors2"),
         (Component.Type.NPM, "@babel/code-frame"),
-        (Component.Type.NPM, "nodejs-yargs-parser"),
+        (Component.Type.NPM, "yargs-parser"),
         (Component.Type.GEM, "fileutils"),
         (Component.Type.GEM, "example"),
         (Component.Type.GEM, "another-example"),

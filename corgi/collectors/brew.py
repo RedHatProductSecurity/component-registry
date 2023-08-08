@@ -180,14 +180,22 @@ class Brew:
             return Component.Type.MAVEN, component, version
         elif component.startswith("apache-commons"):
             return Component.Type.MAVEN, component, version
+        elif component.startswith("java-"):
+            return Component.Type.MAVEN, component, version
         return None
 
     @staticmethod
     def _check_npm_component(
         component: str, version: str
     ) -> Optional[tuple[Component.Type, str, str]]:
-        if "nodejs" in component:
-            component_match = re.match(r"^nodejs\d*-(.*)", component)
+        if component.startswith("js-"):
+            return Component.Type.NPM, component[len("js-") :], version
+        elif component.startswith("npm-"):
+            return Component.Type.NPM, component[len("npm-") :], version
+        elif component.startswith("nodejs-"):
+            return Component.Type.NPM, component[len("nodejs-") :], version
+        else:
+            component_match = re.match(r"^nodejs\d+-(.*)", component)
             if component_match:
                 return Component.Type.NPM, component, version
         return None

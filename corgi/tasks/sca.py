@@ -281,7 +281,19 @@ def _clone_source(source_url: str, build_uuid: str) -> Tuple[Path, str, str]:
     # Else protocol was already https or we're not using the dist-git server
     # Other protocols will raise an error above
 
-    git_remote = f"{protocol}://{url.netloc}{url.path}"
+    path = url.path
+    if (
+        url.netloc == dist_git_hostname
+        and protocol in ("http", "https")
+        and not path.startswith("/git/")
+    ):
+        # dist-git HTTP / HTTPS URLs require paths like /git/containers/ubi8
+        # But Brew sometimes has only /containers/ubi8, which will fail
+        path = f"/git{path}"
+    # Else we're not using dist-git, or git+ssh became just ssh, or path already had "/git/"
+    git_remote = f"{protocol}://{url.netloc}{path}"
+
+    # Use the original path when checking length, ignore any /git/ we added
     path_parts = url.path.rsplit("/", 2)
     if len(path_parts) != 3:
         raise ValueError(f"Build {build_uuid} had a source_url with a too-short path: {source_url}")
@@ -309,9 +321,12 @@ def _clone_source(source_url: str, build_uuid: str) -> Tuple[Path, str, str]:
 
         # dist-git source URLs from Brew are sometimes incorrect, give 404
         # We don't always remove .git in case some URLs require this
-        path = url.path.replace(".git", "", 1)
+        # Use the updated path with /git/ which is always needed for the clone
+        path = path.replace(".git", "", 1)
         git_remote = f"{protocol}://{url.netloc}{path}"
 
+        # Use the updated path so .git doesn't end up in package_name
+        # We already know we have the right number of path_parts, based on check above
         path_parts = path.rsplit("/", 2)
         package_type = path_parts[1]
         package_name = path_parts[2]

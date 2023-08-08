@@ -851,13 +851,25 @@ def test_parsing_bundled_provides():
         "bundled(cocoa(hello-world))",
         # Unknown package type; TODO: find example
         "bundled(libsomething)",
-        # Below entries do not match bundled deps and are not present in expected values
+        # Should now be detected as an NPM package, see CORGI-554
         "rh-nodejs12-npm",
+        # Below entries do not match bundled deps and are not present in expected values
         "",
         # brew rpmID=8178747
         "bundled(org.yaml:snakeyaml)",
         "bundled(commons-codec:commons-codec)",
         "bundled(biz.source_code:base64coder)",
+        # brew rpmID=12267521
+        "bundled(rh-nodejs14-nghttp2)",
+        "bundled(rh-nodejs14-uvwasi)",
+        "bundled(rh-nodejs14-v8)",
+        # brew rpmID=10080036
+        "bundled(apache-commons-lang3)",
+        "bundled(apache-commons-logging)",
+        "bundled(apache-commons-parent)",
+        "bundled(maven-enforcer)",
+        "bundled(maven-file-management)",
+        "bundled(maven-filtering)",
     ]
     # Add mock version; we're testing component name parsing here only
     test_provides = [(str(provide), "0") for provide in test_provides]
@@ -873,18 +885,27 @@ def test_parsing_bundled_provides():
         (Component.Type.PYPI, "django-stubs"),
         (Component.Type.PYPI, "selectors2"),
         (Component.Type.NPM, "@babel/code-frame"),
-        (Component.Type.NPM, "yargs-parser"),
+        (Component.Type.NPM, "nodejs-yargs-parser"),
         (Component.Type.GEM, "fileutils"),
         (Component.Type.GEM, "example"),
         (Component.Type.GEM, "another-example"),
         (Component.Type.CARGO, "aho-corasick/default"),
-        (Component.Type.GENERIC, "rh-nodejs12-zlib"),
+        (Component.Type.NPM, "nodejs12-zlib"),
         (Component.Type.NPM, "backbone"),
         (Component.Type.GENERIC, "hello-world"),
         (Component.Type.GENERIC, "libsomething"),
         (Component.Type.MAVEN, "org.yaml/snakeyaml"),
         (Component.Type.MAVEN, "commons-codec/commons-codec"),
         (Component.Type.MAVEN, "biz.source_code/base64coder"),
+        (Component.Type.NPM, "nodejs14-nghttp2"),
+        (Component.Type.NPM, "nodejs14-uvwasi"),
+        (Component.Type.NPM, "nodejs14-v8"),
+        (Component.Type.MAVEN, "apache-commons-lang3"),
+        (Component.Type.MAVEN, "apache-commons-logging"),
+        (Component.Type.MAVEN, "apache-commons-parent"),
+        (Component.Type.MAVEN, "maven-enforcer"),
+        (Component.Type.MAVEN, "maven-file-management"),
+        (Component.Type.MAVEN, "maven-filtering"),
     ]
     expected_values = [parsed + ("0",) for parsed in expected_values]
     assert Brew._extract_bundled_provides(test_provides) == expected_values

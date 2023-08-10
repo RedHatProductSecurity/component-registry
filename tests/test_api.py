@@ -192,7 +192,8 @@ def test_latest_components_by_stream_filter(client, api_path):
     # 2 components (1 older version, 1 newer version) for each name / arch pair in REDHAT namespace
     # 12 REDHAT components across 6 pairs
     # plus 2 UPSTREAM components per name for src architecture only, 4 upstreams total
-    # Overall 16 components, and latest filter should show 8 (newer, when on or older, when off)
+    # plus 2 non-RPMs components per name for src architecture only, 4 PyPI packages total
+    # Overall 20 components, and latest filter should show 10 (newer, when on or older, when off)
     components = {}
     stream = ProductStreamFactory()
     for name in "red", "blue":
@@ -216,7 +217,7 @@ def test_latest_components_by_stream_filter(client, api_path):
                 arch=older_component.arch,
             )
             newer_component.productstreams.add(stream)
-            components[(name, arch)] = (older_component, newer_component)
+            components[(older_component.type, name, arch)] = (older_component, newer_component)
         # Create UPSTREAM components for src architecture only
         # with the same type, name, and version as REDHAT src components
         # but no release or software_build
@@ -240,28 +241,63 @@ def test_latest_components_by_stream_filter(client, api_path):
             software_build=older_upstream_component.software_build,
         )
         newer_upstream_component.productstreams.add(stream)
-        components[(name, older_upstream_component.arch)] = (
+        components[(older_upstream_component.type, name, older_upstream_component.arch)] = (
             older_upstream_component,
             newer_upstream_component,
         )
 
+        # A NEVRA like "PyYAML version 1.2.3 with no release or architecture"
+        # could be a PyPI package, or an upstream RPM
+        # We want to see the latest version of both components
+        # Create PyPI components for src architecture only
+        # with the same namespace, name and version as UPSTREAM noarch components
+        # and no release, arch, or software_build
+        older_unrelated_component = ComponentFactory(
+            type=Component.Type.PYPI,
+            namespace=older_upstream_component.namespace,
+            name=older_component.name,
+            version=older_component.version,
+            release=older_upstream_component.release,
+            arch=older_upstream_component.arch,
+            software_build=older_upstream_component.software_build,
+        )
+        older_unrelated_component.productstreams.add(stream)
+        newer_unrelated_component = ComponentFactory(
+            type=older_unrelated_component.type,
+            namespace=older_upstream_component.namespace,
+            name=newer_component.name,
+            version=newer_component.version,
+            release=older_upstream_component.release,
+            arch=older_upstream_component.arch,
+            software_build=older_upstream_component.software_build,
+        )
+        newer_unrelated_component.productstreams.add(stream)
+        components[(older_unrelated_component.type, name, older_unrelated_component.arch)] = (
+            older_unrelated_component,
+            newer_unrelated_component,
+        )
+
     response = client.get(f"{api_path}/components")
     assert response.status_code == 200
-    assert response.json()["count"] == 16
+    assert response.json()["count"] == 20
 
     response = client.get(f"{api_path}/components?latest_components_by_streams=True")
     assert response.status_code == 200
     response = response.json()
     assert response["count"] == 2
     for result in response["results"]:
-        assert result["nevra"] == components[(result["name"], result["arch"])][1].nevra
+        assert (
+            result["purl"] == components[(result["type"], result["name"], result["arch"])][1].purl
+        )
 
     response = client.get(f"{api_path}/components?latest_components_by_streams=False")
     assert response.status_code == 200
     response = response.json()
     assert response["count"] == 2
     for result in response["results"]:
-        assert result["nevra"] == components[(result["name"], result["arch"])][0].nevra
+        assert (
+            result["purl"] == components[(result["type"], result["name"], result["arch"])][0].purl
+        )
 
     # Also test latest_components_by_streams filter when combined with root_components filter
     # Note that order doesn't matter here, e.g. before CORGI-609 both of below gave 0 results:
@@ -282,7 +318,9 @@ def test_latest_components_by_stream_filter(client, api_path):
     assert response["count"] == 2
     # Red and blue components with arch "src" each have 1 latest
     for result in response["results"]:
-        assert result["nevra"] == components[(result["name"], result["arch"])][1].nevra
+        assert (
+            result["purl"] == components[(result["type"], result["name"], result["arch"])][1].purl
+        )
 
     response = client.get(
         f"{api_path}/components?root_components=True&latest_components_by_streams=False"
@@ -292,7 +330,9 @@ def test_latest_components_by_stream_filter(client, api_path):
     assert response["count"] == 2
     # Red and blue components with arch "src" each have 1 non-latest
     for result in response["results"]:
-        assert result["nevra"] == components[(result["name"], result["arch"])][0].nevra
+        assert (
+            result["purl"] == components[(result["type"], result["name"], result["arch"])][0].purl
+        )
 
     response = client.get(
         f"{api_path}/components?root_components=False&latest_components_by_streams=True"
@@ -302,9 +342,12 @@ def test_latest_components_by_stream_filter(client, api_path):
     assert response["count"] == 0
     # Red and blue components for 2 arches each have 1 latest
     # Red and blue components for upstream each have 1 latest
+    # Red and blue components for non-RPMs each have 1 latest
     # These are all non-root components, so are excluded in latest_components_by_stream filter
     for result in response["results"]:
-        assert result["nevra"] == components[(result["name"], result["arch"])][1].nevra
+        assert (
+            result["purl"] == components[(result["type"], result["name"], result["arch"])][1].purl
+        )
 
     response = client.get(
         f"{api_path}/components?root_components=False&latest_components_by_streams=False&limit=20"
@@ -320,13 +363,15 @@ def test_latest_components_by_stream_filter(client, api_path):
     #
     # So when root_components=False,
     # latest_components_by_stream=False is a no-op and has no NEVRAs to exclude
-    # We report all 12 non-root components, regardless of latest / non-latest version
-    assert response["count"] == 12
+    # We report all 16 non-root components, regardless of latest / non-latest version
+    assert response["count"] == 16
     # Red and blue components for 2 arches each have 2 components (1 latest and 1 non-latest)
     # Red and blue components for upstream each have 2 components (1 latest and 1 non-latest)
+    # Red and blue components for non-RPMs each have 2 components (1 latest and 1 non-latest)
     for result in response["results"]:
-        assert result["nevra"] in tuple(
-            component.nevra for component in components[(result["name"], result["arch"])]
+        assert result["purl"] in tuple(
+            component.purl
+            for component in components[(result["type"], result["name"], result["arch"])]
         )
 
 

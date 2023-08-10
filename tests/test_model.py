@@ -799,7 +799,8 @@ def test_latest_components_queryset(client, api_path):
     # 2 components (1 older version, 1 newer version) for each name / arch pair in REDHAT namespace
     # 12 REDHAT components across 6 pairs
     # plus 2 UPSTREAM components per name for src architecture only, 4 upstreams total
-    # Overall 16 components, and latest queryset should show 8 (newer, when on or older, when off)
+    # plus 2 non-RPMs components per name for src architecture only, 4 PyPI packages total
+    # Overall 20 components, and latest queryset should show 10 (newer, when on or older, when off)
     components = {}
     for name in "red", "blue":
         for arch in "aarch64", "x86_64", "src":
@@ -820,7 +821,7 @@ def test_latest_components_queryset(client, api_path):
                 release=older_component.release,
                 arch=older_component.arch,
             )
-            components[(name, arch)] = (older_component, newer_component)
+            components[(older_component.type, name, arch)] = (older_component, newer_component)
         # Create UPSTREAM components for src architecture only
         # with the same type, name, and version as REDHAT src components
         # but no release or software_build
@@ -842,22 +843,55 @@ def test_latest_components_queryset(client, api_path):
             arch=older_upstream_component.arch,
             software_build=older_upstream_component.software_build,
         )
-        components[(name, older_upstream_component.arch)] = (
+        components[(older_upstream_component.type, name, older_upstream_component.arch)] = (
             older_upstream_component,
             newer_upstream_component,
         )
 
-    assert Component.objects.count() == 16
+        # A NEVRA like "PyYAML version 1.2.3 with no release or architecture"
+        # could be a PyPI package, or an upstream RPM
+        # We want to see the latest version of both components
+        # Create PyPI components for src architecture only
+        # with the same namespace, name and version as UPSTREAM noarch components
+        # and no release, arch, or software_build
+        older_unrelated_component = ComponentFactory(
+            type=Component.Type.PYPI,
+            namespace=older_upstream_component.namespace,
+            name=older_component.name,
+            version=older_component.version,
+            release=older_upstream_component.release,
+            arch=older_upstream_component.arch,
+            software_build=older_upstream_component.software_build,
+        )
+        newer_unrelated_component = ComponentFactory(
+            type=older_unrelated_component.type,
+            namespace=older_upstream_component.namespace,
+            name=newer_component.name,
+            version=newer_component.version,
+            release=older_upstream_component.release,
+            arch=older_upstream_component.arch,
+            software_build=older_upstream_component.software_build,
+        )
+        components[(older_unrelated_component.type, name, older_unrelated_component.arch)] = (
+            older_unrelated_component,
+            newer_unrelated_component,
+        )
+
+    assert Component.objects.count() == 20
 
     latest_components = Component.objects.latest_components()
-    assert len(latest_components) == 8
+    assert len(latest_components) == 10
     for component in latest_components:
-        assert component.nevra == components[(component.name, component.arch)][1].nevra
+        assert (
+            component.purl == components[(component.type, component.name, component.arch)][1].purl
+        )
 
     non_latest_components = Component.objects.latest_components(include=False)
-    assert len(non_latest_components) == 8
+    assert len(non_latest_components) == 10
     for component in non_latest_components:
-        assert component.nevra == components[(component.name, component.arch)][0].nevra
+        assert (
+            component.purl == components[(component.type, component.name, component.arch)][0].purl
+        )
 
     # Also test latest_components queryset when combined with root_components queryset
     # Note that order doesn't matter in the API, e.g. before CORGI-609 both of below gave 0 results:
@@ -874,7 +908,9 @@ def test_latest_components_queryset(client, api_path):
     assert len(latest_root_components) == 2
     # Red and blue components with arch "src" each have 1 latest
     for component in latest_root_components:
-        assert component.nevra == components[(component.name, component.arch)][1].nevra
+        assert (
+            component.purl == components[(component.type, component.name, component.arch)][1].purl
+        )
 
     non_latest_root_components = Component.objects.latest_components(
         include=False
@@ -882,25 +918,33 @@ def test_latest_components_queryset(client, api_path):
     assert len(non_latest_root_components) == 2
     # Red and blue components with arch "src" each have 1 non-latest
     for component in non_latest_root_components:
-        assert component.nevra == components[(component.name, component.arch)][0].nevra
+        assert (
+            component.purl == components[(component.type, component.name, component.arch)][0].purl
+        )
 
     latest_non_root_components = Component.objects.latest_components().root_components(
         include=False
     )
-    assert len(latest_non_root_components) == 6
+    assert len(latest_non_root_components) == 8
     # Red and blue components for 2 arches each have 1 latest
     # Red and blue components for upstream (non-root) each have 1 latest
+    # Red and blue components for non-RPMs (non-root) each have 1 latest
     for component in latest_non_root_components:
-        assert component.nevra == components[(component.name, component.arch)][1].nevra
+        assert (
+            component.purl == components[(component.type, component.name, component.arch)][1].purl
+        )
 
     non_latest_non_root_components = Component.objects.latest_components(
         include=False
     ).root_components(include=False)
-    assert len(non_latest_non_root_components) == 6
+    assert len(non_latest_non_root_components) == 8
     # Red and blue components for 2 arches each have 1 non-latest
     # Red and blue components for upstream (non-root) each have 1 non-latest
+    # Red and blue components for non-RPMs (non-root) each have 1 non-latest
     for component in non_latest_non_root_components:
-        assert component.nevra == components[(component.name, component.arch)][0].nevra
+        assert (
+            component.purl == components[(component.type, component.name, component.arch)][0].purl
+        )
 
 
 @pytest.mark.django_db

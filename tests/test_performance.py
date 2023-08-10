@@ -57,8 +57,11 @@ def display_component_with_many_sources() -> dict:
     # make sure that you've loaded the right data for this test
     # Any exceptions will be passed through to test code
     response.raise_for_status()
+    large_component_uuid = response.json()["uuid"]
+    response = requests.get(f"{CORGI_API_URL}/components/{large_component_uuid}/sources")
+    response.raise_for_status()
     response_json = response.json()
-    assert len(response_json["sources"]) > 2000
+    assert response_json["count"] > 2000
     return response_json
 
 
@@ -67,6 +70,10 @@ def test_displaying_component_with_many_sources() -> None:
     # Slow /components endpoint and web pod restarts (OoM) were fixed in CORGI-507
     # Now we use .iterator() so that components with many sources / provides
     # don't time out or exhaust all the web pod's memory
+    # We also moved sources / provides / upstreams to a separate endpoint
+    # which is also paginated, to fix Bad Gateway errors (CORGI-729)
+    # This separate endpoint will be very slow if users set a high ?limit=
+    # so we don't recommend / support this
     timer = timeit.Timer(display_component_with_many_sources)
 
     # 3 test results, each of which makes only 1 request

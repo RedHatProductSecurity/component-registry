@@ -565,7 +565,28 @@ paths:
   /api/v1/components/{uuid}/provides:
     get:
       operationId: v1_components_provides_retrieve
-      description: View for api/v1/components
+      description: List a Component's provides, using pagination when needed.
+      parameters:
+      - in: path
+        name: uuid
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this component.
+        required: true
+      tags:
+      - v1
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Component'
+          description: ''
+  /api/v1/components/{uuid}/sources:
+    get:
+      operationId: v1_components_sources_retrieve
+      description: List a Component's sources, using pagination when needed.
       parameters:
       - in: path
         name: uuid
@@ -632,6 +653,27 @@ paths:
               $ref: '#/components/schemas/Component'
       security:
       - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Component'
+          description: ''
+  /api/v1/components/{uuid}/upstreams:
+    get:
+      operationId: v1_components_upstreams_retrieve
+      description: List a Component's upstreams, using pagination when needed.
+      parameters:
+      - in: path
+        name: uuid
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this component.
+        required: true
+      tags:
+      - v1
       responses:
         '200':
           content:
@@ -1508,12 +1550,15 @@ components:
           readOnly: true
         sources:
           type: string
+          format: uri
           readOnly: true
         provides:
           type: string
+          format: uri
           readOnly: true
         upstreams:
           type: string
+          format: uri
           readOnly: true
         manifest:
           type: string

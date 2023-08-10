@@ -1193,29 +1193,101 @@ def test_oci_component_provides_sources_upstreams(client, api_path):
 
     response = client.get(f"{api_path}/components/{root_comp.uuid}")
     assert response.status_code == 200
-    assert response.json()["name"] == root_comp.name
-    assert response.json()["related_url"] == root_comp.related_url
-    assert len(response.json()["sources"]) == 0
-    assert len(response.json()["provides"]) == 2
-    assert len(response.json()["upstreams"]) == 1
+    response = response.json()
+
+    assert response["name"] == root_comp.name
+    assert response["related_url"] == root_comp.related_url
+    assert response["sources"] == f"http://testserver{api_path}/components/{root_comp.uuid}/sources"
+    related_response = client.get(response["sources"])
+    assert related_response.status_code == 200
+    assert related_response.json()["count"] == 0
+
+    assert (
+        response["provides"] == f"http://testserver{api_path}/components/{root_comp.uuid}/provides"
+    )
+    related_response = client.get(response["provides"])
+    assert related_response.status_code == 200
+    assert related_response.json()["count"] == 2
+
+    assert (
+        response["upstreams"]
+        == f"http://testserver{api_path}/components/{root_comp.uuid}/upstreams"
+    )
+    related_response = client.get(response["upstreams"])
+    assert related_response.status_code == 200
+    assert related_response.json()["count"] == 1
 
     response = client.get(f"{api_path}/components/{dep_comp.uuid}")
     assert response.status_code == 200
-    assert len(response.json()["sources"]) == 1
-    assert len(response.json()["provides"]) == 1
-    assert len(response.json()["upstreams"]) == 0
+    response = response.json()
+    assert response["sources"] == f"http://testserver{api_path}/components/{dep_comp.uuid}/sources"
+    related_response = client.get(response["sources"])
+    assert related_response.status_code == 200
+    assert related_response.json()["count"] == 1
+
+    assert (
+        response["provides"] == f"http://testserver{api_path}/components/{dep_comp.uuid}/provides"
+    )
+    related_response = client.get(response["provides"])
+    assert related_response.status_code == 200
+    assert related_response.json()["count"] == 1
+
+    assert (
+        response["upstreams"] == f"http://testserver{api_path}/components/{dep_comp.uuid}/upstreams"
+    )
+    related_response = client.get(response["upstreams"])
+    assert related_response.status_code == 200
+    assert related_response.json()["count"] == 0
 
     response = client.get(f"{api_path}/components/{dep2_comp.uuid}")
     assert response.status_code == 200
-    assert len(response.json()["sources"]) == 2
-    assert len(response.json()["provides"]) == 0
-    assert len(response.json()["upstreams"]) == 0
+    response = response.json()
+    assert response["sources"] == f"http://testserver{api_path}/components/{dep2_comp.uuid}/sources"
+    related_response = client.get(response["sources"])
+    assert related_response.status_code == 200
+    assert related_response.json()["count"] == 2
+
+    assert (
+        response["provides"] == f"http://testserver{api_path}/components/{dep2_comp.uuid}/provides"
+    )
+    related_response = client.get(response["provides"])
+    assert related_response.status_code == 200
+    assert related_response.json()["count"] == 0
+
+    assert (
+        response["upstreams"]
+        == f"http://testserver{api_path}/components/{dep2_comp.uuid}/upstreams"
+    )
+    related_response = client.get(response["upstreams"])
+    assert related_response.status_code == 200
+    assert related_response.json()["count"] == 0
 
     response = client.get(f"{api_path}/components/{upstream_comp.uuid}")
     assert response.status_code == 200
-    assert len(response.json()["sources"]) == 0
-    assert len(response.json()["provides"]) == 0
-    assert len(response.json()["upstreams"]) == 0
+    response = response.json()
+    assert (
+        response["sources"]
+        == f"http://testserver{api_path}/components/{upstream_comp.uuid}/sources"
+    )
+    related_response = client.get(response["sources"])
+    assert related_response.status_code == 200
+    assert related_response.json()["count"] == 0
+
+    assert (
+        response["provides"]
+        == f"http://testserver{api_path}/components/{upstream_comp.uuid}/provides"
+    )
+    related_response = client.get(response["provides"])
+    assert related_response.status_code == 200
+    assert related_response.json()["count"] == 0
+
+    assert (
+        response["upstreams"]
+        == f"http://testserver{api_path}/components/{upstream_comp.uuid}/upstreams"
+    )
+    related_response = client.get(response["upstreams"])
+    assert related_response.status_code == 200
+    assert related_response.json()["count"] == 0
 
     # retrieve all sources of root_comp
     response = client.get(f"{api_path}/components?provides={quote(root_comp.purl)}")
@@ -1259,28 +1331,39 @@ def test_oci_component_provides_sources_upstreams(client, api_path):
     )
     assert response.status_code == 200
     assert "upstreams" not in response.json()
-    assert len(response.json()["provides"]) == 2
-    for provide in response.json()["provides"]:
-        assert "name" in provide
-        assert "purl" in provide
+    assert (
+        response.json()["provides"]
+        == f"http://testserver{api_path}/components/{root_comp.uuid}/provides"
+    )
+    related_response = client.get(response.json()["provides"])
+    assert related_response.status_code == 200
+    assert related_response.json()["count"] == 2
+
     response = client.get(
         f"{api_path}/components/{root_comp.uuid}?include_fields=upstreams.name,upstreams.purl"
     )
     assert response.status_code == 200
     assert "provides" not in response.json()
-    assert len(response.json()["upstreams"]) == 1
-    for provide in response.json()["upstreams"]:
-        assert "name" in provide
-        assert "purl" in provide
+    assert (
+        response.json()["upstreams"]
+        == f"http://testserver{api_path}/components/{root_comp.uuid}/upstreams"
+    )
+    related_response = client.get(response.json()["upstreams"])
+    assert related_response.status_code == 200
+    assert related_response.json()["count"] == 1
+
     response = client.get(
         f"{api_path}/components/{dep_comp.uuid}?include_fields=sources.name,sources.purl"
     )
     assert response.status_code == 200
     assert "provides" not in response.json()
-    assert len(response.json()["sources"]) == 1
-    for provide in response.json()["sources"]:
-        assert "name" in provide
-        assert "purl" in provide
+    assert (
+        response.json()["sources"]
+        == f"http://testserver{api_path}/components/{dep_comp.uuid}/sources"
+    )
+    related_response = client.get(response.json()["sources"])
+    assert related_response.status_code == 200
+    assert related_response.json()["count"] == 1
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
@@ -1375,23 +1458,78 @@ def test_srpm_component_provides_sources_upstreams(client, api_path):
 
     response = client.get(f"{api_path}/components/{root_comp.uuid}")
     assert response.status_code == 200
-    assert response.json()["name"] == root_comp.name
-    assert response.json()["related_url"] == root_comp.related_url
-    assert len(response.json()["sources"]) == 0
-    assert len(response.json()["provides"]) == 1
-    assert len(response.json()["upstreams"]) == 1
+    response = response.json()
+
+    assert response["name"] == root_comp.name
+    assert response["related_url"] == root_comp.related_url
+    assert response["sources"] == f"http://testserver{api_path}/components/{root_comp.uuid}/sources"
+    related_response = client.get(response["sources"])
+    assert related_response.status_code == 200
+    assert related_response.json()["count"] == 0
+
+    assert (
+        response["provides"] == f"http://testserver{api_path}/components/{root_comp.uuid}/provides"
+    )
+    related_response = client.get(response["provides"])
+    assert related_response.status_code == 200
+    assert related_response.json()["count"] == 1
+
+    assert (
+        response["upstreams"]
+        == f"http://testserver{api_path}/components/{root_comp.uuid}/upstreams"
+    )
+    related_response = client.get(response["upstreams"])
+    assert related_response.status_code == 200
+    assert related_response.json()["count"] == 1
 
     response = client.get(f"{api_path}/components/{dep_comp.uuid}")
     assert response.status_code == 200
-    assert len(response.json()["sources"]) == 1
-    assert len(response.json()["provides"]) == 0
-    assert len(response.json()["upstreams"]) == 1
+    response = response.json()
+    assert response["sources"] == f"http://testserver{api_path}/components/{dep_comp.uuid}/sources"
+    related_response = client.get(response["sources"])
+    assert related_response.status_code == 200
+    assert related_response.json()["count"] == 1
+
+    assert (
+        response["provides"] == f"http://testserver{api_path}/components/{dep_comp.uuid}/provides"
+    )
+    related_response = client.get(response["provides"])
+    assert related_response.status_code == 200
+    assert related_response.json()["count"] == 0
+
+    assert (
+        response["upstreams"] == f"http://testserver{api_path}/components/{dep_comp.uuid}/upstreams"
+    )
+    related_response = client.get(response["upstreams"])
+    assert related_response.status_code == 200
+    assert related_response.json()["count"] == 1
 
     response = client.get(f"{api_path}/components/{upstream_comp.uuid}")
     assert response.status_code == 200
-    assert len(response.json()["sources"]) == 0
-    assert len(response.json()["provides"]) == 0
-    assert len(response.json()["upstreams"]) == 1
+    response = response.json()
+    assert (
+        response["sources"]
+        == f"http://testserver{api_path}/components/{upstream_comp.uuid}/sources"
+    )
+    related_response = client.get(response["sources"])
+    assert related_response.status_code == 200
+    assert related_response.json()["count"] == 0
+
+    assert (
+        response["provides"]
+        == f"http://testserver{api_path}/components/{upstream_comp.uuid}/provides"
+    )
+    related_response = client.get(response["provides"])
+    assert related_response.status_code == 200
+    assert related_response.json()["count"] == 0
+
+    assert (
+        response["upstreams"]
+        == f"http://testserver{api_path}/components/{upstream_comp.uuid}/upstreams"
+    )
+    related_response = client.get(response["upstreams"])
+    assert related_response.status_code == 200
+    assert related_response.json()["count"] == 1
 
     # retrieve all sources of root_comp
     response = client.get(f"{api_path}/components?provides={quote(root_comp.purl)}")
@@ -1426,28 +1564,39 @@ def test_srpm_component_provides_sources_upstreams(client, api_path):
     )
     assert response.status_code == 200
     assert "upstreams" not in response.json()
-    assert len(response.json()["provides"]) == 1
-    for provide in response.json()["provides"]:
-        assert "name" in provide
-        assert "purl" in provide
+    assert (
+        response.json()["provides"]
+        == f"http://testserver{api_path}/components/{root_comp.uuid}/provides"
+    )
+    related_response = client.get(response.json()["provides"])
+    assert related_response.status_code == 200
+    assert related_response.json()["count"] == 1
+
     response = client.get(
         f"{api_path}/components/{root_comp.uuid}?include_fields=upstreams.name,upstreams.purl"
     )
     assert response.status_code == 200
     assert "provides" not in response.json()
-    assert len(response.json()["upstreams"]) == 1
-    for provide in response.json()["upstreams"]:
-        assert "name" in provide
-        assert "purl" in provide
+    assert (
+        response.json()["upstreams"]
+        == f"http://testserver{api_path}/components/{root_comp.uuid}/upstreams"
+    )
+    related_response = client.get(response.json()["upstreams"])
+    assert related_response.status_code == 200
+    assert related_response.json()["count"] == 1
+
     response = client.get(
         f"{api_path}/components/{dep_comp.uuid}?include_fields=sources.name,sources.purl"
     )
     assert response.status_code == 200
     assert "provides" not in response.json()
-    assert len(response.json()["sources"]) == 1
-    for provide in response.json()["sources"]:
-        assert "name" in provide
-        assert "purl" in provide
+    assert (
+        response.json()["sources"]
+        == f"http://testserver{api_path}/components/{dep_comp.uuid}/sources"
+    )
+    related_response = client.get(response.json()["sources"])
+    assert related_response.status_code == 200
+    assert related_response.json()["count"] == 1
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)

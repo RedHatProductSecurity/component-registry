@@ -294,9 +294,9 @@ class SoftwareBuildSerializer(IncludeExcludeFieldsSerializer):
 
     tags = TagSerializer(many=True, read_only=True)
 
-    link = serializers.SerializerMethodField()
-    web_url = serializers.SerializerMethodField()
-    components = serializers.SerializerMethodField()
+    link = serializers.SerializerMethodField(read_only=True)
+    web_url = serializers.SerializerMethodField(read_only=True)
+    components = serializers.SerializerMethodField(read_only=True)
 
     @staticmethod
     def get_link(instance: SoftwareBuild) -> str:
@@ -338,7 +338,7 @@ class SoftwareBuildSummarySerializer(IncludeExcludeFieldsSerializer):
     """Show summary information for a SoftwareBuild.
     Add or remove fields using ?include_fields=&exclude_fields="""
 
-    link = serializers.SerializerMethodField()
+    link = serializers.SerializerMethodField(read_only=True)
 
     @staticmethod
     def get_link(instance: SoftwareBuild) -> str:
@@ -351,6 +351,20 @@ class SoftwareBuildSummarySerializer(IncludeExcludeFieldsSerializer):
 
 
 class ProductTaxonomySerializer(IncludeExcludeFieldsSerializer):
+    tags = TagSerializer(many=True, read_only=True)
+    link = serializers.SerializerMethodField(read_only=True)
+
+    products = serializers.SerializerMethodField(read_only=True)
+    product_versions = serializers.SerializerMethodField(read_only=True)
+    product_streams = serializers.SerializerMethodField(read_only=True)
+    product_variants = serializers.SerializerMethodField(read_only=True)
+    channels = serializers.SerializerMethodField(read_only=True)
+
+    @staticmethod
+    @abstractmethod
+    def get_link(instance) -> str:
+        pass
+
     def get_products(
         self, instance: Union[ProductModel, ProductTaxonomyMixin]
     ) -> list[dict[str, str]]:
@@ -407,22 +421,15 @@ class ComponentSerializer(ProductTaxonomySerializer):
     """Show detailed information for a Component.
     Add or remove fields using ?include_fields=&exclude_fields="""
 
-    software_build = serializers.SerializerMethodField()
-    tags = TagSerializer(many=True, read_only=True)
+    software_build = serializers.SerializerMethodField(read_only=True)
 
-    link = serializers.SerializerMethodField()
+    provides = serializers.HyperlinkedIdentityField(view_name="component-provides", read_only=True)
+    sources = serializers.HyperlinkedIdentityField(view_name="component-sources", read_only=True)
+    upstreams = serializers.HyperlinkedIdentityField(
+        view_name="component-upstreams", read_only=True
+    )
 
-    products = serializers.SerializerMethodField()
-    product_versions = serializers.SerializerMethodField()
-    product_streams = serializers.SerializerMethodField()
-    product_variants = serializers.SerializerMethodField()
-    channels = serializers.SerializerMethodField()
-
-    provides = serializers.SerializerMethodField()
-    sources = serializers.SerializerMethodField()
-    upstreams = serializers.SerializerMethodField()
-
-    manifest = serializers.SerializerMethodField()
+    manifest = serializers.SerializerMethodField(read_only=True)
 
     @extend_schema_field(SoftwareBuildSummarySerializer(many=False, read_only=True))
     def get_software_build(self, obj):
@@ -439,37 +446,6 @@ class ComponentSerializer(ProductTaxonomySerializer):
     @staticmethod
     def get_link(instance: Component) -> str:
         return get_component_purl_link(instance.purl)
-
-    # @staticmethod
-    def get_provides(self, instance: Component):
-        include_exclude_serializer = self.get_include_exclude_serializer(
-            "provides", ComponentSerializer, instance.provides
-        )
-        if include_exclude_serializer:
-            return include_exclude_serializer.data
-        return get_component_data_list(
-            instance.provides.values_list("purl", flat=True).using("read_only").iterator()
-        )
-
-    def get_sources(self, instance: Component):
-        include_exclude_serializer = self.get_include_exclude_serializer(
-            "sources", ComponentSerializer, instance.sources
-        )
-        if include_exclude_serializer:
-            return include_exclude_serializer.data
-        return get_component_data_list(
-            instance.sources.values_list("purl", flat=True).using("read_only").iterator()
-        )
-
-    def get_upstreams(self, instance: Component):
-        include_exclude_serializer = self.get_include_exclude_serializer(
-            "upstreams", ComponentSerializer, instance.upstreams
-        )
-        if include_exclude_serializer:
-            return include_exclude_serializer.data
-        return get_component_data_list(
-            instance.upstreams.values_list("purl", flat=True).using("read_only").iterator()
-        )
 
     @staticmethod
     def get_manifest(instance: Component) -> str:
@@ -521,8 +497,8 @@ class ComponentSerializer(ProductTaxonomySerializer):
 class ComponentListSerializer(IncludeExcludeFieldsSerializer):
     """List all Components. Add or remove fields using ?include_fields=&exclude_fields="""
 
-    link = serializers.SerializerMethodField()
-    build_completion_dt = serializers.SerializerMethodField()
+    link = serializers.SerializerMethodField(read_only=True)
+    build_completion_dt = serializers.SerializerMethodField(read_only=True)
 
     @staticmethod
     def get_build_completion_dt(instance: Component) -> Optional[datetime.datetime]:
@@ -550,18 +526,10 @@ class ComponentListSerializer(IncludeExcludeFieldsSerializer):
 
 
 class ProductModelSerializer(ProductTaxonomySerializer):
-    tags = TagSerializer(many=True, read_only=True)
-    components = serializers.SerializerMethodField()
-    upstreams = serializers.SerializerMethodField()
-    builds = serializers.SerializerMethodField()
-    link = serializers.SerializerMethodField()
-    build_count = serializers.SerializerMethodField()
-    channels = serializers.SerializerMethodField()
-
-    @staticmethod
-    @abstractmethod
-    def get_link(instance) -> str:
-        pass
+    components = serializers.SerializerMethodField(read_only=True)
+    upstreams = serializers.SerializerMethodField(read_only=True)
+    builds = serializers.SerializerMethodField(read_only=True)
+    build_count = serializers.SerializerMethodField(read_only=True)
 
     @staticmethod
     def get_components(instance: ProductModel) -> str:
@@ -613,10 +581,6 @@ class ProductSerializer(ProductModelSerializer):
     """Show detailed information for Product(s).
     Add or remove fields using ?include_fields=&exclude_fields="""
 
-    product_versions = serializers.SerializerMethodField()
-    product_streams = serializers.SerializerMethodField()
-    product_variants = serializers.SerializerMethodField()
-
     @staticmethod
     def get_link(instance: Product) -> str:
         return get_model_ofuri_link("products", instance.ofuri)
@@ -635,10 +599,6 @@ class ProductSerializer(ProductModelSerializer):
 class ProductVersionSerializer(ProductModelSerializer):
     """Show detailed information for ProductVersion(s).
     Add or remove fields using ?include_fields=&exclude_fields="""
-
-    products = serializers.SerializerMethodField()
-    product_streams = serializers.SerializerMethodField()
-    product_variants = serializers.SerializerMethodField()
 
     @staticmethod
     def get_link(instance: ProductVersion) -> str:
@@ -661,13 +621,8 @@ class ProductStreamSerializer(ProductModelSerializer):
     Add or remove fields using ?include_fields=&exclude_fields="""
 
     cpes = serializers.ListField(child=serializers.CharField(max_length=1000), read_only=True)
-    manifest = serializers.SerializerMethodField()
-
-    products = serializers.SerializerMethodField()
-    product_versions = serializers.SerializerMethodField()
-    product_variants = serializers.SerializerMethodField()
-
-    relations = serializers.SerializerMethodField()
+    manifest = serializers.SerializerMethodField(read_only=True)
+    relations = serializers.SerializerMethodField(read_only=True)
 
     @staticmethod
     def get_link(instance: ProductStream) -> str:
@@ -699,7 +654,7 @@ class ProductStreamSummarySerializer(ProductModelSerializer):
     """Show summary information for a ProductStream.
     Add or remove fields using ?include_fields=&exclude_fields="""
 
-    manifest = serializers.SerializerMethodField()
+    manifest = serializers.SerializerMethodField(read_only=True)
 
     @staticmethod
     def get_link(instance: ProductStream) -> str:
@@ -721,13 +676,9 @@ class ProductStreamSummarySerializer(ProductModelSerializer):
 class ComponentProductStreamSummarySerializer(ProductModelSerializer):
     """custom component view displaying product information."""
 
-    component_link = serializers.SerializerMethodField()
-    manifest = serializers.SerializerMethodField()
-    component_purl = serializers.SerializerMethodField()
-
-    @staticmethod
-    def get_component_purl(obj):
-        return obj.component_purl
+    component_link = serializers.SerializerMethodField(read_only=True)
+    manifest = serializers.SerializerMethodField(read_only=True)
+    component_purl = serializers.CharField(read_only=True)
 
     @staticmethod
     def get_link(instance: ProductStream) -> str:
@@ -756,11 +707,7 @@ class ProductVariantSerializer(ProductModelSerializer):
     """Show detailed information for ProductVariant(s).
     Add or remove fields using ?include_fields=&exclude_fields="""
 
-    products = serializers.SerializerMethodField()
-    product_versions = serializers.SerializerMethodField()
-    product_streams = serializers.SerializerMethodField()
-
-    relations = serializers.SerializerMethodField()
+    relations = serializers.SerializerMethodField(read_only=True)
 
     @staticmethod
     def get_link(instance: ProductVariant) -> str:
@@ -782,12 +729,6 @@ class ProductVariantSerializer(ProductModelSerializer):
 class ChannelSerializer(ProductTaxonomySerializer):
     """Show detailed information for Channel(s).
     Add or remove fields using ?include_fields=&exclude_fields="""
-
-    link = serializers.SerializerMethodField()
-    products = serializers.SerializerMethodField()
-    product_versions = serializers.SerializerMethodField()
-    product_streams = serializers.SerializerMethodField()
-    product_variants = serializers.SerializerMethodField()
 
     class Meta:
         model = Channel

@@ -903,8 +903,8 @@ class ComponentQuerySet(models.QuerySet):
         component_versions = cls._versions_by_name(queryset)
         latest_components = Q()
         # We need to build tuples of the nevras for comparison with the rpm.labelCompare function
-        # We can discard the namespace, name, arch part of results as it was only used for grouping.
-        for _, _, _, versions in component_versions:
+        # Discard the type, namespace, name, arch part of results as it was only used for grouping.
+        for _, _, _, _, versions in component_versions:
             latest_version = cls._version_dict_to_tuple(versions[0])
             for version in versions:
                 current_version = cls._version_dict_to_tuple(version)
@@ -927,10 +927,10 @@ class ComponentQuerySet(models.QuerySet):
     @staticmethod
     def _versions_by_name(queryset: models.QuerySet) -> Iterator[Any]:
         """This builds a json object 'nevras' so that we can group multiple
-        epoch/version/release (EVR) by namespace/name/arch.
-        We select the uuid as well to identify the latest EVR for that namespace/name/arch"""
+        epoch/version/release (EVR) by type/namespace/name/arch.
+        We select the uuid as well to identify the latest EVR for that type/namespace/name/arch"""
         return (
-            queryset.values_list("namespace", "name", "arch")
+            queryset.values_list("type", "namespace", "name", "arch")
             .annotate(
                 nevras=JSONBAgg(
                     RawSQL(

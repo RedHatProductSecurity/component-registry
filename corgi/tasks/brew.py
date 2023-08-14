@@ -301,10 +301,12 @@ def save_component(component: dict, parent: ComponentNode) -> bool:
             defaults=defaults,
         )
     except IntegrityError:
-        # Return a queryset we can .update(), but there's only one match
-        match = handle_duplicate_component(component_type, name, nevra)
-        match.update(**defaults)
-        obj = match.get()
+        obj = handle_duplicate_component(component_type, name, nevra)
+        # Using .update() here caused deadlocks, maybe? Not sure of cause
+        with transaction.atomic():
+            for field_name in defaults:
+                setattr(obj, field_name, defaults[field_name])
+            obj.save()
         created = False
 
     set_license_declared_safely(obj, license_declared_raw)
@@ -320,9 +322,7 @@ def save_component(component: dict, parent: ComponentNode) -> bool:
     return created or node_created or any_child_created
 
 
-def handle_duplicate_component(
-    component_type: Component.Type, name: str, nevra: str
-) -> ComponentQuerySet:
+def handle_duplicate_component(component_type: Component.Type, name: str, nevra: str) -> Component:
     """Handle an IntegrityError when saving a "new" Component
     which is really a duplicate Component that almost matches an existing NEVRA
     and which generates the same purl"""
@@ -352,7 +352,7 @@ def handle_duplicate_component(
 
     # else there was only one match initially, so extra logic above isn't needed
     # Now that we have only one possible match, return it so it can be updated instead of created
-    return possible_matches
+    return possible_matches.get()
 
 
 def handle_dash_underscore_confusion(
@@ -394,6 +394,7 @@ def handle_dash_underscore_confusion(
             # There's a duplicate of this component / purl,
             # but we couldn't find the same NEVRA with a different case,
             # and we couldn't find a similar NEVRA with only dashes or underscores in it
+            # (0 matches) OR we have too many matches for one of "only dashes" or "only underscores"
             # We shouldn't get here, but if we do, it's an edge case we're not handling
             raise ValueError(
                 f"New edge case when handling duplicate {component_type} component {name}: "

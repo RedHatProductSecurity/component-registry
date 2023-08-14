@@ -301,9 +301,11 @@ def save_component(component: dict, parent: ComponentNode) -> bool:
             defaults=defaults,
         )
     except IntegrityError:
-        obj = handle_duplicate_component(component_type, name, nevra)
+        # Return a queryset we can .update(), but there's only one match
+        match = handle_duplicate_component(component_type, name, nevra)
         # Using .update() here caused deadlocks, maybe? Not sure of cause
         with transaction.atomic():
+            obj = match.get()
             for field_name in defaults:
                 setattr(obj, field_name, defaults[field_name])
             obj.save()
@@ -322,7 +324,9 @@ def save_component(component: dict, parent: ComponentNode) -> bool:
     return created or node_created or any_child_created
 
 
-def handle_duplicate_component(component_type: Component.Type, name: str, nevra: str) -> Component:
+def handle_duplicate_component(
+    component_type: Component.Type, name: str, nevra: str
+) -> ComponentQuerySet:
     """Handle an IntegrityError when saving a "new" Component
     which is really a duplicate Component that almost matches an existing NEVRA
     and which generates the same purl"""
@@ -352,7 +356,7 @@ def handle_duplicate_component(component_type: Component.Type, name: str, nevra:
 
     # else there was only one match initially, so extra logic above isn't needed
     # Now that we have only one possible match, return it so it can be updated instead of created
-    return possible_matches.get()
+    return possible_matches
 
 
 def handle_dash_underscore_confusion(

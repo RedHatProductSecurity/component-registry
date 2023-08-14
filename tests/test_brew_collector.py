@@ -6,7 +6,6 @@ from unittest.mock import call, patch
 import koji
 import pytest
 from django.conf import settings
-from django.db import IntegrityError
 from yaml import safe_load
 
 from corgi.collectors.brew import (
@@ -40,6 +39,7 @@ from tests.data.image_archive_data import (
     TEST_IMAGE_ARCHIVE,
 )
 from tests.factories import (
+    ComponentFactory,
     ContainerImageComponentFactory,
     ProductComponentRelationFactory,
     ProductStreamFactory,
@@ -982,8 +982,6 @@ def test_extract_golang(test_data_file, expected_component):
 
 @pytest.mark.django_db
 def test_save_component():
-    software_build = SoftwareBuildFactory()
-
     # Simulate saving an RPM in a Container
     image_component = ContainerImageComponentFactory(name="image_component")
     root_node = ComponentNode.objects.create(
@@ -996,7 +994,7 @@ def test_save_component():
         "namespace": Component.Namespace.REDHAT,
         "meta": {"name": "myrpm", "arch": "ppc"},
     }
-    save_component(rpm_dict, root_node, software_build)
+    save_component(rpm_dict, root_node)
     # Verify the RPM's software build is None
     assert Component.objects.filter(type=Component.Type.RPM, software_build__isnull=True).exists()
 
@@ -1012,7 +1010,7 @@ def test_save_component():
         "namespace": Component.Namespace.REDHAT,
         "meta": {"name": "mysrpm", "arch": "src"},
     }
-    save_component(rpm_dict, root_node, software_build)
+    save_component(rpm_dict, root_node)
     # It should still not have a software_build
     assert Component.objects.filter(type=Component.Type.RPM, software_build__isnull=True).exists()
 
@@ -1021,33 +1019,52 @@ def test_save_component():
 def test_save_component_skips_duplicates():
     """Test that component names which only differ by dash / underscore,
     or different casing, do not create duplicate purls"""
+    # Only type=PYPI doesn't distinguish between dash and underscore
+    # Only type=PYPI and type=GITHUB don't distinguish between uppercase and lowercase
+    old_component = ComponentFactory(
+        type=Component.Type.PYPI,
+        namespace=Component.Namespace.UPSTREAM,
+        name="REQUESTS_NTLM",
+        epoch=0,
+        release="",
+        arch="noarch",
+    )
     image_component = ContainerImageComponentFactory(name="image_component")
     root_node = ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
         obj=image_component,
     )
-    name = "REQUESTS_NTLM"
+    name = old_component.name.lower().replace("_", "-")
     new_component = {
-        "type": Component.Type.PYPI,
-        "namespace": Component.Namespace.UPSTREAM,
-        "meta": {"name": name, "version": "1.2.3", "arch": "noarch"},
+        "type": old_component.type,
+        "namespace": old_component.namespace,
+        "meta": {
+            "name": name,
+            "epoch": old_component.epoch,
+            "version": old_component.version,
+            "release": old_component.release,
+            "arch": old_component.arch,
+        },
     }
+    new_component_duplicate = copy.deepcopy(new_component)
 
-    new_component_with_same_purl = copy.deepcopy(new_component)
-    save_component(new_component, root_node, image_component.software_build)
-    pypi = Component.objects.get(name=name)
-    assert pypi.purl == "pkg:pypi/requests-ntlm@1.2.3"
+    pypi = Component.objects.get(name=old_component.name)
+    # Python package purls have names lowercased and underscores replaced with dashes
+    assert pypi.purl == f"pkg:pypi/requests-ntlm@{old_component.version}"
 
-    name = name.lower().replace("_", "-")
-    new_component_with_same_purl["meta"]["name"] = name
-    with pytest.raises(IntegrityError):
-        # Shouldn't ever happen in real code
-        # The duplicate components are created by Syft / the SCA task
-        # We can't handle below since we don't know the correct purl yet
-        save_component(new_component_with_same_purl, root_node, image_component.software_build)
-    # The duplicate should not be saved
-    assert Component.objects.filter(name=name).first() is None
+    # Find the existing component, don't create a duplicate
+    # Create a new node and link it to the root
+    assert old_component.cnodes.count() == 0
+    assert save_component(new_component, root_node) is True
+    assert Component.objects.filter(name=name).exists() is False
+    assert old_component.cnodes.count() == 1
+
+    # Find the existing component, don't create a duplicate
+    # Find the existing node, don't create a duplicate
+    assert save_component(new_component_duplicate, root_node) is False
+    assert Component.objects.filter(name=name).exists() is False
+    assert old_component.cnodes.count() == 1
 
 
 @pytest.mark.django_db

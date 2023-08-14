@@ -1,3 +1,4 @@
+import logging
 import os
 from distutils.util import strtobool
 from pathlib import Path
@@ -219,6 +220,13 @@ LOG_FORMAT_END = f'level=%(levelname)s, app=corgi, environ={get_env()}, msg="%(m
 if COMMUNITY_MODE_ENABLED:
     LOG_FORMAT_END = f"community=true {LOG_FORMAT_END}"
 
+CELERY_WORKER_LOG_FORMAT = f"{LOG_FORMAT_START}, process_name=%(processName)s, {LOG_FORMAT_END}"
+
+CELERY_WORKER_TASK_LOG_FORMAT = (
+    f"{LOG_FORMAT_START}, process_name=%(processName)s, task_name=%(task_name)s, "
+    f"task_id=%(task_id)s, {LOG_FORMAT_END}"
+)
+
 # Splunk friendly timestamp
 LOG_DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
 
@@ -228,7 +236,7 @@ LOGGING = {
     "formatters": {
         "default": {
             "format": f"{LOG_FORMAT_START}, {LOG_FORMAT_END}",
-            "datefmt": f"{LOG_DATE_FORMAT}",
+            "datefmt": LOG_DATE_FORMAT,
         },
     },
     "filters": {
@@ -245,19 +253,33 @@ LOGGING = {
         "mail_admins": {
             "class": "django.utils.log.AdminEmailHandler",
             "filters": ["require_debug_false"],
-            "level": "ERROR",
+            "level": logging.ERROR,
         },
     },
     "root": {
+        # For modules with no definition below and no custom logging config,
+        # or for modules with a definition but no "level" key and no custom config,
+        # or when calling loggers directly in a shell / outside of a module,
+        # log WARNING messages or higher to the console
         "handlers": ["console"],
-        "level": "WARNING",
+        "level": logging.WARNING,
     },
     "loggers": {
-        "django": {"handlers": ["console"], "level": "WARNING"},
         # Mail errors only, but set level=WARNING here to pass warnings up to parent loggers
-        "django.request": {"handlers": ["mail_admins"], "level": "WARNING"},
-        "mozilla_django_oidc": {"handlers": ["mail_admins"], "level": "WARNING"},
-        "corgi": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        # Django's custom config logs INFO messages to the console, which we override here
+        # We can't rely only on the root logger's config, so it's not a duplicate of above
+        "django": {"handlers": ["mail_admins"], "level": logging.WARNING},
+        "mozilla_django_oidc": {"handlers": ["mail_admins"], "level": logging.WARNING},
+        # Mail errors only, but set level=INFO here to make debugging in a shell easier
+        "corgi": {"handlers": ["mail_admins"], "level": logging.INFO},
+        # Set level=INFO here to make debugging easier when running tasks manually in a shell
+        # To control Celery process logging to Splunk, use e.g. --loglevel DEBUG
+        # in the Celery init scripts. There's no config option for this
+        # Don't mail Celery errors, just rely on monitoring email to catch failed tasks
+        "celery": {"level": logging.INFO},
+        # Any submodules of above use the lowest-defined parent module's config
+        # Any other modules use the root logger's config, or their own custom config
+        # To see more than defined above, call e.g. logger.setLevel(logging.DEBUG) in a shell
     },
 }
 
@@ -326,6 +348,9 @@ CELERY_WORKER_CONCURRENCY = 5  # defaults to CPU core count, which breaks in Ope
 
 # Disable task prefetching, which caused connection timeouts and other odd task failures in SDEngine
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+
+# Send task-related events, so that tasks can be monitored using tools like Flower
+CELERY_WORKER_SEND_TASK_EVENTS = True
 
 # Store the return values of each task in the TaskResult.result attribute; can be used for
 # informational logging.

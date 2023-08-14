@@ -6,4 +6,4 @@
 # ERROR: Pidfile (/tmp/cpu.pid) already exists.
 rm -f /tmp/cpu.pid
 
-exec celery -A config worker -E --loglevel info --pidfile /tmp/cpu.pid -c 1 -Q cpu -n celery@%h
+exec celery -A config worker --loglevel info --pidfile /tmp/cpu.pid -c 1 -Q cpu -n celery@%h

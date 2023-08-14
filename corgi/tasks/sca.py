@@ -39,9 +39,13 @@ def find_duplicate_component(meta_name: str, syft_purl: str) -> Component:
     logger.warning(
         f"Duplicate component {meta_name} detected by Syft, trying to find purl: {syft_purl}"
     )
-    # Syft generates some purls like pkg:pypi/PyYAML@6.0
+    # Syft generates some purls like pkg:pypi/PyYAML@3.12
     # Happens for packages like PyYAML or PySocks with uppercase names
-    # This isn't a bug in Syft, but we need lowercase names to match Brew
+    # Syft also generates some purls like pkg:pypi/pyyaml@6.0
+    # maybe based on the root component scanned? (e.g. casing in the specfile)
+    # This probably isn't a bug in Syft, but we need names to match Brew's case
+    # Sometimes Brew has lowercase and sometimes it's mixed-case
+    # We can't just lowercase all names / NEVRAs because e.g. search apps need the original casing
     syft_purl = syft_purl.lower()
     possible_dupe = Component.objects.get(purl=syft_purl)
 

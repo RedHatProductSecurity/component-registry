@@ -487,7 +487,12 @@ def process_image_components(image):
 
 def set_license_declared_safely(obj: Component, license_declared_raw: str) -> None:
     """Save a declared license onto a Component, without erasing any existing value"""
-    if license_declared_raw and license_declared_raw != obj.license_declared_raw:
+    # The license value we have in the DB doesn't match the value from Brew
+    different_license = Component.objects.filter(pk=obj.pk).exclude(
+        license_declared_raw=license_declared_raw
+    )
+    # AND the value from Brew isn't an empty string
+    if license_declared_raw and different_license:
         # Any non-empty license here should be reported
         # We only rely on OpenLCS if we don't know the license_declared
         # But we can't set license_declared in update_or_create
@@ -495,8 +500,8 @@ def set_license_declared_safely(obj: Component, license_declared_raw: str) -> No
         # we might erase the license that OpenLCS provided
         # They cannot erase any licenses we set ourselves (when the field is not empty)
         # API endpoint blocks this (400 Bad Request)
-        obj.license_declared_raw = license_declared_raw
-        obj.save()
+        # Use .update() to avoid possible race conditions
+        different_license.update(license_declared_raw=license_declared_raw)
 
 
 def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> tuple[ComponentNode, bool]:

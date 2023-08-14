@@ -729,18 +729,38 @@ def test_component_add_uri(client, api_path):
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_srpm_detail(client, api_path):
-    c1 = SrpmComponentFactory(name="curl-7.19.7-35.el6.src")
+    c1 = SrpmComponentFactory(name="curl", version="7.19.7", release="35.el6")
     response = client.get(f"{api_path}/components?type=RPM&arch=src")
     assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 1
+    assert response["results"][0]["uuid"] == str(c1.uuid)
+
     response = client.get(f"{api_path}/components/{c1.uuid}")
     assert response.status_code == 200
-    assert response.json()["name"] == "curl-7.19.7-35.el6.src"
-    response = client.get(f"{api_path}/components?type=RPM&name=curl-7.19.7-35.el6.src")
+    response = response.json()
+    # No "count" key here because the APi does a retrieve() / returns exactly one result
+    # It doesn't do a list() / return multiple results
+    assert response["name"] == c1.name
+
+    response = client.get(f"{api_path}/components?type=RPM&name={c1.name}")
     assert response.status_code == 200
-    assert response.json()["count"] == 1
-    response = client.get(f"{api_path}/components?type=RPM&re_purl=curl")
+    response = response.json()
+    assert response["count"] == 1
+    assert response["results"][0]["uuid"] == str(c1.uuid)
+
+    response = client.get(f"{api_path}/components?type=RPM&re_purl={c1.name}")
     assert response.status_code == 200
-    assert response.json()["count"] == 1
+    response = response.json()
+    assert response["count"] == 1
+    assert response["results"][0]["uuid"] == str(c1.uuid)
+
+    # Regex filters should be case-insensitive, give the same results
+    response = client.get(f"{api_path}/components?type=RPM&re_purl={c1.name.upper()}")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 1
+    assert response["results"][0]["uuid"] == str(c1.uuid)
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
@@ -782,11 +802,29 @@ def test_re_name_filter(client, api_path):
     c1 = ComponentFactory(type=Component.Type.RPM, name="autotrace-devel")
     response = client.get(f"{api_path}/components?type=RPM")
     assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 1
+    assert response["results"][0]["uuid"] == str(c1.uuid)
+
     response = client.get(f"{api_path}/components/{c1.uuid}")
     assert response.status_code == 200
-    response = client.get(rf"{api_path}/components?re_name=^autotrace(-devel|-libs|-utils)$")
+    response = response.json()
+    # No "count" key here because the APi does a retrieve() / returns exactly one result
+    # It doesn't do a list() / return multiple results
+    assert response["uuid"] == str(c1.uuid)
+
+    response = client.get(f"{api_path}/components?re_name=^autotrace(-devel|-libs|-utils)$")
     assert response.status_code == 200
-    assert response.json()["count"] == 1
+    response = response.json()
+    assert response["count"] == 1
+    assert response["results"][0]["uuid"] == str(c1.uuid)
+
+    # Regex filters should be case-insensitive, give the same results
+    response = client.get(f"{api_path}/components?re_name=^AUTOTRACE(-devel|-libs|-utils)$")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 1
+    assert response["results"][0]["uuid"] == str(c1.uuid)
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
@@ -796,13 +834,29 @@ def test_re_purl_filter(client, api_path):
     )
     response = client.get(f"{api_path}/components?type=RPM")
     assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 1
+    assert response["results"][0]["uuid"] == str(c1.uuid)
+
     response = client.get(f"{api_path}/components/{c1.uuid}")
     assert response.status_code == 200
+    response = response.json()
+    # No "count" key here because the APi does a retrieve() / returns exactly one result
+    # It doesn't do a list() / return multiple results
+    assert response["uuid"] == str(c1.uuid)
+
     response = client.get(rf"{api_path}/components?re_purl=^(.*)\/redhat\/autotrace(.*)$")
-    assert response.json()["results"][0]["uuid"] == str(c1.uuid)
-    response = client.get(f"{api_path}/components?re_name=^autotrace(-devel|-libs|-utils)$")
     assert response.status_code == 200
-    assert response.json()["count"] == 1
+    response = response.json()
+    assert response["count"] == 1
+    assert response["results"][0]["uuid"] == str(c1.uuid)
+
+    # Regex filters should be case-insensitive, give the same results
+    response = client.get(rf"{api_path}/components?re_purl=^(.*)\/REDHAT\/AUTOTRACE(.*)$")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 1
+    assert response["results"][0]["uuid"] == str(c1.uuid)
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
@@ -944,30 +998,57 @@ def test_product_versions(client, api_path):
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_product_streams(client, api_path):
-    ProductStreamFactory(name="rhel-8.5.0-z", version="8.5.0-z")
-    ProductStreamFactory(name="rhel-av-8.5.0-z", version="8.5.0-z", active=False)
+    rhel_8_5_stream = ProductStreamFactory(name="rhel-8.5.0-z", version="8.5.0-z")
+    rhel_av_8_5_stream = ProductStreamFactory(
+        name="rhel-av-8.5.0-z", version="8.5.0-z", active=False
+    )
 
     response = client.get(f"{api_path}/product_streams")
     assert response.status_code == 200
-    assert response.json()["count"] == 1
+    response = response.json()
+    assert response["count"] == 1
+    assert response["results"][0]["uuid"] == str(rhel_8_5_stream.uuid)
 
     response = client.get(f"{api_path}/product_streams?active=all")
     assert response.status_code == 200
-    assert response.json()["count"] == 2
+    response = response.json()
+    assert response["count"] == 2
+    assert response["results"][0]["uuid"] == str(rhel_8_5_stream.uuid)
+    assert response["results"][1]["uuid"] == str(rhel_av_8_5_stream.uuid)
 
-    response = client.get(f"{api_path}/product_streams?ofuri=o:redhat:rhel-av:8.5.0-z")
+    response = client.get(f"{api_path}/product_streams?ofuri={rhel_av_8_5_stream.ofuri}")
     assert response.status_code == 200
+    response = response.json()
+    # No "count" key here because the APi does a retrieve() / returns exactly one result
+    # It doesn't do a list() / return multiple results
+    assert response["uuid"] == str(rhel_av_8_5_stream.uuid)
 
-    response = client.get(f"{api_path}/product_streams?ofuri=o:redhat:rhel:8.5.0-z")
+    response = client.get(f"{api_path}/product_streams?ofuri={rhel_8_5_stream.ofuri}")
     assert response.status_code == 200
+    response = response.json()
+    # No "count" key here because the APi does a retrieve() / returns exactly one result
+    # It doesn't do a list() / return multiple results
+    assert response["uuid"] == str(rhel_8_5_stream.uuid)
 
-    response = client.get(f"{api_path}/product_streams?name=rhel-av-8.5.0-z")
+    response = client.get(f"{api_path}/product_streams?name={rhel_av_8_5_stream.name}")
     assert response.status_code == 200
-    assert response.json()["name"] == "rhel-av-8.5.0-z"
+    response = response.json()
+    # No "count" key here because the APi does a retrieve() / returns exactly one result
+    # It doesn't do a list() / return multiple results
+    assert response["name"] == rhel_av_8_5_stream.name
 
     response = client.get(f"{api_path}/product_streams?re_name=rhel&view=summary")
     assert response.status_code == 200
-    assert response.json()["count"] == 1
+    response = response.json()
+    assert response["count"] == 1
+    assert response["results"][0]["name"] == str(rhel_8_5_stream.name)
+
+    # Regex filters should be case-insensitive, give the same results
+    response = client.get(f"{api_path}/product_streams?re_name=RHEL&view=summary")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 1
+    assert response["results"][0]["name"] == str(rhel_8_5_stream.name)
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)

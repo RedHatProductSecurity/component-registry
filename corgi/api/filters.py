@@ -55,8 +55,8 @@ class ComponentFilter(FilterSet):
         fields = ("type", "namespace", "name", "version", "release", "arch", "nvr", "nevra")
 
     # Custom filters
-    re_name = CharFilter(lookup_expr="regex", field_name="name")
-    re_purl = CharFilter(lookup_expr="regex", field_name="purl")
+    re_name = CharFilter(lookup_expr="iregex", field_name="name")
+    re_purl = CharFilter(lookup_expr="iregex", field_name="purl")
     description = CharFilter(lookup_expr="icontains")
     related_url = CharFilter(lookup_expr="icontains")
     tags = TagFilter()
@@ -74,9 +74,9 @@ class ComponentFilter(FilterSet):
     provides = CharFilter(lookup_expr="purl")
     upstreams = CharFilter(lookup_expr="purl")
     # otherwise use regex to match provides,sources or upstreams purls
-    re_sources = CharFilter(field_name="sources", lookup_expr="purl__regex")
-    re_provides = CharFilter(field_name="provides", lookup_expr="purl__regex")
-    re_upstreams = CharFilter(field_name="upstreams", lookup_expr="purl__regex")
+    re_sources = CharFilter(field_name="sources", lookup_expr="purl__iregex")
+    re_provides = CharFilter(field_name="provides", lookup_expr="purl__iregex")
+    re_upstreams = CharFilter(field_name="upstreams", lookup_expr="purl__iregex")
 
     el_match = CharFilter(label="RHEL version for layered products", lookup_expr="icontains")
     released_components = BooleanFilter(
@@ -191,8 +191,8 @@ class ProductDataFilter(FilterSet):
     """Class that filters queries to Product-related list views."""
 
     name = CharFilter()
-    re_name = CharFilter(lookup_expr="regex", field_name="name")
-    re_ofuri = CharFilter(lookup_expr="regex", field_name="ofuri")
+    re_name = CharFilter(lookup_expr="iregex", field_name="name")
+    re_ofuri = CharFilter(lookup_expr="iregex", field_name="ofuri")
     tags = TagFilter()
 
     products = CharFilter(lookup_expr="name__icontains")

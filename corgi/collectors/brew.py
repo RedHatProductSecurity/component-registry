@@ -126,6 +126,42 @@ class Brew:
         raise BrewBuildSourceNotFound(no_source_msg)
 
     @staticmethod
+    def clean_source_of_build(source_url: str) -> str:
+        """Handle old builds which still use git:// URLs
+        The dist-git service now requires us to use https:// instead"""
+        # It's an internal hostname, so we have to get it a little indirectly
+        dist_git_hostname = os.environ["CORGI_LOOKASIDE_CACHE_URL"]
+        dist_git_hostname = dist_git_hostname.replace("https://", "", 1)
+        dist_git_hostname = dist_git_hostname.replace("/repo", "", 1)
+
+        # Find any build where the source URL starts with git:// or similar
+        gitlike_urls = (
+            f"git://{dist_git_hostname}/",
+            f"git+http://{dist_git_hostname}/",
+            f"git+https://{dist_git_hostname}/",
+            f"git+ssh://{dist_git_hostname}/",
+        )
+        # Replace it with https:// and add "/git/" if not already present
+        dist_git_url = f"https://{dist_git_hostname}/git/"
+
+        for git_url in gitlike_urls:
+            git_url_with_path = f"{git_url}/git/"
+
+            # If "/git/" is already present, just fix the scheme
+            if source_url.startswith(git_url_with_path):
+                source_url = source_url.replace(git_url_with_path, dist_git_url, 1)
+                break
+
+            # If "/git/" isn't already present, fix the scheme and path
+            elif source_url.startswith(git_url):
+                source_url = source_url.replace(git_url, dist_git_url, 1)
+                break
+
+        # Handle .git suffix which must be removed in HTTPS URLs
+        source_url = source_url.replace(".git", "", 1)
+        return source_url
+
+    @staticmethod
     def _parse_remote_source_url(url: str) -> tuple[str, Component.Type]:
         """Used to parse remote_source repo from OSBS into purl name for github namespace
         ref https://github.com/containerbuildsystem/osbs-client/blob/
@@ -1042,6 +1078,9 @@ class Brew:
                     return {}
                 else:
                     raise exc
+
+        # Clean source URL on old builds which are being reloaded, if needed
+        build["source"] = self.clean_source_of_build(build["source"])
 
         # Add list of Brew tags for this build
         tags = self.koji_session.listTags(build_id)

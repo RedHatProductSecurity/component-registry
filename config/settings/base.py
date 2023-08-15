@@ -270,12 +270,10 @@ LOGGING = {
         # We can't rely only on the root logger's config, so it's not a duplicate of above
         "django": {"handlers": ["mail_admins"], "level": logging.WARNING},
         "mozilla_django_oidc": {"handlers": ["mail_admins"], "level": logging.WARNING},
-        # Mail errors only, but set level=INFO here to make debugging in a shell easier
-        "corgi": {"handlers": ["mail_admins"], "level": logging.INFO},
-        # Set level=INFO here to make debugging easier when running tasks manually in a shell
+        # Don't mail errors, just set level=INFO here to make debugging in a shell easier
+        "corgi": {"level": logging.INFO},
         # To control Celery process logging to Splunk, use e.g. --loglevel DEBUG
         # in the Celery init scripts. There's no config option for this
-        # Don't mail Celery errors, just rely on monitoring email to catch failed tasks
         "celery": {"level": logging.INFO},
         # Any submodules of above use the lowest-defined parent module's config
         # Any other modules use the root logger's config, or their own custom config

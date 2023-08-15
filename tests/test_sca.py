@@ -1,6 +1,7 @@
 import copy
 import os
 import shutil
+import subprocess
 from pathlib import Path, PosixPath
 from typing import Tuple
 from unittest.mock import call, patch
@@ -165,37 +166,218 @@ def test_go_package_type(go_list_scan_files):
     assert go_package.meta_attr["go_component_type"] == "go-package"
 
 
+dist_git_hostname = os.environ["CORGI_LOOKASIDE_CACHE_URL"]
+dist_git_hostname = dist_git_hostname.replace("https://", "", 1)
+dist_git_hostname = dist_git_hostname.replace("/repo", "", 1)
+
 # Should succeed
 archive_source_test_data = (
-    f"git://{os.getenv('CORGI_LOOKASIDE_CACHE_URL')}"  # Comma not missing, joined with below
-    "/containers/openshift-enterprise-console",
-    "f95972ce68d2850ae20c10fbf87182a17fa24b19",
-    "openshift-enterprise-console",
-    "2",
-    "/tmp/2",
+    (
+        f"git://{dist_git_hostname}"  # Comma not missing, joined with below
+        "/containers/openshift-enterprise-console",
+        "f95972ce68d2850ae20c10fbf87182a17fa24b19",
+        "openshift-enterprise-console",
+        "2",
+        "/tmp/2",
+    ),
+    (
+        f"git://{dist_git_hostname}"  # Comma not missing, joined with below
+        "/containers/openshift-enterprise-console.git",
+        "f95972ce68d2850ae20c10fbf87182a17fa24b19",
+        "openshift-enterprise-console",
+        "2",
+        "/tmp/2",
+    ),
+    (
+        f"git://{dist_git_hostname}"  # Comma not missing, joined with below
+        "/git/containers/openshift-enterprise-console",
+        "f95972ce68d2850ae20c10fbf87182a17fa24b19",
+        "openshift-enterprise-console",
+        "2",
+        "/tmp/2",
+    ),
+    (
+        f"git://{dist_git_hostname}"  # Comma not missing, joined with below
+        "/git/containers/openshift-enterprise-console.git",
+        "f95972ce68d2850ae20c10fbf87182a17fa24b19",
+        "openshift-enterprise-console",
+        "2",
+        "/tmp/2",
+    ),
+    (
+        f"https://{dist_git_hostname}"  # Comma not missing, joined with below
+        "/containers/openshift-enterprise-console",
+        "f95972ce68d2850ae20c10fbf87182a17fa24b19",
+        "openshift-enterprise-console",
+        "2",
+        "/tmp/2",
+    ),
+    (
+        f"https://{dist_git_hostname}"  # Comma not missing, joined with below
+        "/containers/openshift-enterprise-console.git",
+        "f95972ce68d2850ae20c10fbf87182a17fa24b19",
+        "openshift-enterprise-console",
+        "2",
+        "/tmp/2",
+    ),
+    (
+        f"https://{dist_git_hostname}"  # Comma not missing, joined with below
+        "/git/containers/openshift-enterprise-console",
+        "f95972ce68d2850ae20c10fbf87182a17fa24b19",
+        "openshift-enterprise-console",
+        "2",
+        "/tmp/2",
+    ),
+    (
+        f"https://{dist_git_hostname}"  # Comma not missing, joined with below
+        "/git/containers/openshift-enterprise-console.git",
+        "f95972ce68d2850ae20c10fbf87182a17fa24b19",
+        "openshift-enterprise-console",
+        "2",
+        "/tmp/2",
+    ),
+    (
+        f"git+https://{dist_git_hostname}"  # Comma not missing, joined with below
+        "/containers/openshift-enterprise-console",
+        "f95972ce68d2850ae20c10fbf87182a17fa24b19",
+        "openshift-enterprise-console",
+        "2",
+        "/tmp/2",
+    ),
+    (
+        f"git+https://{dist_git_hostname}"  # Comma not missing, joined with below
+        "/containers/openshift-enterprise-console.git",
+        "f95972ce68d2850ae20c10fbf87182a17fa24b19",
+        "openshift-enterprise-console",
+        "2",
+        "/tmp/2",
+    ),
+    (
+        f"git+https://{dist_git_hostname}"  # Comma not missing, joined with below
+        "/git/containers/openshift-enterprise-console",
+        "f95972ce68d2850ae20c10fbf87182a17fa24b19",
+        "openshift-enterprise-console",
+        "2",
+        "/tmp/2",
+    ),
+    (
+        f"git+https://{dist_git_hostname}"  # Comma not missing, joined with below
+        "/git/containers/openshift-enterprise-console.git",
+        "f95972ce68d2850ae20c10fbf87182a17fa24b19",
+        "openshift-enterprise-console",
+        "2",
+        "/tmp/2",
+    ),
+    (
+        f"git+http://{dist_git_hostname}"  # Comma not missing, joined with below
+        "/containers/openshift-enterprise-console",
+        "f95972ce68d2850ae20c10fbf87182a17fa24b19",
+        "openshift-enterprise-console",
+        "2",
+        "/tmp/2",
+    ),
+    (
+        f"git+http://{dist_git_hostname}"  # Comma not missing, joined with below
+        "/containers/openshift-enterprise-console.git",
+        "f95972ce68d2850ae20c10fbf87182a17fa24b19",
+        "openshift-enterprise-console",
+        "2",
+        "/tmp/2",
+    ),
+    (
+        f"git+http://{dist_git_hostname}"  # Comma not missing, joined with below
+        "/git/containers/openshift-enterprise-console",
+        "f95972ce68d2850ae20c10fbf87182a17fa24b19",
+        "openshift-enterprise-console",
+        "2",
+        "/tmp/2",
+    ),
+    (
+        f"git+http://{dist_git_hostname}"  # Comma not missing, joined with below
+        "/git/containers/openshift-enterprise-console.git",
+        "f95972ce68d2850ae20c10fbf87182a17fa24b19",
+        "openshift-enterprise-console",
+        "2",
+        "/tmp/2",
+    ),
+    (
+        f"git+ssh://{dist_git_hostname}"  # Comma not missing, joined with below
+        "/containers/openshift-enterprise-console",
+        "f95972ce68d2850ae20c10fbf87182a17fa24b19",
+        "openshift-enterprise-console",
+        "2",
+        "/tmp/2",
+    ),
+    (
+        f"git+ssh://{dist_git_hostname}"  # Comma not missing, joined with below
+        "/containers/openshift-enterprise-console.git",
+        "f95972ce68d2850ae20c10fbf87182a17fa24b19",
+        "openshift-enterprise-console.git",
+        "2",
+        "/tmp/2",
+    ),
+    (
+        f"git+ssh://{dist_git_hostname}"  # Comma not missing, joined with below
+        "/git/containers/openshift-enterprise-console",
+        "f95972ce68d2850ae20c10fbf87182a17fa24b19",
+        "openshift-enterprise-console",
+        "2",
+        "/tmp/2",
+    ),
+    (
+        f"git+ssh://{dist_git_hostname}"  # Comma not missing, joined with below
+        "/git/containers/openshift-enterprise-console.git",
+        "f95972ce68d2850ae20c10fbf87182a17fa24b19",
+        "openshift-enterprise-console.git",
+        "2",
+        "/tmp/2",
+    ),
 )
 
 
+@pytest.mark.parametrize(
+    "source_url,commit,expected_name,build_id,expected_path", archive_source_test_data
+)
 @patch("subprocess.check_call")
-def test_clone_source(mock_subprocess):
+def test_clone_source(mock_subprocess, source_url, commit, expected_name, build_id, expected_path):
+    """Test that _clone_source() works correctly for various historical Brew build source URLs
+    Note we only test the dist-git server here - other git services have different requirements"""
     # This prevents multiple runs of this test from having different results because
     # we mkdir the directory prior to the clone
-    source_url, commit, package_name, build_id, expected_path = archive_source_test_data
     shutil.rmtree(expected_path, ignore_errors=True)
-    _clone_source(f"{source_url}#{commit}", build_id)
-    mock_subprocess.assert_has_calls(
-        (
-            call(
-                [
-                    "/usr/bin/git",
-                    "clone",
-                    source_url.replace("git://", "https://", 1),
-                    PosixPath(expected_path),
-                ]
-            ),
-            call(["/usr/bin/git", "checkout", commit], cwd=PosixPath(expected_path), stderr=-3),
-        )
+
+    # Protocol must be https:// or (rarely) ssh:// or (even more rarely) http://
+    # git:// or git+XYZ:// is no longer allowed
+    if source_url.startswith("git://"):
+        clean_source_url = source_url.replace("git://", "https://", 1)
+    else:
+        clean_source_url = source_url.replace("git+", "", 1)
+
+    # Web-based http:// or https:// URLs must have "/git/" at start of path
+    if clean_source_url.startswith("http") and "/git/" not in source_url:
+        clean_source_url = clean_source_url.replace("/containers", "/git/containers", 1)
+
+    git_clone_call = call(["/usr/bin/git", "clone", clean_source_url, PosixPath(expected_path)])
+    retry_clone_call = call(
+        ["/usr/bin/git", "clone", clean_source_url.replace(".git", "", 1), PosixPath(expected_path)]
     )
+    git_checkout_call = call(
+        ["/usr/bin/git", "checkout", commit], cwd=PosixPath(expected_path), stderr=-3
+    )
+
+    if clean_source_url.startswith("http") and ".git" in source_url:
+        # First call (git clone) fails, second (retry git clone) and third (git checkout) succeed
+        git_clone_error = subprocess.CalledProcessError(128, "/usr/bin/git clone")
+        mock_subprocess.side_effect = (git_clone_error, None, None)
+        calls = (git_clone_call, retry_clone_call, git_checkout_call)
+    else:
+        # First call (git clone) succeeds, no need for a retry
+        calls = (git_clone_call, git_checkout_call)
+
+    target_path, package_type, package_name = _clone_source(f"{source_url}#{commit}", build_id)
+    assert PosixPath(expected_path) == target_path
+    assert expected_name == package_name
+    mock_subprocess.assert_has_calls(calls)
 
 
 archive_source_test_data_for_failures = (

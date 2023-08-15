@@ -1,3 +1,4 @@
+import os
 import re
 import shutil
 import subprocess  # nosec B404
@@ -12,7 +13,6 @@ from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.conf import settings
 from packageurl import PackageURL
-from requests import Response
 
 from config.celery import app
 from corgi.collectors.brew import Brew
@@ -265,23 +265,36 @@ def _clone_source(source_url: str, build_uuid: str) -> Tuple[Path, str, str]:
         raise ValueError(
             f"Build {build_uuid} had a source_url with a non-git, non-HTTPS protocol: {source_url}"
         )
-    path = url.path
-    if "kernel-rt.git" in path:
-        # Source URLs from Brew are incorrect, give 404
-        path = path.replace("kernel-rt.git", "kernel-rt")
+
+    # It's an internal hostname, so we have to get it a little indirectly
+    dist_git_hostname = os.environ["CORGI_LOOKASIDE_CACHE_URL"]
+    dist_git_hostname = dist_git_hostname.replace("https://", "", 1)
+    dist_git_hostname = dist_git_hostname.replace("/repo", "", 1)
 
     protocol = url.scheme
     if protocol.startswith("git+"):
         # Make git+https, git+ssh, etc. into just https, ssh, etc.
         protocol = protocol.removeprefix("git+")
-    elif protocol == "git":
+    elif protocol == "git" and url.netloc == dist_git_hostname:
         # dist-git now requires us to use https when cloning
         protocol = "https"
-    # Else protocol was already https
+    # Else protocol was already https or we're not using the dist-git server
     # Other protocols will raise an error above
 
+    path = url.path
+    if (
+        url.netloc == dist_git_hostname
+        and protocol in ("http", "https")
+        and not path.startswith("/git/")
+    ):
+        # dist-git HTTP / HTTPS URLs require paths like /git/containers/ubi8
+        # But Brew sometimes has only /containers/ubi8, which will fail
+        path = f"/git{path}"
+    # Else we're not using dist-git, or git+ssh became just ssh, or path already had "/git/"
     git_remote = f"{protocol}://{url.netloc}{path}"
-    path_parts = path.rsplit("/", 2)
+
+    # Use the original path when checking length, ignore any /git/ we added
+    path_parts = url.path.rsplit("/", 2)
     if len(path_parts) != 3:
         raise ValueError(f"Build {build_uuid} had a source_url with a too-short path: {source_url}")
     package_type = path_parts[1]
@@ -294,7 +307,33 @@ def _clone_source(source_url: str, build_uuid: str) -> Tuple[Path, str, str]:
     target_path.mkdir()
 
     logger.info("Fetching %s to %s", git_remote, target_path)
-    subprocess.check_call(["/usr/bin/git", "clone", git_remote, target_path])  # nosec B603
+    try:
+        subprocess.check_call(["/usr/bin/git", "clone", git_remote, target_path])  # nosec B603
+    except subprocess.CalledProcessError as e:
+        # There's a special case for dist-git web URLs with .git in them
+        # If we aren't using dist-git, it's not a web URL, or .git isn't present, then fail
+        if (
+            url.netloc != dist_git_hostname
+            or protocol not in ("http", "https")
+            or ".git" not in url.path
+        ):
+            raise e
+
+        # dist-git source URLs from Brew are sometimes incorrect, give 404
+        # We don't always remove .git in case some URLs require this
+        # Use the updated path with /git/ which is always needed for the clone
+        path = path.replace(".git", "", 1)
+        git_remote = f"{protocol}://{url.netloc}{path}"
+
+        # Use the updated path so .git doesn't end up in package_name
+        # We already know we have the right number of path_parts, based on check above
+        path_parts = path.rsplit("/", 2)
+        package_type = path_parts[1]
+        package_name = path_parts[2]
+
+        logger.info("Fetching %s without .git to %s", git_remote, target_path)
+        subprocess.check_call(["/usr/bin/git", "clone", git_remote, target_path])  # nosec B603
+
     subprocess.check_call(  # nosec B603
         ["/usr/bin/git", "checkout", commit], cwd=target_path, stderr=subprocess.DEVNULL
     )
@@ -353,10 +392,21 @@ def _download_source(download_url: str, target_filepath: Path) -> None:
     # package_dir not to fail in case this is a subsequent file we are downloading
     package_dir.mkdir(parents=True, exist_ok=True)
     logger.info("Downloading sources from: %s, to: %s", download_url, target_filepath)
-    r: Response = requests.get(download_url)
-    r.raise_for_status()
+    response = requests.get(download_url)
+    if response.status_code == 404:
+        # Source URLs from Brew / _clone_source / _download_lookaside_sources
+        # sometimes have .git in their path, and this ends up in package_name
+        # Sometimes "name.git" fails but just "name" without ".git" will work
+        # e.g. both kernel-rt.git or kmod-kvdo.git work without .git suffixes
+        # We need this logic, even though we sometimes strip .git above,
+        # in case cloning with .git works but fetching source with .git fails
+        logger.info(
+            "Downloading sources from: %s without .git, to: %s", download_url, target_filepath
+        )
+        response = requests.get(download_url.replace(".git", "", 1))
+    response.raise_for_status()
     with target_filepath.open("wb") as target_file:
-        target_file.write(r.content)
+        target_file.write(response.content)
 
 
 def get_tarinfo(members, archived_filename) -> Optional[tarfile.TarInfo]:

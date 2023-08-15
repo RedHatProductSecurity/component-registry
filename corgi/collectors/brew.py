@@ -145,7 +145,7 @@ class Brew:
         dist_git_url = f"https://{dist_git_hostname}/git/"
 
         for git_url in gitlike_urls:
-            git_url_with_path = f"{git_url}/git/"
+            git_url_with_path = f"{git_url}git/"
 
             # If "/git/" is already present, just fix the scheme
             if source_url.startswith(git_url_with_path):

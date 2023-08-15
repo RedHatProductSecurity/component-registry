@@ -29,7 +29,7 @@ def fix_build_source_urls(apps, schema_editor):
     for git_url in gitlike_urls:
         # Always use https:// instead of git:// or similar
         builds_to_update = SoftwareBuild.objects.filter(source__startswith=git_url)
-        git_url_with_path = f"{git_url}/git/"
+        git_url_with_path = f"{git_url}git/"
 
         # If "/git/" is already present, just fix the scheme
         builds_with_git = builds_to_update.filter(source__startswith=git_url_with_path)

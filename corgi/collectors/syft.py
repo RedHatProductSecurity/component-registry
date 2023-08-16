@@ -117,7 +117,7 @@ class Syft:
                 source_ref = target_ref
             else:
                 source_ref = subprocess.check_output(
-                    ["/usr/bin/git", "rev-parse", "HEAD"], text=True
+                    ["/usr/bin/git", "rev-parse", "HEAD"], cwd=scan_dir, text=True
                 ).strip()  # nosec B603
             scan_results = cls.scan_files(target_files=[Path(scan_dir)])
         return scan_results, source_ref

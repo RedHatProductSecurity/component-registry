@@ -34,7 +34,7 @@ export REQUESTS_CA_BUNDLE=/etc/pki/tls/certs/ca-bundle.crt  # or w/e bundle cont
 ```
 
 Internal URLs are set via environment variables, to avoid leaking sensitive data in our public GitHub repo's history.
-The following values are populated as examples, but also allow to run in community mode. If running in enterprise mode, 
+The following values are populated as examples, but also allow to run in community mode. If running in enterprise mode,
 copy the URLs needed to run tests from the internal Gitlab server's CI variables:
 ```bash
 # Internal hostnames or URLs that appear in build metadata; used in tests
@@ -52,6 +52,9 @@ export CORGI_APP_STREAMS_LIFE_CYCLE_URL=https://appstream.example.com/lifecycle-
 export CORGI_ERRATA_TOOL_URL=https://errata.example.com
 export CORGI_MANIFEST_HINTS_URL=https://manifesthints.example.com/manifest-hints.txt
 export CORGI_PRODSEC_DASHBOARD_URL=https://dashboard.example.com/rest/api/latest
+export CORGI_PYXIS_GRAPHQL_URL=https://catalog.example.com/api/containers
+export CORGI_PYXIS_CERT=/path/to/cert.crt
+export CORGI_PYXIS_KEY=/path/to/key.key
 export PIP_INDEX_URL=https://pypi.org/simple
 ```
 

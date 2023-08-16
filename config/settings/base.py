@@ -471,6 +471,11 @@ MANIFEST_HINTS_URL = os.getenv("CORGI_MANIFEST_HINTS_URL")
 
 LOOKASIDE_CACHE_BASE_URL = os.getenv("CORGI_LOOKASIDE_CACHE_URL")
 
+# Pyxis details
+PYXIS_GRAPHQL_URL = os.getenv("CORGI_PYXIS_GRAPHQL_URL", "")
+PYXIS_CERT = os.getenv("CORGI_PYXIS_CERT", "")
+PYXIS_KEY = os.getenv("CORGI_PYXIS_KEY", "")
+
 # Set to False to disable software composition analysis tasks.
 SCA_ENABLED = strtobool(os.getenv("CORGI_SCA_ENABLED", "true"))
 SCA_SCRATCH_DIR = os.getenv("CORGI_SCA_SCATCH_DIR", "/tmp")

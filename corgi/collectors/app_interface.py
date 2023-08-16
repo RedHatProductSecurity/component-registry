@@ -13,7 +13,7 @@ class AppInterface:
     @classmethod
     def fetch_service_metadata(
         cls, services: list[ProductStream]
-    ) -> dict[ProductStream, list[dict]]:
+    ) -> dict[ProductStream, list[dict[str, str]]]:
         repo_query = """
         {
             apps_v1 {
@@ -51,7 +51,7 @@ class AppInterface:
         service_component_map = {}
         for component in data:
             component_name = component["name"]
-            subcomponent_data: defaultdict = defaultdict(dict)
+            subcomponent_data: defaultdict[str, dict[str, str]] = defaultdict(dict)
 
             quay_repos_data = component.get("quayRepos")
             if quay_repos_data:
@@ -73,7 +73,7 @@ class AppInterface:
                 for source_repo in source_repos_data:
                     subcomponent_data[source_repo["name"]]["git_repo_url"] = source_repo["url"]
 
-            # Convert data indexed by subcombonent name to list that contains component names and
+            # Convert data indexed by subcomponent name to list that contains component names and
             # their Git/Quay repo data. Set this as a list of subcomponents for the processed
             # component.
             subcomponent_list = [{"name": k, **v} for k, v in subcomponent_data.items()]

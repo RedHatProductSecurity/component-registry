@@ -33,7 +33,7 @@ def refresh_service_manifests() -> None:
     retry_kwargs=RETRY_KWARGS,
     soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
 )
-def cpu_manifest_service(product_stream_id: str, service_components: list):
+def cpu_manifest_service(product_stream_id: str, service_components: list) -> None:
     service = ProductStream.objects.get(pk=product_stream_id)
 
     now = timezone.now()

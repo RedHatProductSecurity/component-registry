@@ -36,8 +36,8 @@ def refresh_service_manifests() -> None:
 def cpu_manifest_service(product_stream_id: str, service_components: list) -> None:
     service = ProductStream.objects.get(pk=product_stream_id)
 
-    now = timezone.now()
     for service_component in service_components:
+        now = timezone.now()
         analyzed_components = []
         component_version = ""
 

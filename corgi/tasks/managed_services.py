@@ -73,7 +73,7 @@ def cpu_manifest_service(product_stream_id: str, service_components: list) -> No
                 ProductComponentRelation.objects.filter(software_build=build).delete()
                 build.delete()
 
-            build_id = now.strftime("%Y%m%d%H%M%S")
+            build_id = now.strftime("%Y%m%d%H%M%S%f")
             build = SoftwareBuild.objects.create(
                 name=service_component["name"],
                 build_type=SoftwareBuild.Type.APP_INTERFACE,

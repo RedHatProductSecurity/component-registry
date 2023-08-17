@@ -36,6 +36,7 @@ def refresh_service_manifests() -> None:
 def cpu_manifest_service(product_stream_id: str, service_components: list) -> None:
     service = ProductStream.objects.get(pk=product_stream_id)
 
+    counter = 0
     for service_component in service_components:
         now = timezone.now()
         analyzed_components = []
@@ -73,7 +74,13 @@ def cpu_manifest_service(product_stream_id: str, service_components: list) -> No
                 ProductComponentRelation.objects.filter(software_build=build).delete()
                 build.delete()
 
+            # Use a unique timestamp + counter value for the build ID
+            # We create many builds in this loop very quickly, one per service / root component
+            # We must avoid different service components with the same build ID
             build_id = now.strftime("%Y%m%d%H%M%S%f")
+            build_id = f"{build_id}{counter:03}"
+            counter += 1
+
             build = SoftwareBuild.objects.create(
                 name=service_component["name"],
                 build_type=SoftwareBuild.Type.APP_INTERFACE,

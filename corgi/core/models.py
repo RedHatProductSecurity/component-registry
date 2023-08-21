@@ -787,13 +787,17 @@ class ProductComponentRelation(TimeStampedModel):
         BREW_TAG = "BREW_TAG"
         YUM_REPO = "YUM_REPO"
         APP_INTERFACE = "APP_INTERFACE"
+        SBOMER = "SBOMER"
 
     # Below not defined in constants to avoid circular imports
     # ProductComponentRelation types which refer to ProductStreams
     STREAM_TYPES = (Type.BREW_TAG, Type.COMPOSE, Type.YUM_REPO, Type.APP_INTERFACE)
 
     # ProductComponentRelation types which refer to ProductVariants
-    VARIANT_TYPES = (Type.ERRATA,)
+    VARIANT_TYPES = (
+        Type.ERRATA,
+        Type.SBOMER,
+    )
 
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     type = models.CharField(choices=Type.choices, max_length=50)

@@ -40,9 +40,6 @@ class SbomerSbom:
                     if ref["type"] == "build-system"
                 }
 
-                if not ("pnc-build-id" in build_urls or "brew-build-id" in build_urls):
-                    raise ValueError("Component has neither PNC nor Brew build info")
-
                 if "pnc-build-id" in build_urls:
                     self.components[bomref]["meta_attr"]["pnc_build_id"] = build_urls[
                         "pnc-build-id"

@@ -6,7 +6,12 @@ from celery_singleton import Singleton
 from config.celery import app
 from corgi.collectors.models import CollectorErrataProductVariant
 from corgi.collectors.pnc import SbomerSbom
-from corgi.core.models import Component, ComponentNode, SoftwareBuild
+from corgi.core.models import (
+    Component,
+    ComponentNode,
+    ProductComponentRelation,
+    SoftwareBuild,
+)
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 
 logger = logging.getLogger(__name__)
@@ -32,13 +37,24 @@ def slow_fetch_pnc_sbom(purl: str, product_data, build_data, sbom_data) -> None:
     logger.info(f"SBOM fetched for purl {purl}")
 
     # Make sure the SBOM is valid
-    sbom = SbomerSbom(response.json())
+    sbom = SbomerSbom(response.json()["sbom"])
 
     # Create a build for the root component
-    root_build, _ = SoftwareBuild.objects.get_or_create(
+    root_build, created = SoftwareBuild.objects.get_or_create(
         build_id=sbom.components["root"]["meta_attr"]["pnc_build_id"],
         build_type=SoftwareBuild.Type.PNC,
     )
+
+    # Create ProductComponentRelation if it doesn't already exist
+    if created:
+        pcr, _ = ProductComponentRelation.objects.get_or_create(
+            build_id=root_build.build_id,
+            build_type=SoftwareBuild.Type.PNC,
+            software_build__isnull=root_build,
+            defaults={
+                "type": ProductComponentRelation.Type.SBOMER,
+            },
+        )
 
     # Create components
     components = {}
@@ -74,18 +90,28 @@ def slow_fetch_pnc_sbom(purl: str, product_data, build_data, sbom_data) -> None:
         # Only create a new node for parent if it wasn't already
         # created as a dependency of another component
         if parent not in nodes:
-            nodes[parent] = ComponentNode.objects.create(
+            nodes[parent], _ = ComponentNode.objects.get_or_create(
                 type=ComponentNode.ComponentNodeType.PROVIDES,
                 parent=nodes["root"],
                 purl=components[parent].purl,
-                obj=components[parent],
+                defaults={
+                    "obj": components[parent],
+                },
             )
 
         # Deps may be children of both root and other nodes
         for dep in deps:
-            nodes[dep] = ComponentNode.objects.create(
+            nodes[dep], _ = ComponentNode.objects.get_or_create(
                 type=ComponentNode.ComponentNodeType.PROVIDES,
                 parent=nodes[parent],
                 purl=components[dep].purl,
-                obj=components[dep],
+                defaults={
+                    "obj": components[dep],
+                },
             )
+
+    # Save product taxonomy
+    root_build.save_product_taxonomy()
+
+    # Save component taxonomy
+    root_component.save_component_taxonomy()

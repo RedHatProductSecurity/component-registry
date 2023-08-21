@@ -15,12 +15,11 @@ logger = get_task_logger(__name__)
     autoretry_for=RETRYABLE_ERRORS,
     retry_kwargs=RETRY_KWARGS,
 )
-def update_manifests(fixup=True):
-    # Note - temporarily setting fixup=True
+def update_manifests():
     for ps in ProductStream.objects.annotate(num_components=Count("components")).filter(
         num_components__gt=0
     ):
-        cpu_update_ps_manifest.delay(ps.name, fixup=fixup)
+        cpu_update_ps_manifest.delay(ps.name)
 
 
 @app.task(
@@ -28,7 +27,7 @@ def update_manifests(fixup=True):
     autoretry_for=RETRYABLE_ERRORS,
     retry_kwargs=RETRY_KWARGS,
 )
-def cpu_update_ps_manifest(product_stream: str, fixup=True):
+def cpu_update_ps_manifest(product_stream: str):
     logger.info("Updating manifest for %s", product_stream)
     ps = ProductStream.objects.get(name=product_stream)
     # TODO figure out a way to skip updating files where the content doesnt need updating

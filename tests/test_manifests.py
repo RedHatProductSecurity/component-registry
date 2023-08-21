@@ -5,6 +5,7 @@ from json import JSONDecodeError
 import pytest
 
 from corgi.core.files import ProductManifestFile
+from corgi.core.fixups import cpe_lookup
 from corgi.core.models import Component, ComponentNode, ProductComponentRelation
 from corgi.web.templatetags.base_extras import provided_relationship
 
@@ -248,13 +249,56 @@ def test_product_manifest_excludes_internal_components():
         assert "redhat.com/" not in package["name"]
 
 
+def test_manifest_cpes_from_variants():
+    # setup_products_and_components_provides adds a variant with a cpe
+    # verify that is the only cpe shown when stream.et_product_versions is set
+    stream, _ = setup_product()
+    assert stream.productvariants.exists()
+    assert len(stream.cpes) == 1
+
+    # Make sure the stream doesn't exist in cpe_lookup
+    assert not cpe_lookup(stream.name)
+
+    manifest = json.loads(stream.manifest)
+    product_data = manifest["packages"][-1]
+    cpes_in_manifest = [ref["referenceLocator"] for ref in product_data["externalRefs"]]
+    assert len(cpes_in_manifest) == 1
+    assert cpes_in_manifest[0] == stream.cpes[0]
+
+
+def test_manifest_cpes_from_cpe_lookup():
+
+    hardcoded_cpes = cpe_lookup("rhel-8.8.0")
+    stream, _ = setup_product("rhel-8.8.0")
+    assert stream.productvariants.exists()
+    assert hardcoded_cpes
+
+    manifest = json.loads(stream.manifest)
+    product_data = manifest["packages"][-1]
+    cpes_in_manifest = set(ref["referenceLocator"] for ref in product_data["externalRefs"])
+    assert hardcoded_cpes == cpes_in_manifest
+
+
+def test_manifest_cpes_from_patterns():
+    stream, variant = setup_product()
+    assert not cpe_lookup(stream.name)
+    variant.delete()
+    test_cpe = "cpe:/a:redhat:test:1"
+    stream.cpes_matching_patterns = [test_cpe]
+    stream.save()
+    assert not stream.cpes
+
+    manifest = json.loads(stream.manifest)
+    product_data = manifest["packages"][-1]
+    cpes_in_manifest = set(ref["referenceLocator"] for ref in product_data["externalRefs"])
+    assert set([test_cpe]) == cpes_in_manifest
+
+
 def test_product_manifest_properties():
     """Test that all models inheriting from ProductModel have a .manifest property
     And that it generates valid JSON."""
     component, stream, provided, dev_provided = setup_products_and_components_provides()
-    assert stream.cpes
-    stream.cpes_matching_patterns = ["cpe:/a:redhat:test:1"]
-    stream.save()
+
     # assert all those are in the manifest too
 
     manifest = json.loads(stream.manifest)
@@ -281,10 +325,6 @@ def test_product_manifest_properties():
 
     assert product_data["SPDXID"] == f"SPDXRef-{stream.uuid}"
     assert product_data["name"] == stream.name
-    cpes_in_manifest = set(ref["referenceLocator"] for ref in product_data["externalRefs"])
-    stream_cpes = set(stream.cpes)
-    stream_cpes.update(stream.cpes_matching_patterns)
-    assert cpes_in_manifest == stream_cpes
 
     document_describes_product = {
         "relatedSpdxElement": f"SPDXRef-{stream.uuid}",

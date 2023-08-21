@@ -72,12 +72,13 @@ class ProductManifestFile(ManifestFile):
         distinct_provides = self.obj.provides_queryset  # type: ignore[attr-defined]
         distinct_upstreams = self.obj.upstreams_queryset  # type: ignore[attr-defined]
         cpes = cpe_lookup(self.obj.name)  # type: ignore[attr-defined]
-        # If the stream was not found in the supported_cpe_map, and it doesn't have any
-        # et_product_versions from errata_info in ps_update_stream, also add cpes from
-        # pattern matching
-        if not cpes and not self.obj.et_product_versions:  # type: ignore[attr-defined]
-            cpes = set(self.obj.cpes_matching_patterns)  # type: ignore[attr-defined]
-            cpes.update(self.obj.cpes)  # type: ignore[attr-defined]
+        # If the stream was not found in the supported_cpe_map add cpes from
+        # pattern matching, and attached variants
+        if not cpes:
+            cpes = self.obj.cpes  # type: ignore[attr-defined]
+            if not cpes:
+                cpes = set(self.obj.cpes_matching_patterns)  # type: ignore[attr-defined]
+                # TODO add cpes_from_brew_tags
 
         kwargs_for_template = {
             "obj": self.obj,

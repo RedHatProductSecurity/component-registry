@@ -235,6 +235,8 @@ def parse_product_stream(
     if match_version := RE_VERSION_LIKE_STRING.search(name):
         version = match_version.group()
 
+    cpes_from_brew_tags = _parse_cpes_from_brew_tags(brew_tags_dict, name, product_version.name)
+
     logger.debug("Creating or updating Product Stream: name=%s", name)
     product_stream, _ = ProductStream.objects.update_or_create(
         name=name,
@@ -251,6 +253,7 @@ def parse_product_stream(
             "exclude_components": exclude_components,
             # reset by _match_and_save_stream_cpes
             "cpes_matching_patterns": [],
+            "cpes_from_brew_tags": cpes_from_brew_tags,
         },
     )
     product_stream_node, _ = ProductNode.objects.get_or_create(
@@ -260,21 +263,15 @@ def parse_product_stream(
             "obj": product_stream,
         },
     )
-    parse_variants_from_brew_tags(
-        brew_tags_dict, name, product, product_stream, product_stream_node, product_version
-    )
     parse_errata_info(errata_info, product, product_stream, product_stream_node, product_version)
     product_stream.save_product_taxonomy()
 
 
-def parse_variants_from_brew_tags(
+def _parse_cpes_from_brew_tags(
     brew_tags: dict[str, bool],
     stream_name: str,
-    product: Product,
-    product_stream: ProductStream,
-    product_stream_node: ProductNode,
-    product_version: ProductVersion,
-):
+    version_name: str,
+) -> list[str]:
     """Match streams using brew_tags to Errata Tool Product Versions and their Variants"""
     # quay-3 streams brew_tags all share a single variant, and we have a one-to-many
     # cardinality between streams and variants. quay-3 streams should probably be consolidated
@@ -288,15 +285,12 @@ def parse_variants_from_brew_tags(
     # See CORGI-726
     if (
         len(brew_tags) > 0
-        and product_version.name != "quay-3"
-        and not product_version.name.startswith("dts-")
+        and version_name != "quay-3"
+        and not version_name.startswith("dts-")
         and stream_name not in ("rhn_satellite_6.7", "rhn_satellite_6.8", "rhn_satellite_6.9")
     ):
-        logger.debug(
-            "Found brew tags (%s) in product stream: %s",
-            brew_tags,
-            product_stream.name,
-        )
+        logger.debug(f"Found brew tags {brew_tags} in product stream: {stream_name}")
+        cpes: set[str] = set()
         for brew_tag in brew_tags.keys():
             # Also match brew tags in prod_defs with those from ET
             # Brew tags in ET
@@ -305,48 +299,14 @@ def parse_variants_from_brew_tags(
             # This is a special case for 'rhaos-4-*` brew tags which don't have the -container
             # suffix in ET, but do have that suffix in product_definitions
             sans_container_released = brew_tag.removesuffix("-container-released")
-            et_pvs = CollectorErrataProductVersion.objects.filter(
-                brew_tags__overlap=[trimmed_brew_tag, sans_container_released]
-            )
-
-            for et_pv in et_pvs:
-                logger.debug(
-                    "Found Product Version (%s) in ET matching brew tag %s",
-                    et_pv.name,
-                    brew_tag,
-                )
-                for et_variant in et_pv.variants.get_queryset():
-                    logger.info(
-                        "Assigning Variant %s to product stream %s",
-                        et_variant.name,
-                        product_stream.name,
-                    )
-                    variant_product_version: CollectorErrataProductVersion = (
-                        et_variant.product_version
-                    )
-                    product_variant, _ = ProductVariant.objects.update_or_create(
-                        name=et_variant.name,
-                        defaults={
-                            "version": "",
-                            "cpe": et_variant.cpe,
-                            "description": "",
-                            "products": product,
-                            "productversions": product_version,
-                            "productstreams": product_stream,
-                            "meta_attr": {
-                                "et_product": variant_product_version.product.name,
-                                "et_product_version": variant_product_version.name,
-                            },
-                        },
-                    )
-                    ProductNode.objects.get_or_create(
-                        object_id=product_variant.pk,
-                        defaults={
-                            "parent": product_stream_node,
-                            "obj": product_variant,
-                        },
-                    )
-                    product_variant.save_product_taxonomy()
+            brew_tag_cpes = CollectorErrataProductVersion.objects.filter(
+                brew_tags__overlap=[trimmed_brew_tag, sans_container_released],
+                variants__cpe__isnull=False,
+            ).values_list("variants__cpe", flat=True)
+            cpes.update(brew_tag_cpes)
+        return list(cpes)
+    else:
+        return []
 
 
 def parse_errata_info(

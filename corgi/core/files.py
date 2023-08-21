@@ -71,14 +71,7 @@ class ProductManifestFile(ManifestFile):
         released_components = components.manifest_components()
         distinct_provides = self.obj.provides_queryset  # type: ignore[attr-defined]
         distinct_upstreams = self.obj.upstreams_queryset  # type: ignore[attr-defined]
-        cpes = cpe_lookup(self.obj.name)  # type: ignore[attr-defined]
-        # If the stream was not found in the supported_cpe_map add cpes from
-        # pattern matching, and attached variants
-        if not cpes:
-            cpes = self.obj.cpes  # type: ignore[attr-defined]
-            if not cpes:
-                cpes = set(self.obj.cpes_matching_patterns)  # type: ignore[attr-defined]
-                # TODO add cpes_from_brew_tags
+        cpes = self._get_stream_cpes(self.obj)
 
         kwargs_for_template = {
             "obj": self.obj,
@@ -91,3 +84,17 @@ class ProductManifestFile(ManifestFile):
         content = render_to_string(self.file_name, kwargs_for_template)
 
         return self._validate_and_clean(content)
+
+    @classmethod
+    def _get_stream_cpes(cls, model: TimeStampedModel) -> set[str]:
+        hardcoded_cpes = cpe_lookup(model.name)  # type: ignore[attr-defined]
+        if hardcoded_cpes:
+            return hardcoded_cpes
+
+        cpes_from_variants = model.cpes  # type: ignore[attr-defined]
+        if cpes_from_variants:
+            return set(cpes_from_variants)
+
+        matched_cpes = set(model.cpes_matching_patterns)  # type: ignore[attr-defined]
+        matched_cpes.update(model.cpes_from_brew_tags)  # type: ignore[attr-defined]
+        return matched_cpes

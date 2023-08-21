@@ -77,10 +77,8 @@ def test_products(requests_mock):
     assert len(openshift410z.yum_repositories) == 5
 
     rhacm24z = ProductStream.objects.get(name="rhacm-2.4.z")
-    assert et_variant.name in rhacm24z.productvariants.values_list("name", flat=True)
-    # Stream "cpes" is a dynamically-generated property, different than the "cpe" field
-    # Which should include the stream's CPE + all the child variant CPEs (if any)
-    assert et_variant.cpe in rhacm24z.cpes
+    assert et_variant.cpe not in rhacm24z.cpes
+    assert et_variant.cpe in rhacm24z.cpes_from_brew_tags
 
 
 @pytest.mark.django_db
@@ -253,27 +251,37 @@ brew_tag_streams = [
     # In the actual ET data the brew tag is gitops-1.7-rhel-8-candidate
     # This matches ps_update_stream gitops-1.7, which has a brew tag
     # gitops-1.7-rhel-8-candidate
-    ("8Base-GitOps-1.7", "gitops-1.7-rhel-8", "gitops-1.7"),
+    (
+        "8Base-GitOps-1.7",
+        "cpe:/a:redhat:openshift_gitops:1.7::el8",
+        "gitops-1.7-rhel-8",
+        "gitops-1.7",
+    ),
     # In the actual ET data the brew tag is rhaos-4.10-rhel-8-candidate
     # This matches ps_update_stream openshift-4.10.z, which has a brew tag
     # rhaos-4.10-rhel-8-container-released
-    ("OSE-4.10-RHEL-8", "rhaos-4.10-rhel-8", "openshift-4.10.z"),
+    (
+        "8Base-RHOSE-4.10",
+        "cpe:/a:redhat:openshift:4.10::el8",
+        "rhaos-4.10-rhel-8",
+        "openshift-4.10.z",
+    ),
     # In the actual ET data the brew tag is rhacm-2.4-rhel-7-container-candidate
     # This matches the ps_update_stream rhacm-2.4.z, which has a brew tag
     # rhacm-2.4-rhel-7-container-released
-    ("RHACM-2.4", "rhacm-2.4-rhel-7-container", "rhacm-2.4.z"),
+    ("RHACM-2.4", "cpe:/a:redhat:acm:2.4::el7", "rhacm-2.4-rhel-7-container", "rhacm-2.4.z"),
 ]
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("variant_name,brew_tag,stream_name", brew_tag_streams)
-def test_brew_tag_matching(variant_name, brew_tag, stream_name, requests_mock):
+@pytest.mark.parametrize("variant_name,cpe,brew_tag,stream_name", brew_tag_streams)
+def test_brew_tag_matching(variant_name, cpe, brew_tag, stream_name, requests_mock):
     et_product = CollectorErrataProduct.objects.create(et_id=1, name="product")
     et_product_version = CollectorErrataProductVersion.objects.create(
         et_id=10, name="product_version", product=et_product, brew_tags=[brew_tag]
     )
     CollectorErrataProductVariant.objects.create(
-        et_id=100, name=variant_name, product_version=et_product_version
+        et_id=100, name=variant_name, product_version=et_product_version, cpe=cpe
     )
 
     with open("tests/data/prod_defs/product-definitions.json") as prod_defs:
@@ -284,4 +292,5 @@ def test_brew_tag_matching(variant_name, brew_tag, stream_name, requests_mock):
     update_products()
 
     stream = ProductStream.objects.get(name=stream_name)
-    assert stream.productvariants.first().name == variant_name
+    assert stream.productvariants.get_queryset().count() == 0
+    assert stream.cpes_from_brew_tags == [cpe]

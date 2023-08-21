@@ -279,19 +279,21 @@ def test_manifest_cpes_from_cpe_lookup():
     assert hardcoded_cpes == cpes_in_manifest
 
 
-def test_manifest_cpes_from_patterns():
+def test_manifest_cpes_from_patterns_and_brew_tags():
     stream, variant = setup_product()
     assert not cpe_lookup(stream.name)
     variant.delete()
     test_cpe = "cpe:/a:redhat:test:1"
+    another_test_cpe = "cpe:/a:redhat:test:2"
     stream.cpes_matching_patterns = [test_cpe]
+    stream.cpes_from_brew_tags = [another_test_cpe]
     stream.save()
     assert not stream.cpes
 
     manifest = json.loads(stream.manifest)
     product_data = manifest["packages"][-1]
     cpes_in_manifest = set(ref["referenceLocator"] for ref in product_data["externalRefs"])
-    assert set([test_cpe]) == cpes_in_manifest
+    assert set([test_cpe, another_test_cpe]) == cpes_in_manifest
 
 
 def test_product_manifest_properties():

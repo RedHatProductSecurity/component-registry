@@ -178,10 +178,6 @@ def cpu_software_composition_analysis(build_uuid, force_process: bool = False):
         )
         return
 
-    if root_component.name == "kernel":
-        logger.info("skipping scan of the kernel, see CORGI-270")
-        return
-
     root_node = root_component.cnodes.first()
     if not root_node:
         raise ValueError(f"Didn't find root component node for {root_component.purl}")

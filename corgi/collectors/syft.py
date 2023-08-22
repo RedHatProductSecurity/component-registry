@@ -92,6 +92,15 @@ class Syft:
         An optional target ref can be specified that represents a valid committish in the Git
         repo being scanned.
         """
+        # Convert unauthenticated / web-based URLs to SSH-based URLs
+        # so that "git clone" uses our existing SSH key and doesn't prompt
+        # for a username/password combo if the repo is private
+        if target_url.startswith("https://github.com/"):
+            target_url = target_url.replace("https://github.com/", "git@github.com:", 1)
+        elif target_url.startswith("http://github.com/"):
+            target_url = target_url.replace("http://github.com/", "git@github.com:", 1)
+        # Else it could be an internal Gitlab server - we allow these to fail
+        # They should be made into public repos that work without authentication
         with TemporaryDirectory(dir=settings.SCA_SCRATCH_DIR) as scan_dir:
             logger.info("Cloning %s to %s", target_url, scan_dir)
             # This may fail if we don't have access to the repository. GIT_TERMINAL_PROMPT=0

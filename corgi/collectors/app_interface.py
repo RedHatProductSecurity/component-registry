@@ -59,11 +59,10 @@ class AppInterface:
                     # Ignore container images in other registries since we assume all images are
                     # in Quay.io.
                     if org_repos["org"]["instance"]["url"] != "quay.io":
-                        logger.warning(
+                        raise ValueError(
                             f"Found non-quay.io container images for {component_name} in "
                             f"app-interface: {org_repos['org']['instance']}"
                         )
-                        continue
                     for repo in org_repos["items"]:
                         repo_name = f"{org_repos['org']['name']}/{repo['name']}"
                         subcomponent_data[repo["name"]]["quay_repo_name"] = repo_name

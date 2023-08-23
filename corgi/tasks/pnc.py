@@ -12,6 +12,7 @@ from corgi.core.models import (
     ProductComponentRelation,
     SoftwareBuild,
 )
+from corgi.tasks.brew import slow_save_taxonomy
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 
 logger = logging.getLogger(__name__)
@@ -37,24 +38,23 @@ def slow_fetch_pnc_sbom(purl: str, product_data, build_data, sbom_data) -> None:
     logger.info(f"SBOM fetched for purl {purl}")
 
     # Make sure the SBOM is valid
-    sbom = SbomerSbom(response.json()["sbom"])
+    sbom_json = response.json()["sbom"]
+    sbom = SbomerSbom(sbom_json)
 
     # Create a build for the root component
-    root_build, created = SoftwareBuild.objects.get_or_create(
+    root_build = SoftwareBuild.objects.create(
         build_id=sbom.components["root"]["meta_attr"]["pnc_build_id"],
         build_type=SoftwareBuild.Type.PNC,
     )
 
-    # Create ProductComponentRelation if it doesn't already exist
-    if created:
-        pcr, _ = ProductComponentRelation.objects.get_or_create(
-            build_id=root_build.build_id,
-            build_type=SoftwareBuild.Type.PNC,
-            software_build__isnull=root_build,
-            defaults={
-                "type": ProductComponentRelation.Type.SBOMER,
-            },
-        )
+    # Create ProductComponentRelation
+    ProductComponentRelation.objects.create(
+        build_id=root_build.build_id,
+        build_type=SoftwareBuild.Type.PNC,
+        software_build=root_build,
+        product_ref=sbom.product_variant,
+        type=ProductComponentRelation.Type.SBOMER,
+    )
 
     # Create components
     components = {}
@@ -79,10 +79,11 @@ def slow_fetch_pnc_sbom(purl: str, product_data, build_data, sbom_data) -> None:
     nodes = {}
     # Create the root node from the SBOM's component
     root_component = components.pop("root")
-    nodes["root"], _ = ComponentNode.objects.get_or_create(
+    nodes["root"] = ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
-        defaults={"obj": root_component},
+        purl=root_component.purl,
+        obj=root_component,
     )
 
     # Create the relationships recorded in the manifest's dependencies
@@ -111,7 +112,7 @@ def slow_fetch_pnc_sbom(purl: str, product_data, build_data, sbom_data) -> None:
             )
 
     # Save product taxonomy
-    root_build.save_product_taxonomy()
+    slow_save_taxonomy.delay(root_build.build_id, root_build.build_type)
 
     # Save component taxonomy
     root_component.save_component_taxonomy()

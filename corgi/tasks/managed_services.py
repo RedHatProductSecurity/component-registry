@@ -23,6 +23,26 @@ def refresh_service_manifests() -> None:
     services = ProductStream.objects.filter(meta_attr__managed_service_components__isnull=False)
     service_metadata = AppInterface.fetch_service_metadata(list(services))
 
+    # Find previous builds and delete them and their components, so we can create a fresh
+    # manifest structure for each "new" build. This is done specifically because we don't
+    # have a way to tie a set of components to a specific build right now,
+    # so we construct an arbitrary build periodically even if nothing has changed since
+    # the last time we looked. Historical data is not needed as of right now.
+
+    # Delete all APP_INTERFACE builds in advance, before we start creating anything.
+    # Services can reuse components, so this avoids deleting a build / component for one service
+    # while trying to create the same build / component for another service in another task.
+    # This also cleans up any old builds / components which were removed from product-definitions.
+    # We should recreate builds / components that are still present in prod-defs
+    # when we process the list of components for that service below.
+    SoftwareBuild.objects.filter(build_type=SoftwareBuild.Type.APP_INTERFACE).delete()
+    ProductComponentRelation.objects.filter(
+        type=ProductComponentRelation.Type.APP_INTERFACE
+    ).delete()
+    # TODO: Deleting the build deletes the linked root component
+    #  but what about the root component's child (provided / upstream) components?
+    #  Check cleanup logic
+
     for service, components in service_metadata.items():
         cpu_manifest_service.delay(str(service.pk), components)
 
@@ -59,20 +79,6 @@ def cpu_manifest_service(product_stream_id: str, service_components: list) -> No
             continue
 
         with transaction.atomic():
-            # Find previous build and delete it and its components, so we can create a fresh
-            # manifest structure for this "new" build. This is done specifically because we don't
-            # have a way to tie a set of components to a specific build right now,
-            # so we construct an arbitrary build periodically even if nothing has changed since
-            # the last time we looked. Historical data is not needed as of right now.
-            past_builds = SoftwareBuild.objects.filter(
-                name=service_component["name"],
-                build_type=SoftwareBuild.Type.APP_INTERFACE,
-                meta_attr__service=service.name,
-            )
-            for build in past_builds:
-                ProductComponentRelation.objects.filter(software_build=build).delete()
-                build.delete()
-
             build_id = now.strftime("%Y%m%d%H%M%S%f")
             try:
                 # get_or_create requires all keyword arguments to appear in

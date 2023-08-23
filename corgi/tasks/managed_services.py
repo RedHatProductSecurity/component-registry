@@ -74,27 +74,66 @@ def cpu_manifest_service(product_stream_id: str, service_components: list) -> No
                 build.delete()
 
             build_id = now.strftime("%Y%m%d%H%M%S%f")
-            build = SoftwareBuild.objects.create(
-                name=service_component["name"],
-                build_type=SoftwareBuild.Type.APP_INTERFACE,
-                build_id=build_id,
-                completion_time=now,
-                meta_attr={"service": service.name},
-            )
+            try:
+                # get_or_create requires all keyword arguments to appear in
+                # a unique_together constraint, like build_id and build_type
+                # Otherwise it will not be atomic and can behave incorrectly
+                # Since we don't have a database index for name + build_type,
+                # we try to find an APP_INTERFACE build with a matching name first
+                # And update the list of services it belongs to
+                # If that fails, we'll create a new build
+                # So Corgi reuses a component when services reuse the component
+                build = SoftwareBuild.objects.get(
+                    name=service_component["name"],
+                    build_type=SoftwareBuild.Type.APP_INTERFACE,
+                )
+                build.meta_attr["services"].append(service.name)
+                build.save()
+            except SoftwareBuild.DoesNotExist:
+                build = SoftwareBuild.objects.create(
+                    name=service_component["name"],
+                    build_type=SoftwareBuild.Type.APP_INTERFACE,
+                    build_id=build_id,
+                    completion_time=now,
+                    meta_attr={"services": [service.name]},
+                )
 
-            root_component = Component.objects.create(
-                type=Component.Type.CONTAINER_IMAGE if quay_repo else Component.Type.GITHUB,
-                name=service_component["name"],
-                version=component_version,
-                release="",
-                arch="noarch",
-                namespace=Component.Namespace.REDHAT,
-                software_build=build,
-            )
-            root_node = ComponentNode.objects.create(
+            # Root components can only be linked to one build
+            # if we use the same build / component for two different services,
+            # we will analyze the same component twice
+            # this should be OK and the taxonomy should be the same.
+            # Or if not, merging the data is probably what we want.
+
+            # We can't use namespace in Component get_or_create / update_or_create kwargs
+            # We can only use name, version, etc. fields that are part of the NEVRA
+            # We don't want to get an existing component in the UPSTREAM namespace
+            # or update an existing component to use the REDHAT namespace
+            # so we do a get with the correct namespace first
+            # then create a new component with the correct namespace only if the get fails
+            # This is expected to fail, for safety, if some GitHub repo already exists
+            # but uses the UPSTREAM namespace instead of the REDHAT namespace
+            root_component_kwargs = {
+                "type": Component.Type.CONTAINER_IMAGE if quay_repo else Component.Type.GITHUB,
+                "name": service_component["name"],
+                "version": component_version,
+                "release": "",
+                "arch": "noarch",
+                "namespace": Component.Namespace.REDHAT,
+                "software_build": build,
+            }
+            try:
+                root_component = Component.objects.get(**root_component_kwargs)
+            except Component.DoesNotExist:
+                root_component = Component.objects.create(**root_component_kwargs)
+
+            # the index uses type / parent / purl for lookups
+            root_node, _ = ComponentNode.objects.get_or_create(
                 type=ComponentNode.ComponentNodeType.SOURCE,
                 parent=None,
-                obj=root_component,
+                purl=root_component.purl,
+                defaults={
+                    "obj": root_component,
+                },
             )
 
             for component in analyzed_components:

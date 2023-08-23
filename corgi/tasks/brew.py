@@ -42,11 +42,17 @@ def slow_fetch_brew_build(
 ) -> bool:
     logger.info("Fetch brew build called with build id: %s", build_id)
 
-    if SoftwareBuild.objects.filter(build_id=build_id, build_type=build_type).exists():
+    try:
+        softwarebuild = SoftwareBuild.objects.get(build_id=build_id, build_type=build_type)
+    except SoftwareBuild.DoesNotExist:
+        # Process the build below
+        pass
+    else:
         logger.info("Already processed build_id %s", build_id)
 
         # Build exists, and we don't want to reload it
         if not force_process:
+            update_relation_software_build_fk(build_id, build_type, softwarebuild)
             # But we want to save the taxonomy again
             if save_product:
                 logger.info("Only saving product taxonomy for build_id %s", build_id)
@@ -95,11 +101,8 @@ def slow_fetch_brew_build(
         },
         completion_time=completion_dt,
     )
-    if build_created:
-        # Create foreign key from Relations to the new SoftwareBuild, where they don't already exist
-        ProductComponentRelation.objects.filter(
-            build_id=build_id, build_type=build_type, software_build__isnull=True
-        ).update(software_build=softwarebuild)
+
+    update_relation_software_build_fk(build_id, build_type, softwarebuild)
 
     if not force_process and not build_created:
         # If another task starts while this task is downloading data this can result in processing
@@ -163,6 +166,15 @@ def slow_fetch_brew_build(
     )
     logger.info("Finished fetching brew build: (%s, %s)", build_id, build_type)
     return build_created or root_created or any_child_created
+
+
+def update_relation_software_build_fk(
+    build_id: str, build_type: str, softwarebuild: SoftwareBuild
+) -> None:
+    # Update foreign key from Relations to this SoftwareBuild where they don't already exist
+    ProductComponentRelation.objects.filter(
+        build_id=build_id, build_type=build_type, software_build__isnull=True
+    ).update(software_build=softwarebuild)
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)

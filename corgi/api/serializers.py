@@ -42,9 +42,9 @@ def get_component_data_list(component_list: Iterable[str]) -> list[dict[str, str
     ]
 
 
-def get_component_purl_link(purl: str) -> str:
-    """Generic method to get a pURL link for a Component."""
-    return f"{CORGI_API_URL}/components?purl={quote(purl)}"
+def get_component_purl_link(purl: str, lookup_kwarg: str = "purl") -> str:
+    """Generic method to get a ?purl= / ?sources= / ?provides= / ?upstreams= link for a Component"""
+    return f"{CORGI_API_URL}/components?{lookup_kwarg}={quote(purl)}"
 
 
 def get_model_ofuri_link(
@@ -423,11 +423,9 @@ class ComponentSerializer(ProductTaxonomySerializer):
 
     software_build = serializers.SerializerMethodField(read_only=True)
 
-    provides = serializers.HyperlinkedIdentityField(view_name="component-provides", read_only=True)
-    sources = serializers.HyperlinkedIdentityField(view_name="component-sources", read_only=True)
-    upstreams = serializers.HyperlinkedIdentityField(
-        view_name="component-upstreams", read_only=True
-    )
+    provides = serializers.SerializerMethodField(read_only=True)
+    sources = serializers.SerializerMethodField(read_only=True)
+    upstreams = serializers.SerializerMethodField(read_only=True)
 
     manifest = serializers.SerializerMethodField(read_only=True)
 
@@ -446,6 +444,24 @@ class ComponentSerializer(ProductTaxonomySerializer):
     @staticmethod
     def get_link(instance: Component) -> str:
         return get_component_purl_link(instance.purl)
+
+    @staticmethod
+    def get_provides(instance: Component) -> str:
+        """Show all components which have instance.purl as one of their sources
+        In other words, show all components which instance.purl provides"""
+        return get_component_purl_link(instance.purl, lookup_kwarg="sources")
+
+    @staticmethod
+    def get_sources(instance: Component) -> str:
+        """Show all components which have instance.purl as one of their provides
+        In other words, show all components which are a source of instance.purl"""
+        return get_component_purl_link(instance.purl, lookup_kwarg="provides")
+
+    @staticmethod
+    def get_upstreams(instance: Component) -> str:
+        """Show all components which have instance.purl as one of their downstreams
+        In other words, show all components which are upstream of instance.purl"""
+        return get_component_purl_link(instance.purl, lookup_kwarg="downstreams")
 
     @staticmethod
     def get_manifest(instance: Component) -> str:

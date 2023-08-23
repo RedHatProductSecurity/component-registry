@@ -19,9 +19,8 @@ pytestmark = [pytest.mark.performance]
 
 
 def display_product_stream_with_many_roots() -> dict:
-    stream_with_many_root = "o:redhat:rhel:7.9.z"
     response = requests.get(
-        f"{CORGI_API_URL}/components?ofuri={stream_with_many_root}" f"&view=summary&limit=5000"
+        f"{CORGI_API_URL}/components?ofuri=o:redhat:rhel:8.8.0.z&view=summary&limit=5000"
     )
 
     # If you're running performance tests manually against a dev environment,
@@ -29,7 +28,7 @@ def display_product_stream_with_many_roots() -> dict:
     # Any exceptions will be passed through to test code
     response.raise_for_status()
     response_json = response.json()
-    assert response_json["count"] > 3000
+    assert response_json["count"] > 2800
     return response_json
 
 

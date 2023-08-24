@@ -21,6 +21,7 @@ from corgi.core.models import (
 from corgi.tasks.brew import (
     slow_delete_brew_build,
     slow_refresh_brew_build_tags,
+    slow_save_taxonomy,
     slow_update_brew_tags,
 )
 from corgi.tasks.errata_tool import slow_handle_shipped_errata
@@ -539,23 +540,28 @@ def test_slow_fetch_pnc_sbom():
     response.status_code = 200
     response.json.return_value = sbom_contents
 
-    with patch("requests.get", return_value=response) as get_mock:
-        slow_fetch_pnc_sbom(purl, product_config, build, sbom)
-        get_mock.assert_called_once_with(sbom["link"])
+    with patch(
+        "corgi.tasks.brew.slow_save_taxonomy.delay", wraps=slow_save_taxonomy
+    ) as wrapped_save_taxonomy:
+        with patch("requests.get", return_value=response) as get_mock:
+            slow_fetch_pnc_sbom(purl, product_config, build, sbom)
+            get_mock.assert_called_once_with(sbom["link"])
 
-    # Test with an SBOM available message that has a PV that
-    # doesn't exist in ET. An sbom object shouldn't be created,
-    # because the fetch task should log that the PV doesn't exist
-    # and end early.
-    with patch("corgi.collectors.pnc.SbomerSbom.__init__") as parse_sbom_mock:
-        with open("tests/data/pnc/sbom_no_variant.json") as complete_file:
-            complete_data = json.load(complete_file)["msg"]
+        wrapped_save_taxonomy.assert_called_once_with(build["id"], SoftwareBuild.Type.PNC)
 
-        slow_fetch_pnc_sbom(
-            complete_data["purl"],
-            complete_data["productConfig"]["errataTool"],
-            complete_data["build"],
-            complete_data["sbom"],
-        )
+        # Test with an SBOM available message that has a PV that
+        # doesn't exist in ET. An sbom object shouldn't be created,
+        # because the fetch task should log that the PV doesn't exist
+        # and end early.
+        with patch("corgi.collectors.pnc.SbomerSbom.__init__") as parse_sbom_mock:
+            with open("tests/data/pnc/sbom_no_variant.json") as complete_file:
+                complete_data = json.load(complete_file)["msg"]
 
-        parse_sbom_mock.assert_not_called()
+            slow_fetch_pnc_sbom(
+                complete_data["purl"],
+                complete_data["productConfig"]["errataTool"],
+                complete_data["build"],
+                complete_data["sbom"],
+            )
+
+            parse_sbom_mock.assert_not_called()

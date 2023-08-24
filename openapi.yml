@@ -109,6 +109,7 @@ paths:
           - BREW
           - CENTOS
           - KOJI
+          - PNC
       - in: query
         name: exclude_fields
         schema:
@@ -1333,6 +1334,7 @@ components:
       - KOJI
       - CENTOS
       - APP_INTERFACE
+      - PNC
       type: string
     Channel:
       type: object

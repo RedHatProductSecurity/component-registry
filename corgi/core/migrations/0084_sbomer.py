@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("core", "0080_adjust_product_cpe_fields"),
+        ("core", "0083_set_build_fk_relations"),
     ]
 
     operations = [

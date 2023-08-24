@@ -50,6 +50,16 @@ class SbomerSbom:
             # Declared purl
             meta_attr["purl_declared"] = component["purl"]
 
+            # License info
+            licenses = []
+            for _license in component["licenses"]:
+                if _license["license"].get("id"):
+                    licenses.append(_license["license"].get("id"))
+                if _license["license"].get("name"):
+                    licenses.append(_license["license"].get("name"))
+
+            component["licenses"] = licenses
+
             # Related URLs
             component["related_url"] = None
             url_types = ["website", "distribution", "issue-tracker", "mailing-list", "vcs"]

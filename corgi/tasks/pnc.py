@@ -12,7 +12,7 @@ from corgi.core.models import (
     ProductComponentRelation,
     SoftwareBuild,
 )
-from corgi.tasks.brew import slow_save_taxonomy
+from corgi.tasks.brew import set_license_declared_safely, slow_save_taxonomy
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 
 logger = logging.getLogger(__name__)
@@ -79,6 +79,8 @@ def slow_fetch_pnc_sbom(purl: str, product_data, build_data, sbom_data) -> None:
             arch="noarch",
             defaults=defaults,
         )
+
+        set_license_declared_safely(components[bomref], ";".join(component["licenses"]))
 
     # Link dependencies
     nodes = {}

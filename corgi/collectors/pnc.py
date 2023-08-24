@@ -23,6 +23,9 @@ class SbomerSbom:
         if "components" not in data:
             raise ValueError("SBOM is missing component data")
 
+        # Components is a list of all components. Some are listed
+        # more than once with different bomrefs, as they're listed
+        # separately for each dependency they have or fulfill.
         self.components = {c["bom-ref"]: c for c in data["components"]}
         # The root component is listed separately in metadata
         self.components["root"] = data["metadata"]["component"]
@@ -87,4 +90,7 @@ class SbomerSbom:
 
             component["meta_attr"] = meta_attr
 
+        # Dependencies is a list of relationships between components
+        # declared in the Components section above. At the moment,
+        # only "dependsOn" type relationships are declared.
         self.dependencies = {d["ref"]: d["dependsOn"] for d in data["dependencies"]}

@@ -545,9 +545,7 @@ class ProductVersion(ProductModel):
     # It is populated by the corgi.tasks.prod_defs.update_products task
     cpes_matching_patterns = fields.ArrayField(models.CharField(max_length=1000), default=list)
 
-    products = models.ForeignKey(
-        "Product", on_delete=models.CASCADE, related_name="productversions"
-    )
+    products = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="productversions")
 
     @property
     def productversions(self) -> "ProductVersion":
@@ -595,9 +593,9 @@ class ProductStream(ProductModel):
 
     cpes_matching_patterns = fields.ArrayField(models.CharField(max_length=1000), default=list)
 
-    products = models.ForeignKey("Product", on_delete=models.CASCADE, related_name="productstreams")
+    products = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="productstreams")
     productversions = models.ForeignKey(
-        "ProductVersion",
+        ProductVersion,
         on_delete=models.CASCADE,
         related_name="productstreams",
     )
@@ -683,11 +681,9 @@ class ProductVariant(ProductModel):
 
     cpe = models.CharField(max_length=1000, default="")
 
-    products = models.ForeignKey(
-        "Product", on_delete=models.CASCADE, related_name="productvariants"
-    )
+    products = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="productvariants")
     productversions = models.ForeignKey(
-        "ProductVersion", on_delete=models.CASCADE, related_name="productvariants"
+        ProductVersion, on_delete=models.CASCADE, related_name="productvariants"
     )
     # Below creates implicit "productvariants" field on ProductStream
     productstreams = models.ForeignKey(
@@ -803,7 +799,7 @@ class ProductComponentRelation(TimeStampedModel):
     # E.g. product variant for ERRATA, or product stream for COMPOSE
     product_ref = models.CharField(max_length=200, default="")
     software_build = models.ForeignKey(
-        "SoftwareBuild", on_delete=models.SET_NULL, related_name="relations", null=True
+        SoftwareBuild, on_delete=models.SET_NULL, related_name="relations", null=True
     )
     build_id = models.CharField(max_length=200, default="")
     build_type = models.CharField(choices=SoftwareBuild.Type.choices, max_length=20)
@@ -1129,7 +1125,6 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         on_delete=models.CASCADE,
         null=True,
         related_name="components",
-        db_column="software_build_uuid",
     )
 
     # Copyright text as it appears in the component source code, from an OpenLCS scan

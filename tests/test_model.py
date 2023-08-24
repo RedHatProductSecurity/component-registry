@@ -1,3 +1,5 @@
+import uuid
+
 import pytest
 from django.apps import apps
 from django.db.utils import IntegrityError, ProgrammingError
@@ -1244,3 +1246,66 @@ def test_license_properties():
     # We should end up with an empty list, and not [""]
     assert c.license_concluded_list == []
     assert c.license_declared_list == []
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_cascade_deletion():
+    """Test that models linked with ForeignKeys, and which set on_delete=models.CASCADE,
+    are deleted when their parent object is deleted"""
+    build = SoftwareBuild.objects.create(build_id=uuid.uuid4(), build_type=SoftwareBuild.Type.BREW)
+    srpm = Component.objects.create(
+        type=Component.Type.RPM,
+        name="rpm",
+        version="1",
+        release="2",
+        arch="src",
+        namespace=Component.Namespace.REDHAT,
+        software_build=build,
+    )
+    upstream_rpm = Component.objects.create(
+        type=srpm.type,
+        name=srpm.name,
+        version=srpm.version,
+        release="",
+        arch="noarch",
+        namespace=Component.Namespace.UPSTREAM,
+        software_build=None,
+    )
+    binary_rpm = Component.objects.create(
+        type=srpm.type,
+        name=srpm.name,
+        version=srpm.version,
+        release=srpm.release,
+        arch="x86_64",
+        namespace=srpm.namespace,
+        software_build=None,
+    )
+
+    srpm_node = ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, obj=srpm
+    )
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE, parent=srpm_node, obj=upstream_rpm
+    )
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.PROVIDES, parent=srpm_node, obj=binary_rpm
+    )
+
+    build.save_product_taxonomy()
+    srpm.save_component_taxonomy()
+    upstream_rpm.save_component_taxonomy()
+    binary_rpm.save_component_taxonomy()
+
+    num_deleted, dict_deleted = build.delete()
+    assert num_deleted == 7, num_deleted
+    assert dict_deleted == {
+        # Many-to-many relationships targeting the root component are deleted
+        # But not the related components themselves
+        "core.Component_upstreams": 1,
+        "core.Component_sources": 1,
+        "core.SoftwareBuild": 1,
+        # Only the root component is deleted, not many-to-many related components
+        "core.Component": 1,
+        # Deleting the root component deletes its node(s) and child nodes / the entire tree(s)
+        "core.ComponentNode": 3,
+    }, dict_deleted

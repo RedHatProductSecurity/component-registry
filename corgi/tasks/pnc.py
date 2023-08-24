@@ -66,8 +66,13 @@ def slow_fetch_pnc_sbom(purl: str, product_data, build_data, sbom_data) -> None:
         if bomref == "root":
             defaults["software_build"] = root_build
 
+        if component["package_type"] == "maven":
+            component_type = Component.Type.MAVEN
+        else:
+            component_type = Component.Type.GENERIC
+
         components[bomref], _ = Component.objects.update_or_create(
-            type=Component.Type.MAVEN,
+            type=component_type,
             name=component["name"],
             version=component["version"],
             release="",

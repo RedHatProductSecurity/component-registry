@@ -65,6 +65,16 @@ class SbomerSbom:
             if component.get("pedigree"):
                 meta_attr["pedigree"] = component["pedigree"]
 
+            # Package type info when it's available
+            component["package_type"] = None
+            package_types = [
+                prop for prop in component["properties"] if prop["name"] == "package:type"
+            ]
+            if package_types:
+                if len(package_types) > 1:
+                    logger.warn("Component %s had multiple package types, taking the first")
+                component["package_type"] = package_types[0]["value"]
+
             component["meta_attr"] = meta_attr
 
         self.dependencies = {d["ref"]: d["dependsOn"] for d in data["dependencies"]}

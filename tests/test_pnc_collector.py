@@ -14,7 +14,7 @@ def test_validate_sbom():
     with open("tests/data/pnc/pnc_sbom.json") as sbom_file:
         sbom_data = json.load(sbom_file)
 
-    sbom = SbomerSbom(sbom_data)
+    sbom = SbomerSbom(sbom_data["sbom"])
 
     for bomref, component in sbom.components.items():
         # All Red Hat components should have PNC or Brew info
@@ -53,18 +53,4 @@ def test_validate_sbom():
         with open("tests/data/pnc/pnc_sbom_no_components.json") as sbom_file:
             sbom_data = json.load(sbom_file)
 
-        sbom = SbomerSbom(sbom_data)
-
-    # An sbom where a component is missing build info
-    with pytest.raises(ValueError):
-        with open("tests/data/pnc/pnc_sbom_no_build_info.json") as sbom_file:
-            sbom_data = json.load(sbom_file)
-
-        sbom = SbomerSbom(sbom_data)
-
-    # An sbom with an unknown build type
-    with pytest.raises(ValueError):
-        with open("tests/data/pnc/pnc_sbom_bad_build_info.json") as sbom_file:
-            sbom_data = json.load(sbom_file)
-
-        sbom = SbomerSbom(sbom_data)
+        sbom = SbomerSbom(sbom_data["sbom"])

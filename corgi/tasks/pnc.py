@@ -61,7 +61,7 @@ def slow_fetch_pnc_sbom(purl: str, product_data, build_data, sbom_data) -> None:
     for bomref, component in sbom.components.items():
         defaults = {"namespace": component["namespace"], "meta_attr": component["meta_attr"]}
 
-        if "related_url" in component:
+        if component.get("related_url"):
             defaults["related_url"] = component["related_url"]
         if bomref == "root":
             defaults["software_build"] = root_build

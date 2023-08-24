@@ -36,7 +36,7 @@ class SbomerSbom:
                 component["namespace"] = Component.Namespace.REDHAT
                 build_urls = {
                     ref["comment"]: ref["url"]
-                    for ref in component["externalReferences"]
+                    for ref in component.get("externalReferences", {})
                     if ref["type"] == "build-system"
                 }
 
@@ -63,7 +63,7 @@ class SbomerSbom:
             # Related URLs
             component["related_url"] = None
             url_types = ["website", "distribution", "issue-tracker", "mailing-list", "vcs"]
-            for ref in component["externalReferences"]:
+            for ref in component.get("externalReferences", {}):
                 if ref["type"] in url_types:
                     meta_attr[f"{ref['type']}_ref_url"] = ref["url"]
 

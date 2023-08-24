@@ -274,7 +274,7 @@
                     {
                         "type": "build-system",
                         "url": "https://example.com/v2/builds/AZIDE5OTGKIAA",
-                        "comment": "pnc-build-id"
+                        "comment": "abstemious-build-id"
                     },
                     {
                         "type": "build-meta",
@@ -386,6 +386,10 @@
                 },
                 "externalReferences": [
                     {
+                        "type": "website",
+                        "url": "https://smallrye.io/smallrye-mutiny/mutiny"
+                    },
+                    {
                         "type": "distribution",
                         "url": "https://maven.repository.redhat.com/ga/"
                     },
@@ -401,11 +405,6 @@
                         "type": "build-system",
                         "url": "https://example.com/v2/builds/AUOMUWXT3VQAA",
                         "comment": "pnc-build-id"
-                    },
-                    {
-                        "type": "build-system",
-                        "url": "https://example.com/v2/builds/0987654321",
-                        "comment": "brew-build-id"
                     },
                     {
                         "type": "build-meta",
@@ -429,6 +428,28 @@
             {
                 "bom-ref": "pkg:maven/org.jboss.spec.javax.resource/jboss-connector-api_1.7_spec@1.0.0.Final?type=jar",
                 "description": "JSR 322: Java(TM) EE Connector Architecture 1.7 API",
+                "externalReferences": [
+                    {
+                        "type": "website",
+                        "url": "http://www.jboss.org/jboss-connector-api_1.7_spec"
+                    },
+                    {
+                        "type": "distribution",
+                        "url": "https://repository.jboss.org/nexus/service/local/staging/deploy/maven2/"
+                    },
+                    {
+                        "type": "issue-tracker",
+                        "url": "https://issues.jboss.org/"
+                    },
+                    {
+                        "type": "mailing-list",
+                        "url": "http://lists.jboss.org/pipermail/jboss-user/"
+                    },
+                    {
+                        "type": "vcs",
+                        "url": "https://github.com/jboss/jboss-connector-api_spec.git"
+                    }
+                ],
                 "group": "org.jboss.spec.javax.resource",
                 "licenses": [
                     {

@@ -1,0 +1,215 @@
+{
+    "bomFormat": "CycloneDX",
+    "specVersion": "1.4",
+    "version": 1,
+    "metadata": {
+        "timestamp": "2023-06-09T10:41:28Z",
+        "tools": [
+            {
+                "vendor": "Quarkus Community",
+                "name": "Domino 0.0.89 SBOM Generator",
+                "version": "0.0.89",
+                "hashes": [
+                    {
+                        "alg": "MD5",
+                        "content": "64bbc42ce8b8b99ceeb3ed4145af023c"
+                    },
+                    {
+                        "alg": "SHA-1",
+                        "content": "03a18724ecb3681af4994950c9c21183bbce7a9d"
+                    },
+                    {
+                        "alg": "SHA-256",
+                        "content": "d3fa653f1bd824806ed680cff138fab73f9c29e1a993a919944fea46e1079540"
+                    },
+                    {
+                        "alg": "SHA-512",
+                        "content": "350ed52b792802aad521110ed1c4217815cad40741df596d3a5e4a97760db22db68eb6c32769b5987184554552d5ad5787d1ee7c53373a4c5febc17dac656f0a"
+                    },
+                    {
+                        "alg": "SHA-384",
+                        "content": "1c209164660d1adfb2e6e8ef0f2d070cf330389660792b893351193af8f57547ce219a9793dc929bde31177f0992f4b5"
+                    },
+                    {
+                        "alg": "SHA3-384",
+                        "content": "be372388ef579e8c610f341966acc4004838f4351a0ed20cab900281c23c0d798fc48a2196c08f5f28756cce73b7cae9"
+                    },
+                    {
+                        "alg": "SHA3-256",
+                        "content": "2212e97348a7f34fc3a4a580839b2a76219623c54d382290da50a1e0454d0f0a"
+                    },
+                    {
+                        "alg": "SHA3-512",
+                        "content": "5d306bd75341a5854eebf63c5782e6eee0e833ba067549e7568241fce1fc168b46894342dcea34110328cbd0cda5d35a7eb6f6965a5832156c89f9b6bb3c5ed5"
+                    }
+                ]
+            }
+        ],
+        "component": {
+            "supplier": {
+                "name": "Red Hat",
+                "url": [
+                    "https://www.redhat.com"
+                ]
+            },
+            "publisher": "Red Hat",
+            "group": "com.redhat.quarkus.platform",
+            "name": "quarkus-bom",
+            "version": "2.13.8.Final-redhat-00003",
+            "description": "Red Hat Build of Quarkus - Kubernetes Native Java stack tailored for OpenJDK HotSpot and GraalVM",
+            "licenses": [
+                {
+                    "license": {
+                        "id": "Apache-2.0"
+                    }
+                }
+            ],
+            "purl": "pkg:maven/com.redhat.quarkus.platform/quarkus-bom@2.13.8.Final-redhat-00003?type=pom",
+            "pedigree": {
+                "commits": [
+                    {
+                        "uid": "370253ca4fca2c2f5c4b86b3c7febd94193dc16c",
+                        "url": "https://example.com/gerrit/quarkusio/quarkus-platform.git#2.13.8.Final-redhat-00003"
+                    }
+                ]
+            },
+            "externalReferences": [
+                {
+                    "type": "distribution",
+                    "url": "https://maven.repository.redhat.com/ga/"
+                },
+                {
+                    "type": "build-system",
+                    "url": "https://example.com/v2/builds/AZL76RACCHQAA",
+                    "comment": "pnc-build-id"
+                },
+                {
+                    "type": "build-meta",
+                    "url": "quay.io/rh-newcastle/builder-rhel-8-j11-mvn3.8.6-gradle7.5.1-gcc-cpp-make:1.0.0",
+                    "comment": "pnc-environment-image"
+                },
+                {
+                    "type": "vcs",
+                    "url": "https://github.com/quarkusio/quarkus-platform.git",
+                    "comment": ""
+                }
+            ],
+            "properties": [
+                {
+                    "name": "product-id",
+                    "value": "quarkus-2"
+                },
+                {
+                    "name": "product-stream",
+                    "value": "quarkus-2.13"
+                },
+                {
+                    "name": "errata-tool-product-name",
+                    "value": "RHBQ"
+                },
+                {
+                    "name": "errata-tool-product-version",
+                    "value": "RHEL-8-RHBQ-2.13"
+                },
+                {
+                    "name": "errata-tool-product-variant",
+                    "value": "8Base-RHBQ-2.13"
+                }
+            ],
+            "releaseNotes": {
+                "type": "Patch",
+                "title": "Red Hat Build of Quarkus 2.13.8.Final-redhat-00003",
+                "aliases": [
+                    "RHBQ",
+                    "Quarkus",
+                    "Fireball"
+                ],
+                "properties": [
+                    {
+                        "name": "product-name",
+                        "value": "Red Hat Build of Quarkus"
+                    },
+                    {
+                        "name": "product-version",
+                        "value": "2.13.8.Final-redhat-00003"
+                    }
+                ]
+            },
+            "type": "framework"
+        }
+    },
+    "components": [
+        {
+            "supplier": {
+                "name": "Red Hat",
+                "url": [
+                    "https://www.redhat.com"
+                ]
+            },
+            "publisher": "Red Hat",
+            "group": "io.agroal",
+            "name": "agroal-narayana",
+            "version": "1.17.0.redhat-00001",
+            "description": "The natural database connection pool",
+            "licenses": [
+                {
+                    "license": {
+                        "id": "Apache-2.0",
+                        "url": "https://www.apache.org/licenses/LICENSE-2.0"
+                    }
+                }
+            ],
+            "purl": "pkg:maven/io.agroal/agroal-narayana@1.17.0.redhat-00001?type=jar",
+            "pedigree": {
+                "commits": [
+                    {
+                        "uid": "31889b928ec4e6991552f214744c48fe74646b12",
+                        "url": "https://example.com/gerrit/agroal/agroal.git#1.17.0.redhat-00001"
+                    }
+                ]
+            },
+            "externalReferences": [
+                {
+                    "type": "website",
+                    "url": "https://github.com/agroal/agroal-narayana"
+                },
+                {
+                    "type": "distribution",
+                    "url": "https://maven.repository.redhat.com/ga/"
+                },
+                {
+                    "type": "issue-tracker",
+                    "url": "https://issues.jboss.org/projects/AG"
+                },
+                {
+                    "type": "mailing-list",
+                    "url": "http://lists.jboss.org/pipermail/jboss-user/"
+                },
+                {
+                    "type": "vcs",
+                    "url": "https://example.com/gerrit/agroal/agroal.git"
+                },
+                {
+                    "type": "build-meta",
+                    "url": "quay.io/rh-newcastle/builder-rhel-7-j8-mvn3.3.9:1.0.4",
+                    "comment": "pnc-environment-image"
+                }
+            ],
+            "properties": [
+                {
+                    "name": "package:type",
+                    "value": "maven"
+                },
+                {
+                    "name": "package:language",
+                    "value": "java"
+                }
+            ],
+            "type": "library",
+            "bom-ref": "pkg:maven/io.agroal/agroal-narayana@1.17.0.redhat-00001?type=jar"
+        }
+    ],
+    "dependencies": [
+
+    ]
+}

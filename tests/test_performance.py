@@ -50,14 +50,11 @@ def test_displaying_product_stream_with_many_roots() -> None:
 def display_component_with_many_sources() -> dict:
     """Helper method for timeit to get a component with many sources"""
     large_component_purl = "pkg:rpm/redhat/systemd-libs@250-12.el9_1?arch=aarch64"
-    response = requests.get(f"{CORGI_API_URL}/components?purl={large_component_purl}")
+    response = requests.get(f"{CORGI_API_URL}/components?provides={large_component_purl}")
 
     # If you're running performance tests manually against a dev environment,
     # make sure that you've loaded the right data for this test
     # Any exceptions will be passed through to test code
-    response.raise_for_status()
-    large_component_uuid = response.json()["uuid"]
-    response = requests.get(f"{CORGI_API_URL}/components/{large_component_uuid}/sources")
     response.raise_for_status()
     response_json = response.json()
     assert response_json["count"] > 2000

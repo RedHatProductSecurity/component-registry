@@ -73,10 +73,13 @@ class ComponentFilter(FilterSet):
     sources = CharFilter(lookup_expr="purl")
     provides = CharFilter(lookup_expr="purl")
     upstreams = CharFilter(lookup_expr="purl")
+    downstreams = CharFilter(lookup_expr="purl")
+
     # otherwise use regex to match provides,sources or upstreams purls
     re_sources = CharFilter(field_name="sources", lookup_expr="purl__iregex")
     re_provides = CharFilter(field_name="provides", lookup_expr="purl__iregex")
     re_upstreams = CharFilter(field_name="upstreams", lookup_expr="purl__iregex")
+    re_downstreams = CharFilter(field_name="downstreams", lookup_expr="purl__iregex")
 
     el_match = CharFilter(label="RHEL version for layered products", lookup_expr="icontains")
     released_components = BooleanFilter(

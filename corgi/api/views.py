@@ -689,42 +689,6 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         response["Location"] = f"/api/{CORGI_API_VERSION}/components/{component.uuid}"
         return response
 
-    @action(methods=["get"], detail=True)
-    def provides(self, request: Request, pk: str = "") -> Response:
-        """
-        List a Component's provides, using pagination when needed.
-        """
-        obj = self.queryset.filter(pk=pk).first()
-        if not obj:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-
-        related_qs = obj.provides.get_queryset().using("read_only")
-        return self._paginate_queryset(related_qs)
-
-    @action(methods=["get"], detail=True)
-    def sources(self, request: Request, pk: str = "") -> Response:
-        """
-        List a Component's sources, using pagination when needed.
-        """
-        obj = self.queryset.filter(pk=pk).first()
-        if not obj:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-
-        related_qs = obj.sources.get_queryset().using("read_only")
-        return self._paginate_queryset(related_qs)
-
-    @action(methods=["get"], detail=True)
-    def upstreams(self, request: Request, pk: str = "") -> Response:
-        """
-        List a Component's upstreams, using pagination when needed.
-        """
-        obj = self.queryset.filter(pk=pk).first()
-        if not obj:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-
-        related_qs = obj.upstreams.get_queryset().using("read_only")
-        return self._paginate_queryset(related_qs)
-
     def _paginate_queryset(self, queryset: QuerySet) -> Response:
         """Helper method to apply pagination to arbitrary querysets."""
         page = self.paginate_queryset(queryset)

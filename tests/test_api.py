@@ -1218,7 +1218,7 @@ def test_oci_component_provides_sources_upstreams(client, api_path):
         └──(PROVIDES) dep1_comp
             └──(PROVIDES) dep2_comp
 
-    The following are expectations in terms of sources, providers and upstreams on each of these components ?
+    The following are expectations in terms of sources, providers and upstreams on these components:
 
     +--------------------+---------+----------+-----------+
     |                    | sources | provides | upstreams |
@@ -1232,11 +1232,12 @@ def test_oci_component_provides_sources_upstreams(client, api_path):
     | dep2_component     | 2       | 0        | 0         |
     +--------------------+---------+----------+-----------+
 
-    The data model does not impose this constraint eg. provides, sources and upstream property queries enforce
-    this behaviour.
+    The data model does not impose this constraint
+    eg. provides, sources and upstream property queries enforce this behaviour.
 
-    """  # noqa
+    """
 
+    api_path_with_domain = f"https://{settings.CORGI_DOMAIN}{api_path}"
     # create a top level root source component
     root_comp = ComponentFactory(
         name="root_comp",
@@ -1323,13 +1324,15 @@ def test_oci_component_provides_sources_upstreams(client, api_path):
 
     assert response["name"] == root_comp.name
     assert response["related_url"] == root_comp.related_url
-    assert response["sources"] == f"http://testserver{api_path}/components/{root_comp.uuid}/sources"
+    assert (
+        response["sources"] == f"{api_path_with_domain}/components?provides={quote(root_comp.purl)}"
+    )
     related_response = client.get(response["sources"])
     assert related_response.status_code == 200
     assert related_response.json()["count"] == 0
 
     assert (
-        response["provides"] == f"http://testserver{api_path}/components/{root_comp.uuid}/provides"
+        response["provides"] == f"{api_path_with_domain}/components?sources={quote(root_comp.purl)}"
     )
     related_response = client.get(response["provides"])
     assert related_response.status_code == 200
@@ -1337,7 +1340,7 @@ def test_oci_component_provides_sources_upstreams(client, api_path):
 
     assert (
         response["upstreams"]
-        == f"http://testserver{api_path}/components/{root_comp.uuid}/upstreams"
+        == f"{api_path_with_domain}/components?downstreams={quote(root_comp.purl)}"
     )
     related_response = client.get(response["upstreams"])
     assert related_response.status_code == 200
@@ -1346,20 +1349,23 @@ def test_oci_component_provides_sources_upstreams(client, api_path):
     response = client.get(f"{api_path}/components/{dep_comp.uuid}")
     assert response.status_code == 200
     response = response.json()
-    assert response["sources"] == f"http://testserver{api_path}/components/{dep_comp.uuid}/sources"
+    assert (
+        response["sources"] == f"{api_path_with_domain}/components?provides={quote(dep_comp.purl)}"
+    )
     related_response = client.get(response["sources"])
     assert related_response.status_code == 200
     assert related_response.json()["count"] == 1
 
     assert (
-        response["provides"] == f"http://testserver{api_path}/components/{dep_comp.uuid}/provides"
+        response["provides"] == f"{api_path_with_domain}/components?sources={quote(dep_comp.purl)}"
     )
     related_response = client.get(response["provides"])
     assert related_response.status_code == 200
     assert related_response.json()["count"] == 1
 
     assert (
-        response["upstreams"] == f"http://testserver{api_path}/components/{dep_comp.uuid}/upstreams"
+        response["upstreams"]
+        == f"{api_path_with_domain}/components?downstreams={quote(dep_comp.purl)}"
     )
     related_response = client.get(response["upstreams"])
     assert related_response.status_code == 200
@@ -1368,13 +1374,15 @@ def test_oci_component_provides_sources_upstreams(client, api_path):
     response = client.get(f"{api_path}/components/{dep2_comp.uuid}")
     assert response.status_code == 200
     response = response.json()
-    assert response["sources"] == f"http://testserver{api_path}/components/{dep2_comp.uuid}/sources"
+    assert (
+        response["sources"] == f"{api_path_with_domain}/components?provides={quote(dep2_comp.purl)}"
+    )
     related_response = client.get(response["sources"])
     assert related_response.status_code == 200
     assert related_response.json()["count"] == 2
 
     assert (
-        response["provides"] == f"http://testserver{api_path}/components/{dep2_comp.uuid}/provides"
+        response["provides"] == f"{api_path_with_domain}/components?sources={quote(dep2_comp.purl)}"
     )
     related_response = client.get(response["provides"])
     assert related_response.status_code == 200
@@ -1382,7 +1390,7 @@ def test_oci_component_provides_sources_upstreams(client, api_path):
 
     assert (
         response["upstreams"]
-        == f"http://testserver{api_path}/components/{dep2_comp.uuid}/upstreams"
+        == f"{api_path_with_domain}/components?downstreams={quote(dep2_comp.purl)}"
     )
     related_response = client.get(response["upstreams"])
     assert related_response.status_code == 200
@@ -1393,7 +1401,7 @@ def test_oci_component_provides_sources_upstreams(client, api_path):
     response = response.json()
     assert (
         response["sources"]
-        == f"http://testserver{api_path}/components/{upstream_comp.uuid}/sources"
+        == f"{api_path_with_domain}/components?provides={quote(upstream_comp.purl)}"
     )
     related_response = client.get(response["sources"])
     assert related_response.status_code == 200
@@ -1401,7 +1409,7 @@ def test_oci_component_provides_sources_upstreams(client, api_path):
 
     assert (
         response["provides"]
-        == f"http://testserver{api_path}/components/{upstream_comp.uuid}/provides"
+        == f"{api_path_with_domain}/components?sources={quote(upstream_comp.purl)}"
     )
     related_response = client.get(response["provides"])
     assert related_response.status_code == 200
@@ -1409,7 +1417,7 @@ def test_oci_component_provides_sources_upstreams(client, api_path):
 
     assert (
         response["upstreams"]
-        == f"http://testserver{api_path}/components/{upstream_comp.uuid}/upstreams"
+        == f"{api_path_with_domain}/components?downstreams={quote(upstream_comp.purl)}"
     )
     related_response = client.get(response["upstreams"])
     assert related_response.status_code == 200
@@ -1459,7 +1467,7 @@ def test_oci_component_provides_sources_upstreams(client, api_path):
     assert "upstreams" not in response.json()
     assert (
         response.json()["provides"]
-        == f"http://testserver{api_path}/components/{root_comp.uuid}/provides"
+        == f"{api_path_with_domain}/components?sources={quote(root_comp.purl)}"
     )
     related_response = client.get(response.json()["provides"])
     assert related_response.status_code == 200
@@ -1472,7 +1480,7 @@ def test_oci_component_provides_sources_upstreams(client, api_path):
     assert "provides" not in response.json()
     assert (
         response.json()["upstreams"]
-        == f"http://testserver{api_path}/components/{root_comp.uuid}/upstreams"
+        == f"{api_path_with_domain}/components?downstreams={quote(root_comp.purl)}"
     )
     related_response = client.get(response.json()["upstreams"])
     assert related_response.status_code == 200
@@ -1485,7 +1493,7 @@ def test_oci_component_provides_sources_upstreams(client, api_path):
     assert "provides" not in response.json()
     assert (
         response.json()["sources"]
-        == f"http://testserver{api_path}/components/{dep_comp.uuid}/sources"
+        == f"{api_path_with_domain}/components?provides={quote(dep_comp.purl)}"
     )
     related_response = client.get(response.json()["sources"])
     assert related_response.status_code == 200
@@ -1501,7 +1509,7 @@ def test_srpm_component_provides_sources_upstreams(client, api_path):
         ├──(SOURCE) upstream_comp
         └──(PROVIDES) dep1_comp
 
-    Then we expect the following in terms of sources, providers and upstreams for each of these components.
+    Then we expect the following in terms of sources, providers and upstreams for these components:
 
     +--------------------+---------+----------+-----------+
     |                    | sources | provides | upstreams |
@@ -1517,10 +1525,12 @@ def test_srpm_component_provides_sources_upstreams(client, api_path):
     * SRPM -> arch RPM
     * binary RPM never have child dependencies
 
-    The data model does not impose this constraint eg. provides, sources and upstream property queries enforce
-    this behaviour.
+    The data model does not impose this constraint
+    eg. provides, sources and upstream property queries enforce this behaviour.
 
-    """  # noqa
+    """
+
+    api_path_with_domain = f"https://{settings.CORGI_DOMAIN}{api_path}"
     # create a top level root source component
     root_comp = ComponentFactory(
         name="root_comp",
@@ -1588,13 +1598,15 @@ def test_srpm_component_provides_sources_upstreams(client, api_path):
 
     assert response["name"] == root_comp.name
     assert response["related_url"] == root_comp.related_url
-    assert response["sources"] == f"http://testserver{api_path}/components/{root_comp.uuid}/sources"
+    assert (
+        response["sources"] == f"{api_path_with_domain}/components?provides={quote(root_comp.purl)}"
+    )
     related_response = client.get(response["sources"])
     assert related_response.status_code == 200
     assert related_response.json()["count"] == 0
 
     assert (
-        response["provides"] == f"http://testserver{api_path}/components/{root_comp.uuid}/provides"
+        response["provides"] == f"{api_path_with_domain}/components?sources={quote(root_comp.purl)}"
     )
     related_response = client.get(response["provides"])
     assert related_response.status_code == 200
@@ -1602,7 +1614,7 @@ def test_srpm_component_provides_sources_upstreams(client, api_path):
 
     assert (
         response["upstreams"]
-        == f"http://testserver{api_path}/components/{root_comp.uuid}/upstreams"
+        == f"{api_path_with_domain}/components?downstreams={quote(root_comp.purl)}"
     )
     related_response = client.get(response["upstreams"])
     assert related_response.status_code == 200
@@ -1611,20 +1623,23 @@ def test_srpm_component_provides_sources_upstreams(client, api_path):
     response = client.get(f"{api_path}/components/{dep_comp.uuid}")
     assert response.status_code == 200
     response = response.json()
-    assert response["sources"] == f"http://testserver{api_path}/components/{dep_comp.uuid}/sources"
+    assert (
+        response["sources"] == f"{api_path_with_domain}/components?provides={quote(dep_comp.purl)}"
+    )
     related_response = client.get(response["sources"])
     assert related_response.status_code == 200
     assert related_response.json()["count"] == 1
 
     assert (
-        response["provides"] == f"http://testserver{api_path}/components/{dep_comp.uuid}/provides"
+        response["provides"] == f"{api_path_with_domain}/components?sources={quote(dep_comp.purl)}"
     )
     related_response = client.get(response["provides"])
     assert related_response.status_code == 200
     assert related_response.json()["count"] == 0
 
     assert (
-        response["upstreams"] == f"http://testserver{api_path}/components/{dep_comp.uuid}/upstreams"
+        response["upstreams"]
+        == f"{api_path_with_domain}/components?downstreams={quote(dep_comp.purl)}"
     )
     related_response = client.get(response["upstreams"])
     assert related_response.status_code == 200
@@ -1635,7 +1650,7 @@ def test_srpm_component_provides_sources_upstreams(client, api_path):
     response = response.json()
     assert (
         response["sources"]
-        == f"http://testserver{api_path}/components/{upstream_comp.uuid}/sources"
+        == f"{api_path_with_domain}/components?provides={quote(upstream_comp.purl)}"
     )
     related_response = client.get(response["sources"])
     assert related_response.status_code == 200
@@ -1643,7 +1658,7 @@ def test_srpm_component_provides_sources_upstreams(client, api_path):
 
     assert (
         response["provides"]
-        == f"http://testserver{api_path}/components/{upstream_comp.uuid}/provides"
+        == f"{api_path_with_domain}/components?sources={quote(upstream_comp.purl)}"
     )
     related_response = client.get(response["provides"])
     assert related_response.status_code == 200
@@ -1651,7 +1666,7 @@ def test_srpm_component_provides_sources_upstreams(client, api_path):
 
     assert (
         response["upstreams"]
-        == f"http://testserver{api_path}/components/{upstream_comp.uuid}/upstreams"
+        == f"{api_path_with_domain}/components?downstreams={quote(upstream_comp.purl)}"
     )
     related_response = client.get(response["upstreams"])
     assert related_response.status_code == 200
@@ -1692,7 +1707,7 @@ def test_srpm_component_provides_sources_upstreams(client, api_path):
     assert "upstreams" not in response.json()
     assert (
         response.json()["provides"]
-        == f"http://testserver{api_path}/components/{root_comp.uuid}/provides"
+        == f"{api_path_with_domain}/components?sources={quote(root_comp.purl)}"
     )
     related_response = client.get(response.json()["provides"])
     assert related_response.status_code == 200
@@ -1705,7 +1720,7 @@ def test_srpm_component_provides_sources_upstreams(client, api_path):
     assert "provides" not in response.json()
     assert (
         response.json()["upstreams"]
-        == f"http://testserver{api_path}/components/{root_comp.uuid}/upstreams"
+        == f"{api_path_with_domain}/components?downstreams={quote(root_comp.purl)}"
     )
     related_response = client.get(response.json()["upstreams"])
     assert related_response.status_code == 200
@@ -1718,7 +1733,7 @@ def test_srpm_component_provides_sources_upstreams(client, api_path):
     assert "provides" not in response.json()
     assert (
         response.json()["sources"]
-        == f"http://testserver{api_path}/components/{dep_comp.uuid}/sources"
+        == f"{api_path_with_domain}/components?provides={quote(dep_comp.purl)}"
     )
     related_response = client.get(response.json()["sources"])
     assert related_response.status_code == 200

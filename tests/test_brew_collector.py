@@ -1,7 +1,7 @@
 import copy
 import json
 from types import SimpleNamespace
-from unittest.mock import call, patch
+from unittest.mock import ANY, call, patch
 
 import koji
 import pytest
@@ -27,6 +27,7 @@ from corgi.tasks.brew import (
     load_stream_brew_tags,
     save_component,
     slow_fetch_brew_build,
+    slow_save_container_children,
     slow_save_taxonomy,
 )
 from corgi.tasks.common import BUILD_TYPE
@@ -1260,10 +1261,22 @@ def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, moc
         with patch(
             "corgi.tasks.brew.Brew.check_red_hat_namespace", wraps=Brew.check_red_hat_namespace
         ) as wrapped_check_namespace:
-            build_id = "1781353"
-            slow_fetch_brew_build(build_id, SoftwareBuild.Type.BREW)
+            with patch(
+                "corgi.tasks.brew.slow_save_container_children.delay",
+                wraps=slow_save_container_children,
+            ) as wrapped_save_children:
+                build_id = "1781353"
+                slow_fetch_brew_build(build_id, SoftwareBuild.Type.BREW)
+                wrapped_save_children.assert_called_once_with(
+                    build_id, SoftwareBuild.Type.BREW, ANY, ANY, True
+                )
             wrapped_check_namespace.assert_called()
-        wrapped_save_taxonomy.assert_called_once_with(build_id, SoftwareBuild.Type.BREW)
+        save_taxonomy_call = call(build_id, SoftwareBuild.Type.BREW)
+        # Called twice - once at end of main fetch_brew_build task
+        # And once at end of save_container_children subtask
+        # Because we can't guarantee which will finish first
+        # and we need to save the whole taxonomy, even if children are saved / added later
+        wrapped_save_taxonomy.assert_has_calls((save_taxonomy_call, save_taxonomy_call))
     image_index = Component.objects.get(
         name="subctl-container", type=Component.Type.CONTAINER_IMAGE, arch="noarch"
     )

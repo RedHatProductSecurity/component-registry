@@ -159,7 +159,7 @@ def cpu_software_composition_analysis(build_uuid, force_process: bool = False):
     component_qs = Component.objects.filter(software_build=software_build)
     try:
         # Get root component for this build.
-        root_component = component_qs.root_components().get()
+        root_component = component_qs.root_components().exclude(type=Component.Type.RPMMOD).get()
     except Component.DoesNotExist as exc:
         # None of the components were root components
         module_qs = component_qs.filter(type=Component.Type.RPMMOD)

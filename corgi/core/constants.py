@@ -49,11 +49,15 @@ MODEL_FILTER_NAME_MAPPING = {
     "ProductVariant": "product_variants",
 }
 
-# Filter on "root components": SRPMs, index container images, or Github repos for managed services
+# Filter on "root components":
+# SRPMs, modules, index container images, or Github repos for managed services
 SRPM_CONDITION = Q(type="RPM", arch="src")
+RPMMOD_CONDITION = Q(type="RPMMOD")
 INDEX_CONTAINER_CONDITION = Q(type="OCI", arch="noarch")
 SERVICE_REPO_CONDITION = Q(type="GITHUB", namespace="REDHAT", arch="noarch")
-ROOT_COMPONENTS_CONDITION = SRPM_CONDITION | INDEX_CONTAINER_CONDITION | SERVICE_REPO_CONDITION
+ROOT_COMPONENTS_CONDITION = (
+    SRPM_CONDITION | RPMMOD_CONDITION | INDEX_CONTAINER_CONDITION | SERVICE_REPO_CONDITION
+)
 
 # Regex for generating el_match field
 EL_MATCH_RE = re.compile(r".*el(\d+)?[._-]?(\d+)?[._-]?(\d+)?(.*)")

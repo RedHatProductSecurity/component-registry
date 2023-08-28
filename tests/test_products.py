@@ -1,4 +1,5 @@
 import os
+from unittest.mock import patch
 
 import pytest
 from django.conf import settings
@@ -8,13 +9,23 @@ from corgi.collectors.models import (
     CollectorErrataProductVariant,
     CollectorErrataProductVersion,
 )
-from corgi.core.models import Product, ProductStream, ProductVersion
+from corgi.core.models import (
+    Product,
+    ProductComponentRelation,
+    ProductStream,
+    ProductVariant,
+    ProductVersion,
+)
 from corgi.tasks.prod_defs import (
     _find_by_cpe,
     _match_and_save_stream_cpes,
     update_products,
 )
-from tests.factories import ProductStreamFactory, ProductVersionFactory
+from tests.factories import (
+    ProductStreamFactory,
+    ProductVersionFactory,
+    SoftwareBuildFactory,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -79,6 +90,148 @@ def test_products(requests_mock):
     rhacm24z = ProductStream.objects.get(name="rhacm-2.4.z")
     assert et_variant.cpe not in rhacm24z.cpes
     assert et_variant.cpe in rhacm24z.cpes_from_brew_tags
+
+
+@pytest.mark.django_db
+@patch("corgi.tasks.prod_defs.slow_remove_product_from_build.delay")
+def test_stream_brew_tags_removed(mock_remove, requests_mock):
+    with open("tests/data/prod_defs/proddefs-update.json") as prod_defs:
+        text = prod_defs.read()
+        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+
+    update_products()
+    assert not mock_remove.called
+
+    stream = ProductStream.objects.get(name="stream")
+    assert stream.brew_tags == {"test_tag": False}
+
+    sb = SoftwareBuildFactory()
+
+    ProductComponentRelation.objects.create(
+        external_system_id="test_tag",
+        product_ref="stream",
+        software_build=sb,
+        type=ProductComponentRelation.Type.BREW_TAG,
+    )
+
+    with open("tests/data/prod_defs/proddefs-update-tag-removed.json") as prod_defs:
+        text = prod_defs.read()
+        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+
+    update_products()
+
+    assert not ProductComponentRelation.objects.filter(software_build=sb).exists()
+    assert mock_remove.called_with(
+        (
+            str(sb.pk),
+            "ProductStream",
+            stream.pk,
+        )
+    )
+
+
+@pytest.mark.django_db
+@patch("corgi.tasks.prod_defs.slow_remove_product_from_build.delay")
+def test_stream_new_brew_tags_with_old_builds(mock_remove, requests_mock):
+    with open("tests/data/prod_defs/proddefs-update-tag-with-old-build.json") as prod_defs:
+        text = prod_defs.read()
+        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+
+    update_products()
+
+    stream = ProductStream.objects.get(name="stream")
+    assert "test_tag" in stream.brew_tags
+    assert "another_tag" in stream.brew_tags
+    assert not mock_remove.called
+
+    sb = SoftwareBuildFactory()
+
+    ProductComponentRelation.objects.create(
+        external_system_id="test_tag",
+        product_ref="stream",
+        software_build=sb,
+        type=ProductComponentRelation.Type.BREW_TAG,
+    )
+
+    ProductComponentRelation.objects.create(
+        external_system_id="another_tag",
+        product_ref="stream",
+        software_build=sb,
+        type=ProductComponentRelation.Type.BREW_TAG,
+    )
+
+    with open("tests/data/prod_defs/proddefs-update-tag-with-old-build-removed.json") as prod_defs:
+        text = prod_defs.read()
+        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+
+    update_products()
+
+    stream.refresh_from_db()
+    assert "test_tag" not in stream.brew_tags
+    assert "another_tag" in stream.brew_tags
+    assert not ProductComponentRelation.objects.filter(external_system_id="test_tag").exists()
+    assert not mock_remove.called
+
+
+@pytest.mark.django_db
+@patch("corgi.tasks.prod_defs.slow_remove_product_from_build.delay")
+def test_stream_variants_with_old_builds(mock_remove, requests_mock):
+    with open("tests/data/prod_defs/proddefs-update-variant-with-old-build.json") as prod_defs:
+        text = prod_defs.read()
+        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+
+    et_product = CollectorErrataProduct.objects.create(
+        et_id=1, name="product", short_name="product"
+    )
+    et_product_version = CollectorErrataProductVersion.objects.create(
+        et_id=10,
+        name="version",
+        product=et_product,
+    )
+    CollectorErrataProductVariant.objects.create(
+        et_id=100,
+        name="variant",
+        product_version=et_product_version,
+    )
+
+    update_products()
+
+    stream = ProductStream.objects.get(name="stream")
+    assert "test_tag" in stream.brew_tags
+    assert not mock_remove.called
+
+    variant = ProductVariant.objects.get(name="variant")
+    assert variant in stream.productvariants.get_queryset()
+
+    sb = SoftwareBuildFactory()
+
+    ProductComponentRelation.objects.create(
+        external_system_id="test_tag",
+        product_ref="stream",
+        software_build=sb,
+        type=ProductComponentRelation.Type.BREW_TAG,
+    )
+
+    ProductComponentRelation.objects.create(
+        external_system_id="12345",
+        product_ref="variant",
+        software_build=sb,
+        type=ProductComponentRelation.Type.ERRATA,
+    )
+
+    with open(
+        "tests/data/prod_defs/proddefs-update-variant-with-old-build-removed.json"
+    ) as prod_defs:
+        text = prod_defs.read()
+        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+
+    update_products()
+
+    stream.refresh_from_db()
+    assert "test_tag" not in stream.brew_tags
+    assert variant in stream.productvariants.get_queryset()
+    assert not ProductComponentRelation.objects.filter(external_system_id="test_tag").exists()
+    assert not mock_remove.called
 
 
 @pytest.mark.django_db

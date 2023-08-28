@@ -3,16 +3,21 @@
     "stream": {
       "brew_tags": [
         {
-          "tag": "two_streams_with_same_tag",
+          "tag": "test_tag",
           "inherit": false
         }
-      ]
-    },
-    "new_stream": {
-      "brew_tags": [
+      ],
+      "errata_info": [
         {
-          "tag": "two_streams_with_same_tag",
-          "inherit": false
+          "product_name": "product",
+          "product_versions": [
+            {
+              "name": "version",
+              "variants":[
+                "variant"
+              ]
+            }
+          ]
         }
       ]
     }
@@ -20,10 +25,10 @@
   "ps_modules": {
     "version": {
       "active_ps_update_streams": [
-        "new_stream"
+        "stream"
       ],
       "ps_update_streams": [
-        "stream", "new_stream"
+        "stream"
       ]
     }
   },

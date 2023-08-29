@@ -82,8 +82,7 @@ def save_component(
 ) -> bool:
     meta = component.get("meta", {})
     if component["type"] not in Component.Type.values:
-        logger.warning("Tried to save component with unknown type: %s", component["type"])
-        return False
+        raise ValueError("Tried to save component with unknown type: %s", component["type"])
 
     syft_purl = meta.get("purl")
     if not syft_purl:
@@ -94,6 +93,8 @@ def save_component(
     created = False
     name = meta.pop("name", "")
     version = meta.pop("version", "")
+    release = meta.pop("release", "")
+    arch = meta.pop("arch", "noarch")
 
     namespace = Brew.check_red_hat_namespace(component["type"], version)
     if namespace == Component.Namespace.REDHAT:
@@ -116,8 +117,8 @@ def save_component(
             type=component["type"],
             name=name,
             version=version,
-            release="",
-            arch="noarch",
+            release=release,
+            arch=arch,
             defaults={
                 "meta_attr": meta,
                 "namespace": namespace,

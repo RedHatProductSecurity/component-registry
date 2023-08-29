@@ -113,7 +113,7 @@ def slow_fetch_brew_build(
     if component["type"] == Component.Type.RPM:
         root_node, root_created = save_srpm(softwarebuild, component)
     elif component["type"] == Component.Type.CONTAINER_IMAGE:
-        root_node, root_created = save_container(softwarebuild, component)
+        root_node, root_created = save_container(softwarebuild, component, save_product)
     elif component["type"] == Component.Type.RPMMOD:
         root_node, root_created = save_module(softwarebuild, component)
     else:
@@ -520,7 +520,9 @@ def set_license_declared_safely(obj: Component, license_declared_raw: str) -> No
         different_license.update(license_declared_raw=license_declared_raw)
 
 
-def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> tuple[ComponentNode, bool]:
+def save_container(
+    softwarebuild: SoftwareBuild, build_data: dict, save_product: bool
+) -> tuple[ComponentNode, bool]:
     license_declared_raw = build_data["meta"].pop("license", "")
     related_url = build_data["meta"].get("repository_url", "")
     if not related_url:
@@ -546,18 +548,7 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> tuple[Comp
     set_license_declared_safely(obj, license_declared_raw)
     root_node, root_node_created = save_node(ComponentNode.ComponentNodeType.SOURCE, None, obj)
     any_image_created = any_image_node_created = False
-    any_go_module_created = any_rpm_created = False
-    any_source_created = any_cachito_created = False
-
-    if "upstream_go_modules" in build_data["meta"]:
-        meta_attr = {"go_component_type": "gomod", "source": ["collectors/brew"]}
-        for module in build_data["meta"]["upstream_go_modules"]:
-            # the upstream commit is included in the dist-git commit history, but is not
-            # exposed anywhere in the brew data that I can find, so can't set version
-            _, _, temp_created = save_upstream(
-                Component.Type.GOLANG, module, "", meta_attr, {}, root_node
-            )
-            any_go_module_created |= temp_created
+    any_rpm_created = False
 
     if "image_components" in build_data:
         for image in build_data["image_components"]:
@@ -596,40 +587,91 @@ def save_container(softwarebuild: SoftwareBuild, build_data: dict) -> tuple[Comp
                     any_rpm_created |= save_component(rpm, image_arch_node)
                     # SRPMs are loaded using nested_builds
 
-    if "sources" in build_data:
-        for source in build_data["sources"]:
-            component_name = source["meta"].pop("name")
-            component_version = source["meta"].pop("version")
-            related_url = source["meta"].pop("url", "")
-            if not related_url:
-                # Handle case when key is present but value is None
-                related_url = ""
-                if component_name.startswith("github.com/"):
-                    related_url = f"https://{component_name}"
-            if "openshift-priv" in related_url:
-                # Component name is something like github.com/openshift-priv/cluster-api
-                # The public repo we want is just github.com/openshift/cluster-api
-                related_url = related_url.replace("openshift-priv", "openshift")
-
-            if source["type"] == Component.Type.GOLANG:
-                # Assume upstream container sources are always go modules, never go-packages
-                source["meta"]["go_component_type"] = "gomod"
-
-            extra = {"related_url": related_url}
-            _, upstream_node, temp_created = save_upstream(
-                source["type"], component_name, component_version, source["meta"], extra, root_node
-            )
-            any_source_created |= temp_created
-
-            # Collect the Cachito dependencies
-            temp_created = recurse_components(source, upstream_node)
-            any_cachito_created |= temp_created
+    slow_save_container_children.delay(
+        softwarebuild.build_id,
+        softwarebuild.build_type,
+        build_data,
+        str(root_node.pk),
+        save_product,
+    )
     return root_node, (
         (root_created or root_node_created)
         or (any_image_created or any_image_node_created)
-        or (any_go_module_created or any_rpm_created)
-        or (any_source_created or any_cachito_created)
+        or any_rpm_created
     )
+
+
+@app.task(
+    base=Singleton,
+    autoretry_for=RETRYABLE_ERRORS,
+    retry_kwargs=RETRY_KWARGS,
+    soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
+)
+def slow_save_container_children(
+    build_id: str,
+    build_type: str,
+    build_data: dict,
+    root_node_pk: str,
+    save_product: bool,
+) -> bool:
+    """Save provides / upstreams of a container in a separate task to avoid timeouts"""
+    logger.info(f"Saving upstreams for {build_type} container build {build_id}")
+    root_node = ComponentNode.objects.get(pk=root_node_pk)
+    logger.info(f"{build_type} container build {build_id} had root node with purl {root_node.purl}")
+    any_go_module_created = any_source_created = any_cachito_created = False
+
+    meta_attr = {"go_component_type": "gomod", "source": ["collectors/brew"]}
+    for module in build_data["meta"].get("upstream_go_modules", ()):
+        # the upstream commit is included in the dist-git commit history, but is not
+        # exposed anywhere in the brew data that I can find, so can't set version
+        _, _, temp_created = save_upstream(
+            Component.Type.GOLANG, module, "", meta_attr, {}, root_node
+        )
+        any_go_module_created |= temp_created
+
+    for source in build_data.get("sources", ()):
+        component_name = source["meta"].pop("name")
+        component_version = source["meta"].pop("version")
+        related_url = source["meta"].pop("url", "")
+        if not related_url:
+            # Handle case when key is present but value is None
+            related_url = ""
+            if component_name.startswith("github.com/"):
+                related_url = f"https://{component_name}"
+        if "openshift-priv" in related_url:
+            # Component name is something like github.com/openshift-priv/cluster-api
+            # The public repo we want is just github.com/openshift/cluster-api
+            related_url = related_url.replace("openshift-priv", "openshift")
+
+        if source["type"] == Component.Type.GOLANG:
+            # Assume upstream container sources are always go modules, never go-packages
+            source["meta"]["go_component_type"] = "gomod"
+
+        extra = {"related_url": related_url}
+        _, upstream_node, temp_created = save_upstream(
+            source["type"], component_name, component_version, source["meta"], extra, root_node
+        )
+        any_source_created |= temp_created
+
+        # Collect the Cachito dependencies
+        temp_created = recurse_components(source, upstream_node)
+        any_cachito_created |= temp_created
+
+    if save_product:
+        # slow_fetch_brew_build could finish before this task
+        # and the taxonomy it saved would be incomplete, if new nodes were added to the tree here
+        # So we save the taxonomy again in this task for safety
+
+        # If the other task hasn't finished yet, we won't put two in the queue (singleton task)
+        # But if the other task is currently running, it might have a stale view of the taxonomy
+        # which doesn't include any nodes we just created, so those nodes wouldn't get saved
+        # But the other task should definitely finish before the SCA task, which takes a long time
+        # The SCA task will then save the taxonomy again, so nothing should get missed
+
+        # Incomplete provides / upstreams ForeignKeys are probably still better
+        # than timeouts / failing to load a build and create all the child components
+        slow_save_taxonomy.delay(build_id, build_type)
+    return any_go_module_created or any_source_created or any_cachito_created
 
 
 def recurse_components(component: dict, parent: ComponentNode) -> bool:

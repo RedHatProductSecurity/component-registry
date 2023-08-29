@@ -778,8 +778,8 @@ def load_brew_tags(software_build: SoftwareBuild, brew_tags: list[str]) -> int:
     for stream_name, stream_tags in all_stream_tags:
         distinct_stream_tags = set(stream_tags)
         distinct_stream_tags = distinct_brew_tags.intersection(distinct_stream_tags)
+        brew, build_type, _ = _relation_context_for_stream(stream_name)
         for tag in distinct_stream_tags:
-            brew, build_type, _ = _relation_context_for_stream(stream_name)
             logger.info(f"Creating relations for {stream_name} and {tag}")
             # We do this inline instead of via create_relations function because
             # it's the only time we call it where we have a software_build object created
@@ -798,7 +798,7 @@ def load_brew_tags(software_build: SoftwareBuild, brew_tags: list[str]) -> int:
     return no_created
 
 
-def _relation_context_for_stream(stream_name: str):
+def _relation_context_for_stream(stream_name: str) -> tuple[Brew, SoftwareBuild.Type, app.task]:
     build_type = BUILD_TYPE
     brew = Brew(BUILD_TYPE)
     refresh_task = slow_fetch_modular_build

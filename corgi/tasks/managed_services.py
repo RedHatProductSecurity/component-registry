@@ -143,6 +143,13 @@ def cpu_manifest_service(product_stream_id: str, service_components: list) -> No
             )
 
             for component in analyzed_components:
+                if "-" in component["meta"]["version"]:
+                    # Syft uses version-release as the version
+                    # And then get_or_create fails (different NEVRA, same purl)
+                    # release needs to be in its own field to match other components
+                    version, release = component["meta"]["version"].split("-", 1)
+                    component["meta"]["version"] = version
+                    component["meta"]["release"] = release
                 save_component(component, root_node)
 
             ProductComponentRelation.objects.create(

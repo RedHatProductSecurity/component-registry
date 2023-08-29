@@ -3,7 +3,6 @@ import subprocess
 from datetime import datetime, timedelta
 from typing import Optional
 
-from celery.local import PromiseProxy
 from django.conf import settings
 from django.db.utils import InterfaceError as DjangoInterfaceError
 from django.utils import timezone
@@ -12,6 +11,7 @@ from psycopg2.errors import InterfaceError as Psycopg2InterfaceError
 from redis.exceptions import ConnectionError as RedisConnectionError
 from requests.exceptions import RequestException
 
+from config.celery import app
 from corgi.core.models import ProductComponentRelation, SoftwareBuild
 
 BACKOFF_KWARGS = {"max_tries": 5, "jitter": None}
@@ -76,7 +76,7 @@ def create_relations(
     external_system_id: str,
     product_ref: str,
     relation_type: ProductComponentRelation.Type,
-    refresh_task: Optional[PromiseProxy],
+    refresh_task: Optional[app.task],
 ) -> int:
     no_of_relations = 0
     for build_id in build_ids:

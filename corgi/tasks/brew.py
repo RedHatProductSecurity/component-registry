@@ -618,7 +618,7 @@ def slow_save_container_children(
     logger.info(f"Saving upstreams for {build_type} container build {build_id}")
     root_node = ComponentNode.objects.get(pk=root_node_pk)
     logger.info(f"{build_type} container build {build_id} had root node with purl {root_node.purl}")
-    any_go_module_created = any_source_created = any_cachito_created = False
+    any_go_module_created = any_source_created = False
 
     meta_attr = {"go_component_type": "gomod", "source": ["collectors/brew"]}
     for module in build_data["meta"].get("upstream_go_modules", ()):
@@ -652,10 +652,39 @@ def slow_save_container_children(
             source["type"], component_name, component_version, source["meta"], extra, root_node
         )
         any_source_created |= temp_created
+        slow_save_container_provides.delay(
+            build_id, build_type, source, upstream_node.pk, save_product
+        )
 
-        # Collect the Cachito dependencies
-        temp_created = recurse_components(source, upstream_node)
-        any_cachito_created |= temp_created
+    if save_product and not build_data.get("sources"):
+        # Save the taxonomy either here in this task (if only upstreams created),
+        # or in the task below (if both upstreams and provides created)
+        slow_save_taxonomy.delay(build_id, build_type)
+
+    return any_go_module_created or any_source_created
+
+
+@app.task(
+    base=Singleton,
+    autoretry_for=RETRYABLE_ERRORS,
+    retry_kwargs=RETRY_KWARGS,
+    soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
+)
+def slow_save_container_provides(
+    build_id: str,
+    build_type: str,
+    source: dict,
+    upstream_node_pk: ComponentNode,
+    save_product: bool,
+) -> bool:
+    """Save provides of a container in a separate task to avoid timeouts"""
+    logger.info(f"Saving provides for {build_type} container build {build_id}")
+    upstream_node = ComponentNode.objects.get(pk=upstream_node_pk)
+    logger.info(
+        f"{build_type} container build {build_id} had upstream node with purl {upstream_node.purl}"
+    )
+    # Collect the Cachito dependencies
+    cachito_created = recurse_components(source, upstream_node)
 
     if save_product:
         # slow_fetch_brew_build could finish before this task
@@ -671,7 +700,7 @@ def slow_save_container_children(
         # Incomplete provides / upstreams ForeignKeys are probably still better
         # than timeouts / failing to load a build and create all the child components
         slow_save_taxonomy.delay(build_id, build_type)
-    return any_go_module_created or any_source_created or any_cachito_created
+    return cachito_created
 
 
 def recurse_components(component: dict, parent: ComponentNode) -> bool:
@@ -778,8 +807,8 @@ def load_brew_tags(software_build: SoftwareBuild, brew_tags: list[str]) -> int:
     for stream_name, stream_tags in all_stream_tags:
         distinct_stream_tags = set(stream_tags)
         distinct_stream_tags = distinct_brew_tags.intersection(distinct_stream_tags)
+        brew, build_type, _ = _relation_context_for_stream(stream_name)
         for tag in distinct_stream_tags:
-            brew, build_type, _ = _relation_context_for_stream(stream_name)
             logger.info(f"Creating relations for {stream_name} and {tag}")
             # We do this inline instead of via create_relations function because
             # it's the only time we call it where we have a software_build object created
@@ -798,7 +827,7 @@ def load_brew_tags(software_build: SoftwareBuild, brew_tags: list[str]) -> int:
     return no_created
 
 
-def _relation_context_for_stream(stream_name: str):
+def _relation_context_for_stream(stream_name: str) -> tuple[Brew, SoftwareBuild.Type, app.task]:
     build_type = BUILD_TYPE
     brew = Brew(BUILD_TYPE)
     refresh_task = slow_fetch_modular_build

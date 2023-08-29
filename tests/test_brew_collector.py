@@ -28,6 +28,7 @@ from corgi.tasks.brew import (
     save_component,
     slow_fetch_brew_build,
     slow_save_container_children,
+    slow_save_container_provides,
     slow_save_taxonomy,
 )
 from corgi.tasks.common import BUILD_TYPE
@@ -1265,8 +1266,15 @@ def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, moc
                 "corgi.tasks.brew.slow_save_container_children.delay",
                 wraps=slow_save_container_children,
             ) as wrapped_save_children:
-                build_id = "1781353"
-                slow_fetch_brew_build(build_id, SoftwareBuild.Type.BREW)
+                with patch(
+                    "corgi.tasks.brew.slow_save_container_provides.delay",
+                    wraps=slow_save_container_provides,
+                ) as wrapped_save_provides:
+                    build_id = "1781353"
+                    slow_fetch_brew_build(build_id, SoftwareBuild.Type.BREW)
+                    wrapped_save_provides.assert_called_once_with(
+                        build_id, SoftwareBuild.Type.BREW, ANY, ANY, True
+                    )
                 wrapped_save_children.assert_called_once_with(
                     build_id, SoftwareBuild.Type.BREW, ANY, ANY, True
                 )

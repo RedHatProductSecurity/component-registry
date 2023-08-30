@@ -20,7 +20,7 @@
       "packageFileName": {% if component.filename %}"{{component.filename}}"{% else %}"NOASSERTION"{% endif %},
       "SPDXID": "SPDXRef-{{component.uuid}}",
       "supplier": "Organization: Red Hat",
-      "versionInfo": "{{component.nevra|escapejs}}"
+      "versionInfo": "{% if component.epoch %}{{component.epoch|escapejs}}-{% endif %}{{component.version}}{% if component.release %}-{{component.release}}{% endif %}"
     },{% endfor %}{% if obj.type != obj.Type.RPM %}{% for upstream in obj.upstreams.iterator %}{# RPM upstream data is human-generated and unreliable #}{
       "copyrightText": {% if upstream.copyright_text %}"{{upstream.copyright_text|escapejs}}"{% else %}"NOASSERTION"{% endif %},
       "downloadLocation": {% if upstream.download_url %}"{{upstream.download_url|escapejs}}"{% else %}"NOASSERTION"{% endif %},
@@ -40,7 +40,7 @@
       "packageFileName": {% if upstream.filename %}"{{upstream.filename}}"{% else %}"NOASSERTION"{% endif %},
       "SPDXID": "SPDXRef-{{upstream.uuid}}",
       "supplier": "NOASSERTION",
-      "versionInfo": "{{upstream.nevra|escapejs}}"
+      "versionInfo": "{% if upstream.epoch %}{{upstream.epoch|escapejs}}-{% endif %}{{upstream.version|escapejs}}{% if upstream.release %}-{{upstream.release|escapejs}}{% endif %}"
     },{% endfor %}{% endif %}
     {
       "copyrightText": {% if obj.copyright_text %}"{{obj.copyright_text|escapejs}}"{% else %}"NOASSERTION"{% endif %},
@@ -62,7 +62,7 @@
       "packageFileName": {% if obj.filename %}"{{obj.filename}}"{% else %}"NOASSERTION"{% endif %},
       "SPDXID": "SPDXRef-{{obj.uuid}}",
       "supplier": "Organization: Red Hat",
-      "versionInfo": "{{obj.nevra|escapejs}}"
+      "versionInfo": "{% if obj.epoch %}{{obj.epoch|escapejs}}-{% endif %}{{obj.version|escapejs}}{% if obj.release %}-{{obj.release|escapejs}}{% endif %}"
     }{% endblock packages %}
 {% block relationships %}{% for node_purl, node_type, node_id in obj.get_provides_nodes_queryset %}
     {

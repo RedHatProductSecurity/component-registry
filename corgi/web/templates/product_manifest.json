@@ -20,7 +20,7 @@
       "packageFileName": {% if component.filename %}"{{component.filename}}"{% else %}"NOASSERTION"{% endif %},
       "SPDXID": "SPDXRef-{{component.uuid}}",
       "supplier": "Organization: Red Hat",
-      "versionInfo": "{{component.nevra|escapejs}}"
+      "versionInfo": "{% if component.epoch %}{{component.epoch|escapejs}}-{% endif %}{{component.version|escapejs}}{% if component.release %}-{{component.release|escapejs}}{% endif %}"
     },{% endfor %}{% for upstream in distinct_upstreams.iterator %}{
       "copyrightText": {% if upstream.copyright_text %}"{{upstream.copyright_text|escapejs}}"{% else %}"NOASSERTION"{% endif %},
       "downloadLocation": {% if upstream.download_url %}"{{upstream.download_url|escapejs}}"{% else %}"NOASSERTION"{% endif %},
@@ -40,7 +40,7 @@
       "packageFileName": {% if upstream.filename %}"{{upstream.filename}}"{% else %}"NOASSERTION"{% endif %},
       "SPDXID": "SPDXRef-{{upstream.uuid}}",
       "supplier": "NOASSERTION",
-      "versionInfo": "{{upstream.nevra|escapejs}}"
+      "versionInfo": "{% if upstream.epoch %}{{upstream.epoch|escapejs}}-{% endif %}{{upstream.version|escapejs}}{% if upstream.release %}-{{upstream.release|escapejs}}{% endif %}"
     },{% endfor %}{% for provided in distinct_provides.iterator %}
     {
       "copyrightText": {% if provided.copyright_text %}"{{provided.copyright_text|escapejs}}"{% else %}"NOASSERTION"{% endif %},
@@ -62,7 +62,7 @@
       "packageFileName": {% if provided.filename %}"{{provided.filename}}"{% else %}"NOASSERTION"{% endif %},
       "SPDXID": "SPDXRef-{{provided.uuid}}",
       "supplier": "Organization: Red Hat",
-      "versionInfo": "{{provided.nevra|escapejs}}"
+      "versionInfo": "{% if provided.epoch %}{{provided.epoch|escapejs}}-{% endif %}{{provided.version|escapejs}}{% if provided.release %}-{{provided.release|escapejs}}{% endif %}"
     },{% endfor %}
     {
       "copyrightText": "NOASSERTION",
@@ -83,7 +83,7 @@
       "packageFileName": "NOASSERTION",
       "SPDXID": "SPDXRef-{{obj.uuid}}",
       "supplier": "Organization: Red Hat",
-      "versionInfo": "{{obj.version}}"
+      "versionInfo": "{% if obj.epoch %}{{obj.epoch|escapejs}}-{% endif %}{{obj.version|escapejs}}{% if obj.release %}-{{obj.release|escapejs}}{% endif %}"
     }{% endblock packages %}
 {% block relationships %}{% for component in released_components %}{% for node_purl, node_type, node_id in component.get_provides_nodes_queryset %}
     {

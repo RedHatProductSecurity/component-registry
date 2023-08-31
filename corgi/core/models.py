@@ -1554,8 +1554,8 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     def save_component_taxonomy(self):
         """Link related components together using foreign keys. Avoids repeated MPTT tree lookups"""
         self.upstreams.set(self.get_upstreams_pks(using="default"))
-        self.provides.set(self.get_provides_nodes(using="default"))
-        self.sources.set(self.get_sources_nodes(using="default"))
+        self.provides.set(self.get_provides_pks(using="default"))
+        self.sources.set(self.get_sources_pks(using="default"))
 
     @property
     def provides_queryset(self, using: str = "read_only") -> Iterator["Component"]:
@@ -1913,9 +1913,8 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         """Return an SPDX-style manifest in JSON format."""
         return ComponentManifestFile(self).render_content()
 
-    def get_provides_nodes(self, include_dev: bool = True, using: str = "read_only") -> set[str]:
-        """return a set of descendant ids with PROVIDES ComponentNode type"""
-        # Used in taxonomies. Returns only PKs
+    def get_provides_pks(self, include_dev: bool = True, using: str = "read_only") -> set[str]:
+        """Return Component PKs which are PROVIDES descendants of this Component, for taxonomies"""
         provides_set = set()
 
         type_list: tuple[ComponentNode.ComponentNodeType, ...] = (
@@ -1936,8 +1935,8 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     def get_provides_nodes_queryset(
         self, include_dev: bool = True, using: str = "read_only"
     ) -> QuerySet[ComponentNode]:
-        """return a QuerySet of descendants with PROVIDES ComponentNode type"""
-        # Used in manifests. Returns a QuerySet of (node_purl, node type, linked component UUID)
+        """Return (node purl, node type, component PK) which are PROVIDES descendants of this Component,
+        for manifests"""
         type_list: tuple[ComponentNode.ComponentNodeType, ...] = (
             ComponentNode.ComponentNodeType.PROVIDES,
         )
@@ -1963,8 +1962,9 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             .iterator()
         )
 
-    def get_sources_nodes(self, include_dev: bool = True, using: str = "read_only") -> set[str]:
-        """Return a set of ancestors ids for all PROVIDES ComponentNodes"""
+    def get_sources_pks(self, include_dev: bool = True, using: str = "read_only") -> set[str]:
+        """Return Component PKs which are ancestors of this Component's PROVIDES nodes,
+        for taxonomies"""
         sources_set = set()
         type_list: tuple[ComponentNode.ComponentNodeType, ...] = (
             ComponentNode.ComponentNodeType.PROVIDES,
@@ -1983,52 +1983,55 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             )
         return sources_set
 
-    def get_upstreams_nodes(self, using: str = "read_only") -> list[ComponentNode]:
+    def get_upstreams_nodes(self, using: str = "read_only") -> QuerySet[ComponentNode]:
         """return upstreams component ancestors in family trees"""
-        # The get_roots logic is too complicated to use only Django filtering
-        # So it has to use Python logic and return a set, instead of a QuerySet
-        # which forces us to use Python in this + all other get_upstreams_* methods
-        upstreams = []
-        roots = self.get_roots(using=using)
-        for root in roots:
+        upstream_pks = set()
+        for root in self.get_roots(using=using).iterator():
             # For SRPM/RPMS, and noarch containers, these are the cnodes we want.
             source_descendants = (
                 root.get_descendants()
                 .filter(type=ComponentNode.ComponentNodeType.SOURCE)
+                .values_list("pk", flat=True)
                 .using(using)
             )
-            # Cachito builds nest components under the relevant source component for that
+            # Cachito manifests nest components under the relevant arch-specific container for that
             # container build, eg. buildID=1911112. In that case we need to walk up the
-            # tree from the current node to find its relevant source
+            # tree from the current node to find its relevant upstream component
             root_obj = root.obj
             if (
                 root_obj
                 and root_obj.type == Component.Type.CONTAINER_IMAGE
                 and root_obj.arch == "noarch"
-                and source_descendants.count() > 1
+                and root_obj != self
+                # The root obj is a container, and not this component
+                # Look for SOURCE-type ancestors of the current component
             ):
-                upstreams.extend(
-                    self.cnodes.get_queryset()
-                    .get_ancestors(include_self=True)
-                    .filter(
-                        type=ComponentNode.ComponentNodeType.SOURCE,
-                        component__namespace=Component.Namespace.UPSTREAM,
-                    )
+                upstream_pks.update(
+                    self.cnodes.filter(tree_id=root.tree_id)
+                    .get_ancestors()
+                    .filter(type=ComponentNode.ComponentNodeType.SOURCE)
+                    .exclude(parent=None)
+                    .values_list("pk", flat=True)
                     .using(using)
                     .iterator()
                 )
             else:
-                upstreams.extend(source_descendants)
-        return upstreams
+                # Else we're processing a non-container root
+                # So include all SOURCE-type descendants (SRPMs should only have 1)
+                # RPMMODs and managed service GitHub repos should have 0
+                # Not sure about Red Hat Maven components, probably depends on CORGI-796
+                # OR the root obj is a container but is the same component we're processing
+                # So "source descendants" should just be the Brew "sources" and Go modules
+                upstream_pks.update(source_descendants)
+        return ComponentNode.objects.filter(pk__in=upstream_pks).using(using)
 
-    def get_upstreams_pks(self, using: str = "read_only") -> tuple[str, ...]:
-        """Return only the primary keys from the set of all upstream nodes"""
-        linked_pks = set(str(node.object_id) for node in self.get_upstreams_nodes(using=using))
-        return tuple(linked_pks)
+    def get_upstreams_pks(self, using: str = "read_only") -> QuerySet:
+        """Return only the linked Component primary keys from the set of all upstream nodes"""
+        return self.get_upstreams_nodes(using=using).values_list("object_id", flat=True).distinct()
 
-    def get_upstreams_purls(self, using: str = "read_only") -> set[str]:
+    def get_upstreams_purls(self, using: str = "read_only") -> QuerySet:
         """Return only the purls from the set of all upstream nodes"""
-        return set(node.purl for node in self.get_upstreams_nodes(using=using))
+        return self.get_upstreams_nodes(using=using).values_list("purl", flat=True).distinct()
 
     def disassociate_with_product(self, product_ref: ProductModel) -> None:
         """Disassociate this component with the passed in ProductModel and any child ProductModels

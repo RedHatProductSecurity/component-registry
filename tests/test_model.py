@@ -598,7 +598,7 @@ def test_get_upstream():
         parent=srpm_cnode,
         obj=srpm_upstream,
     )
-    assert sorted(rpm.get_upstreams_purls(using="default")) == [srpm_upstream.purl]
+    assert rpm.get_upstreams_purls(using="default").get() == srpm_upstream.purl
 
 
 def test_get_upstream_container():
@@ -625,7 +625,37 @@ def test_get_upstream_container():
     )
     # 2. RPM children report only RPM upstreams, but there are none here
     # We only have container upstreams, which we don't want to report
-    assert not container_rpm.get_upstreams_purls(using="default")
+    assert not container_rpm.get_upstreams_purls(using="default").exists()
+    # 2. If the binary RPM is in multiple trees (this container and a source RPM),
+    # then only the source RPM's upstreams will be reported
+    source_rpm = SrpmComponentFactory(
+        name=container_rpm.name,
+        version=container_rpm.version,
+        epoch=container_rpm.epoch,
+        release=container_rpm.release,
+    )
+    upstream_rpm = UpstreamComponentFactory(
+        type=Component.Type.RPM,
+        name=container_rpm.name,
+        version=container_rpm.version,
+        epoch=container_rpm.epoch,
+    )
+    source_rpm_cnode = ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        obj=source_rpm,
+    )
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=source_rpm_cnode,
+        obj=upstream_rpm,
+    )
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.PROVIDES,
+        parent=source_rpm_cnode,
+        obj=container_rpm,
+    )
+    assert container_rpm.get_upstreams_purls(using="default").get() == upstream_rpm.purl
 
     # 1. The index container created above has an arch-specific child container
     container_source = ChildContainerImageComponentFactory(
@@ -633,27 +663,36 @@ def test_get_upstream_container():
         epoch=container.epoch,
         version=container.version,
         release=container.release,
+        arch="aarch64",
     )
     container_source_cnode = ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=container_cnode,
         obj=container_source,
     )
-    assert container.get_upstreams_purls(using="default") == {container_source.purl}
-    # TODO: The assert above succeeds when there's only one source / child container
-    #  But the assert below fails when there are multiple source / child containers
-    #  We get an empty set due to filtering in one of the upstreams_* functions
+    assert container.get_upstreams_purls(using="default").get() == container_source.purl
+    # 3. Upstream components do not have any upstreams of their own
+    assert not container_source.get_upstreams_purls(using="default").exists()
 
-    container_source_2 = ContainerImageComponentFactory(name="container_source_2")
+    # 1. The index container created above has another arch-specific child container
+    container_source_other = ChildContainerImageComponentFactory(
+        name=container.name,
+        epoch=container.epoch,
+        version=container.version,
+        release=container.release,
+        arch="x86_64",
+    )
     ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=container_cnode,
-        obj=container_source_2,
+        obj=container_source_other,
     )
     assert sorted(container.get_upstreams_purls(using="default")) == [
         container_source.purl,
-        container_source_2.purl,
+        container_source_other.purl,
     ]
+    # 3. Upstream components do not have any upstreams of their own
+    assert not container_source_other.get_upstreams_purls(using="default").exists()
 
     container_nested = UpstreamComponentFactory(name="container_nested", type=Component.Type.NPM)
     ComponentNode.objects.create(
@@ -662,28 +701,30 @@ def test_get_upstream_container():
         obj=container_nested,
     )
     # 3. Upstream components do not have any upstreams of their own
-    assert not container_nested.get_upstreams_purls(using="default")
+    assert not container_nested.get_upstreams_purls(using="default").exists()
 
-    container_o_source = UpstreamComponentFactory(
+    container_upstream_other = UpstreamComponentFactory(
         name="contain_upstream_other",
         type=Component.Type.PYPI,
     )
-    container_o_source_cnode = ComponentNode.objects.create(
+    container_upstream_other_cnode = ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=container_cnode,
-        obj=container_o_source,
+        obj=container_upstream_other,
     )
+    # 3. Upstream components do not have any upstreams of their own
+    assert not container_upstream_other.get_upstreams_purls(using="default").exists()
 
-    container_other_nested = UpstreamComponentFactory(
+    container_nested_other = UpstreamComponentFactory(
         name="container_nested_other", type=Component.Type.NPM
     )
     ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
-        parent=container_o_source_cnode,
-        obj=container_other_nested,
+        parent=container_upstream_other_cnode,
+        obj=container_nested_other,
     )
     # 3. Upstream components do not have any upstreams of their own
-    assert not container_other_nested.get_upstreams_purls(using="default")
+    assert not container_nested_other.get_upstreams_purls(using="default").exists()
 
 
 def test_purl2url():

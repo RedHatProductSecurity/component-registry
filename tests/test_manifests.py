@@ -141,7 +141,7 @@ def test_slim_rpm_in_containers_manifest():
     provided = set()
     # Each component has 1 node each
     for released_component in released_components:
-        component_nodes = released_component.get_provides_nodes()
+        component_nodes = released_component.get_provides_pks()
         assert len(component_nodes) == 1
         provided.update(component_nodes)
 
@@ -417,7 +417,7 @@ def test_component_manifest_properties():
 
     manifest = json.loads(component.manifest)
 
-    num_provided = len(component.get_provides_nodes())
+    num_provided = len(component.get_provides_pks())
 
     assert num_provided == 2
 

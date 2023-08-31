@@ -786,6 +786,7 @@ class ProductComponentRelation(TimeStampedModel):
         ERRATA = "ERRATA"
         COMPOSE = "COMPOSE"
         BREW_TAG = "BREW_TAG"
+        CDN_REPO = "CDN_REPO"
         YUM_REPO = "YUM_REPO"
         APP_INTERFACE = "APP_INTERFACE"
         SBOMER = "SBOMER"
@@ -796,6 +797,7 @@ class ProductComponentRelation(TimeStampedModel):
 
     # ProductComponentRelation types which refer to ProductVariants
     VARIANT_TYPES = (
+        Type.CDN_REPO,
         Type.ERRATA,
         Type.SBOMER,
     )

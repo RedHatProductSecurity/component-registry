@@ -24,6 +24,13 @@ RPM_CRITERIA = {
     }
 }
 
+MODULE_CRITERIA = {
+    "criteria": {
+        "fields": {"unit": ["name", "stream", "artifacts", "version", "context", "arch"]},
+        "type_ids": ["modulemd"],
+    }
+}
+
 
 class Pulp:
     def __init__(self):
@@ -55,10 +62,18 @@ class Pulp:
                 logger.info("Created CollectorRPMRepository with id %s", repo["id"])
         return no_created
 
+    def get_module_data(self, repo: str) -> Generator[str, None, None]:
+        module_data = self._get_module_data(repo)
+        # Pulp collector only handles builds of type Brew
+        yield from Brew(SoftwareBuild.Type.BREW).persist_modules(module_data)
+
+    def _get_module_data(self, repo) -> dict[str, list[str]]:
+        module_data = self._get_unit_data(repo, MODULE_CRITERIA)
+        return self.get_rpms_by_module(module_data)
+
     @staticmethod
     def get_rpms_by_module(module_data: list[dict[str, dict]]) -> dict[str, list[str]]:
         """Given a list of modules return a mapping of module NSVCs to a list of module artifacts"""
-        # Still needed for corgi.tasks.yum.slow_load_yum_repositories_by_stream
         rpms_by_module = {}
         for entry in module_data:
             name = entry["metadata"]["name"]

@@ -334,7 +334,7 @@ def test_product_stream_builds():
         software_build=rhel_8_2_build,
     )
     ProductComponentRelation.objects.create(
-        type=ProductComponentRelation.Type.ERRATA,
+        type=ProductComponentRelation.Type.CDN_REPO,
         # This is a product variant ref, and also a child of rhel_8_2 stream
         product_ref=rhel_8_2_base.name,
         software_build=rhel_8_2_base_build,

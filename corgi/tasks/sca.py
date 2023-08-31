@@ -46,6 +46,8 @@ def find_duplicate_component(meta_name: str, syft_purl: str) -> Component:
     # This probably isn't a bug in Syft, but we need names to match Brew's case
     # Sometimes Brew has lowercase and sometimes it's mixed-case
     # We can't just lowercase all names / NEVRAs because e.g. search apps need the original casing
+    # TODO: This is wrong - purl is not guaranteed to be lowercase either
+    #  Only certain types like GitHub or PyPI have their purls lowercased
     syft_purl = syft_purl.lower()
     possible_dupe = Component.objects.get(purl=syft_purl)
 
@@ -82,27 +84,54 @@ def save_component(
 ) -> bool:
     meta = component.get("meta", {})
     if component["type"] not in Component.Type.values:
-        logger.warning("Tried to save component with unknown type: %s", component["type"])
-        return False
+        raise ValueError("Tried to save component with unknown type: %s", component["type"])
 
+    component_type = component["type"].lower()
     syft_purl = meta.get("purl")
     if not syft_purl:
+        # TODO: Needs a lot more work and tests
+        # But this fixes the most basic issues for now
+        qualifiers = {}
+
+        version = meta.get("version", "")
+        release = meta.get("release")
+        if version and release:
+            version = f"{version}-{release}"
+
+        arch = meta.get("arch")
+        if arch:
+            qualifiers["arch"] = arch
+        # TODO: Might need a epoch qualifier
+
         syft_purl = PackageURL(
-            type=component["type"], name=meta.get("name", ""), version=meta.get("version", "")
+            type=component_type,
+            name=meta.get("name", ""),
+            version=version,
+            qualifiers=qualifiers,
         ).to_string()
 
     created = False
     name = meta.pop("name", "")
     version = meta.pop("version", "")
+    release = meta.pop("release", "")
+    arch = meta.pop("arch", "noarch")
 
     namespace = Brew.check_red_hat_namespace(component["type"], version)
     if namespace == Component.Namespace.REDHAT:
-        # Add an extra &repository_url= qualifier to the end
-        # if any other qualifiers are already present
-        # Otherwise add the first (only) qualifier, ?repository_url=
-        # TODO: Check Syft isn't encoding these weirdly
-        suffix = "&" if "?" in syft_purl else "?"
-        syft_purl = f"{syft_purl}{suffix}{RED_HAT_MAVEN_REPOSITORY}"
+        if component["type"] == Component.Type.MAVEN:
+            # Don't prepend the namespace, Maven-type purls don't allow this
+            # Add an extra &repository_url= qualifier to the end
+            # if any other qualifiers are already present
+            # Otherwise add the first (only) qualifier, ?repository_url=
+            # TODO: Check Syft isn't encoding these weirdly
+            suffix = "&repository_url=" if "?" in syft_purl else "?repository_url="
+            syft_purl = f"{syft_purl}{suffix}{RED_HAT_MAVEN_REPOSITORY}"
+        elif component["type"] not in Component.CUSTOM_NAMESPACE_TYPES:
+            # Add the REDHAT namespace to the beginning
+            syft_purl = syft_purl.replace(
+                f"pkg:{component_type}/", f"pkg:{component_type}/{namespace.lower()}", 1
+            )
+        # Else it was a type with custom logic for namespace handling, don't prepend the namespace
 
     if component["type"] == Component.Type.GOLANG:
         # Syft doesn't support go-package detection
@@ -116,8 +145,8 @@ def save_component(
             type=component["type"],
             name=name,
             version=version,
-            release="",
-            arch="noarch",
+            release=release,
+            arch=arch,
             defaults={
                 "meta_attr": meta,
                 "namespace": namespace,

@@ -42,7 +42,7 @@ class TagFilter(Filter):
                 )
             else:
                 queryset = queryset.filter(tags__name__icontains=tag)
-        return queryset
+        return queryset.distinct()
 
 
 class ComponentFilter(FilterSet):

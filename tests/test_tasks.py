@@ -549,6 +549,34 @@ def test_slow_fetch_pnc_sbom():
 
         wrapped_save_taxonomy.assert_called_once_with(build["id"], SoftwareBuild.Type.PNC)
 
+        # Check that pedigree components were created
+        agroal_narayana = Component.objects.get(
+            name="agroal-narayana",
+            version="1.17.0.redhat-00001",
+            type=Component.Type.MAVEN,
+            namespace=Component.Namespace.REDHAT,
+        )
+
+        agroal_narayana_pedigree = Component.objects.get(
+            name="agroal-narayana",
+            version="1.17.0.redhat-00001",
+            type=Component.Type.GITHUB,
+            namespace=Component.Namespace.UPSTREAM,
+        )
+
+        component_node = ComponentNode.objects.get(
+            purl=agroal_narayana.purl,
+            type=ComponentNode.ComponentNodeType.PROVIDES,
+        )
+
+        pedigree_nodes = ComponentNode.objects.filter(
+            purl=agroal_narayana_pedigree.purl,
+            type=ComponentNode.ComponentNodeType.SOURCE,
+        )
+
+        assert pedigree_nodes.count() == 1
+        assert pedigree_nodes.first().parent == component_node
+
         # Test with an SBOM available message that has a PV that
         # doesn't exist in ET. An sbom object shouldn't be created,
         # because the fetch task should log that the PV doesn't exist

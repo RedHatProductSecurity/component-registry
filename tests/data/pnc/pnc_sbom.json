@@ -78,7 +78,7 @@
                     "commits": [
                         {
                             "uid": "370253ca4fca2c2f5c4b86b3c7febd94193dc16c",
-                            "url": "https://example.com/gerrit/quarkusio/quarkus-platform.git#2.13.8.Final-redhat-00003"
+                            "url": "https://example.redhat.com/gerrit/quarkusio/quarkus-platform.git#2.13.8.Final-redhat-00003"
                         }
                     ]
                 },
@@ -173,7 +173,7 @@
                     "commits": [
                         {
                             "uid": "31889b928ec4e6991552f214744c48fe74646b12",
-                            "url": "https://example.com/gerrit/agroal/agroal.git#1.17.0.redhat-00001"
+                            "url": "https://github.com/agroal/agroal.git"
                         }
                     ]
                 },
@@ -380,7 +380,11 @@
                     "commits": [
                         {
                             "uid": "38decebceeda9b5bb50e3997936afbcba9c088d8",
-                            "url": "https://example.com/gerrit/smallrye/smallrye-mutiny.git#1.7.0.redhat-00001"
+                            "url": "https://example.github.com/smallrye/smallrye-mutiny"
+                        },
+                        {
+                            "uid": "27decebceeda9b5bb50e3997936afbcba9c088d7",
+                            "url": "https://example.smallrye.com/smallrye/smallrye-mutiny"
                         }
                     ]
                 },

@@ -1,4 +1,5 @@
 import logging
+from urllib.parse import urlparse
 
 import requests
 from celery_singleton import Singleton
@@ -58,6 +59,7 @@ def slow_fetch_pnc_sbom(purl: str, product_data, build_data, sbom_data) -> None:
 
     # Create components
     components = {}
+    pedigrees = {}  # Support pedigree reports, see CORGI-796
     for bomref, component in sbom.components.items():
         defaults = {"namespace": component["namespace"], "meta_attr": component["meta_attr"]}
 
@@ -81,6 +83,46 @@ def slow_fetch_pnc_sbom(purl: str, product_data, build_data, sbom_data) -> None:
         )
 
         set_license_declared_safely(components[bomref], ";".join(component["licenses"]))
+
+        # If this component has a pedigree, create a component for that as well
+        if component["meta_attr"].get("pedigree"):
+            # Find upstream commits in pedigree history
+            # Components might have more than one pedigree commit, but because
+            # of uniqueness constraints, only Github upstreams are created here,
+            # and then only for the first commit in the list. See CORGI-796 for
+            # more information.
+            for commit in component["meta_attr"]["pedigree"].get("commits"):
+                host = urlparse(commit["url"]).hostname
+                # Only create pedigree components for external sources
+                if not host.endswith("redhat.com"):
+                    if host.endswith("github.com"):
+                        pedigree_type = Component.Type.GITHUB
+                    else:
+                        logger.warning(
+                            "Component %s has non-Github external pedigree, skipping it."
+                        )
+                        continue
+
+                    pedigree, _ = Component.objects.get_or_create(
+                        type=pedigree_type,
+                        name=component["name"],
+                        version=component["version"],
+                        release="",
+                        arch="noarch",
+                        defaults={
+                            "namespace": Component.Namespace.UPSTREAM,
+                            "meta_attr": {
+                                "commit": commit,
+                            },
+                        },
+                    )
+
+                    # Components might have more than one pedigree commit
+                    # Because of component uniqueness constraints, k
+                    if bomref not in pedigrees:
+                        pedigrees[bomref] = [pedigree]
+                    else:
+                        pedigrees[bomref].append(pedigree)
 
     # Link dependencies
     nodes = {}
@@ -116,6 +158,16 @@ def slow_fetch_pnc_sbom(purl: str, product_data, build_data, sbom_data) -> None:
                 defaults={
                     "obj": components[dep],
                 },
+            )
+
+    # Create relationships for pedigree components
+    for component, commits in pedigrees.items():
+        for commit in commits:
+            ComponentNode.objects.create(
+                type=ComponentNode.ComponentNodeType.SOURCE,
+                parent=nodes[component],
+                purl=components[parent].purl,
+                obj=commit,
             )
 
     # Save product taxonomy

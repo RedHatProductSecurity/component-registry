@@ -18,6 +18,8 @@ forwarded_allow_ips = "*"
 
 timeout = 300
 
+keepalive = 5
+
 if not running_dev():
     # Saves memory in the worker process, but breaks --reload
     preload_app = True

@@ -1,0 +1,38 @@
+{
+  "ps_update_streams": {
+    "stream": {
+      "errata_info": [
+        {
+          "product_name": "product",
+          "product_versions": [
+            {
+              "name": "version",
+              "variants":[
+                "variant"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "ps_modules": {
+    "version": {
+      "active_ps_update_streams": [
+        "stream"
+      ],
+      "ps_update_streams": [
+        "stream"
+      ]
+    }
+  },
+  "ps_products": {
+    "product": {
+      "name": "product",
+      "ps_modules": [
+        "version"
+      ],
+      "business_unit": "test"
+    }
+  }
+}

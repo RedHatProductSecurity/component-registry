@@ -15,6 +15,7 @@ from corgi.collectors.models import (
 from corgi.collectors.prod_defs import ProdDefs
 from corgi.core.models import (
     Product,
+    ProductComponentRelation,
     ProductNode,
     ProductStream,
     ProductVariant,
@@ -238,7 +239,8 @@ def parse_product_stream(
     cpes_from_brew_tags = _parse_cpes_from_brew_tags(brew_tags_dict, name, product_version.name)
 
     logger.debug("Creating or updating Product Stream: name=%s", name)
-    product_stream, _ = ProductStream.objects.update_or_create(
+
+    product_stream, stream_created = ProductStream.objects.update_or_create(
         name=name,
         defaults={
             "version": version,
@@ -263,8 +265,45 @@ def parse_product_stream(
             "obj": product_stream,
         },
     )
+    if not stream_created:
+        _clean_orphaned_brew_tags(set(brew_tags_dict.keys()), name, str(product_stream.pk))
     parse_errata_info(errata_info, product, product_stream, product_stream_node, product_version)
     product_stream.save_product_taxonomy()
+
+
+def _clean_orphaned_brew_tags(brew_tags: set[str], name: str, product_stream_pk: str) -> None:
+    relations_to_remove = (
+        ProductComponentRelation.objects.filter(
+            type=ProductComponentRelation.Type.BREW_TAG, product_ref=name
+        )
+        .exclude(external_system_id__in=brew_tags)
+        .iterator()
+    )
+    related_product_refs: set[str] = {name}
+    related_product_refs.update(
+        ProductStream.objects.get(pk=product_stream_pk).productvariants.values_list(
+            "name", flat=True
+        )
+    )
+    for relation_to_remove in relations_to_remove:
+        # Make sure there is no other relation linking this build to the stream or it's child
+        # variants before removing
+        existing_stream_relation = (
+            ProductComponentRelation.objects.filter(
+                build_id=relation_to_remove.build_id, product_ref__in=related_product_refs
+            )
+            .exclude(pk=relation_to_remove.pk)
+            .exists()
+        )
+        # We want to remove relations even if they don't have a software_build foreign key populated
+        # However we only need to clear the product_ref from the build if we've linked a build
+        if relation_to_remove.software_build_id and not existing_stream_relation:
+            slow_remove_product_from_build.delay(
+                str(relation_to_remove.software_build_id),
+                "ProductStream",
+                product_stream_pk,
+            )
+        relation_to_remove.delete()
 
 
 def _parse_cpes_from_brew_tags(

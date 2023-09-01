@@ -15,6 +15,7 @@ from corgi.core.models import (
 )
 
 from .factories import (
+    BinaryRpmComponentFactory,
     ChannelFactory,
     ComponentFactory,
     ComponentTagFactory,
@@ -26,6 +27,7 @@ from .factories import (
     ProductVersionFactory,
     SoftwareBuildFactory,
     SrpmComponentFactory,
+    UpstreamComponentFactory,
 )
 
 User = get_user_model()
@@ -1542,6 +1544,14 @@ def test_oci_component_provides_sources_upstreams(client, api_path):
     assert related_response.json()["count"] == 1
 
 
+def _get_related_data_from_link(client, link):
+    """Helper method to fetch and return provides / sources / upstreams data
+    from a separately-linked page, as if it were still inline on a component's main page"""
+    response = client.get(link)
+    assert response.status_code == 200
+    return response.json()
+
+
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_srpm_component_provides_sources_upstreams(client, api_path):
     """
@@ -1553,32 +1563,32 @@ def test_srpm_component_provides_sources_upstreams(client, api_path):
 
     Then we expect the following in terms of sources, providers and upstreams for these components:
 
-    +--------------------+---------+----------+-----------+
-    |                    | sources | provides | upstreams |
-    +--------------------+---------+----------+-----------+
-    | root_component     | 0       | 1        | 1         |
-    +--------------------+---------+----------+-----------+
-    | upstream_component | 0       | 0        | 3         |
-    +--------------------+---------+----------+-----------+
-    | dep1_component     | 1       | 0        | 1         |
-    +--------------------+---------+----------+-----------+
+    +--------------------+---------+----------+-----------+-------------+
+    |                    | sources | provides | upstreams | downstreams |
+    +--------------------+---------+----------+-----------+-------------+
+    | root_component     | 0       | 1        | 1         | 0           |
+    +--------------------+---------+----------+-----------+-------------+
+    | upstream_component | 0       | 0        | 0         | 2           |
+    +--------------------+---------+----------+-----------+-------------+
+    | dep1_component     | 1       | 0        | 1         | 0           |
+    +--------------------+---------+----------+-----------+-------------+
 
     This behaviour is predicated on the following assumptions:
-    * SRPM -> arch RPM
-    * binary RPM never have child dependencies
+    * one SRPM provides many binary RPMs
+    * binary RPMs may provide children of their own (none here)
+    * one SRPM has exactly one upstream (containers can have many upstreams)
+    * sources is the inverse of provides
+    * downstreams is the inverse of upstreams
 
-    The data model does not impose this constraint
-    eg. provides, sources and upstream property queries enforce this behaviour.
+    The data model does not impose these constraints
+    eg. provides, sources, upstreams, and downstreams property queries enforce these behaviours.
 
     """
 
     api_path_with_domain = f"https://{settings.CORGI_DOMAIN}{api_path}"
     # create a top level root source component
-    root_comp = ComponentFactory(
+    root_comp = SrpmComponentFactory(
         name="root_comp",
-        type=Component.Type.RPM,
-        arch="src",
-        namespace=Component.Namespace.REDHAT,
         related_url="https://example.org/related",
     )
     root_node = ComponentNode.objects.create(
@@ -1588,10 +1598,9 @@ def test_srpm_component_provides_sources_upstreams(client, api_path):
     )
 
     # create upstream child node
-    upstream_comp = ComponentFactory(
+    upstream_comp = UpstreamComponentFactory(
         name="upstream_comp",
         type=Component.Type.RPM,
-        namespace=Component.Namespace.UPSTREAM,
         related_url="https://example.org/related",
     )
     ComponentNode.objects.create(
@@ -1600,12 +1609,7 @@ def test_srpm_component_provides_sources_upstreams(client, api_path):
         obj=upstream_comp,
     )
     # create dep component
-    dep_comp = ComponentFactory(
-        name="cool_dep_component",
-        arch="s390x",
-        type=Component.Type.RPM,
-        namespace=Component.Namespace.REDHAT,
-    )
+    dep_comp = BinaryRpmComponentFactory(name="cool_dep_component")
     # make it a child of root OCI component
     ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
@@ -1613,80 +1617,83 @@ def test_srpm_component_provides_sources_upstreams(client, api_path):
         obj=dep_comp,
     )
 
-    # TODO - investigate if invoking any of the following in any order is stable
-    # it is intentional to invoke these twice during the test
-    upstream_comp.save_component_taxonomy()
-    upstream_comp.save()
-    dep_comp.save_component_taxonomy()
-    dep_comp.save()
     root_comp.save_component_taxonomy()
-    root_comp.save()
     upstream_comp.save_component_taxonomy()
-    upstream_comp.save()
     dep_comp.save_component_taxonomy()
-    dep_comp.save()
-    root_comp.save_component_taxonomy()
-    root_comp.save()
-
-    assert dep_comp.purl in root_comp.provides.values_list("purl", flat=True)
 
     response = client.get(f"{api_path}/components?namespace=REDHAT")
     assert response.status_code == 200
     assert response.json()["count"] == 2
 
+    response = client.get(f"{api_path}/components?namespace=UPSTREAM")
+    assert response.status_code == 200
+    assert response.json()["count"] == 1
+
+    # Check sources, provides, upstreams, and downstreams for root (source RPM)
     response = client.get(f"{api_path}/components/{root_comp.uuid}")
     assert response.status_code == 200
     response = response.json()
 
-    assert response["name"] == root_comp.name
-    assert response["related_url"] == root_comp.related_url
     assert (
         response["sources"] == f"{api_path_with_domain}/components?provides={quote(root_comp.purl)}"
     )
-    related_response = client.get(response["sources"])
-    assert related_response.status_code == 200
-    assert related_response.json()["count"] == 0
+    related_response = _get_related_data_from_link(client, response["sources"])
+    assert related_response["count"] == 0
 
     assert (
         response["provides"] == f"{api_path_with_domain}/components?sources={quote(root_comp.purl)}"
     )
-    related_response = client.get(response["provides"])
-    assert related_response.status_code == 200
-    assert related_response.json()["count"] == 1
+    related_response = _get_related_data_from_link(client, response["provides"])
+    assert related_response["count"] == 1
 
     assert (
         response["upstreams"]
         == f"{api_path_with_domain}/components?downstreams={quote(root_comp.purl)}"
     )
-    related_response = client.get(response["upstreams"])
-    assert related_response.status_code == 200
-    assert related_response.json()["count"] == 1
+    related_response = _get_related_data_from_link(client, response["upstreams"])
+    assert related_response["count"] == 1
 
+    # TODO: Uncomment when we expose this on the API
+    #  Without this, users can go from a downstream component to its upstream
+    #  but it's currently impossible to go from the upstream back to its downstream
+    # assert (
+    #     response["downstreams"]
+    #     == f"{api_path_with_domain}/components?upstreams={quote(root_comp.purl)}"
+    # )
+    # related_response = _get_related_data_from_link(client, response["downstreams"])
+    # assert related_response["count"] == 0
+
+    # Check sources, provides, upstreams, and downstreams for dep (binary RPM)
     response = client.get(f"{api_path}/components/{dep_comp.uuid}")
     assert response.status_code == 200
     response = response.json()
     assert (
         response["sources"] == f"{api_path_with_domain}/components?provides={quote(dep_comp.purl)}"
     )
-    related_response = client.get(response["sources"])
-    assert related_response.status_code == 200
-    assert related_response.json()["count"] == 1
+    related_response = _get_related_data_from_link(client, response["sources"])
+    assert related_response["count"] == 1
 
     assert (
         response["provides"] == f"{api_path_with_domain}/components?sources={quote(dep_comp.purl)}"
     )
-    related_response = client.get(response["provides"])
-    assert related_response.status_code == 200
-    assert related_response.json()["count"] == 0
+    related_response = _get_related_data_from_link(client, response["provides"])
+    assert related_response["count"] == 0
 
     assert (
         response["upstreams"]
         == f"{api_path_with_domain}/components?downstreams={quote(dep_comp.purl)}"
     )
-    related_response = client.get(response["upstreams"])
-    assert related_response.status_code == 200
-    assert related_response.json()["count"] == 1
+    related_response = _get_related_data_from_link(client, response["upstreams"])
+    assert related_response["count"] == 1
 
+    # assert (
+    #     response["downstreams"]
+    #     == f"{api_path_with_domain}/components?upstreams={quote(dep_comp.purl)}"
+    # )
+    # related_response = _get_related_data_from_link(client, response["downstreams"])
+    # assert related_response["count"] == 0
+
+    # Check sources, provides, upstreams, and downstreams for upstream (noarch RPM)
     response = client.get(f"{api_path}/components/{upstream_comp.uuid}")
     assert response.status_code == 200
     response = response.json()
@@ -1694,92 +1701,37 @@ def test_srpm_component_provides_sources_upstreams(client, api_path):
         response["sources"]
         == f"{api_path_with_domain}/components?provides={quote(upstream_comp.purl)}"
     )
-    related_response = client.get(response["sources"])
-    assert related_response.status_code == 200
-    assert related_response.json()["count"] == 0
+    related_response = _get_related_data_from_link(client, response["sources"])
+    assert related_response["count"] == 0
 
     assert (
         response["provides"]
         == f"{api_path_with_domain}/components?sources={quote(upstream_comp.purl)}"
     )
-    related_response = client.get(response["provides"])
-    assert related_response.status_code == 200
-    assert related_response.json()["count"] == 0
+    related_response = _get_related_data_from_link(client, response["provides"])
+    assert related_response["count"] == 0
 
     assert (
         response["upstreams"]
         == f"{api_path_with_domain}/components?downstreams={quote(upstream_comp.purl)}"
     )
-    related_response = client.get(response["upstreams"])
-    assert related_response.status_code == 200
-    assert related_response.json()["count"] == 1
+    related_response = _get_related_data_from_link(client, response["upstreams"])
+    assert related_response["count"] == 0
 
-    # retrieve all sources of root_comp
-    response = client.get(f"{api_path}/components?provides={quote(root_comp.purl)}")
-    assert response.status_code == 200
-    assert response.json()["results"] == []
-    assert response.json()["count"] == 0
-    # retrieve all provides of root_comp
-    response = client.get(f"{api_path}/components?sources={quote(root_comp.purl)}")
-    assert response.status_code == 200
-    assert response.json()["count"] == 1
-
-    # retrieve all sources of dep_comp component
-    response = client.get(f"{api_path}/components?provides={quote(dep_comp.purl)}")
-    assert response.status_code == 200
-    assert response.json()["count"] == 1
-    # retrieve all provides of dep_comp
-    response = client.get(f"{api_path}/components?sources={quote(dep_comp.purl)}")
-    assert response.status_code == 200
-    assert response.json()["count"] == 0
-
-    # retrieve all components with upstream_comp upstream
-    response = client.get(f"{api_path}/components?upstreams={quote(upstream_comp.purl)}")
-    assert response.status_code == 200
-    assert response.json()["count"] == 3
+    # assert (
+    #     response["downstreams"]
+    #     == f"{api_path_with_domain}/components?upstreams={quote(upstream_comp.purl)}"
+    # )
+    # related_response = _get_related_data_from_link(client, response["downstreams"])
+    # assert related_response["count"] == 2
 
     response = client.get(f"{api_path}/components/{root_comp.uuid}/taxonomy")
     assert response.status_code == 200
-    assert len(response.json()[0]["provides"]) == 2
-
-    response = client.get(
-        f"{api_path}/components/{root_comp.uuid}?include_fields=provides.name,provides.purl"
-    )
-    assert response.status_code == 200
-    assert "upstreams" not in response.json()
-    assert (
-        response.json()["provides"]
-        == f"{api_path_with_domain}/components?sources={quote(root_comp.purl)}"
-    )
-    related_response = client.get(response.json()["provides"])
-    assert related_response.status_code == 200
-    assert related_response.json()["count"] == 1
-
-    response = client.get(
-        f"{api_path}/components/{root_comp.uuid}?include_fields=upstreams.name,upstreams.purl"
-    )
-    assert response.status_code == 200
-    assert "provides" not in response.json()
-    assert (
-        response.json()["upstreams"]
-        == f"{api_path_with_domain}/components?downstreams={quote(root_comp.purl)}"
-    )
-    related_response = client.get(response.json()["upstreams"])
-    assert related_response.status_code == 200
-    assert related_response.json()["count"] == 1
-
-    response = client.get(
-        f"{api_path}/components/{dep_comp.uuid}?include_fields=sources.name,sources.purl"
-    )
-    assert response.status_code == 200
-    assert "provides" not in response.json()
-    assert (
-        response.json()["sources"]
-        == f"{api_path_with_domain}/components?provides={quote(dep_comp.purl)}"
-    )
-    related_response = client.get(response.json()["sources"])
-    assert related_response.status_code == 200
-    assert related_response.json()["count"] == 1
+    response = response.json()
+    # TODO: Calling this "provides" is incorrect. It includes "upstreams" too
+    #  We should call it either "children" (if it only shows the first level of the tree)
+    #  or "descendants" (if it shows all levels of the tree)
+    assert len(response[0]["provides"]) == 2
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)

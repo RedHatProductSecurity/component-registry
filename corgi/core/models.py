@@ -1553,8 +1553,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
     def save_component_taxonomy(self):
         """Link related components together using foreign keys. Avoids repeated MPTT tree lookups"""
-        upstreams = self.get_upstreams_pks(using="default")
-        self.upstreams.set(upstreams)
+        self.upstreams.set(self.get_upstreams_pks(using="default"))
         self.provides.set(self.get_provides_nodes(using="default"))
         self.sources.set(self.get_sources_nodes(using="default"))
 
@@ -1681,17 +1680,27 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         # We don't know which do and don't, so for now just stop linking
         return None
 
-    def get_roots(self, using: str = "read_only") -> list[ComponentNode]:
+    def get_roots(self, using: str = "read_only") -> QuerySet[ComponentNode]:
         """Return component root entities."""
-        roots: list[ComponentNode] = []
-        # If a component does not have a softwarebuild that means it's not built at Red Hat
-        # therefore it doesn't need its upstreams listed. If we start using the get_roots property
-        # for functions other than get_upstreams we might need to revisit this check
-        if not self.software_build:
-            return roots
+        # Only components built at Red Hat need their upstreams listed
+        if self.namespace != Component.Namespace.REDHAT:
+            return ComponentNode.objects.none()
+
+        # Only root components have a linked SoftwareBuild / have a root node in self.cnodes
+        # Non-root components like binary RPMs / Red Hat Maven components also need upstreams listed
+        # So we must find their root nodes a little indirectly
+        root_node_pks = set()
         for cnode in self.cnodes.db_manager(using).iterator():
-            root = cnode.get_root()
-            if root.obj.type == Component.Type.CONTAINER_IMAGE:
+            root_node_pks_queryset = (
+                cnode.get_ancestors(include_self=True)
+                .filter(parent=None)
+                .values_list("pk", flat=True)
+                .using(using)
+            )
+            container_image_root_pk = root_node_pks_queryset.filter(
+                component__type=Component.Type.CONTAINER_IMAGE
+            ).first()
+            if container_image_root_pk:
                 # TODO if we change the CONTAINER->RPM ComponentNode.type to something besides
                 # 'PROVIDES' we would check for that type here to prevent 'hardcoding' the
                 # container -> rpm relationship here.
@@ -1707,10 +1716,24 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
                     .exists()
                 )
                 if not rpm_descendant:
-                    roots.append(root)
+                    # If the root for this tree is a container image
+                    # AND we're not an RPM, or a child of an RPM,
+                    # include the container in the list of roots
+                    root_node_pks.add(container_image_root_pk)
+                # Else the root for this tree is a container, but we're an RPM or its child
+                # So ignore the container image root for this tree
+
+            # Else the root for this tree is not a container, so it could be an SRPM or RPM module
+            # or a GitHub repo for a managed service, or a Red Hat Maven component
+            # We always include these roots just in case
+            # although RPM module and GitHub repo roots should never have any upstreams
+            # We can't do this in one query (excluding all the container roots)
+            # because GenericForeignKey / GenericRelation doesn't support .exclude()
             else:
-                roots.append(root)
-        return roots
+                root_node_pks.add(root_node_pks_queryset.get())
+
+        # return non-container roots, AND container roots if self is not an RPM descendant
+        return ComponentNode.objects.filter(pk__in=root_node_pks).using(using)
 
     @property
     def build_meta(self):

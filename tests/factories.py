@@ -191,10 +191,30 @@ class SrpmComponentFactory(ComponentFactory):
     arch = "src"
 
 
+class BinaryRpmComponentFactory(SrpmComponentFactory):
+    arch = random.choice(("noarch", "s390", "ppc", "x86_64"))
+    software_build = None
+
+
+class UpstreamComponentFactory(ComponentFactory):
+    type = random.choice(models.Component.REMOTE_SOURCE_COMPONENT_TYPES)
+    namespace = models.Component.Namespace.UPSTREAM
+    release = ""
+    arch = "noarch"
+    software_build = None
+
+
 class ContainerImageComponentFactory(ComponentFactory):
     type = models.Component.Type.CONTAINER_IMAGE
     namespace = models.Component.Namespace.REDHAT
     arch = "noarch"
+
+
+class ChildContainerImageComponentFactory(ComponentFactory):
+    type = models.Component.Type.CONTAINER_IMAGE
+    namespace = models.Component.Namespace.REDHAT
+    arch = random.choice(("s390", "ppc", "x86_64"))
+    software_build = None
 
 
 class LifeCycleFactory(factory.django.DjangoModelFactory):

@@ -1,0 +1,79 @@
+[
+  {
+    "metadata": {
+      "name": "389-ds",
+      "stream": "1.4",
+      "artifacts": [
+        "389-ds-base-0:1.4.3.16-13.module+el8.4.0+10307+74bbfb4e.aarch64",
+        "389-ds-base-0:1.4.3.16-13.module+el8.4.0+10307+74bbfb4e.src",
+        "389-ds-base-debuginfo-0:1.4.3.16-13.module+el8.4.0+10307+74bbfb4e.aarch64",
+        "389-ds-base-debugsource-0:1.4.3.16-13.module+el8.4.0+10307+74bbfb4e.aarch64",
+        "389-ds-base-devel-0:1.4.3.16-13.module+el8.4.0+10307+74bbfb4e.aarch64",
+        "389-ds-base-legacy-tools-0:1.4.3.16-13.module+el8.4.0+10307+74bbfb4e.aarch64",
+        "389-ds-base-legacy-tools-debuginfo-0:1.4.3.16-13.module+el8.4.0+10307+74bbfb4e.aarch64",
+        "389-ds-base-libs-0:1.4.3.16-13.module+el8.4.0+10307+74bbfb4e.aarch64",
+        "389-ds-base-libs-debuginfo-0:1.4.3.16-13.module+el8.4.0+10307+74bbfb4e.aarch64",
+        "389-ds-base-snmp-0:1.4.3.16-13.module+el8.4.0+10307+74bbfb4e.aarch64",
+        "389-ds-base-snmp-debuginfo-0:1.4.3.16-13.module+el8.4.0+10307+74bbfb4e.aarch64",
+        "python3-lib389-0:1.4.3.16-13.module+el8.4.0+10307+74bbfb4e.noarch"
+      ],
+      "version": 8040020210311214642,
+      "context": "866effaa",
+      "_content_type_id": "modulemd",
+      "_id": "1a9c5174-d5b7-43b4-8e0b-0c1705618349",
+      "arch": "aarch64"
+    },
+    "updated": "2022-05-10T04:19:09Z",
+    "repo_id": "rhel-8-for-aarch64-appstream-rpms__8",
+    "created": "2021-05-18T04:40:05Z",
+    "unit_type_id": "modulemd",
+    "unit_id": "1a9c5174-d5b7-43b4-8e0b-0c1705618349"
+  },
+  {
+    "metadata": {
+      "name": "389-ds",
+      "stream": "1.4",
+      "artifacts": [
+        "389-ds-base-0:1.4.3.16-19.module+el8.4.0+11894+f5bb5c43.aarch64",
+        "389-ds-base-0:1.4.3.16-19.module+el8.4.0+11894+f5bb5c43.src",
+        "389-ds-base-debuginfo-0:1.4.3.16-19.module+el8.4.0+11894+f5bb5c43.aarch64",
+        "389-ds-base-debugsource-0:1.4.3.16-19.module+el8.4.0+11894+f5bb5c43.aarch64",
+        "389-ds-base-devel-0:1.4.3.16-19.module+el8.4.0+11894+f5bb5c43.aarch64",
+        "389-ds-base-legacy-tools-0:1.4.3.16-19.module+el8.4.0+11894+f5bb5c43.aarch64",
+        "389-ds-base-legacy-tools-debuginfo-0:1.4.3.16-19.module+el8.4.0+11894+f5bb5c43.aarch64",
+        "389-ds-base-libs-0:1.4.3.16-19.module+el8.4.0+11894+f5bb5c43.aarch64",
+        "389-ds-base-libs-debuginfo-0:1.4.3.16-19.module+el8.4.0+11894+f5bb5c43.aarch64",
+        "389-ds-base-snmp-0:1.4.3.16-19.module+el8.4.0+11894+f5bb5c43.aarch64",
+        "389-ds-base-snmp-debuginfo-0:1.4.3.16-19.module+el8.4.0+11894+f5bb5c43.aarch64",
+        "python3-lib389-0:1.4.3.16-19.module+el8.4.0+11894+f5bb5c43.noarch"
+      ],
+      "version": 8040020210721074904,
+      "context": "96015a92",
+      "_content_type_id": "modulemd",
+      "_id": "1f1e340c-54ef-4bfa-9d38-facc1bffad82",
+      "arch": "aarch64"
+    },
+    "updated": "2022-05-10T04:18:55Z",
+    "repo_id": "rhel-8-for-aarch64-appstream-rpms__8",
+    "created": "2021-08-10T12:05:41Z",
+    "unit_type_id": "modulemd",
+    "unit_id": "1f1e340c-54ef-4bfa-9d38-facc1bffad82"
+  },
+  {
+    "metadata": {
+      "name": "pmdk",
+      "stream": "1-fileformat-v6",
+      "artifacts": [],
+      "version": 8040020210211161159,
+      "context": "9f9e2e7e",
+      "_content_type_id": "modulemd",
+      "_id": "8179a9a5-f772-45a6-9949-e1a4b6cf38be",
+      "arch": "aarch64"
+    },
+    "updated": "2022-05-10T04:19:10Z",
+    "repo_id": "rhel-8-for-aarch64-appstream-rpms__8",
+    "created": "2021-05-18T04:40:06Z",
+    "unit_type_id": "modulemd",
+    "unit_id": "8179a9a5-f772-45a6-9949-e1a4b6cf38be"
+  }
+]

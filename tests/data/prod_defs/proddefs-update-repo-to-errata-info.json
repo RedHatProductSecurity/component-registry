@@ -9,8 +9,18 @@
       ]
     },
     "yum_stream": {
-      "yum_repositories": [
-        "https://example.com/rhel-8/compose/yum_stream/"
+      "errata_info": [
+        {
+          "product_name": "RHCERTSYS",
+          "product_versions": [
+            {
+              "name": "CERTSYS-10.6-RHEL-8",
+              "variants": [
+                "8Base-CertSys-10.6"
+              ]
+            }
+          ]
+        }
       ]
     }
   },

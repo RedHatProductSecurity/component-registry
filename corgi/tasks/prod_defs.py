@@ -265,18 +265,29 @@ def parse_product_stream(
             "obj": product_stream,
         },
     )
-    if not stream_created:
-        _clean_orphaned_brew_tags(set(brew_tags_dict.keys()), name, str(product_stream.pk))
     parse_errata_info(errata_info, product, product_stream, product_stream_node, product_version)
+    if not stream_created:
+        _clean_orphaned_relations_and_builds(
+            set(brew_tags_dict.keys()),
+            name,
+            str(product_stream.pk),
+            ProductComponentRelation.Type.BREW_TAG,
+        )
+        _clean_orphaned_relations_and_builds(
+            yum_repos, name, str(product_stream.pk), ProductComponentRelation.Type.YUM_REPO
+        )
     product_stream.save_product_taxonomy()
 
 
-def _clean_orphaned_brew_tags(brew_tags: set[str], name: str, product_stream_pk: str) -> None:
+def _clean_orphaned_relations_and_builds(
+    new_external_system_ids: set[str],
+    name: str,
+    product_stream_pk: str,
+    relation_type: ProductComponentRelation.Type,
+) -> None:
     relations_to_remove = (
-        ProductComponentRelation.objects.filter(
-            type=ProductComponentRelation.Type.BREW_TAG, product_ref=name
-        )
-        .exclude(external_system_id__in=brew_tags)
+        ProductComponentRelation.objects.filter(type=relation_type, product_ref=name)
+        .exclude(external_system_id__in=new_external_system_ids)
         .iterator()
     )
     related_product_refs: set[str] = {name}

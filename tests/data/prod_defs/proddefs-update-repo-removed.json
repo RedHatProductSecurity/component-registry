@@ -9,9 +9,6 @@
       ]
     },
     "yum_stream": {
-      "yum_repositories": [
-        "https://example.com/rhel-8/compose/yum_stream/"
-      ]
     }
   },
   "ps_modules": {

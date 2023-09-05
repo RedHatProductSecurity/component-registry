@@ -235,6 +235,93 @@ def test_stream_variants_with_old_builds(mock_remove, requests_mock):
 
 
 @pytest.mark.django_db
+@patch("corgi.tasks.prod_defs.slow_remove_product_from_build.delay")
+def test_stream_yum_repos_removed(mock_remove, requests_mock):
+    with open("tests/data/prod_defs/proddefs-update.json") as prod_defs:
+        text = prod_defs.read()
+        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+
+    update_products()
+    assert not mock_remove.called
+
+    stream = ProductStream.objects.get(name="yum_stream")
+    assert stream.yum_repositories
+
+    sb = SoftwareBuildFactory()
+
+    ProductComponentRelation.objects.create(
+        external_system_id="https://example.com/rhel-8/compose/yum_stream/",
+        product_ref="yum_stream",
+        software_build=sb,
+        type=ProductComponentRelation.Type.YUM_REPO,
+    )
+
+    with open("tests/data/prod_defs/proddefs-update-repo-removed.json") as prod_defs:
+        text = prod_defs.read()
+        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+
+    update_products()
+
+    stream.refresh_from_db()
+    assert not stream.yum_repositories
+    assert not ProductComponentRelation.objects.filter(software_build=sb).exists()
+    assert mock_remove.called_with(
+        (
+            str(sb.pk),
+            "ProductStream",
+            stream.pk,
+        )
+    )
+
+
+@pytest.mark.django_db
+@patch("corgi.tasks.prod_defs.slow_remove_product_from_build.delay")
+def test_stream_yum_repos_to_errata_info_not_removed(mock_remove, requests_mock):
+    with open("tests/data/prod_defs/proddefs-update.json") as prod_defs:
+        text = prod_defs.read()
+        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+
+    update_products()
+    assert not mock_remove.called
+
+    stream = ProductStream.objects.get(name="yum_stream")
+    assert stream.yum_repositories
+
+    sb = SoftwareBuildFactory()
+
+    ProductComponentRelation.objects.create(
+        external_system_id="https://example.com/rhel-8/compose/yum_stream/",
+        product_ref="yum_stream",
+        software_build=sb,
+        build_id=sb.build_id,
+        type=ProductComponentRelation.Type.YUM_REPO,
+    )
+
+    ProductComponentRelation.objects.create(
+        external_system_id="10000",
+        product_ref="8Base-CertSys-10.6",
+        software_build=sb,
+        build_id=sb.build_id,
+        type=ProductComponentRelation.Type.ERRATA,
+    )
+
+    with open("tests/data/prod_defs/proddefs-update-repo-to-errata-info.json") as prod_defs:
+        text = prod_defs.read()
+        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+
+    update_products()
+
+    stream.refresh_from_db()
+
+    assert "8Base-CertSys-10.6" in stream.productvariants.values_list("name", flat=True)
+    assert stream.et_product_versions
+    assert not ProductComponentRelation.objects.filter(
+        type=ProductComponentRelation.Type.YUM_REPO
+    ).exists()
+    assert not mock_remove.called
+
+
+@pytest.mark.django_db
 def test_cpe_parsing(requests_mock):
     with open("tests/data/prod_defs/product-definitions.json") as prod_defs:
         text = prod_defs.read()

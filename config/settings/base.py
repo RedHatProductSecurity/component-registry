@@ -307,6 +307,7 @@ DATABASES = {
         "OPTIONS": {"gssencmode": "disable"},
         # When running tests, mirror all data from the default DB instead of using migrations
         "TEST": {"MIGRATE": False, "MIRROR": "default"},
+        "CONN_MAX_AGE": 300,
     },
 }
 

@@ -293,6 +293,7 @@ DATABASES = {
         # Prefer password authentication even if a valid Kerberos ticket exists on the system.
         # See: https://www.postgresql.org/docs/devel/libpq-connect.html#LIBPQ-CONNECT-GSSENCMODE
         "OPTIONS": {"gssencmode": "disable"},
+        "CONN_MAX_AGE": 300,
     },
     "read_only": {
         "ENGINE": "django.db.backends.postgresql",

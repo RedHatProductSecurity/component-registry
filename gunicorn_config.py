@@ -22,8 +22,12 @@ keepalive = 5
 if not running_dev():
     # Saves memory in the worker process, but breaks --reload
     preload_app = True
+    worker_connections = 1000
     # avoid memory leaks by having a worker process restart when it hits this max_requests
     max_requests = 1000
+    max_requests_jitter = 100
+    # handle bursts of incoming requests more efficiently
+    backlog = 2048
 else:
     # Support hot-reloading of Gunicorn / Django when files change
     reload = True

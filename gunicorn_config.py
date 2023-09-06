@@ -1,6 +1,6 @@
 from config.utils import running_dev
 
-workers = 4
+workers = 8
 worker_class = "gevent"
 # worker_connections = 10
 reuse_port = True
@@ -17,17 +17,10 @@ access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
 forwarded_allow_ips = "*"
 
 timeout = 300
-keepalive = 5
 
 if not running_dev():
     # Saves memory in the worker process, but breaks --reload
     preload_app = True
-    worker_connections = 1000
-    # avoid memory leaks by having a worker process restart when it hits this max_requests
-    max_requests = 1000
-    max_requests_jitter = 100
-    # handle bursts of incoming requests more efficiently
-    backlog = 2048
 else:
     # Support hot-reloading of Gunicorn / Django when files change
     reload = True

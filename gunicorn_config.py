@@ -22,12 +22,12 @@ access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
 forwarded_allow_ips = "*"
 
 timeout = 300
+# we let openshift restart a pod in case of memory leaks
+max_requests = 0
 
 if not running_dev():
     # Saves memory in the worker process, but breaks --reload
     preload_app = True
-    # we let openshift restart a pod in case of memory leaks
-    max_requests = 0
 else:
     # Support hot-reloading of Gunicorn / Django when files change
     reload = True

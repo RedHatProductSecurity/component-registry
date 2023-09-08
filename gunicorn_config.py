@@ -5,7 +5,8 @@ from config.utils import running_dev
 
 monkey.patch_all(thread=False, select=False)
 
-workers = 4
+import multiprocessing
+workers = multiprocessing.cpu_count() * 2 + 1
 worker_class = "gevent"
 # worker_connections = 10
 reuse_port = True
@@ -22,12 +23,14 @@ access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
 forwarded_allow_ips = "*"
 
 timeout = 300
-# we let openshift restart a pod in case of memory leaks
-max_requests = 0
 
 if not running_dev():
     # Saves memory in the worker process, but breaks --reload
     preload_app = True
+    # avoid restarting gunicorn and leave it to pod restarts to handle memory leaks
+    max_requests = 0
+    # ref: https://github.com/benoitc/gunicorn/issues/1978
+    max_requests_jitter = 0
 else:
     # Support hot-reloading of Gunicorn / Django when files change
     reload = True

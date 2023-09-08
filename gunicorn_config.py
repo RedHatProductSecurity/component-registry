@@ -1,4 +1,9 @@
+# to avoid MonkeyPatchWarning error/warnings
+from gevent import monkey
+
 from config.utils import running_dev
+
+monkey.patch_all(thread=False, select=False)
 
 workers = 4
 worker_class = "gevent"
@@ -21,8 +26,8 @@ timeout = 300
 if not running_dev():
     # Saves memory in the worker process, but breaks --reload
     preload_app = True
-    # ensure we finish off requests before restarting
-    graceful_timeout = 300
+    # we let openshift restart a pod in case of memory leaks
+    max_requests = 0
 else:
     # Support hot-reloading of Gunicorn / Django when files change
     reload = True

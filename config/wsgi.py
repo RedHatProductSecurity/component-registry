@@ -8,6 +8,7 @@ if os.getenv("RUNNING_GUNICORN"):
     # patching only what's required is safer, since gunicorn hasn't forked workers yet
     patch_ssl()
 
+
 from django.core.wsgi import get_wsgi_application
 
 application = get_wsgi_application()

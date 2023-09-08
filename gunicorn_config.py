@@ -1,14 +1,11 @@
-# to avoid MonkeyPatchWarning error/warnings
+# avoid MonkeyPatchWarning error/warnings
 from gevent import monkey
 
 from config.utils import running_dev
 
 monkey.patch_all(thread=False, select=False)
-
-import multiprocessing
-workers = multiprocessing.cpu_count() * 2 + 1
+workers = 4  # this can probably be increased
 worker_class = "gevent"
-# worker_connections = 10
 reuse_port = True
 
 bind = "0.0.0.0:8008"
@@ -29,6 +26,8 @@ if not running_dev():
     preload_app = True
     # avoid restarting gunicorn and leave it to pod restarts to handle memory leaks
     max_requests = 0
+    graceful_timeout = 800  # if a restart must happen then let it be graceful
+    keepalive = 60  # specifically this should be a value larger then nginx setting
     # ref: https://github.com/benoitc/gunicorn/issues/1978
     max_requests_jitter = 0
 else:

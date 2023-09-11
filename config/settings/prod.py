@@ -10,6 +10,7 @@ ALLOWED_HOSTS = [
     socket.gethostname(),
     socket.gethostbyname(socket.gethostname()),
     CORGI_DOMAIN,  # noqa: F405
+    SCORECARD_DOMAIN,  # noqa: F405
 ]
 
 CSP_UPGRADE_INSECURE_REQUESTS = True

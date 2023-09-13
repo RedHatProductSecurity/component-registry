@@ -436,6 +436,22 @@ def test_find_by_cpe():
     assert cpe in results
 
 
+@pytest.mark.django_db
+def test_find_by_cpe_substring():
+    product = CollectorErrataProduct.objects.create(name="product", et_id=1)
+    product_version = CollectorErrataProductVersion.objects.create(
+        name="product_version", et_id=10, product=product
+    )
+    cpe = "cpe:/a:redhat:openshift_pipelines:1.7::el8"
+    CollectorErrataProductVariant.objects.create(
+        name="product_variant", et_id=100, product_version=product_version, cpe=cpe
+    )
+
+    results = _find_by_cpe(["cpe:/a:redhat:openshift_pipelines:1"])
+
+    assert cpe in results
+
+
 # We stip -candidate from tags before persisting Collector models
 brew_tag_streams = [
     # In the actual ET data the brew tag is gitops-1.7-rhel-8-candidate
@@ -484,3 +500,83 @@ def test_brew_tag_matching(variant_name, cpe, brew_tag, stream_name, requests_mo
     stream = ProductStream.objects.get(name=stream_name)
     assert stream.productvariants.get_queryset().count() == 0
     assert stream.cpes_from_brew_tags == [cpe]
+
+
+@pytest.mark.django_db
+@patch("corgi.tasks.prod_defs.slow_remove_product_from_build.delay")
+@patch("corgi.tasks.prod_defs.slow_save_taxonomy.delay")
+def test_multi_variant_streams(mock_save, mock_remove, requests_mock):
+    """Test that errata_info variants are only attached to an active stream where that stream
+    shares errata_info with an inactive stream"""
+    with open("tests/data/prod_defs/proddefs-update-multi-stream-variant.json") as prod_defs:
+        text = prod_defs.read()
+        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+
+    update_products()
+    assert not mock_remove.called
+
+    ga_stream = ProductStream.objects.get(name="ga_stream")
+    assert ga_stream.productvariants.get_queryset().count() == 1
+    z_stream = ProductStream.objects.get(name="z_stream")
+    assert z_stream.productvariants.get_queryset().count() == 0
+    assert z_stream.yum_repositories
+
+    sb = SoftwareBuildFactory()
+
+    ProductComponentRelation.objects.create(
+        external_system_id="https://example.com/rhel-8/compose/yum_stream/",
+        product_ref="z_stream",
+        software_build=sb,
+        type=ProductComponentRelation.Type.YUM_REPO,
+    )
+
+    ProductComponentRelation.objects.create(
+        external_system_id="some_repo",
+        product_ref="8Base-CertSys-10.4",
+        software_build=sb,
+        type=ProductComponentRelation.Type.CDN_REPO,
+    )
+
+    with open("tests/data/prod_defs/proddefs-update-multi-stream-variant-update.json") as prod_defs:
+        text = prod_defs.read()
+        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+
+    update_products()
+
+    ga_stream.refresh_from_db()
+    assert ga_stream.productvariants.get_queryset().count() == 0
+    z_stream.refresh_from_db()
+    assert z_stream.productvariants.get_queryset().count() == 1
+    assert not ProductComponentRelation.objects.filter(product_ref="z_stream").exists()
+    assert mock_remove.called_once_with(
+        (
+            str(sb.pk),
+            "ProductStream",
+            z_stream.pk,
+        )
+    )
+    assert mock_save.called_once_with(sb.build_id, sb.build_type)
+
+
+@pytest.mark.django_db
+def test_multi_variant_active_streams(requests_mock):
+    """Tests that multiple runs of update_products with multiple active streams sharing errata_info
+    does not cause the variants to move back and forth between the streams"""
+    with open("tests/data/prod_defs/proddefs-update-multi-stream-variant-active.json") as prod_defs:
+        text = prod_defs.read()
+        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+
+    update_products()
+
+    ga_stream = ProductStream.objects.get(name="ga_stream")
+    assert ga_stream.productvariants.get_queryset().count() == 0
+    z_stream = ProductStream.objects.get(name="z_stream")
+    assert z_stream.productvariants.get_queryset().count() == 1
+
+    # Call update_products again with the same proddefs-update-mult-stream-variant-active.json
+    update_products()
+
+    ga_stream = ProductStream.objects.get(name="ga_stream")
+    assert ga_stream.productvariants.get_queryset().count() == 0
+    z_stream = ProductStream.objects.get(name="z_stream")
+    assert z_stream.productvariants.get_queryset().count() == 1

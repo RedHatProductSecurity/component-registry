@@ -22,6 +22,7 @@ from corgi.core.models import (
     ProductVersion,
     SoftwareBuild,
 )
+from corgi.tasks.brew import slow_save_taxonomy
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 
 logger = get_task_logger(__name__)
@@ -322,7 +323,8 @@ def _parse_cpes_from_brew_tags(
     stream_name: str,
     version_name: str,
 ) -> list[str]:
-    """Match streams using brew_tags to Errata Tool Product Versions and their Variants"""
+    """Match streams using brew_tags to Errata Tool Product Versions and their Variants
+    Return a list of CPEs for the matched Variants"""
     if len(brew_tags) > 0:
         logger.debug(f"Found brew tags {brew_tags} in product stream: {stream_name}")
         cpes: set[str] = set()
@@ -352,7 +354,8 @@ def parse_errata_info(
     product_version: ProductVersion,
 ):
     """Parse and create ProductVariants from errata_info in product-definitions.json"""
-    et_product_versions_set = set(product_stream.et_product_versions)
+    # Reset the stream's et_product_versions_set so we keep it up to date with what's in prod_defs.
+    et_product_versions_set = set()
     for et_product in errata_info:
         et_product_name = et_product.pop("product_name")
         et_product_versions = et_product.pop("product_versions")
@@ -360,6 +363,11 @@ def parse_errata_info(
         for et_product_version in et_product_versions:
             et_pv_name = et_product_version["name"]
             et_product_versions_set.add(et_pv_name)
+
+            # This is a workaround for CORGI-811 which attaches variants from errata_info only to
+            # active streams
+            if not product_stream.active:
+                continue
 
             for variant in et_product_version["variants"]:
                 logger.debug("Creating or updating Product Variant: name=%s", variant)
@@ -384,13 +392,32 @@ def parse_errata_info(
                         },
                     },
                 )
-                ProductNode.objects.get_or_create(
+                # If multiple active streams share the same errata_info,
+                # use update to relink the node to a different parent product_stream_node
+                # the last matching stream always wins / gets the link
+                node, node_created = ProductNode.objects.get_or_create(
                     object_id=product_variant.pk,
                     defaults={
                         "parent": product_stream_node,
                         "obj": product_variant,
                     },
                 )
+                if node.parent != product_stream_node:
+                    node.parent = product_stream_node
+                    node.save()
+                    # save the existing builds to adjust the product_stream
+                    # we don't remove the old product_stream from the builds because are related via
+                    # the same variant. This a workaround for CORGI-811 stream to variant should be
+                    # many-to-many relationship
+                    builds_to_update = (
+                        ProductComponentRelation.objects.filter(
+                            type__in=ProductComponentRelation.VARIANT_TYPES, product_ref=variant
+                        )
+                        .values_list("build_id", "build_type")
+                        .distinct()
+                    )
+                    for build_id, build_type in builds_to_update:
+                        slow_save_taxonomy.delay(build_id, build_type)
                 product_variant.save_product_taxonomy()
     # persist et_product_versions plucked from errata_info
     product_stream.et_product_versions = sorted(et_product_versions_set)

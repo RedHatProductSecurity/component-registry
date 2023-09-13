@@ -601,6 +601,21 @@ def test_get_upstream_container():
         parent=container_cnode,
         obj=container_source,
     )
+    assert container.get_upstreams_purls(using="default") == {container_source.purl}
+    # TODO: The assert above succeeds when there's only one source / child container
+    #  But the assert below fails when there are multiple source / child containers
+    #  We get an empty set due to filtering in one of the upstreams_* functions
+
+    container_source_2 = ContainerImageComponentFactory(name="container_source_2")
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=container_cnode,
+        obj=container_source_2,
+    )
+    assert sorted(container.get_upstreams_purls(using="default")) == [
+        container_source.purl,
+        container_source_2.purl,
+    ]
 
     container_nested = ComponentFactory(name="container_nested", type=Component.Type.NPM)
     ComponentNode.objects.create(

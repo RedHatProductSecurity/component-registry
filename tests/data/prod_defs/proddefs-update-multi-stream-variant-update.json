@@ -1,0 +1,54 @@
+{
+  "ps_update_streams": {
+    "ga_stream": {
+      "errata_info": [
+        {
+          "product_name": "RHCERTSYS",
+          "product_versions": [
+            {
+              "name": "CERTSYS-10.4-RHEL-8",
+              "variants": [
+                "8Base-CertSys-10.4"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "z_stream": {
+      "errata_info": [
+        {
+          "product_name": "RHCERTSYS",
+          "product_versions": [
+            {
+              "name": "CERTSYS-10.4-RHEL-8",
+              "variants": [
+                "8Base-CertSys-10.4"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "ps_modules": {
+    "version": {
+      "active_ps_update_streams": [
+        "z_stream"
+      ],
+      "ps_update_streams": [
+        "ga_stream",
+        "z_stream"
+      ]
+    }
+  },
+  "ps_products": {
+    "product": {
+      "name": "product",
+      "ps_modules": [
+        "version"
+      ],
+      "business_unit": "test"
+    }
+  }
+}

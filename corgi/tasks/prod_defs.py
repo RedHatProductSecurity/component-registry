@@ -323,22 +323,7 @@ def _parse_cpes_from_brew_tags(
     version_name: str,
 ) -> list[str]:
     """Match streams using brew_tags to Errata Tool Product Versions and their Variants"""
-    # quay-3 streams brew_tags all share a single variant, and we have a one-to-many
-    # cardinality between streams and variants. quay-3 streams should probably be consolidated
-    # into a single stream in prod_defs. See also PROJQUAY-5312.
-    # The rhn_satellite_6 streams have brew tags, but those brew tags are associated
-    # with the RHEL-7-SATELLITE-6.10 ET Product Version. We skip them
-    # here to ensure the rhn_satelite_6.10 variants only get linked with that stream
-    # I haven't filed a product bug to get them fixed since 6.7 - 6.9 are no longer
-    # active. See CORGI-546 for more details.
-    # Also skip brew_tag matching for dts ps_module which share Variants/Brew Tags with rhscl
-    # See CORGI-726
-    if (
-        len(brew_tags) > 0
-        and version_name != "quay-3"
-        and not version_name.startswith("dts-")
-        and stream_name not in ("rhn_satellite_6.7", "rhn_satellite_6.8", "rhn_satellite_6.9")
-    ):
+    if len(brew_tags) > 0:
         logger.debug(f"Found brew tags {brew_tags} in product stream: {stream_name}")
         cpes: set[str] = set()
         for brew_tag in brew_tags.keys():

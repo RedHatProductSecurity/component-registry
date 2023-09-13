@@ -436,56 +436,6 @@ def test_find_by_cpe():
     assert cpe in results
 
 
-@pytest.mark.django_db
-def test_find_by_cpe_substring():
-    product = CollectorErrataProduct.objects.create(name="product", et_id=1)
-    product_version = CollectorErrataProductVersion.objects.create(
-        name="product_version", et_id=10, product=product
-    )
-    cpe = "cpe:/a:redhat:openshift_pipelines:1.7::el8"
-    CollectorErrataProductVariant.objects.create(
-        name="product_variant", et_id=100, product_version=product_version, cpe=cpe
-    )
-
-    results = _find_by_cpe(["cpe:/a:redhat:openshift_pipelines:1"])
-
-    assert cpe in results
-
-
-@pytest.mark.django_db
-def test_skip_brew_tag_linking_for_buggy_products(requests_mock):
-    """RHEL-7-SATELLITE-6.10 has a brew_tag for 6.7 version, which means the 7Server-Satellite67
-    ProductVariant gets incorrectly associated with the rhn_satellite_6.7 product stream"""
-
-    with open("tests/data/prod_defs/product-definitions.json") as prod_defs:
-        text = prod_defs.read()
-        text = text.replace("{CORGI_TEST_DOWNLOAD_URL}", os.getenv("CORGI_TEST_DOWNLOAD_URL"))
-        text = text.replace("{CORGI_PULP_URL}", os.getenv("CORGI_PULP_URL"))
-        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
-
-    et_product = CollectorErrataProduct.objects.create(
-        et_id=103, name="Red Hat Satellite 6", short_name="SATELLITE"
-    )
-    CollectorErrataProductVersion.objects.create(
-        et_id=1571,
-        name="RHEL-7-SATELLITE-6.10",
-        product=et_product,
-        brew_tags=["satellite-6.7.0-rhel-7"],
-    )
-
-    update_products()
-
-    rhn_satellite_67 = ProductStream.objects.get(name="rhn_satellite_6.7")
-    assert "satellite-6.7.0-rhel-7" in rhn_satellite_67.brew_tags
-    assert rhn_satellite_67.productvariants.count() == 0
-
-    rhn_satellite_610 = ProductStream.objects.get(name="rhn_satellite_6.10")
-    sat_610_variants = rhn_satellite_610.productvariants.get_queryset()
-    assert len(sat_610_variants) == 2
-    for variant in sat_610_variants:
-        assert variant.name in ("7Server-Capsule610", "7Server-Satellite610")
-
-
 # We stip -candidate from tags before persisting Collector models
 brew_tag_streams = [
     # In the actual ET data the brew tag is gitops-1.7-rhel-8-candidate

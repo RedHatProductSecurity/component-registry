@@ -283,8 +283,13 @@ class IncludeExcludeFieldsSerializer(serializers.ModelSerializer):
 
 
 class TagSerializer(serializers.Serializer):
-    name = serializers.SlugField(allow_blank=False)
+    """Show name, value, and the date created for Tag(s)."""
+
+    # Cannot use ModelSerializer with abstract models
+    # Make sure to update below when changing the Tag model
+    name = serializers.SlugField(max_length=200, allow_blank=False)
     value = serializers.CharField(max_length=1024, allow_blank=True, default="")
+    # Inherited from TimestampedModel
     created_at = serializers.DateTimeField(read_only=True)
 
 

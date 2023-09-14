@@ -571,6 +571,59 @@ paths:
               schema:
                 $ref: '#/components/schemas/Component'
           description: ''
+  /api/v1/components/{uuid}/tags:
+    post:
+      operationId: v1_components_tags_create
+      description: Add a tag.
+      parameters:
+      - in: path
+        name: uuid
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this component.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Tag'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Tag'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Tag'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tag'
+          description: ''
+    delete:
+      operationId: v1_components_tags_destroy
+      description: Delete a tag.
+      parameters:
+      - in: path
+        name: uuid
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this component.
+        required: true
+      tags:
+      - v1
+      security:
+      - tokenAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/v1/components/{uuid}/taxonomy:
     get:
       operationId: v1_components_taxonomy_retrieve
@@ -2201,9 +2254,11 @@ components:
       - source
     Tag:
       type: object
+      description: Show name, value, and the date created for Tag(s).
       properties:
         name:
           type: string
+          maxLength: 200
           pattern: ^[-a-zA-Z0-9_]+$
         value:
           type: string

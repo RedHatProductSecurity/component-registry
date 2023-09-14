@@ -30,7 +30,7 @@ class SoftwareBuildFactory(factory.django.DjangoModelFactory):
     build_id = factory.Faker("md5")
     build_type = random.choice(models.SoftwareBuild.Type.values)
     name = factory.Faker("word")
-    tag = factory.RelatedFactory(SoftwareBuildTagFactory, factory_related_name="tagged_model")
+    tags = factory.RelatedFactory(SoftwareBuildTagFactory, factory_related_name="tagged_model")
     completion_time = timezone.now()
 
 
@@ -46,7 +46,7 @@ class ProductFactory(factory.django.DjangoModelFactory):
     name = factory.Faker("word")
     version = ""
     description = factory.Faker("word")
-    tag = factory.RelatedFactory(ProductTagFactory, factory_related_name="tagged_model")
+    tags = factory.RelatedFactory(ProductTagFactory, factory_related_name="tagged_model")
 
 
 class ProductVersionTagFactory(TagFactory):
@@ -68,7 +68,7 @@ class ProductVersionFactory(factory.django.DjangoModelFactory):
         description=factory.SelfAttribute("..description"),
     )
     # link model using reverse relationship to child models
-    tag = factory.RelatedFactory(ProductVersionTagFactory, factory_related_name="tagged_model")
+    tags = factory.RelatedFactory(ProductVersionTagFactory, factory_related_name="tagged_model")
 
 
 class ProductStreamTagFactory(TagFactory):
@@ -96,7 +96,7 @@ class ProductStreamFactory(factory.django.DjangoModelFactory):
         products=factory.SelfAttribute("..products"),
     )
     # link model using reverse relationship to child models
-    tag = factory.RelatedFactory(ProductStreamTagFactory, factory_related_name="tagged_model")
+    tags = factory.RelatedFactory(ProductStreamTagFactory, factory_related_name="tagged_model")
     active = True
 
 
@@ -138,7 +138,7 @@ class ProductVariantFactory(factory.django.DjangoModelFactory):
         productversions=factory.SelfAttribute("..productversions"),
     )
     # link model using reverse relationship to child models
-    tag = factory.RelatedFactory(ProductVariantTagFactory, factory_related_name="tagged_model")
+    tags = factory.RelatedFactory(ProductVariantTagFactory, factory_related_name="tagged_model")
 
 
 def random_erratum_name(n):
@@ -180,7 +180,7 @@ class ComponentFactory(factory.django.DjangoModelFactory):
     license_concluded_raw = "(MIT and (ASL 2.0 or GPLv3+ with exceptions)) or LGPLv3+"
 
     software_build = factory.SubFactory(SoftwareBuildFactory)
-    tag = factory.RelatedFactory(ComponentTagFactory, factory_related_name="tagged_model")
+    tags = factory.RelatedFactory(ComponentTagFactory, factory_related_name="tagged_model")
 
     meta_attr: dict = {}
 

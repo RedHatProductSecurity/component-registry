@@ -36,7 +36,7 @@ def extract_tag_tuples(tags: list[dict]) -> set[tuple]:
 # https://code.djangoproject.com/ticket/23718#comment:6
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_software_build_details(client, api_path, build_type):
-    build = SoftwareBuildFactory(build_type=build_type, tag__name="t0", tag__value="v0")
+    build = SoftwareBuildFactory(build_type=build_type, tags__name="t0", tags__value="v0")
     SoftwareBuildFactory(build_type=build_type)
 
     response = client.get(f"{api_path}/builds/{build.uuid}")
@@ -68,7 +68,7 @@ def test_software_build_details(client, api_path, build_type):
     ],
 )
 def test_product_data_detail(model, endpoint_name, client, api_path):
-    p1 = model(name="RHEL", tag__name="t0", tag__value="v0")
+    p1 = model(name="RHEL", tags__name="t0", tags__value="v0")
 
     response = client.get(f"{api_path}/{endpoint_name}")
     assert response.status_code == 200
@@ -646,66 +646,150 @@ def test_component_does_not_exist(client, api_path):
     assert response.status_code == 404
 
 
-@pytest.mark.skip(reason="Disabled until auth for write endpoints is implemented")
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_component_tags_create(client, api_path):
-    c1 = ComponentFactory(name="curl", tag__name="t0", tag__value="v0")
+    # User for Incident Response authentication
+    ir_user = User.objects.create_user(username="ir", email="ir@example.com")
+    ir_token = Token.objects.create(user=ir_user, key="mysteries_quirewise_volitant_woolshed")
+
+    c1 = ComponentFactory(name="curl", tags__name="t0", tags__value="v0")
+    response = client.get(f"{api_path}/components/{c1.uuid}")
+    assert response.status_code == 200
+    assert extract_tag_tuples(response.json()["tags"]) == {("t0", "v0")}
+
+    # Unauthenticated requests fail, detailed error message is given
     response = client.post(
         f"{api_path}/components/{c1.uuid}/tags",
         data={"name": "t1", "value": "v1"},
     )
-    assert response.status_code == 201
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Authentication credentials were not provided."}
+
+    # Authenticate
+    client.credentials(HTTP_AUTHORIZATION=f"Token {ir_token.key}")
+    response = client.post(
+        f"{api_path}/components/{c1.uuid}/tags",
+        data={"name": "t1", "value": "v1", "tagged_model": c1.uuid},
+    )
+    assert response.status_code == 201, response.json()
+    assert response.json() == {"detail": "Created tag t1: v1"}
+
     response = client.get(f"{api_path}/components/{c1.uuid}")
+    assert response.status_code == 200
     assert extract_tag_tuples(response.json()["tags"]) == {("t0", "v0"), ("t1", "v1")}
 
-    client.post(f"{api_path}/components/{c1.uuid}/tags", data={"name": "t2"})
+    response = client.post(f"{api_path}/components/{c1.uuid}/tags", data={"name": "t2"})
+    assert response.status_code == 201
+    assert response.json() == {"detail": "Created tag t2"}
+
     response = client.get(f"{api_path}/components/{c1.uuid}")
     assert response.status_code == 200
     assert extract_tag_tuples(response.json()["tags"]) == {("t0", "v0"), ("t1", "v1"), ("t2", "")}
 
 
-@pytest.mark.skip(reason="Disabled until auth for write endpoints is implemented")
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_component_tags_duplicate(client, api_path):
-    c1 = ComponentFactory(name="curl", tag__name="t0", tag__value="v0")
+    """Test that tagging components fails if the tag is a duplicate"""
+    # User for Incident Response authentication
+    ir_user = User.objects.create_user(username="ir", email="ir@example.com")
+    ir_token = Token.objects.create(user=ir_user, key="mysteries_quirewise_volitant_woolshed")
+    c1 = ComponentFactory(name="curl", tags__name="t0", tags__value="v0")
+
+    # Unauthenticated requests fail, detailed error message is given
+    response = client.post(
+        f"{api_path}/components/{c1.uuid}/tags", data={"name": "t0", "value": "v0"}
+    )
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Authentication credentials were not provided."}
+
+    # Authenticate
+    client.credentials(HTTP_AUTHORIZATION=f"Token {ir_token.key}")
     response = client.post(
         f"{api_path}/components/{c1.uuid}/tags", data={"name": "t0", "value": "v0"}
     )
     assert response.status_code == 400
-    assert response.json()["error"] == "Tag already exists."
+    assert response.json() == {"detail": "Tag already exists."}
 
 
-@pytest.mark.skip(reason="Disabled until auth for write endpoints is implemented")
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_component_tags_length(client, api_path):
+    """Test that tagging components fails if the tag is too long"""
+    # User for Incident Response authentication
+    ir_user = User.objects.create_user(username="ir", email="ir@example.com")
+    ir_token = Token.objects.create(user=ir_user, key="mysteries_quirewise_volitant_woolshed")
+    c1 = ComponentFactory(name="curl", tags=None)
+    tag_name = "too" + ("long" * 50)  # max length 200, here we have 203
+    tag_value = "too" + ("long" * 256)  # max length 1024, here we have 1027
+
+    # Unauthenticated requests fail, detailed error message is given
+    response = client.post(f"{api_path}/components/{c1.uuid}/tags", data={"name": tag_name})
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Authentication credentials were not provided."}
+
+    # Authenticate
+    client.credentials(HTTP_AUTHORIZATION=f"Token {ir_token.key}")
+    response = client.post(f"{api_path}/components/{c1.uuid}/tags", data={"name": tag_name})
+    assert response.status_code == 400
+    assert response.json() == {"name": ["Ensure this field has no more than 200 characters."]}
+
+    response = client.post(
+        f"{api_path}/components/{c1.uuid}/tags", data={"name": "t0", "value": tag_value}
+    )
+    assert response.status_code == 400
+    assert response.json() == {"value": ["Ensure this field has no more than 1024 characters."]}
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_component_tags_delete(client, api_path):
-    component = ComponentFactory(name="curl", tag=None)
-    ComponentTagFactory(component=component, name="t0", value="v0")
-    ComponentTagFactory(component=component, name="t1", value="")
-    ComponentTagFactory(component=component, name="t2", value="v2")
-    ComponentTagFactory(component=component, name="t3", value="v3")
+    # User for Incident Response authentication
+    ir_user = User.objects.create_user(username="ir", email="ir@example.com")
+    ir_token = Token.objects.create(user=ir_user, key="mysteries_quirewise_volitant_woolshed")
 
-    # Remove one tag
+    component = ComponentFactory(name="curl", tags=None)
+    ComponentTagFactory(tagged_model=component, name="t0", value="v0")
+    ComponentTagFactory(tagged_model=component, name="t1", value="")
+    ComponentTagFactory(tagged_model=component, name="t2", value="v2")
+    ComponentTagFactory(tagged_model=component, name="t3", value="v3")
+
+    # Unauthenticated requests fail, detailed error message is given
+    response = client.delete(
+        f"{api_path}/components/{component.uuid}/tags", data={"name": "t0", "value": "v0"}
+    )
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Authentication credentials were not provided."}
+
+    # Authenticate and remove one tag
+    client.credentials(HTTP_AUTHORIZATION=f"Token {ir_token.key}")
     response = client.delete(
         f"{api_path}/components/{component.uuid}/tags", data={"name": "t0", "value": "v0"}
     )
     assert response.status_code == 200
-    assert response.json()["text"] == "Tag deleted."
+    assert response.json() == {
+        "detail": "1 tag(s) and related models deleted: {'core.ComponentTag': 1}"
+    }
     response = client.get(f"{api_path}/components/{component.uuid}")
     assert extract_tag_tuples(response.json()["tags"]) == {("t1", ""), ("t2", "v2"), ("t3", "v3")}
 
     # Try to remove a non-existent tag
     response = client.delete(f"{api_path}/components/{component.uuid}/tags", data={"name": "t2"})
-    assert response.status_code == 200
-    assert response.json()["text"] == "Tag not found; nothing deleted."
+    assert response.status_code == 404
+    assert response.json() == {"detail": "0 tag(s) and related models deleted: {}"}
 
     # Remove the t1 tag by name only
     response = client.delete(f"{api_path}/components/{component.uuid}/tags", data={"name": "t1"})
     assert response.status_code == 200
-    assert response.json()["text"] == "Tag deleted."
+    assert response.json() == {
+        "detail": "1 tag(s) and related models deleted: {'core.ComponentTag': 1}"
+    }
     response = client.get(f"{api_path}/components/{component.uuid}")
     assert extract_tag_tuples(response.json()["tags"]) == {("t2", "v2"), ("t3", "v3")}
 
     # Remove all tags
     response = client.delete(f"{api_path}/components/{component.uuid}/tags")
     assert response.status_code == 200
-    assert response.json()["text"] == "All tags deleted."
+    assert response.json() == {
+        "detail": "2 tag(s) and related models deleted: {'core.ComponentTag': 2}"
+    }
     response = client.get(f"{api_path}/components/{component.uuid}")
     assert response.json()["tags"] == []
 
@@ -714,8 +798,8 @@ def test_component_tags_delete(client, api_path):
 def test_component_add_uri(client, api_path):
     c1 = ComponentFactory(
         name="curl",
-        tag__name="component_review",
-        tag__value="https://someexample.org/review/curl.doc",
+        tags__name="component_review",
+        tags__value="https://someexample.org/review/curl.doc",
     )
     response = client.get(f"{api_path}/components/{c1.uuid}")
     assert response.status_code == 200
@@ -883,12 +967,12 @@ def test_nvr_nevra_filter(client, api_path):
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_filter_component_tags(client, api_path):
-    openssl = ComponentFactory(name="openssl", type=Component.Type.RPM, tag=None)
+    openssl = ComponentFactory(name="openssl", type=Component.Type.RPM, tags=None)
     ComponentTagFactory(tagged_model=openssl, name="prodsec_priority", value="")
     ComponentTagFactory(tagged_model=openssl, name="ubi8", value="")
     ComponentTagFactory(tagged_model=openssl, name="status", value="yellow")
 
-    curl = ComponentFactory(name="curl", type=Component.Type.RPM, tag=None)
+    curl = ComponentFactory(name="curl", type=Component.Type.RPM, tags=None)
     ComponentTagFactory(tagged_model=curl, name="prodsec_priority", value="")
     ComponentTagFactory(tagged_model=curl, name="status", value="green")
 

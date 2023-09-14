@@ -48,6 +48,7 @@ from .filters import (
     ProductDataFilter,
     SoftwareBuildFilter,
 )
+from .mixins import TagViewMixin
 from .serializers import (
     AppStreamLifeCycleSerializer,
     ChannelSerializer,
@@ -541,7 +542,7 @@ class ChannelViewSet(ReadOnlyModelViewSet):
 
 
 @INCLUDE_EXCLUDE_FIELDS_SCHEMA
-class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled until auth is added
+class ComponentViewSet(ReadOnlyModelViewSet, TagViewMixin):
     """View for api/v1/components"""
 
     queryset = (

@@ -40,6 +40,7 @@ def test_viewset_ordering(api_path):
             "GenericViewSet",
             "ReadOnlyModelViewSet",
             "StatusViewSet",
+            "TagViewMixin",
             "ProductDataViewSet",
             "SoftwareBuildViewSet",
             "ComponentViewSet",

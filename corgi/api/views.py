@@ -689,15 +689,6 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         response["Location"] = f"/api/{CORGI_API_VERSION}/components/{component.uuid}"
         return response
 
-    def _paginate_queryset(self, queryset: QuerySet) -> Response:
-        """Helper method to apply pagination to arbitrary querysets."""
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
-
     @action(methods=["get"], detail=True)
     def taxonomy(self, request: Request, pk: str = "") -> Response:
         obj = self.queryset.filter(pk=pk).first()

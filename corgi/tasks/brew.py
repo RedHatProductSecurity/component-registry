@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Any, Optional, Tuple
+from typing import Any, Optional
 
 import koji
 from celery.utils.log import get_task_logger
@@ -97,20 +97,21 @@ def slow_fetch_brew_build(
         logger.warning("SoftwareBuild with build_id %s already existed, not reprocessing", build_id)
         return False
 
-    root = _check_and_save_type(component, softwarebuild, save_product, build_id)
-    if not root:
+    root_node, root_created = _check_and_save_type(component, softwarebuild, save_product, build_id)
+    if not root_node:
         return False
-    (root_node, root_created) = root
 
     any_child_created = _save_children(component.get("components", []), root_node)
 
-    _check_and_load_brew_tags(build_id, build_meta["tags"], build_type, softwarebuild)
+    new_relations = load_brew_tags(softwarebuild, build_meta["tags"])
+    logger.info(f"Created {new_relations} for brew tags in {build_type}:{build_id}")
 
     # Allow async call of slow_load_errata task, see CORGI-21
     if save_product:
         slow_save_taxonomy.delay(build_id, build_type)
 
-    slow_load_errata.delay(build_meta.get("released_errata_tags", []), force_process=force_process)
+    for released_erratum in build_meta.get("released_errata_tags", []):
+        slow_load_errata.delay(released_erratum, force_process=force_process)
 
     _get_nested_builds(build_type, component.get("nested_builds", ()), force_process, save_product)
 
@@ -141,18 +142,6 @@ def _get_nested_builds(
         )
 
 
-def _check_and_load_brew_tags(
-    build_id: str, tags: list[str], build_type: str, softwarebuild: SoftwareBuild
-) -> None:
-    # for builds with any tag, check if the tag is used for product stream relations, and create the
-    # relations if so.
-    if not tags:
-        logger.info("no brew tags")
-    else:
-        new_relations = load_brew_tags(softwarebuild, tags)
-        logger.info(f"Created {new_relations} for brew tags in {build_type}:{build_id}")
-
-
 def _save_children(child_components: list[dict], root_node: ComponentNode) -> bool:
     any_child_created = False
     for child_component in child_components:
@@ -160,7 +149,7 @@ def _save_children(child_components: list[dict], root_node: ComponentNode) -> bo
     return any_child_created
 
 
-def _get_completion_time(build_id: str, completion_time):
+def _get_completion_time(build_id: str, completion_time) -> datetime:
     if completion_time:
         dt = dateparse.parse_datetime(completion_time.split(".")[0])
         if dt:
@@ -176,7 +165,7 @@ def _get_completion_time(build_id: str, completion_time):
 
 def _check_and_save_type(
     component: dict[str, Any], softwarebuild: SoftwareBuild, save_product: bool, build_id: str
-) -> Optional[Tuple[ComponentNode, bool]]:
+) -> tuple[Optional[ComponentNode], bool]:
     if component["type"] == Component.Type.RPM:
         return save_srpm(softwarebuild, component)
     elif component["type"] == Component.Type.CONTAINER_IMAGE:
@@ -185,7 +174,7 @@ def _check_and_save_type(
         return save_module(softwarebuild, component)
     else:
         logger.warning(f"Build {build_id} type is not supported: {component['type']}")
-        return None
+        return None, False
 
 
 def update_relation_software_build_fk(
@@ -917,8 +906,10 @@ def slow_update_brew_tags(build_id: str, tag_added: str = "", tag_removed: str =
             build.meta_attr["tags"] = sorted(tags)
             errata_tag = ADVISORY_REGEX.match(tag_added)
             if errata_tag:
-                # Below should automatically create new relations for this build / erratum
-                slow_load_errata.delay(errata_tag.group())
+                advisory_ids = Brew.parse_advisory_ids([errata_tag.group()])
+                if advisory_ids:
+                    # Below should automatically create new relations for this build / erratum
+                    slow_load_errata.delay(advisory_ids[0])
         else:
             try:
                 build.meta_attr["tags"].remove(tag_removed)

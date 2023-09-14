@@ -1,0 +1,8 @@
+{
+  "errata": {
+    "rhba": {
+      "id": 77150,
+      "status": "SHIPPED_LIVE"
+    }
+  }
+}

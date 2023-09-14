@@ -48,10 +48,9 @@ def slow_save_errata_product_taxonomy(erratum_id: int) -> None:
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def slow_load_errata(erratum_name: str, force_process: bool = False) -> None:
     et = ErrataTool()
-    if not erratum_name.isdigit():
-        erratum_id = et.normalize_erratum_id(erratum_name)
-    else:
-        erratum_id = int(erratum_name)
+    erratum_id, shipped_live = et.get_errata_key_details(erratum_name)
+    if not shipped_live:
+        raise ValueError(f"Called slow_load_errata with non-shipped errata {erratum_name}")
     relation_builds = _get_relation_builds(erratum_id)
 
     build_types = set()

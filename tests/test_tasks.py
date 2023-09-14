@@ -86,7 +86,8 @@ def test_slow_update_brew_tags_added(tag_added, is_errata, is_released):
     if is_errata:
         tag_without_suffix = tag_added.rsplit("-", maxsplit=1)[0]
         assert ADVISORY_REGEX.match(tag_added).group() == tag_without_suffix
-        mock_load_errata.assert_called_once_with(tag_without_suffix)
+        if is_released:
+            mock_load_errata.assert_called_once_with(tag_without_suffix)
         clean_errata_tags = sorted(set(clean_errata_tags + [tag_without_suffix]))
 
         if is_released:

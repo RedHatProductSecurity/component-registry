@@ -1,7 +1,6 @@
 import logging
 import typing
 from collections import defaultdict
-from functools import reduce
 
 import requests
 from django.conf import settings
@@ -209,23 +208,16 @@ class ErrataTool:
         }
         return variants_with_repos
 
-    def normalize_erratum_id(self, name: str) -> int:
-        if name.isdigit():
-            return int(name)
+    def get_errata_key_details(self, name: str) -> tuple[int, bool]:
         erratum_details = self.get(f"api/v1/erratum/{name}")
-        erratum_id = self.get_from_dict(erratum_details, ["content", "content", "errata_id"])
-        return int(erratum_id)
-
-    # https://stackoverflow.com/questions/28225552/
-    # is-there-a-recursive-version-of-the-dict-get-built-in/52260663#52260663
-    @staticmethod
-    def get_from_dict(data, keys):
-        """Iterate nested dictionary"""
-        try:
-            return reduce(dict.get, keys, data)
-        except TypeError:
-            logger.warning("Didn't find %s in data", keys)
-            return None
+        errata_type_details = list(erratum_details["errata"].values())
+        if len(errata_type_details) != 1:
+            raise ValueError(
+                f"Erratum with name {name} has more than one type key: {errata_type_details}"
+            )
+        erratum_id = errata_type_details[0]["id"]
+        shipped_live = errata_type_details[0]["status"] == "SHIPPED_LIVE"
+        return erratum_id, shipped_live
 
     def get_builds_for_errata(self, errata_id: int) -> list[int]:
         build_ids = set()

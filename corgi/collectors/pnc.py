@@ -94,3 +94,14 @@ class SbomerSbom:
         # declared in the Components section above. At the moment,
         # only "dependsOn" type relationships are declared.
         self.dependencies = {d["ref"]: d["dependsOn"] for d in data["dependencies"]}
+
+
+def is_sbomer_product(product: str, product_release: str) -> bool:
+    """Identifies products for which SBOMer produces manifests and which need separate handling
+    for release errata"""
+    products = {
+        "RHBQ": [
+            "Red Hat build of Quarkus Middleware",
+        ],
+    }
+    return product in products and product_release in products[product]

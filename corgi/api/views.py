@@ -12,7 +12,6 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from mozilla_django_oidc.contrib.drf import OIDCAuthentication
 from mptt.templatetags.mptt_tags import cache_tree_children
-from packageurl import PackageURL
 from rest_framework import filters, status
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import (
@@ -463,7 +462,9 @@ class ComponentViewSet(ReadOnlyModelViewSet, TagViewMixin):
         .select_related("software_build")
     )
     serializer_class: Union[
-        Type[ComponentSerializer], Type[ComponentListSerializer]
+        Type[ComponentSerializer],
+        Type[ComponentListSerializer],
+        Type[ComponentProductStreamSummarySerializer],
     ] = ComponentSerializer
     search_fields = ["name", "description", "release", "version", "meta_attr"]
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend, filters.SearchFilter]
@@ -493,9 +494,7 @@ class ComponentViewSet(ReadOnlyModelViewSet, TagViewMixin):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter("ofuri", OpenApiTypes.STR, OpenApiParameter.QUERY),
             OpenApiParameter("view", OpenApiTypes.STR, OpenApiParameter.QUERY),
-            OpenApiParameter("purl", OpenApiTypes.STR, OpenApiParameter.QUERY),
         ]
     )
     def list(self, request: Request, *args: tuple, **kwargs: dict) -> Response:
@@ -520,29 +519,16 @@ class ComponentViewSet(ReadOnlyModelViewSet, TagViewMixin):
 
                 ps_qs = ProductStream.objects.none()
                 productstreams = ps_qs.union(*product_streams_arr).using("read_only")
-                serializer = ComponentProductStreamSummarySerializer(
-                    productstreams, many=True, read_only=True
-                )
+                self.serializer_class = ComponentProductStreamSummarySerializer
+                # A little indirect, so the serializer context is set correctly
+                serializer = self.get_serializer(productstreams, many=True, read_only=True)
                 return Response({"count": productstreams.count(), "results": serializer.data})
             if view == "summary":
                 self.serializer_class = ComponentListSerializer
-            return super().list(request)
-        return super().retrieve(request)
-
-    def get_object(self) -> Component:
-        req = self.request
-        purl = req.query_params.get("purl")
-        try:
-            if purl:
-                # We re-encode the purl here to ensure each segment of the purl is url encoded,
-                # as it's stored in the DB.
-                purl = f"{PackageURL.from_string(purl)}"
-                component = Component.objects.db_manager("read_only").get(purl=purl)
-            else:
-                component = super().get_object()
-            return component
-        except Component.DoesNotExist:
-            raise Http404
+        # Else we're looking up a single component by its purl
+        # None of the above custom code should apply
+        # We'll rely on standard Django filters instead
+        return super().list(request)
 
     @action(methods=["get"], detail=True)
     def manifest(self, request: Request, pk: str = "") -> Response:

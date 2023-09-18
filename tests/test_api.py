@@ -1174,9 +1174,9 @@ def test_api_component_lookup_by_purl(client, api_path):
     # Lookup for nonexistent component gives no results
     component_purl = "pkg:rpm/redhat/fake-libs@3.26.0-15.el8?arch=x86_64"
     response = client.get(f"{api_path}/components?purl={component_purl}")
-    error_dict = {"detail": "Not found."}
-    assert response.status_code == 404
-    assert response.json() == error_dict
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 0
 
     component = ComponentFactory(
         type=Component.Type.RPM,
@@ -1191,22 +1191,24 @@ def test_api_component_lookup_by_purl(client, api_path):
 
     # Lookup for raw purl gives no results
     response = client.get(f"{api_path}/components?purl={component_purl}")
-    assert response.status_code == 404
-    assert response.json() == error_dict
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 0
 
     # One result if we URL-encode the purl
     component_purl = quote(component.purl)
     response = client.get(f"{api_path}/components?purl={component_purl}")
     assert response.status_code == 200
-    # No "count" key here because the APi does a retrieve() / returns exactly one result
-    # It doesn't do a list() / return multiple results
-    assert response.json()["purl"] == component.purl
+    response = response.json()
+    assert response["count"] == 1
+    assert response["results"][0]["purl"] == component.purl
 
     # No results if we URL-encode the purl a slightly different way
     component_purl = PackageURL.from_string(component.purl)
     response = client.get(f"{api_path}/components?purl={component_purl}")
-    assert response.status_code == 404
-    assert response.json() == error_dict
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 0
 
 
 def test_api_component_400(client, api_path):

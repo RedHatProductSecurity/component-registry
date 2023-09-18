@@ -52,7 +52,7 @@ class ComponentFilter(FilterSet):
         model = Component
         # Fields that are matched to a filter using their Django model field type and default
         # __exact lookups.
-        fields = ("type", "namespace", "name", "version", "release", "arch", "nvr", "nevra")
+        fields = ("purl", "type", "namespace", "name", "version", "release", "arch", "nvr", "nevra")
 
     # Custom filters
     re_name = CharFilter(lookup_expr="iregex", field_name="name")

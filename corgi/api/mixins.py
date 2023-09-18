@@ -23,11 +23,7 @@ class TagViewMixin(GenericViewSet):
     )
     def tags(self, request: Request, **kwargs: dict) -> Response:
         """Add a tag."""
-        # TODO: self.get_object() doesn't work here??
-        #  It tries to look up the last part of the URL as a UUID: "components/some_uuid/TAGS"
-        #  instead of the middle part: "components/SOME_UUID/tags"
-        # obj = self.get_object()
-        obj = self.get_queryset().get()
+        obj = self.get_object()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         # We enforce uniqueness of tags on a single model instance on the database level,
@@ -50,8 +46,7 @@ class TagViewMixin(GenericViewSet):
     @tags.mapping.delete
     def delete_tag(self, request: Request, **kwargs: dict) -> Response:
         """Delete a tag."""
-        # obj = self.get_object()
-        obj = self.get_queryset().get()
+        obj = self.get_object()
         if not request.data:
             tags_to_delete = obj.tags.get_queryset()
         else:

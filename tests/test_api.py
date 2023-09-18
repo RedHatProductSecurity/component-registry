@@ -653,6 +653,10 @@ def test_component_tags_create(client, api_path):
     ir_token = Token.objects.create(user=ir_user, key="mysteries_quirewise_volitant_woolshed")
 
     c1 = ComponentFactory(name="curl", tags__name="t0", tags__value="v0")
+    # Make sure test doesn't fail when more than object present
+    # e.g. due to incorrect get_queryset().get() usage instead of get_object()
+    ComponentFactory(name="curl_unused", tags=None)
+
     response = client.get(f"{api_path}/components/{c1.uuid}")
     assert response.status_code == 200
     assert extract_tag_tuples(response.json()["tags"]) == {("t0", "v0")}
@@ -746,6 +750,9 @@ def test_component_tags_delete(client, api_path):
     ir_token = Token.objects.create(user=ir_user, key="mysteries_quirewise_volitant_woolshed")
 
     component = ComponentFactory(name="curl", tags=None)
+    # Make sure test doesn't fail when more than object present
+    # e.g. due to incorrect get_queryset().get() usage instead of get_object()
+    ComponentFactory(name="curl_unused", tags=None)
     ComponentTagFactory(tagged_model=component, name="t0", value="v0")
     ComponentTagFactory(tagged_model=component, name="t1", value="")
     ComponentTagFactory(tagged_model=component, name="t2", value="v2")

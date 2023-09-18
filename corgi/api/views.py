@@ -396,7 +396,7 @@ class ProductViewSet(ProductDataViewSet):
             return super().list(request)
         return super().retrieve(request)
 
-    def get_object(self):
+    def get_object(self) -> Product:
         req = self.request
         p_ofuri = req.query_params.get("ofuri")
         p_name = req.query_params.get("name")
@@ -406,8 +406,7 @@ class ProductViewSet(ProductDataViewSet):
             elif p_ofuri:
                 p = Product.objects.db_manager("read_only").get(ofuri=p_ofuri)
             else:
-                pk = req.path.split("/")[-1]  # there must be better ways ...
-                p = Product.objects.db_manager("read_only").get(uuid=pk)
+                p = super().get_object()
             return p
         except Product.DoesNotExist:
             raise Http404
@@ -427,7 +426,7 @@ class ProductVersionViewSet(ProductDataViewSet):
             return super().list(request)
         return super().retrieve(request)
 
-    def get_object(self):
+    def get_object(self) -> ProductVersion:
         req = self.request
         pv_ofuri = req.query_params.get("ofuri")
         pv_name = req.query_params.get("name")
@@ -437,8 +436,7 @@ class ProductVersionViewSet(ProductDataViewSet):
             elif pv_ofuri:
                 pv = ProductVersion.objects.db_manager("read_only").get(ofuri=pv_ofuri)
             else:
-                pk = req.path.split("/")[-1]  # there must be better ways ...
-                pv = ProductVersion.objects.db_manager("read_only").get(uuid=pk)
+                pv = super().get_object()
             return pv
         except ProductVersion.DoesNotExist:
             raise Http404
@@ -475,7 +473,7 @@ class ProductStreamViewSetSet(ProductDataViewSet):
             return super().list(request)
         return super().retrieve(request)
 
-    def get_object(self):
+    def get_object(self) -> ProductStream:
         req = self.request
         ps_ofuri = req.query_params.get("ofuri")
         ps_name = req.query_params.get("name")
@@ -485,8 +483,7 @@ class ProductStreamViewSetSet(ProductDataViewSet):
             elif ps_ofuri:
                 ps = ProductStream.objects.db_manager("read_only").get(ofuri=ps_ofuri)
             else:
-                pk = req.path.split("/")[-1]  # there must be better ways ...
-                ps = ProductStream.objects.db_manager("read_only").get(uuid=pk)
+                ps = super().get_object()
             return ps
         except ProductStream.DoesNotExist:
             raise Http404
@@ -514,7 +511,7 @@ class ProductVariantViewSetSet(ProductDataViewSet):
             return super().list(request)
         return super().retrieve(request)
 
-    def get_object(self):
+    def get_object(self) -> ProductVariant:
         req = self.request
         pv_ofuri = req.query_params.get("ofuri")
         pv_name = req.query_params.get("name")
@@ -524,8 +521,7 @@ class ProductVariantViewSetSet(ProductDataViewSet):
             elif pv_ofuri:
                 pv = ProductVariant.objects.db_manager("read_only").get(ofuri=pv_ofuri)
             else:
-                pk = req.path.split("/")[-1]  # there must be better ways ...
-                pv = ProductVariant.objects.db_manager("read_only").get(uuid=pk)
+                pv = super().get_object()
             return pv
         except ProductVariant.DoesNotExist:
             raise Http404
@@ -617,7 +613,7 @@ class ComponentViewSet(ReadOnlyModelViewSet, TagViewMixin):
             return super().list(request)
         return super().retrieve(request)
 
-    def get_object(self):
+    def get_object(self) -> Component:
         req = self.request
         purl = req.query_params.get("purl")
         try:
@@ -627,8 +623,7 @@ class ComponentViewSet(ReadOnlyModelViewSet, TagViewMixin):
                 purl = f"{PackageURL.from_string(purl)}"
                 component = Component.objects.db_manager("read_only").get(purl=purl)
             else:
-                pk = req.path.split("/")[-1]  # there must be better ways ...
-                component = Component.objects.db_manager("read_only").get(pk=pk)
+                component = super().get_object()
             return component
         except Component.DoesNotExist:
             raise Http404

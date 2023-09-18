@@ -389,28 +389,6 @@ class ProductViewSet(ProductDataViewSet):
     queryset = Product.objects.order_by(ProductDataViewSet.ordering_field).using("read_only")
     serializer_class = ProductSerializer
 
-    def list(self, request: Request, *args: tuple, **kwargs: dict) -> Response:
-        req = self.request
-        ofuri = req.query_params.get("ofuri")
-        if not ofuri:
-            return super().list(request)
-        return super().retrieve(request)
-
-    def get_object(self) -> Product:
-        req = self.request
-        p_ofuri = req.query_params.get("ofuri")
-        p_name = req.query_params.get("name")
-        try:
-            if p_name:
-                p = Product.objects.db_manager("read_only").get(name=p_name)
-            elif p_ofuri:
-                p = Product.objects.db_manager("read_only").get(ofuri=p_ofuri)
-            else:
-                p = super().get_object()
-            return p
-        except Product.DoesNotExist:
-            raise Http404
-
 
 @INCLUDE_EXCLUDE_FIELDS_SCHEMA
 class ProductVersionViewSet(ProductDataViewSet):
@@ -419,38 +397,12 @@ class ProductVersionViewSet(ProductDataViewSet):
     queryset = ProductVersion.objects.order_by(ProductDataViewSet.ordering_field).using("read_only")
     serializer_class = ProductVersionSerializer
 
-    def list(self, request: Request, *args: tuple, **kwargs: dict) -> Response:
-        req = self.request
-        ofuri = req.query_params.get("ofuri")
-        if not ofuri:
-            return super().list(request)
-        return super().retrieve(request)
-
-    def get_object(self) -> ProductVersion:
-        req = self.request
-        pv_ofuri = req.query_params.get("ofuri")
-        pv_name = req.query_params.get("name")
-        try:
-            if pv_name:
-                pv = ProductVersion.objects.db_manager("read_only").get(name=pv_name)
-            elif pv_ofuri:
-                pv = ProductVersion.objects.db_manager("read_only").get(ofuri=pv_ofuri)
-            else:
-                pv = super().get_object()
-            return pv
-        except ProductVersion.DoesNotExist:
-            raise Http404
-
 
 @INCLUDE_EXCLUDE_FIELDS_SCHEMA
 class ProductStreamViewSetSet(ProductDataViewSet):
     """View for api/v1/product_streams"""
 
-    queryset = (
-        ProductStream.objects.filter(active=True)
-        .order_by(ProductDataViewSet.ordering_field)
-        .using("read_only")
-    )
+    queryset = ProductStream.objects.order_by(ProductDataViewSet.ordering_field).using("read_only")
     serializer_class: Union[
         Type[ProductStreamSerializer], Type[ProductStreamSummarySerializer]
     ] = ProductStreamSerializer
@@ -463,34 +415,20 @@ class ProductStreamViewSetSet(ProductDataViewSet):
         ps_ofuri = request.query_params.get("ofuri")
         ps_name = request.query_params.get("name")
         active = request.query_params.get("active")
-        if active == "all":
-            self.queryset = ProductStream.objects.order_by(super().ordering_field).using(
-                "read_only"
-            )
         if not ps_ofuri and not ps_name:
+            if active != "all":
+                self.queryset = self.get_queryset().filter(active=True)
             if view == "summary":
                 self.serializer_class = ProductStreamSummarySerializer
-            return super().list(request)
-        return super().retrieve(request)
-
-    def get_object(self) -> ProductStream:
-        req = self.request
-        ps_ofuri = req.query_params.get("ofuri")
-        ps_name = req.query_params.get("name")
-        try:
-            if ps_name:
-                ps = ProductStream.objects.db_manager("read_only").get(name=ps_name)
-            elif ps_ofuri:
-                ps = ProductStream.objects.db_manager("read_only").get(ofuri=ps_ofuri)
-            else:
-                ps = super().get_object()
-            return ps
-        except ProductStream.DoesNotExist:
-            raise Http404
+        # Else we are looking up by a unique field (ofuri or name)
+        # This should always return a single result,
+        # even if the stream to be looked up isn't active anymore
+        # Single results also shouldn't use a summary serializer
+        return super().list(request, *args, **kwargs)
 
     @action(methods=["get"], detail=True)
     def manifest(self, request: Request, pk: str = "") -> Response:
-        obj = self.queryset.filter(pk=pk).first()
+        obj = self.get_queryset().filter(pk=pk).first()
         if not obj:
             return Response(status=status.HTTP_404_NOT_FOUND)
         manifest = json.loads(obj.manifest)
@@ -503,28 +441,6 @@ class ProductVariantViewSetSet(ProductDataViewSet):
 
     queryset = ProductVariant.objects.order_by(ProductDataViewSet.ordering_field).using("read_only")
     serializer_class = ProductVariantSerializer
-
-    def list(self, request: Request, *args: tuple, **kwargs: dict) -> Response:
-        req = self.request
-        ofuri = req.query_params.get("ofuri")
-        if not ofuri:
-            return super().list(request)
-        return super().retrieve(request)
-
-    def get_object(self) -> ProductVariant:
-        req = self.request
-        pv_ofuri = req.query_params.get("ofuri")
-        pv_name = req.query_params.get("name")
-        try:
-            if pv_name:
-                pv = ProductVariant.objects.db_manager("read_only").get(name=pv_name)
-            elif pv_ofuri:
-                pv = ProductVariant.objects.db_manager("read_only").get(ofuri=pv_ofuri)
-            else:
-                pv = super().get_object()
-            return pv
-        except ProductVariant.DoesNotExist:
-            raise Http404
 
 
 @INCLUDE_EXCLUDE_FIELDS_SCHEMA
@@ -630,7 +546,7 @@ class ComponentViewSet(ReadOnlyModelViewSet, TagViewMixin):
 
     @action(methods=["get"], detail=True)
     def manifest(self, request: Request, pk: str = "") -> Response:
-        obj = self.queryset.filter(pk=pk).first()
+        obj = self.get_queryset().filter(pk=pk).first()
         if not obj:
             return Response(status=status.HTTP_404_NOT_FOUND)
         manifest = json.loads(obj.manifest)
@@ -646,7 +562,7 @@ class ComponentViewSet(ReadOnlyModelViewSet, TagViewMixin):
         """Allow OpenLCS to upload copyright text / license scan results for a component"""
         # In the future these could be separate endpoints
         # For testing we'll just keep it under one endpoint
-        component = self.queryset.filter(pk=pk).using("default").first()
+        component = self.get_queryset().filter(pk=pk).using("default").first()
         if not component:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
@@ -687,7 +603,7 @@ class ComponentViewSet(ReadOnlyModelViewSet, TagViewMixin):
 
     @action(methods=["get"], detail=True)
     def taxonomy(self, request: Request, pk: str = "") -> Response:
-        obj = self.queryset.filter(pk=pk).first()
+        obj = self.get_queryset().filter(pk=pk).first()
         if not obj:
             return Response(status=status.HTTP_404_NOT_FOUND)
         dicts = get_component_taxonomy(obj, tuple(ComponentNode.ComponentNodeType.values))

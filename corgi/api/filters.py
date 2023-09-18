@@ -194,6 +194,7 @@ class ProductDataFilter(FilterSet):
     """Class that filters queries to Product-related list views."""
 
     name = CharFilter()
+    ofuri = CharFilter()
     re_name = CharFilter(lookup_expr="iregex", field_name="name")
     re_ofuri = CharFilter(lookup_expr="iregex", field_name="ofuri")
     tags = TagFilter()

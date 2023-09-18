@@ -1110,23 +1110,20 @@ def test_product_streams(client, api_path):
     response = client.get(f"{api_path}/product_streams?ofuri={rhel_av_8_5_stream.ofuri}")
     assert response.status_code == 200
     response = response.json()
-    # No "count" key here because the APi does a retrieve() / returns exactly one result
-    # It doesn't do a list() / return multiple results
-    assert response["uuid"] == str(rhel_av_8_5_stream.uuid)
+    assert response["count"] == 1
+    assert response["results"][0]["uuid"] == str(rhel_av_8_5_stream.uuid)
 
     response = client.get(f"{api_path}/product_streams?ofuri={rhel_8_5_stream.ofuri}")
     assert response.status_code == 200
     response = response.json()
-    # No "count" key here because the APi does a retrieve() / returns exactly one result
-    # It doesn't do a list() / return multiple results
-    assert response["uuid"] == str(rhel_8_5_stream.uuid)
+    assert response["count"] == 1
+    assert response["results"][0]["uuid"] == str(rhel_8_5_stream.uuid)
 
     response = client.get(f"{api_path}/product_streams?name={rhel_av_8_5_stream.name}")
     assert response.status_code == 200
     response = response.json()
-    # No "count" key here because the APi does a retrieve() / returns exactly one result
-    # It doesn't do a list() / return multiple results
-    assert response["name"] == rhel_av_8_5_stream.name
+    assert response["count"] == 1
+    assert response["results"][0]["name"] == rhel_av_8_5_stream.name
 
     response = client.get(f"{api_path}/product_streams?re_name=rhel&view=summary")
     assert response.status_code == 200
@@ -1839,4 +1836,5 @@ def test_product_streams_exclude_components(client, api_path):
     response = client.get(f"{api_path}/product_streams?ofuri={stream.ofuri}")
     assert response.status_code == 200
     response = response.json()
-    assert response["exclude_components"] == ["starfish", "seahorse"]
+    assert response["count"] == 1
+    assert response["results"][0]["exclude_components"] == ["starfish", "seahorse"]

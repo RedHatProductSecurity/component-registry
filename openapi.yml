@@ -726,6 +726,10 @@ paths:
         schema:
           type: integer
       - in: query
+        name: ofuri
+        schema:
+          type: string
+      - in: query
         name: product_streams
         schema:
           type: string
@@ -868,6 +872,10 @@ paths:
         schema:
           type: integer
       - in: query
+        name: ofuri
+        schema:
+          type: string
+      - in: query
         name: product_streams
         schema:
           type: string
@@ -989,6 +997,10 @@ paths:
         schema:
           type: integer
       - in: query
+        name: ofuri
+        schema:
+          type: string
+      - in: query
         name: product_streams
         schema:
           type: string
@@ -1109,6 +1121,10 @@ paths:
         description: The initial index from which to return the results.
         schema:
           type: integer
+      - in: query
+        name: ofuri
+        schema:
+          type: string
       - in: query
         name: product_streams
         schema:

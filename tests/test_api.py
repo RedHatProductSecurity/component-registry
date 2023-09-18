@@ -3,6 +3,7 @@ from urllib.parse import quote
 import pytest
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from packageurl import PackageURL
 from rest_framework.authtoken.models import Token
 
 from corgi.collectors.appstream_lifecycle import AppStreamLifeCycleCollector
@@ -1168,12 +1169,44 @@ def test_api_listing(client, api_path):
     assert response.status_code == 200
 
 
-@pytest.mark.django_db(databases=("read_only",))
-def test_api_component_404(client, api_path):
-    response = client.get(
-        f"{api_path}/components?purl=pkg:rpm/redhat/fake-libs@3.26.0-15.el8?arch=x86_64"
-    )
+@pytest.mark.django_db(databases=("read_only", "default"), transaction=True)
+def test_api_component_lookup_by_purl(client, api_path):
+    # Lookup for nonexistent component gives no results
+    component_purl = "pkg:rpm/redhat/fake-libs@3.26.0-15.el8?arch=x86_64"
+    response = client.get(f"{api_path}/components?purl={component_purl}")
+    error_dict = {"detail": "Not found."}
     assert response.status_code == 404
+    assert response.json() == error_dict
+
+    component = ComponentFactory(
+        type=Component.Type.RPM,
+        namespace=Component.Namespace.REDHAT,
+        name="fake-libs",
+        version="3.26.0",
+        release="15.el8",
+        arch="x86_64",
+    )
+    # Not URL-encoded here
+    assert component.purl == component_purl
+
+    # Lookup for raw purl gives no results
+    response = client.get(f"{api_path}/components?purl={component_purl}")
+    assert response.status_code == 404
+    assert response.json() == error_dict
+
+    # One result if we URL-encode the purl
+    component_purl = quote(component.purl)
+    response = client.get(f"{api_path}/components?purl={component_purl}")
+    assert response.status_code == 200
+    # No "count" key here because the APi does a retrieve() / returns exactly one result
+    # It doesn't do a list() / return multiple results
+    assert response.json()["purl"] == component.purl
+
+    # No results if we URL-encode the purl a slightly different way
+    component_purl = PackageURL.from_string(component.purl)
+    response = client.get(f"{api_path}/components?purl={component_purl}")
+    assert response.status_code == 404
+    assert response.json() == error_dict
 
 
 def test_api_component_400(client, api_path):

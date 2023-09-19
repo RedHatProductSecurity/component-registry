@@ -503,13 +503,12 @@ def setup_products_and_components_upstreams():
 
 def setup_products_and_components_provides(released=True, internal_component=False):
     stream, variant = setup_product()
-    meta_attr = {"released_errata_tags": []}
+    build = SoftwareBuildFactory(build_id=1)
     if released:
-        meta_attr["released_errata_tags"] = ["RHBA-2023:1234"]
-    build = SoftwareBuildFactory(
-        build_id=1,
-        meta_attr=meta_attr,
-    )
+        ProductComponentRelationFactory(
+            type=ProductComponentRelation.Type.ERRATA, software_build=build
+        )
+
     if internal_component:
         provided = ComponentFactory(name="gitlab.cee.redhat.com/", type=Component.Type.GOLANG)
         dev_provided = ComponentFactory(name="github.com/blah.redhat.com", type=Component.Type.NPM)
@@ -541,8 +540,8 @@ def setup_products_and_components_provides(released=True, internal_component=Fal
     # to generate the manifest
     ProductComponentRelationFactory(
         software_build=build,
-        product_ref=variant.name,
-        type=ProductComponentRelation.Type.ERRATA,
+        product_ref=stream.name,
+        type=ProductComponentRelation.Type.BREW_TAG,
     )
     # Link the components to the ProductModel instances
     build.save_product_taxonomy()

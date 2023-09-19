@@ -1006,12 +1006,12 @@ class ComponentQuerySet(models.QuerySet):
 
     def released_components(self, include: bool = True) -> "ComponentQuerySet":
         """Show only released components by default, or unreleased components if include=False"""
-        empty_released_errata = Q(software_build__meta_attr__released_errata_tags=())
+        errata_relations = Q(software_build__relations__type=ProductComponentRelation.Type.ERRATA)
         if include:
-            # Truthy values return the excluded queryset (only released components)
-            return self.exclude(empty_released_errata)
-        # Falsey values return the filtered queryset (only unreleased components)
-        return self.filter(empty_released_errata)
+            # Truthy values return only released components
+            return self.filter(errata_relations)
+        # Falsey values return only unreleased components
+        return self.exclude(errata_relations)
 
     def root_components(self, include: bool = True) -> "ComponentQuerySet":
         """Show only root components by default, or only non-root components if include=False"""

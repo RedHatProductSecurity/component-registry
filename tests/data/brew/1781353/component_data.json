@@ -12603,6 +12603,9 @@
             ],
             "errata_tags": [
                 "RHEA-2021:4610"
+            ],
+            "released_errata_tags": [
+                "RHEA-2021:4610"
             ]
         },
         "type_info": {

@@ -219,6 +219,11 @@ errata_details = [
 def test_save_product_component_for_errata(
     mock_send, erratum_id, build_list, no_of_objs, requests_mock
 ):
+    with open(f"tests/data/errata/{erratum_id}.json", "r") as remote_source_data:
+        requests_mock.get(
+            f"{settings.ERRATA_TOOL_URL}/api/v1/erratum/{erratum_id}",
+            text=remote_source_data.read(),
+        )
     build_list_url = f"{settings.ERRATA_TOOL_URL}/api/v1/erratum/{erratum_id}/builds_list.json"
     requests_mock.get(build_list_url, text=build_list)
     slow_load_errata(erratum_id)
@@ -406,3 +411,52 @@ def test_parse_module_and_normal_errata_components_mixed_variants(
         ]
     }
     assert expected_7server_76_aus_results in results["7Server-7.6.AUS"]
+
+
+errata_key_details = [
+    (
+        "RHBA-2023:5017-2",
+        120142,
+        True,
+    ),
+    (
+        "RHBA-2023:120271",
+        120271,
+        False,
+    ),
+]
+
+
+@pytest.mark.parametrize("advisory_name, erratum_id, shipped_live", errata_key_details)
+def test_shipped_live_advisory(advisory_name, erratum_id, shipped_live, requests_mock):
+    # Test we can translate between advisory_name and id
+    with open(f"tests/data/errata/{erratum_id}.json", "r") as remote_source_data:
+        requests_mock.get(
+            f"{settings.ERRATA_TOOL_URL}/api/v1/erratum/{advisory_name}",
+            text=remote_source_data.read(),
+        )
+    results = ErrataTool().get_errata_key_details(advisory_name)
+    assert results == (erratum_id, shipped_live)
+
+
+@pytest.mark.parametrize("advisory_name, erratum_id, shipped_live", errata_key_details)
+def test_shipped_live_id(advisory_name, erratum_id, shipped_live, requests_mock):
+    # Test we can get details by id
+    with open(f"tests/data/errata/{erratum_id}.json", "r") as remote_source_data:
+        requests_mock.get(
+            f"{settings.ERRATA_TOOL_URL}/api/v1/erratum/{erratum_id}",
+            text=remote_source_data.read(),
+        )
+    results = ErrataTool().get_errata_key_details(erratum_id)
+    assert results == (erratum_id, shipped_live)
+
+
+def test_invalid_errtaum_details(requests_mock):
+    # This test data contains 2 errata of type rhsa, and rhba. Only one type is expected.
+    with open("tests/data/errata/invalid.json", "r") as remote_source_data:
+        requests_mock.get(
+            f"{settings.ERRATA_TOOL_URL}/api/v1/erratum/123456",
+            text=remote_source_data.read(),
+        )
+    with pytest.raises(ValueError):
+        ErrataTool().get_errata_key_details("123456")

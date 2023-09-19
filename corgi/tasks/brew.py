@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Any, Optional
 
 import koji
 from celery.utils.log import get_task_logger
@@ -76,21 +76,8 @@ def slow_fetch_brew_build(
     build_meta["corgi_ingest_start_dt"] = dateformat.format(timezone.now(), "Y-m-d H:i:s")
     build_meta["corgi_ingest_status"] = "INPROGRESS"
 
-    completion_time = build_meta.get("completion_time", "")
-    if completion_time:
-        dt = dateparse.parse_datetime(completion_time.split(".")[0])
-        if dt:
-            completion_dt = make_aware(dt)
-        else:
-            raise ValueError(f"Could not parse completion_time for build {build_id}")
-    else:
-        # Build has no timestamp even though it's in COMPLETE state?
-        # This really shouldn't happen
-        raise ValueError(f"No completion_time for build {build_id}")
+    completion_dt = _get_completion_time(build_id, build_meta.get("completion_time", ""))
 
-    # TODO: Should we update_or_create to pick up changed build_meta?
-    #  Sometimes builds are deleted in Brew
-    #  In that case, don't wipe out data - test this
     softwarebuild, build_created = SoftwareBuild.objects.get_or_create(
         build_id=build_id,
         build_type=build_type,
@@ -110,47 +97,23 @@ def slow_fetch_brew_build(
         logger.warning("SoftwareBuild with build_id %s already existed, not reprocessing", build_id)
         return False
 
-    if component["type"] == Component.Type.RPM:
-        root_node, root_created = save_srpm(softwarebuild, component)
-    elif component["type"] == Component.Type.CONTAINER_IMAGE:
-        root_node, root_created = save_container(softwarebuild, component, save_product)
-    elif component["type"] == Component.Type.RPMMOD:
-        root_node, root_created = save_module(softwarebuild, component)
-    else:
-        logger.warning(f"Build {build_id} type is not supported: {component['type']}")
+    root_node, root_created = _check_and_save_type(component, softwarebuild, save_product, build_id)
+    if not root_node:
         return False
 
-    any_child_created = False
-    for child_component in component.get("components", []):
-        any_child_created |= save_component(child_component, root_node)
+    any_child_created = _save_children(component.get("components", []), root_node)
 
-    # for builds with any tag, check if the tag is used for product stream relations, and create the
-    # relations if so.
-    if not build_meta["tags"]:
-        logger.info("no brew tags")
-    else:
-        new_relations = load_brew_tags(softwarebuild, build_meta["tags"])
-        logger.info(f"Created {new_relations} for brew tags in {build_type}:{build_id}")
+    new_relations = load_brew_tags(softwarebuild, build_meta["tags"])
+    logger.info(f"Created {new_relations} for brew tags in {build_type}:{build_id}")
 
     # Allow async call of slow_load_errata task, see CORGI-21
     if save_product:
         slow_save_taxonomy.delay(build_id, build_type)
 
-    # for builds with errata tags set ProductComponentRelation
-    # get_component_data always calls _extract_advisory_ids to set tags, but list may be empty
-    if not build_meta["errata_tags"]:
-        logger.info("no errata tags")
-    else:
-        for e in build_meta["errata_tags"]:
-            slow_load_errata.delay(e, force_process=force_process)
+    for released_erratum in build_meta.get("released_errata_tags", []):
+        slow_load_errata.delay(released_erratum, force_process=force_process)
 
-    build_ids = component.get("nested_builds", ())
-    logger.info("Fetching brew builds for (%s, %s)", build_ids, build_type)
-    for b_id in build_ids:
-        logger.info("Requesting fetch of nested build: (%s, %s)", b_id, build_type)
-        slow_fetch_brew_build.delay(
-            b_id, build_type, save_product=save_product, force_process=force_process
-        )
+    _get_nested_builds(build_type, component.get("nested_builds", ()), force_process, save_product)
 
     logger.info("Requesting software composition analysis for %s", softwarebuild.pk)
     if settings.SCA_ENABLED:
@@ -166,6 +129,52 @@ def slow_fetch_brew_build(
     )
     logger.info("Finished fetching brew build: (%s, %s)", build_id, build_type)
     return build_created or root_created or any_child_created
+
+
+def _get_nested_builds(
+    build_type: str, nested_builds: set[int], force_process: bool, save_product: bool
+) -> None:
+    logger.info("Fetching brew builds for (%s, %s)", nested_builds, build_type)
+    for b_id in nested_builds:
+        logger.info("Requesting fetch of nested build: (%s, %s)", b_id, build_type)
+        slow_fetch_brew_build.delay(
+            b_id, build_type, save_product=save_product, force_process=force_process
+        )
+
+
+def _save_children(child_components: list[dict], root_node: ComponentNode) -> bool:
+    any_child_created = False
+    for child_component in child_components:
+        any_child_created |= save_component(child_component, root_node)
+    return any_child_created
+
+
+def _get_completion_time(build_id: str, completion_time) -> datetime:
+    if completion_time:
+        dt = dateparse.parse_datetime(completion_time.split(".")[0])
+        if dt:
+            completion_dt = make_aware(dt)
+        else:
+            raise ValueError(f"Could not parse completion_time for build {build_id}")
+    else:
+        # Build has no timestamp even though it's in COMPLETE state?
+        # This really shouldn't happen
+        raise ValueError(f"No completion_time for build {build_id}")
+    return completion_dt
+
+
+def _check_and_save_type(
+    component: dict[str, Any], softwarebuild: SoftwareBuild, save_product: bool, build_id: str
+) -> tuple[Optional[ComponentNode], bool]:
+    if component["type"] == Component.Type.RPM:
+        return save_srpm(softwarebuild, component)
+    elif component["type"] == Component.Type.CONTAINER_IMAGE:
+        return save_container(softwarebuild, component, save_product)
+    elif component["type"] == Component.Type.RPMMOD:
+        return save_module(softwarebuild, component)
+    else:
+        logger.warning(f"Build {build_id} type is not supported: {component['type']}")
+        return None, False
 
 
 def update_relation_software_build_fk(
@@ -897,8 +906,10 @@ def slow_update_brew_tags(build_id: str, tag_added: str = "", tag_removed: str =
             build.meta_attr["tags"] = sorted(tags)
             errata_tag = ADVISORY_REGEX.match(tag_added)
             if errata_tag:
-                # Below should automatically create new relations for this build / erratum
-                slow_load_errata.delay(errata_tag.group())
+                advisory_ids = Brew.parse_advisory_ids([errata_tag.group()])
+                if advisory_ids:
+                    # Below should automatically create new relations for this build / erratum
+                    slow_load_errata.delay(advisory_ids[0])
         else:
             try:
                 build.meta_attr["tags"].remove(tag_removed)

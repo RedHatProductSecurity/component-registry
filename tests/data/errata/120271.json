@@ -1,0 +1,16 @@
+{
+  "errata": {
+    "rhba": {
+      "id": 120271,
+      "revision": 1,
+      "fulladvisory": "RHBA-2023:120271-01",
+      "status": "QE"
+    }
+  },
+  "content": {
+    "content": {
+      "id": 117851,
+      "errata_id": 120271
+    }
+  }
+}

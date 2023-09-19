@@ -25,7 +25,7 @@ from corgi.tasks.brew import (
     slow_update_brew_tags,
 )
 from corgi.tasks.errata_tool import slow_handle_shipped_errata
-from corgi.tasks.pnc import slow_fetch_pnc_sbom
+from corgi.tasks.pnc import slow_fetch_pnc_sbom, slow_handle_pnc_errata_released
 
 from .factories import (
     ComponentFactory,
@@ -565,3 +565,31 @@ def test_slow_fetch_pnc_sbom():
             )
 
             parse_sbom_mock.assert_not_called()
+
+
+def test_slow_handle_pnc_errata_released():
+    """Test extracting the released root component from an SBOMer product erratum's
+    Notes field"""
+
+    # Ensure bad erratum status raises #####
+    with pytest.raises(ValueError):
+        slow_handle_pnc_errata_released(120325, "DROPPED_NO_SHIP")
+
+    # Well-formed notes data #####
+    with open("tests/data/pnc/erratum_notes.json") as notes_file:
+        notes = json.load(notes_file)
+
+    with patch(
+        "corgi.collectors.errata_tool.ErrataTool.get_erratum_notes", return_value=notes
+    ) as get_notes_mock:
+        slow_handle_pnc_errata_released(120325, "SHIPPED_LIVE")
+
+        get_notes_mock.assert_called_once_with(120325)
+
+    # Notes with no manifest data #####
+    with open("tests/data/pnc/notes_no_manifest.json") as notes_file:
+        notes = json.load(notes_file)
+
+    with patch("corgi.collectors.errata_tool.ErrataTool.get_erratum_notes", return_value=notes):
+        with pytest.raises(ValueError):
+            slow_handle_pnc_errata_released(120325, "SHIPPED_LIVE")

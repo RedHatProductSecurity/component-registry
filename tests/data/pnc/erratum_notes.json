@@ -1,0 +1,15 @@
+{
+  "manifest" : {
+    "refs" : [ {
+      "type" : "purl",
+      "uri" : "pkg:maven/com.redhat.quarkus.platform/quarkus-bom@2.13.8.SP2-redhat-00001?type=pom"
+    } ]
+  },
+  "simple-mapper" : {
+    "refs" : [ {
+      "type" : "cve-component-mapping",
+      "version" : "0.0.1",
+      "uri" : "https://gitlab.cee.redhat.com/fix-mappings/rhbq/-/raw/main/2.13.8.SP2.GA/cve-mappings.json"
+    } ]
+  }
+}

@@ -6,13 +6,19 @@ from django.contrib.auth import get_user_model
 from rest_framework.authtoken.models import Token
 
 from corgi.collectors.appstream_lifecycle import AppStreamLifeCycleCollector
-from corgi.core.models import Component, ComponentNode, SoftwareBuild
+from corgi.core.models import (
+    Component,
+    ComponentNode,
+    ProductComponentRelation,
+    SoftwareBuild,
+)
 
 from .factories import (
     ChannelFactory,
     ComponentFactory,
     ComponentTagFactory,
     LifeCycleFactory,
+    ProductComponentRelationFactory,
     ProductFactory,
     ProductStreamFactory,
     ProductVariantFactory,
@@ -439,8 +445,11 @@ def test_latest_components_by_streams_filter(client, api_path):
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_released_components_filter(client, api_path):
-    released_build = SoftwareBuildFactory(meta_attr={"released_errata_tags": ["RHBA-2023:1234"]})
-    unreleased_build = SoftwareBuildFactory(meta_attr={"released_errata_tags": []})
+    released_build = SoftwareBuildFactory()
+    unreleased_build = SoftwareBuildFactory()
+    ProductComponentRelationFactory(
+        type=ProductComponentRelation.Type.ERRATA, software_build=released_build
+    )
     ComponentFactory(name="released", software_build=released_build)
     ComponentFactory(name="unreleased", software_build=unreleased_build)
 

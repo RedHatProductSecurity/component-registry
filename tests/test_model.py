@@ -1149,6 +1149,28 @@ def test_latest_filter():
 
 
 @pytest.mark.django_db
+def test_released_filter():
+    sb = SoftwareBuildFactory()
+    c = ComponentFactory(software_build=sb)
+    # Make sure that components with no relations don't show in filter
+    assert c not in Component.objects.get_queryset().released_components()
+    assert c in Component.objects.get_queryset().released_components(include=False)
+
+    # Make sure that a relation not of type Errata does not show in filter
+    ProductComponentRelation.objects.create(
+        type=ProductComponentRelation.Type.BREW_TAG,
+        software_build=sb,
+        external_system_id="BREW_TAG",
+    )
+    assert c not in Component.objects.get_queryset().released_components()
+    # If there is an errata relation, should be considered released
+    ProductComponentRelation.objects.create(
+        type=ProductComponentRelation.Type.ERRATA, software_build=sb, external_system_id="1"
+    )
+    assert c in Component.objects.get_queryset().released_components()
+
+
+@pytest.mark.django_db
 def test_latest_filter_components_modular():
     ps = ProductStreamFactory(name="certificate_system-10.2.z")
     modular_rpm_1 = SrpmComponentFactory(

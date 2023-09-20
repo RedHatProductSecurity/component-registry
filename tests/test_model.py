@@ -603,128 +603,151 @@ def test_get_upstream():
 
 def test_get_upstream_container():
     """Test that upstreams for containers are reported correctly:
-    1. Index / noarch / arch-independent containers have one or more
-    child arch-specific containers as sources in Brew / upstreams in Corgi
-    2. RPM children of containers report only RPM upstreams, never container upstreams
-    3. Upstream components themselves have no upstreams of their own
-    4. Root components are not upstreams, even though both have SOURCE-type nodes"""
+    1. Index / noarch / arch-independent containers have
+    one or more arch-specific child containers as provides in Corgi,
+    zero or more Go modules as sources in Brew / upstreams in Corgi,
+    and zero or more bundled / provided components discovered by Syft
+
+    2. Child arch-specific containers have
+    the same upstreams (Go modules) as their parent index container,
+    and zero or more bundled / provided components listed in Brew / Cachito manifests
+    (bundled Cachito components are hopefully the same as bundled Syft components,
+    but we aren't testing that here)
+
+    3. RPM children of containers report only RPM upstreams, never container upstreams
+    4. Upstream components themselves have no upstreams of their own
+    5. Root components are not upstreams, even though both have SOURCE-type nodes"""
+    # 1. Technically, containers can also have "sources" in Brew
+    # These are created as SOURCE-type descendants of the root / index container
+    # and should also be considered as upstreams, in addition to upstream Go modules
+
+    # Existing code handles these fine, but old code / test assumed some Brew "sources"
+    # would be SOURCE-type containers, in addition to PROVIDES-type arch-specific containers
+
+    # We said Cachito components would report these as upstreams. That doesn't seem right:
+    # I don't see any in our DB. The non-root containers always have PROVIDES type
+
+    # A PyPI package in Cachito probably should report parent containers as sources
+    # that bundle / ship the package, not as upstreams that the package relies on
+    # Existing code should handle this today
+
+    # It's long and complicated, because we need to test RPMs in multiple trees
+    # So we can't split it into separate RPM and container tests
+
     container = ContainerImageComponentFactory(name="container")
     container_cnode = ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
         obj=container,
     )
-    # TODO: Should binary RPMs should always be created as children of an arch-specific container?
-    #  Cachito doesn't nest components directly under the index container, I think
-    #  But Syft / the SCA task does this - is that a bug? Or is this test code correct?
-    container_rpm = BinaryRpmComponentFactory(name="container_rpm")
-    ComponentNode.objects.create(
-        type=ComponentNode.ComponentNodeType.PROVIDES,
-        parent=container_cnode,
-        obj=container_rpm,
-    )
-    # 2. RPM children report only RPM upstreams, but there are none here
-    # We only have container upstreams, which we don't want to report
-    assert not container_rpm.get_upstreams_purls(using="default").exists()
-    # 2. If the binary RPM is in multiple trees (this container and a source RPM),
-    # then only the source RPM's upstreams will be reported
-    source_rpm = SrpmComponentFactory(
-        name=container_rpm.name,
-        version=container_rpm.version,
-        epoch=container_rpm.epoch,
-        release=container_rpm.release,
-    )
-    upstream_rpm = UpstreamComponentFactory(
-        type=Component.Type.RPM,
-        name=container_rpm.name,
-        version=container_rpm.version,
-        epoch=container_rpm.epoch,
-    )
-    source_rpm_cnode = ComponentNode.objects.create(
-        type=ComponentNode.ComponentNodeType.SOURCE,
-        parent=None,
-        obj=source_rpm,
-    )
-    ComponentNode.objects.create(
-        type=ComponentNode.ComponentNodeType.SOURCE,
-        parent=source_rpm_cnode,
-        obj=upstream_rpm,
-    )
-    ComponentNode.objects.create(
-        type=ComponentNode.ComponentNodeType.PROVIDES,
-        parent=source_rpm_cnode,
-        obj=container_rpm,
-    )
-    assert container_rpm.get_upstreams_purls(using="default").get() == upstream_rpm.purl
 
-    # 1. The index container created above has an arch-specific child container
-    container_source = ChildContainerImageComponentFactory(
+    # 1. The index container has an arch-specific child container
+    container_arch = ChildContainerImageComponentFactory(
         name=container.name,
         epoch=container.epoch,
         version=container.version,
         release=container.release,
         arch="aarch64",
     )
-    container_source_cnode = ComponentNode.objects.create(
-        type=ComponentNode.ComponentNodeType.SOURCE,
-        parent=container_cnode,
-        obj=container_source,
-    )
-    assert container.get_upstreams_purls(using="default").get() == container_source.purl
-    # 3. Upstream components do not have any upstreams of their own
-    assert not container_source.get_upstreams_purls(using="default").exists()
-
-    # 1. The index container created above has another arch-specific child container
-    container_source_other = ChildContainerImageComponentFactory(
-        name=container.name,
-        epoch=container.epoch,
-        version=container.version,
-        release=container.release,
-        arch="x86_64",
-    )
-    ComponentNode.objects.create(
-        type=ComponentNode.ComponentNodeType.SOURCE,
-        parent=container_cnode,
-        obj=container_source_other,
-    )
-    assert sorted(container.get_upstreams_purls(using="default")) == [
-        container_source.purl,
-        container_source_other.purl,
-    ]
-    # 3. Upstream components do not have any upstreams of their own
-    assert not container_source_other.get_upstreams_purls(using="default").exists()
-
-    container_nested = UpstreamComponentFactory(name="container_nested", type=Component.Type.NPM)
-    ComponentNode.objects.create(
+    container_arch_cnode = ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
-        parent=container_source_cnode,
-        obj=container_nested,
+        parent=container_cnode,
+        obj=container_arch,
     )
-    # 3. Upstream components do not have any upstreams of their own
-    assert not container_nested.get_upstreams_purls(using="default").exists()
 
-    container_upstream_other = UpstreamComponentFactory(
-        name="contain_upstream_other",
-        type=Component.Type.PYPI,
+    # 1. The index container has an upstream Go module
+    container_upstream = UpstreamComponentFactory(
+        name="container_upstream",
+        type=Component.Type.GOLANG,
+        meta_attr={"go_component_type": "gomod"},
     )
-    container_upstream_other_cnode = ComponentNode.objects.create(
+    ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=container_cnode,
-        obj=container_upstream_other,
+        obj=container_upstream,
     )
-    # 3. Upstream components do not have any upstreams of their own
-    assert not container_upstream_other.get_upstreams_purls(using="default").exists()
 
-    container_nested_other = UpstreamComponentFactory(
-        name="container_nested_other", type=Component.Type.NPM
+    # 1. The index container has a binary RPM (discovered by Syft)
+    # And the binary RPM is also participating in a source RPM's tree
+    source_rpm = SrpmComponentFactory(name="container_rpm")
+    source_rpm_cnode = ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        obj=source_rpm,
+    )
+
+    container_rpm = BinaryRpmComponentFactory(
+        name=source_rpm.name,
+        version=source_rpm.version,
+        epoch=source_rpm.epoch,
+        release=source_rpm.release,
     )
     ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.PROVIDES,
-        parent=container_upstream_other_cnode,
-        obj=container_nested_other,
+        parent=source_rpm_cnode,
+        obj=container_rpm,
     )
-    # 3. Upstream components do not have any upstreams of their own
-    assert not container_nested_other.get_upstreams_purls(using="default").exists()
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.PROVIDES,
+        parent=container_cnode,
+        obj=container_rpm,
+    )
+
+    upstream_rpm = UpstreamComponentFactory(
+        type=Component.Type.RPM,
+        name=source_rpm.name,
+        version=source_rpm.version,
+        epoch=source_rpm.epoch,
+    )
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=source_rpm_cnode,
+        obj=upstream_rpm,
+    )
+
+    # 1. The index container has a bundled / provided component (discovered by Syft)
+    # Syft can discover both binary RPMs and remote-source components
+    container_provided = UpstreamComponentFactory(name="container_provided")
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.PROVIDES,
+        parent=container_cnode,
+        obj=container_provided,
+    )
+
+    # 2. The arch-specific container has the same bundled / provided component (given in Cachito)
+    # Cachito only lists remote-source components in the UPSTREAM namespace
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.PROVIDES,
+        parent=container_arch_cnode,
+        obj=container_provided,
+    )
+
+    container.save_component_taxonomy()
+    container_rpm.save_component_taxonomy()
+    source_rpm.save_component_taxonomy()
+
+    container_arch.save_component_taxonomy()
+    container_upstream.save_component_taxonomy()
+    upstream_rpm.save_component_taxonomy()
+    container_provided.save_component_taxonomy()
+
+    # 2. Child arch-specific containers have the same upstreams as their parent container
+    assert container.upstreams.values_list("purl", flat=True).get() == container_upstream.purl
+    assert container_arch.upstreams.values_list("purl", flat=True).get() == container_upstream.purl
+
+    # 3. If a binary RPM is in multiple trees (this container's tree and a source RPM's tree),
+    # then only the source RPM's upstreams will be reported
+    assert container_rpm.upstreams.values_list("purl", flat=True).get() == upstream_rpm.purl
+    assert source_rpm.upstreams.values_list("purl", flat=True).get() == upstream_rpm.purl
+
+    # 4. Components in the UPSTREAM namespace do not have any upstreams of their own
+    assert not container_upstream.upstreams.exists()
+    assert not upstream_rpm.upstreams.exists()
+    assert not container_provided.upstreams.exists()
+
+    # 5. The root node was not listed as an upstream of any other component
+    # So it will not have a corresponding "downstreams" queryset / reverse relation
+    assert not container.downstreams.exists()
 
 
 def test_purl2url():

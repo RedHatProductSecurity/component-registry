@@ -1987,42 +1987,49 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         """return upstreams component ancestors in family trees"""
         upstream_pks = set()
         for root in self.get_roots(using=using).iterator():
-            # For SRPM/RPMS, and noarch containers, these are the cnodes we want.
+            root_obj = root.obj
+            if (
+                root_obj
+                and root_obj.type == Component.Type.CONTAINER_IMAGE
+                and self.type != Component.Type.CONTAINER_IMAGE
+            ):
+                # If the root obj is a container, but this child component is not,
+                # skip reporting any upstreams from this container tree, because:
+
+                # Binary RPMs should only report upstreams from a source RPM tree
+                # If one exists, we'll process it in a later loop iteration
+                # So the source RPM and binary RPMs both report the same upstreams
+                # and the binary RPMs won't report the container's upstreams
+
+                # Red Hat GitHub / Maven components might be root components (in another tree)
+                # If one exists, we'll process it in a later loop iteration
+                # So REDHAT components report only their upstreams, if any
+                # and won't report the container's upstreams
+
+                # Other remote-source components will never reach this point at all
+                # since get_roots only gives results for REDHAT components
+                # UPSTREAM components are already upstream, so don't list any new upstreams
+                continue
+
+            # Else we're processing a non-container root
+            # So include all SOURCE-type descendants of the root
+            # Source RPM roots should only have 1, binary RPMs will share it
+
+            # RPM module and managed service GitHub repo roots should have 0
+            # Not sure about Red Hat Maven component roots, probably depends on CORGI-796
+
+            # OR the root obj is a container, and so is the component we're processing
+            # "Source descendants of the root" should just be the Brew "sources"
+            # as well as the upstream Go modules, if any
+            # So index / arch-independent and arch-specific containers will report
+            # the same upstreams for all variations of the same container
             source_descendants = (
                 root.get_descendants()
                 .filter(type=ComponentNode.ComponentNodeType.SOURCE)
                 .values_list("pk", flat=True)
                 .using(using)
             )
-            # Cachito manifests nest components under the relevant arch-specific container for that
-            # container build, eg. buildID=1911112. In that case we need to walk up the
-            # tree from the current node to find its relevant upstream component
-            root_obj = root.obj
-            if (
-                root_obj
-                and root_obj.type == Component.Type.CONTAINER_IMAGE
-                and root_obj.arch == "noarch"
-                and root_obj != self
-                # The root obj is a container, and not this component
-                # Look for SOURCE-type ancestors of the current component
-            ):
-                upstream_pks.update(
-                    self.cnodes.filter(tree_id=root.tree_id)
-                    .get_ancestors()
-                    .filter(type=ComponentNode.ComponentNodeType.SOURCE)
-                    .exclude(parent=None)
-                    .values_list("pk", flat=True)
-                    .using(using)
-                    .iterator()
-                )
-            else:
-                # Else we're processing a non-container root
-                # So include all SOURCE-type descendants (SRPMs should only have 1)
-                # RPMMODs and managed service GitHub repos should have 0
-                # Not sure about Red Hat Maven components, probably depends on CORGI-796
-                # OR the root obj is a container but is the same component we're processing
-                # So "source descendants" should just be the Brew "sources" and Go modules
-                upstream_pks.update(source_descendants)
+            upstream_pks.update(source_descendants)
         return ComponentNode.objects.filter(pk__in=upstream_pks).using(using)
 
     def get_upstreams_pks(self, using: str = "read_only") -> QuerySet:

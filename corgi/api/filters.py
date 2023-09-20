@@ -35,13 +35,19 @@ class TagFilter(Filter):
             return queryset
         search_tags = value.split(",")
         for tag in search_tags:
+            exclude = False
+            if tag.startswith("!"):
+                tag = tag[1:]
+                exclude = True
             if ":" in tag:
                 tag_name, _, tag_value = tag.partition(":")
-                queryset = queryset.filter(
-                    tags__name__icontains=tag_name, tags__value__icontains=tag_value
-                )
+                queryset_kwargs = {"tags__name": tag_name, "tags__value": tag_value}
             else:
-                queryset = queryset.filter(tags__name__icontains=tag)
+                queryset_kwargs = {"tags__name": tag}
+            if exclude:
+                queryset = queryset.exclude(**queryset_kwargs)
+            else:
+                queryset = queryset.filter(**queryset_kwargs)
         return queryset
 
 

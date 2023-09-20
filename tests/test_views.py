@@ -28,8 +28,8 @@ def test_not_found(client):
     assert response.status_code == 404
 
 
-@pytest.mark.django_db(databases=("read_only",))
-def test_viewset_ordering(api_path):
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_viewset_ordering(api_path, stored_proc):
     """Test that all ViewSets define an ordering to prevent DRF pagination bugs"""
     for name, cls in views.__dict__.items():
         if not isinstance(cls, type) or not issubclass(cls, GenericViewSet):

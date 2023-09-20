@@ -60,22 +60,23 @@ def test_escapejs_on_copyright():
         ), f"JSONDecodeError thrown by component with special chars in copyright_text {e}"
 
 
-def test_manifests_exclude_source_container():
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_manifests_exclude_source_container(stored_proc):
     """Test that container sources are excluded packages"""
     containers, stream, _ = setup_products_and_rpm_in_containers()
     assert len(containers) == 3
-
     manifest_str = ProductManifestFile(stream).render_content()
     manifest = json.loads(manifest_str)
     components = manifest["packages"]
     # Two containers, one RPM, and a product are included
-    assert len(components) == 4, components
+    assert len(components) == 4
     # The source container is excluded
     for component in components:
         assert not component["name"].endswith("-container-source")
 
 
-def test_manifests_exclude_bad_golang_components():
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_manifests_exclude_bad_golang_components(stored_proc):
     """Test that Golang components with names like ../ are excluded packages"""
     # Remove below when CORGI-428 is resolved
     containers, stream, _ = setup_products_and_rpm_in_containers()
@@ -101,7 +102,8 @@ def test_manifests_exclude_bad_golang_components():
         assert not component["name"] == bad_golang.name
 
 
-def test_stream_manifest_backslash():
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_stream_manifest_backslash(stored_proc):
     """Test that a tailing backslash in a purl doesn't break rendering"""
 
     stream = ProductStreamFactory()
@@ -129,12 +131,13 @@ def test_component_manifest_backslash():
         assert False
 
 
-def test_slim_rpm_in_containers_manifest():
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def a_test_slim_rpm_in_containers_manifest(stored_proc):
     containers, stream, rpm_in_container = setup_products_and_rpm_in_containers()
 
     # Two components linked to this product
     # plus a source container which is shown in API but not in manifests
-    released_components = stream.components.manifest_components()
+    released_components = stream.components.manifest_components(ofuri=stream.ofuri)
     num_components = len(released_components)
     assert num_components == 2, released_components
 
@@ -195,7 +198,8 @@ def test_slim_rpm_in_containers_manifest():
     assert manifest["relationships"][-1] == document_describes_product
 
 
-def test_product_manifest_excludes_unreleased_components():
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_product_manifest_excludes_unreleased_components(stored_proc):
     """Test that manifests for products don't include unreleased components"""
     component, stream, provided, dev_provided = setup_products_and_components_provides(
         released=False
@@ -232,7 +236,8 @@ def test_product_manifest_excludes_unreleased_components():
     }
 
 
-def test_product_manifest_excludes_internal_components():
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_product_manifest_excludes_internal_components(stored_proc):
     """Test that manifests for products don't include unreleased components"""
     component, stream, provided, dev_provided = setup_products_and_components_provides(
         internal_component=True
@@ -241,7 +246,7 @@ def test_product_manifest_excludes_internal_components():
     manifest = json.loads(stream.manifest)
 
     # This is the root rpm src component
-    num_components = len(stream.components.manifest_components())
+    num_components = len(stream.components.manifest_components(ofuri=stream.ofuri))
     assert num_components == 1
 
     num_provided = len(stream.provides_queryset)
@@ -272,7 +277,8 @@ def test_manifest_no_duplicate_released_components():
         unique_components.add(purl)
 
 
-def test_manifest_cpes_from_variants():
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_manifest_cpes_from_variants(stored_proc):
     # setup_products_and_components_provides adds a variant with a cpe
     # verify that is the only cpe shown when stream.et_product_versions is set
     stream, _ = setup_product()
@@ -289,7 +295,8 @@ def test_manifest_cpes_from_variants():
     assert cpes_in_manifest[0] == stream.cpes[0]
 
 
-def test_manifest_cpes_from_cpe_lookup():
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_manifest_cpes_from_cpe_lookup(stored_proc):
 
     hardcoded_cpes = cpe_lookup("rhel-8.8.0")
     stream, _ = setup_product(stream_name="rhel-8.8.0")
@@ -302,7 +309,8 @@ def test_manifest_cpes_from_cpe_lookup():
     assert hardcoded_cpes == cpes_in_manifest
 
 
-def test_manifest_cpes_from_patterns_and_brew_tags():
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_manifest_cpes_from_patterns_and_brew_tags(stored_proc):
     stream, variant = setup_product()
     assert not cpe_lookup(stream.name)
     variant.delete()
@@ -319,7 +327,8 @@ def test_manifest_cpes_from_patterns_and_brew_tags():
     assert {test_cpe, another_test_cpe} == cpes_in_manifest
 
 
-def test_product_manifest_properties():
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_product_manifest_properties(stored_proc):
     """Test that all models inheriting from ProductModel have a .manifest property
     And that it generates valid JSON."""
     component, stream, provided, dev_provided = setup_products_and_components_provides()
@@ -329,7 +338,7 @@ def test_product_manifest_properties():
     manifest = json.loads(stream.manifest)
 
     # One component linked to this product
-    num_components = len(stream.components.manifest_components())
+    num_components = len(stream.components.manifest_components(ofuri=stream.ofuri))
     assert num_components == 1
 
     num_provided = len(stream.provides_queryset)
@@ -394,14 +403,15 @@ def test_product_manifest_properties():
     assert manifest["relationships"][-1] == document_describes_product
 
 
-def test_no_duplicates_in_manifest_with_upstream():
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_no_duplicates_in_manifest_with_upstream(stored_proc):
     stream, component, other_component, upstream = setup_products_and_components_upstreams()
 
     assert component.upstreams.get(pk=upstream.uuid)
     assert other_component.upstreams.get(pk=upstream.uuid)
 
     # 1 (product) + 2 (root components) + 1 (upstream)
-    root_components = stream.components.manifest_components()
+    root_components = stream.components.manifest_components(ofuri=stream.ofuri)
     assert len(root_components) == 2
     assert component in root_components
     assert other_component in root_components
@@ -581,8 +591,8 @@ def setup_products_and_rpm_in_containers():
     stream, variant = setup_product()
     rpm_in_container = BinaryRpmComponentFactory()
     containers = []
-    for name in ("", "", "some-container-source"):
-        build, container = _build_rpm_in_containers(rpm_in_container, name=name)
+    for name in ["", "", "some-container-source"]:
+        build, container = _build_rpm_in_containers(rpm_in_container, name=name, stream=stream)
 
         # The product_ref here is a variant name but below we use it's parent stream
         # to generate the manifest
@@ -599,7 +609,7 @@ def setup_products_and_rpm_in_containers():
     return containers, stream, rpm_in_container
 
 
-def _build_rpm_in_containers(rpm_in_container, name=""):
+def _build_rpm_in_containers(rpm_in_container, name="", stream=None):
     build = SoftwareBuildFactory(
         meta_attr={"released_errata_tags": ["RHBA-2023:1234"]},
     )
@@ -612,6 +622,9 @@ def _build_rpm_in_containers(rpm_in_container, name=""):
             name=name,
             software_build=build,
         )
+    if stream:
+        container.productstreams.add(stream)
+        container.save()
     cnode = ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,

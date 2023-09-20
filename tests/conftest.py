@@ -1,4 +1,7 @@
+import importlib
+
 import pytest
+from django.db import connection
 from rest_framework.test import APIClient
 
 from corgi.api.constants import CORGI_API_VERSION
@@ -26,6 +29,21 @@ def api_path(api_version):
     return f"/api/{api_version}"
 
 
+@pytest.fixture(scope="session")
+def stored_proc(django_db_setup, django_db_blocker):
+    """setup stored procedure"""
+    # depends on corgi/core/migration/0091_install_stored_proc.py data migration
+    stored_proc = importlib.import_module("corgi.core.migrations.0091_install_stored_proc")
+    with django_db_blocker.unblock():
+        with connection.cursor() as c:
+            c.execute("DROP FUNCTION if exists rpmvercmp;"),
+            c.execute(stored_proc.RPMVERCMP_STOREDPROC_SQL)
+            c.execute("DROP FUNCTION if exists rpmvercmp_epoch;"),
+            c.execute(stored_proc.RPMVERCMP_EPOCH_STOREDPROC_SQL),
+            c.execute("DROP FUNCTION if exists get_latest_component;"),
+            c.execute(stored_proc.GET_LATEST_COMPONENT_STOREDPROC_SQL)
+
+
 def setup_product(version_name: str = "", stream_name: str = ""):
     product = ProductFactory()
     if version_name:
@@ -33,9 +51,11 @@ def setup_product(version_name: str = "", stream_name: str = ""):
     else:
         version = ProductVersionFactory(products=product)
     if stream_name:
-        stream = ProductStreamFactory(name=stream_name, products=product, productversions=version)
+        stream = ProductStreamFactory(
+            name=stream_name, products=product, productversions=version, active=True
+        )
     else:
-        stream = ProductStreamFactory(products=product, productversions=version)
+        stream = ProductStreamFactory(products=product, productversions=version, active=True)
     variant = ProductVariantFactory(
         name="1", products=product, productversions=version, productstreams=stream
     )

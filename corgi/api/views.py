@@ -564,7 +564,7 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         if not ofuri:
             return self.queryset
 
-        model, _ = get_model_ofuri_type(ofuri)
+        model, model_type = get_model_ofuri_type(ofuri)
         if isinstance(model, Product):
             components_for_model = self.queryset.filter(products__ofuri=ofuri)
         elif isinstance(model, ProductVersion):
@@ -576,7 +576,10 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         else:
             # No matching model instance found, or invalid ofuri
             raise Http404
-        return components_for_model.root_components().latest_components()
+        return components_for_model.root_components().latest_components(
+            model_type=model_type,
+            ofuri=ofuri,
+        )
 
     @extend_schema(
         parameters=[
@@ -589,6 +592,7 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         # purl are stored with each segment url encoded as per the specification. The purl query
         # param here is url decoded, to ensure special characters such as '@' and '?'
         # are not interpreted as part of the request.
+
         view = request.query_params.get("view")
         purl = request.query_params.get("purl")
         if not purl:

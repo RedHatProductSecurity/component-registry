@@ -286,7 +286,7 @@ def test_manifest_cpes_from_variants():
 def test_manifest_cpes_from_cpe_lookup():
 
     hardcoded_cpes = cpe_lookup("rhel-8.8.0")
-    stream, _ = setup_product("rhel-8.8.0")
+    stream, _ = setup_product(stream_name="rhel-8.8.0")
     assert stream.productvariants.exists()
     assert hardcoded_cpes
 

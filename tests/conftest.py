@@ -26,9 +26,12 @@ def api_path(api_version):
     return f"/api/{api_version}"
 
 
-def setup_product(stream_name: str = ""):
+def setup_product(version_name: str = "", stream_name: str = ""):
     product = ProductFactory()
-    version = ProductVersionFactory(products=product)
+    if version_name:
+        version = ProductVersionFactory(name=version_name, products=product)
+    else:
+        version = ProductVersionFactory(products=product)
     if stream_name:
         stream = ProductStreamFactory(name=stream_name, products=product, productversions=version)
     else:

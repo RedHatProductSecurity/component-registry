@@ -137,7 +137,7 @@ def slow_handle_pnc_errata_released(erratum_id: int, erratum_status: str) -> Non
     notes = et.get_erratum_notes(erratum_id)
 
     related_purls = set()
-    for ref in notes.get("manifest", {}).get("refs", {}):
+    for ref in notes.get("manifest", {}).get("refs", []):
         if ref["type"] == "purl":
             related_purls.add(ref["uri"])
 
@@ -148,38 +148,36 @@ def slow_handle_pnc_errata_released(erratum_id: int, erratum_status: str) -> Non
     root_components: set[Component] = set()
     for purl in related_purls:
         # There should only be one root component of SOURCE type
-        components = Component.objects.filter(meta_attr__purl_declared=purl).filter(
-            type=Component.Type.MAVEN
+        components = Component.objects.filter(
+            type=Component.Type.MAVEN, meta_attr__purl_declared=purl
         )
-        if components.count() == 0:
+        component_count = components.count()
+        if component_count == 0:
             logger.warning(
                 f"Erratum {erratum_id} refers to purl {purl} which matches no components"
             )
             continue
-        if components.count() > 1:
+        if component_count > 1:
             logger.warning(
-                f"Erratum {erratum_id} refers to purl {purl} which matches {components.count()}"
+                f"Erratum {erratum_id} refers to purl {purl} which matches {component_count}"
                 " components; only handling the first"
             )
         root_components.add(components[0])
 
     # Update relations with this erratum
-    # TODO: Is just the root component okay here, or do I need to recreate the entire tree?
     for component in root_components:
         if component.software_build is None:
-            logger.warning(
-                f"Component {component.purl} has no build, can't relate erratum {erratum_id}"
-            )
-        else:
-            build = component.software_build
-            build_relation = ProductComponentRelation.objects.get(software_build=build)
-            ProductComponentRelation.objects.update_or_create(
-                external_system_id=erratum_id,
-                product_ref=build_relation.product_ref,
-                build_id=build.build_id,
-                build_type=build.build_type,
-                defaults={
-                    "type": ProductComponentRelation.Type.ERRATA,
-                    "meta_attr": {"components": component},
-                },
-            )
+            raise ValueError(f"Component {component.purl} has no build, can't relate {erratum_id}")
+
+        build = component.software_build
+        build_relation = ProductComponentRelation.objects.get(software_build=build)
+        ProductComponentRelation.objects.update_or_create(
+            external_system_id=erratum_id,
+            product_ref=build_relation.product_ref,
+            build_id=build.build_id,
+            build_type=build.build_type,
+            defaults={
+                "type": ProductComponentRelation.Type.ERRATA,
+                "meta_attr": {"components": component},
+            },
+        )

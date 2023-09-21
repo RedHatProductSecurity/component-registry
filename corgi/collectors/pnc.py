@@ -1,6 +1,7 @@
 import logging
 from typing import Any
 
+from corgi.core.constants import SBOMER_PRODUCT_MAP
 from corgi.core.models import Component
 
 logger = logging.getLogger(__name__)
@@ -94,3 +95,9 @@ class SbomerSbom:
         # declared in the Components section above. At the moment,
         # only "dependsOn" type relationships are declared.
         self.dependencies = {d["ref"]: d["dependsOn"] for d in data["dependencies"]}
+
+
+def is_sbomer_product(product: str, product_release: str) -> bool:
+    """Identifies products for which SBOMer produces manifests and which need separate handling
+    for release errata"""
+    return product in SBOMER_PRODUCT_MAP and product_release in SBOMER_PRODUCT_MAP[product]

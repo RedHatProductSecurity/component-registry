@@ -1,3 +1,4 @@
+import json
 import logging
 import typing
 from collections import defaultdict
@@ -253,3 +254,17 @@ class ErrataTool:
                 # map modular_rpms to build_ids. In slow_save_errata these are only saved as
                 # meta_attr so, let's just save the entire list for each build_id
                 variant_to_component_map[variant].append({build_id: modular_rpms})
+
+    def get_erratum_notes(self, erratum_id: int) -> dict:
+        # Get the contents of the "Notes" (formerly "How to test") field from an erratum.
+        # Quarkus uses this field to associate an SBOM with an erratum.
+        erratum_json = self.get(f"api/v1/erratum/{erratum_id}?format=json")
+        try:
+            # All products that use SBOMer should have notes set
+            # NB: Though the field in the ET UI is called "Notes", the field name in the API
+            # is "how_to_test", which was the original purpose of the Notes field.
+            notes = json.loads(erratum_json["content"]["content"]["how_to_test"])
+        except json.JSONDecodeError as error:
+            logger.warning(f"Couldn't load Notes for erratum {erratum_id}")
+            raise error
+        return notes

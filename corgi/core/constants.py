@@ -61,3 +61,11 @@ ROOT_COMPONENTS_CONDITION = (
 
 # Regex for generating el_match field
 EL_MATCH_RE = re.compile(r".*el(\d+)?[._-]?(\d+)?[._-]?(\d+)?(.*)")
+
+# List of products and releases which publish SBOMer manifests and should
+# process shipped errata accordingly
+SBOMER_PRODUCT_MAP = {
+    "RHBQ": [
+        "Red Hat build of Quarkus Middleware",
+    ],
+}

@@ -249,18 +249,33 @@ def test_umb_receiver_handles_shipped_errata():
 
     mock_umb_event = MagicMock()
     mock_invalid_event = MagicMock()
+    mock_sbomer_event = MagicMock()
     mock_id = "1234"
     address = "topic://VirtualTopic.eng.errata.activity.status"
     mock_umb_event.message.address = address
     mock_invalid_event.message.address = address
+    mock_sbomer_event.message.address = address
     assert address.replace("topic://", VIRTUAL_TOPIC_ADDRESS_PREFIX) in addresses
 
-    mock_umb_event.message.body = '{"errata_status": "SHIPPED_LIVE", "errata_id": MOCK_ID}'.replace(
+    mock_umb_event.message.body = """
+        {"errata_status": "SHIPPED_LIVE", "errata_id": MOCK_ID,
+        "product": "Product", "release": "Red Hat release of Product"}
+    """.replace(
         "MOCK_ID", mock_id
     )
     # Messages with an invalid status should get filtered out by the topic selector
-    mock_invalid_event.message.body = (
-        '{"errata_status": "DROPPED_NO_SHIP", "errata_id": MOCK_ID}'.replace("MOCK_ID", mock_id)
+    mock_invalid_event.message.body = """
+        {"errata_status": "DROPPED_NO_SHIP", "errata_id": MOCK_ID,
+        "product": "Product", "release": "Red Hat release of Product"}
+    """.replace(
+        "MOCK_ID", mock_id
+    )
+    # Messages for Middleware/SBOMer products should be handled by separately
+    mock_sbomer_event.message.body = """
+        {"errata_status": "SHIPPED_LIVE", "errata_id": MOCK_ID,
+        "product": "RHBQ", "release": "Red Hat build of Quarkus Middleware"}
+    """.replace(
+        "MOCK_ID", mock_id
     )
     mock_id = int(mock_id)
 
@@ -293,6 +308,42 @@ def test_umb_receiver_handles_shipped_errata():
     # slow_handle_shipped_errata.apply_async is called once per message
     # with an erratum_id and erratum_status arg
     slow_handle_shipped_errata_mock.assert_has_calls(
+        (
+            call(args=(mock_id, "SHIPPED_LIVE")),
+            call(args=(mock_id, "DROPPED_NO_SHIP")),
+            call(args=(mock_id, "SHIPPED_LIVE")),
+        )
+    )
+
+    # Test SBOMer release errata
+    side_effects = (None, None, ValueError("Mock invalid erratum value"))
+    with patch(
+        "corgi.monitor.consumer.slow_handle_pnc_errata_released.apply_async",
+        side_effect=side_effects,
+    ) as slow_handle_pnc_errata_released_mock:
+        # No exception
+        with patch.object(handler, "accept") as mock_accept:
+            handler.on_message(mock_sbomer_event)
+            mock_accept.assert_called_once_with(mock_sbomer_event.delivery)
+            mock_accept.reset_mock()
+
+            # Make sure invalid statuses work in the SBOMer erratum handler as well
+            mock_sbomer_event.message.body = mock_sbomer_event.message.body.replace(
+                "SHIPPED_LIVE", "DROPPED_NO_SHIP"
+            )
+            handler.on_message(mock_sbomer_event)
+            mock_accept.assert_called_once_with(mock_sbomer_event.delivery)
+
+        # Ensure the message is released if there's an exception
+        with patch.object(handler, "release") as mock_release:
+            mock_sbomer_event.message.body = mock_sbomer_event.message.body.replace(
+                "DROPPED_NO_SHIP", "SHIPPED_LIVE"
+            )
+            handler.on_message(mock_sbomer_event)
+            mock_release.assert_called_once_with(mock_sbomer_event.delivery, delivered=True)
+
+    # slow_handle_pnc_released_errata takes erratum_id, erratum_status as arguments
+    slow_handle_pnc_errata_released_mock.assert_has_calls(
         (
             call(args=(mock_id, "SHIPPED_LIVE")),
             call(args=(mock_id, "DROPPED_NO_SHIP")),

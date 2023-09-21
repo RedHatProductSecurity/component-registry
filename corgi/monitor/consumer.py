@@ -7,9 +7,10 @@ from proton import Event, SSLDomain
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, Selector
 
+from corgi.collectors.pnc import is_sbomer_product
 from corgi.tasks.brew import slow_fetch_brew_build, slow_update_brew_tags
 from corgi.tasks.errata_tool import slow_handle_shipped_errata
-from corgi.tasks.pnc import slow_fetch_pnc_sbom
+from corgi.tasks.pnc import slow_fetch_pnc_sbom, slow_handle_pnc_errata_released
 
 logger = logging.getLogger(__name__)
 
@@ -152,6 +153,8 @@ class UMBReceiverHandler(MessagingHandler):
         message = json.loads(event.message.body)
         errata_id = message["errata_id"]
         errata_status = message["errata_status"]
+        errata_product = message["product"]
+        errata_release = message["release"]
         if errata_status != "SHIPPED_LIVE":
             # Don't raise an error here because it will kill the whole listener
             logger.error(
@@ -160,10 +163,15 @@ class UMBReceiverHandler(MessagingHandler):
 
         try:
             # If an erratum has the wrong status, we'll raise an error in the task
-            slow_handle_shipped_errata.apply_async(args=(errata_id, errata_status))
+            # Errata for PNC/SBOMer products won't have attached artifacts, so handle
+            # those separately
+            if is_sbomer_product(errata_product, errata_release):
+                slow_handle_pnc_errata_released.apply_async(args=(errata_id, errata_status))
+            else:
+                slow_handle_shipped_errata.apply_async(args=(errata_id, errata_status))
         except Exception as exc:
             logger.error(
-                "Failed to schedule slow_update_brew_tags task for build ID %s: %s",
+                "Failed to schedule slow_handle_shipped_errata task for erratum ID %s: %s",
                 errata_id,
                 str(exc),
             )

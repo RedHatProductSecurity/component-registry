@@ -4,6 +4,7 @@ import requests
 from celery_singleton import Singleton
 
 from config.celery import app
+from corgi.collectors.errata_tool import ErrataTool
 from corgi.collectors.models import CollectorErrataProductVariant
 from corgi.collectors.pnc import SbomerSbom
 from corgi.core.models import (
@@ -123,3 +124,60 @@ def slow_fetch_pnc_sbom(purl: str, product_data, build_data, sbom_data) -> None:
 
     # Save component taxonomy
     root_component.save_component_taxonomy()
+
+
+@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
+def slow_handle_pnc_errata_released(erratum_id: int, erratum_status: str) -> None:
+    # Check that the erratum is released
+    if erratum_status != "SHIPPED_LIVE":
+        raise ValueError(f"Invalid status {erratum_status} for erratum {erratum_id}")
+
+    # Get the purl(s) of the related component(s) from the erratum's Notes field
+    et = ErrataTool()
+    notes = et.get_erratum_notes(erratum_id)
+
+    related_purls = set()
+    for ref in notes.get("manifest", {}).get("refs", []):
+        if ref["type"] == "purl":
+            related_purls.add(ref["uri"])
+
+    if not related_purls:
+        raise ValueError(f"Erratum {erratum_id} had no associated purls")
+
+    # Check that there's a component matching the purls
+    root_components: set[Component] = set()
+    for purl in related_purls:
+        # There should only be one root component of SOURCE type
+        components = Component.objects.filter(
+            type=Component.Type.MAVEN, meta_attr__purl_declared=purl
+        )
+        component_count = components.count()
+        if component_count == 0:
+            logger.warning(
+                f"Erratum {erratum_id} refers to purl {purl} which matches no components"
+            )
+            continue
+        if component_count > 1:
+            logger.warning(
+                f"Erratum {erratum_id} refers to purl {purl} which matches {component_count}"
+                " components; only handling the first"
+            )
+        root_components.add(components[0])
+
+    # Update relations with this erratum
+    for component in root_components:
+        if component.software_build is None:
+            raise ValueError(f"Component {component.purl} has no build, can't relate {erratum_id}")
+
+        build = component.software_build
+        build_relation = ProductComponentRelation.objects.get(software_build=build)
+        ProductComponentRelation.objects.update_or_create(
+            external_system_id=erratum_id,
+            product_ref=build_relation.product_ref,
+            build_id=build.build_id,
+            build_type=build.build_type,
+            defaults={
+                "type": ProductComponentRelation.Type.ERRATA,
+                "meta_attr": {"component_purl": component.purl},
+            },
+        )

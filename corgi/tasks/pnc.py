@@ -178,6 +178,6 @@ def slow_handle_pnc_errata_released(erratum_id: int, erratum_status: str) -> Non
             build_type=build.build_type,
             defaults={
                 "type": ProductComponentRelation.Type.ERRATA,
-                "meta_attr": {"components": component},
+                "meta_attr": {"component_purl": component.purl},
             },
         )

@@ -249,6 +249,23 @@ def test_product_manifest_excludes_internal_components():
         assert "redhat.com/" not in package["name"]
 
 
+def test_manifest_no_duplicate_released_components():
+    component, stream, _, _ = setup_products_and_components_provides()
+    # Add another Errata relation type for the same build (one already created in
+    # setup_product_and_components_provides)
+    ProductComponentRelationFactory(
+        software_build=component.software_build, type=ProductComponentRelation.Type.ERRATA
+    )
+
+    unique_components = set()
+
+    for c in stream.components.manifest_components():
+        if c.purl not in unique_components:
+            unique_components.add(c.purl)
+        else:
+            assert False
+
+
 def test_manifest_cpes_from_variants():
     # setup_products_and_components_provides adds a variant with a cpe
     # verify that is the only cpe shown when stream.et_product_versions is set

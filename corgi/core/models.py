@@ -1045,7 +1045,7 @@ class ComponentQuerySet(models.QuerySet):
         if quick:
             return roots
         else:
-            return roots.latest_components()
+            return roots.latest_components().distinct()
 
     def srpms(self, include: bool = True) -> models.QuerySet["Component"]:
         """Show only source RPMs by default, or only non-SRPMs if include=False"""

@@ -2,6 +2,7 @@ import datetime
 import logging
 from abc import abstractmethod
 from collections import defaultdict
+from pathlib import Path
 from typing import Iterable, Optional, Union
 from urllib.parse import quote
 from uuid import UUID
@@ -13,7 +14,6 @@ from rest_framework import serializers
 
 from corgi.api.constants import CORGI_API_URL, CORGI_STATIC_URL
 from corgi.core.constants import MODEL_FILTER_NAME_MAPPING
-from corgi.core.fixups import supported_stream_cpes
 from corgi.core.models import (
     AppStreamLifeCycle,
     Channel,
@@ -565,11 +565,13 @@ class ProductModelSerializer(ProductTaxonomySerializer):
 
     @staticmethod
     def get_manifest(instance: ProductStream) -> str:
-        if (not instance.components.manifest_components(quick=True).exists()) or (
-            instance.name not in supported_stream_cpes
-        ):
+        manifest_path = f"{instance.name}-{instance.pk}.json"
+        path = Path(f"{settings.STATIC_ROOT}/{manifest_path}")
+
+        if not path.is_file():
             return ""
-        return f"{CORGI_STATIC_URL}{instance.name}-{instance.pk}.json"
+
+        return f"{CORGI_STATIC_URL}{manifest_path}"
 
     @staticmethod
     def get_relations(instance: ProductModel) -> list[dict[str, str]]:

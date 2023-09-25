@@ -110,6 +110,7 @@ paths:
           - CENTOS
           - KOJI
           - PNC
+          - PYXIS
       - in: query
         name: exclude_fields
         schema:
@@ -1280,6 +1281,7 @@ components:
       - CENTOS
       - APP_INTERFACE
       - PNC
+      - PYXIS
       type: string
     Channel:
       type: object

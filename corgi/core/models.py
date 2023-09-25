@@ -265,6 +265,7 @@ class SoftwareBuild(TimeStampedModel):
         CENTOS = "CENTOS"  # Used by OpenStack RDO
         APP_INTERFACE = "APP_INTERFACE"  # Managed Services
         PNC = "PNC"  # Middleware
+        PYXIS = "PYXIS"  # API backing Red Hat's container catalog
 
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     build_id = models.CharField(max_length=200, default="")

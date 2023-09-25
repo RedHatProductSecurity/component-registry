@@ -26,6 +26,8 @@ def test_umb_listener_defines_settings():
         f"errata.activity.status": UMBReceiverHandler.et_shipped_errata,
         f"{VIRTUAL_TOPIC_ADDRESS_PREFIX}VirtualTopic.eng."
         f"pnc.sbom.spike.complete": UMBReceiverHandler.sbomer_complete,
+        f"{VIRTUAL_TOPIC_ADDRESS_PREFIX}VirtualTopic.eng."
+        f"snitch.contentmanifest.create": UMBReceiverHandler.pyxis_manifest_create,
     }
 
     # Stub out the real Container class with a mock we can assert on
@@ -93,7 +95,7 @@ def test_umb_receiver_setup():
         )
         for address in handler.virtual_topic_addresses
     ]
-    assert len(handler.virtual_topic_addresses) == 5
+    assert len(handler.virtual_topic_addresses) == 6
     mock_umb_event.container.create_receiver.assert_has_calls(create_receiver_calls)
 
 
@@ -381,6 +383,40 @@ def test_sbomer_handles_sbom_available():
                 test_data["msg"]["productConfig"]["errataTool"],
                 test_data["msg"]["build"],
                 test_data["msg"]["sbom"],
+            )
+
+        with patch.object(receiver, "release") as mock_release:
+            receiver.on_message(mock_event)
+            mock_release.assert_called_once_with(mock_event.delivery, delivered=True)
+
+
+def test_handle_pyxis_available():
+    """Test that the UMB receiver correctly handles manifest messages from pyxis"""
+    listener = UMBListener()
+    with patch("corgi.monitor.consumer.SSLDomain"):
+        receiver = UMBReceiverHandler(
+            virtual_topic_addresses=listener.virtual_topic_addresses, selectors=listener.selectors
+        )
+
+    mock_event = MagicMock()
+
+    with open("tests/data/pyxis/umb/manifest_create.json") as test_file:
+        test_data = json.load(test_file)
+    mock_event.message.address = test_data["topic"].replace("/topic/", VIRTUAL_TOPIC_ADDRESS_PREFIX)
+    mock_event.message.body = json.dumps(test_data["msg"])
+
+    # Call first with a valid message, then with a bad contentmanifest URL
+    fetch_manifest_exceptions = (None, Exception("Bad contentmanifest URL"))
+
+    with patch(
+        "corgi.monitor.consumer.slow_fetch_pyxis_manifest.delay",
+        side_effect=fetch_manifest_exceptions,
+    ) as mock_fetch_manifest:
+        with patch.object(receiver, "accept") as mock_accept:
+            receiver.on_message(mock_event)
+            mock_accept.assert_called_once_with(mock_event.delivery)
+            mock_fetch_manifest.assert_called_once_with(
+                test_data["msg"]["entityData"]["_id"]["$oid"],
             )
 
         with patch.object(receiver, "release") as mock_release:

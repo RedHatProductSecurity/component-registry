@@ -430,20 +430,6 @@
                 "bom-ref": "pkg:maven/org.jboss.spec.javax.resource/jboss-connector-api_1.7_spec@1.0.0.Final?type=jar",
                 "description": "JSR 322: Java(TM) EE Connector Architecture 1.7 API",
                 "group": "org.jboss.spec.javax.resource",
-                "licenses": [
-                    {
-                        "license": {
-                            "name": "Common Development and Distribution License",
-                            "url": "http://repository.jboss.org/licenses/cddl.txt"
-                        }
-                    },
-                    {
-                        "license": {
-                            "name": "GNU General Public License, Version 2 with the Classpath Exception",
-                            "url": "http://repository.jboss.org/licenses/gpl-2.0-ce.txt"
-                        }
-                    }
-                ],
                 "name": "jboss-connector-api_1.7_spec",
                 "properties": [
                     {

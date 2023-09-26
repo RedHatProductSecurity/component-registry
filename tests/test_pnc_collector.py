@@ -33,6 +33,14 @@ def test_validate_sbom():
         == "1234567890"
     )
 
+    assert (
+        sbom.components[
+            "pkg:maven/org.jboss.spec.javax.resource/jboss-connector-api_1.7_spec@"
+            + "1.0.0.Final?type=jar"
+        ]["licenses"]
+        == []
+    )
+
     # A component with both PNC and Brew builds stores both
     assert (
         sbom.components["pkg:maven/io.smallrye.reactive/mutiny@1.7.0.redhat-00001?type=jar"][

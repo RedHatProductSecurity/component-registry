@@ -53,8 +53,8 @@ export CORGI_ERRATA_TOOL_URL=https://errata.example.com
 export CORGI_MANIFEST_HINTS_URL=https://manifesthints.example.com/manifest-hints.txt
 export CORGI_PRODSEC_DASHBOARD_URL=https://dashboard.example.com/rest/api/latest
 export CORGI_PYXIS_GRAPHQL_URL=https://catalog.example.com/api/containers
-export CORGI_PYXIS_CERT=/path/to/cert.crt
-export CORGI_PYXIS_KEY=/path/to/key.key
+export CORGI_UMB_CERT=/path/to/cert.crt
+export CORGI_UMB_KEY=/path/to/key.key
 export PIP_INDEX_URL=https://pypi.org/simple
 ```
 

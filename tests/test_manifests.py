@@ -395,10 +395,10 @@ def test_no_duplicates_in_manifest_with_upstream():
     assert other_component.upstreams.get(pk=upstream.uuid)
 
     # 1 (product) + 2 (root components) + 1 (upstream)
-    root_components = stream.components.manifest_components().order_by("software_build__build_id")
+    root_components = stream.components.manifest_components()
     assert len(root_components) == 2
-    assert root_components.first() == component
-    assert root_components.last() == other_component
+    assert component in root_components
+    assert other_component in root_components
 
     upstream_components = stream.upstreams_queryset
     assert len(upstream_components) == 1

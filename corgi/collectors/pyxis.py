@@ -1,6 +1,4 @@
-import json
 import logging
-import sys
 from collections.abc import Mapping
 from string import Template
 from typing import Any
@@ -22,7 +20,6 @@ retries = urllib3.util.retry.Retry(
     raise_on_status=False,
 )
 adapter = requests.adapters.HTTPAdapter(max_retries=retries)
-session.mount("http://", adapter)
 session.mount("https://", adapter)
 
 
@@ -144,13 +141,3 @@ def get_manifest_data(manifest_id: str, page_size: int = 50) -> Mapping[str, Any
 
     manifest["edges"]["components"]["data"] = components
     return manifest
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-    settings.configure()
-
-    manifest_id = "64dccc646d82013739c4f7e0"
-    example = Template(query).substitute(manifest_id=manifest_id, page=1, page_size=50)
-    print(json.dumps({"query": example}), file=sys.stderr)
-    print(json.dumps(get_manifest_data(manifest_id)), file=sys.stdout)

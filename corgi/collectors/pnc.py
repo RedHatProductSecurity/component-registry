@@ -56,7 +56,7 @@ class SbomerSbom:
 
             # License info
             licenses = []
-            for _license in component.get("licenses", []):
+            for _license in component.get("licenses", ()):
                 if _license["license"].get("id"):
                     licenses.append(_license["license"].get("id"))
                 if _license["license"].get("name"):

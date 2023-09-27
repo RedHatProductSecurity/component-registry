@@ -139,9 +139,6 @@ test-performance:
     - $DNF_WITH_OPTIONS install $RPM_REQUIREMENTS
     - python3.9 -m pip install tox
     - tox -e corgi -- -m performance --no-cov
-  only:
-    refs:
-      - schedules
 
 mypy:
   stage: test

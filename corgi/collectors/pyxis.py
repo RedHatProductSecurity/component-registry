@@ -1,11 +1,12 @@
 import logging
 from collections.abc import Mapping
 from string import Template
-from typing import Any
+from typing import Any, Optional
 
 import requests
 import urllib3.util.retry
 from django.conf import settings
+from typing_extensions import TypeGuard
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +104,13 @@ query = """{
 """
 
 
+def check_client_cert(cert: tuple[Optional[str], Optional[str]]) -> TypeGuard[tuple[str, str]]:
+    """Convert the type Optional[str] returned by Django conf.settings to be a non-optional str"""
+    if not all(cert):
+        raise ValueError("Set CORGI_PYXIS_CERT and CORGI_PYXIS_KEY to get manifests from pyxis")
+    return True
+
+
 def get_manifest_data(manifest_id: str, page_size: int = 50) -> Mapping[str, Any]:
     """Pull a manifest from pyxis"""
 
@@ -112,8 +120,8 @@ def get_manifest_data(manifest_id: str, page_size: int = 50) -> Mapping[str, Any
     if not url:
         raise ValueError("Set CORGI_PYXIS_GRAPHQL_URL to get manifests from pyxis")
 
-    if not all(cert):
-        raise ValueError("Set CORGI_PYXIS_CERT and CORGI_PYXIS_KEY to get manifests from pyxis")
+    if check_client_cert(cert):
+        checked_cert = cert
 
     logger.info(f"Retrieving manifest data for {manifest_id} from {url}")
 
@@ -127,7 +135,7 @@ def get_manifest_data(manifest_id: str, page_size: int = 50) -> Mapping[str, Any
     while has_more:
         variables = {"manifest_id": manifest_id, "page": page, "page_size": page_size}
         body = {"query": Template(query).substitute(**variables)}
-        response = session.post(url, json=body, headers=headers, cert=cert, timeout=timeout)
+        response = session.post(url, json=body, headers=headers, cert=checked_cert, timeout=timeout)
         if not bool(response):
             logger.error(f"Failed request to {url} with {response} had text body: {response.text}")
         response.raise_for_status()

@@ -194,6 +194,11 @@ def save_component(component: dict, parent: ComponentNode) -> bool:
     mapping = {
         "rpm": Component.Type.RPM,
         "golang": Component.Type.GOLANG,
+        "npm": Component.Type.NPM,
+        "gem": Component.Type.GEM,
+        "github": Component.Type.GITHUB,
+        "generic": Component.Type.GENERIC,
+        "maven": Component.Type.MAVEN,
     }
 
     if component_type in mapping:

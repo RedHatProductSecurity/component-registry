@@ -63,8 +63,7 @@ def cpu_manifest_service(product_stream_id: str, service_components: list) -> No
 
         quay_repo = service_component.get("quay_repo_name")
         if quay_repo:
-            quay_repo_full = f"quay.io/{quay_repo}"
-            component_data, quay_scan_source = Syft.scan_repo_image(target_image=quay_repo_full)
+            component_data, quay_scan_source = Syft.scan_repo_image(target_image=quay_repo)
             component_version = quay_scan_source["target"]["imageID"]
             analyzed_components.extend(component_data)
 

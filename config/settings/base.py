@@ -479,3 +479,5 @@ PYXIS_KEY = UMB_KEY
 # Set to False to disable software composition analysis tasks.
 SCA_ENABLED = strtobool(os.getenv("CORGI_SCA_ENABLED", "true"))
 SCA_SCRATCH_DIR = os.getenv("CORGI_SCA_SCATCH_DIR", "/tmp")
+
+QUAY_TOKEN = os.getenv("CORGI_QUAY_TOKEN")

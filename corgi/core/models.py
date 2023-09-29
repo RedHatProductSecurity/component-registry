@@ -1553,10 +1553,9 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
     def save_component_taxonomy(self):
         """Link related components together using foreign keys. Avoids repeated MPTT tree lookups"""
-        upstreams = self.get_upstreams_pks(using="default")
-        self.upstreams.set(upstreams)
-        self.provides.set(self.get_provides_nodes(using="default"))
-        self.sources.set(self.get_sources_nodes(using="default"))
+        self.upstreams.set(self.get_upstreams_pks(using="default"))
+        self.provides.set(self.get_provides_pks(using="default"))
+        self.sources.set(self.get_sources_pks(using="default"))
 
     @property
     def provides_queryset(self, using: str = "read_only") -> Iterator["Component"]:
@@ -1681,17 +1680,27 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         # We don't know which do and don't, so for now just stop linking
         return None
 
-    def get_roots(self, using: str = "read_only") -> list[ComponentNode]:
+    def get_roots(self, using: str = "read_only") -> QuerySet[ComponentNode]:
         """Return component root entities."""
-        roots: list[ComponentNode] = []
-        # If a component does not have a softwarebuild that means it's not built at Red Hat
-        # therefore it doesn't need its upstreams listed. If we start using the get_roots property
-        # for functions other than get_upstreams we might need to revisit this check
-        if not self.software_build:
-            return roots
+        # Only components built at Red Hat need their upstreams listed
+        if self.namespace != Component.Namespace.REDHAT:
+            return ComponentNode.objects.none()
+
+        # Only root components have a linked SoftwareBuild / have a root node in self.cnodes
+        # Non-root components like binary RPMs / Red Hat Maven components also need upstreams listed
+        # So we must find their root nodes a little indirectly
+        root_node_pks = set()
         for cnode in self.cnodes.db_manager(using).iterator():
-            root = cnode.get_root()
-            if root.obj.type == Component.Type.CONTAINER_IMAGE:
+            root_node_pks_queryset = (
+                cnode.get_ancestors(include_self=True)
+                .filter(parent=None)
+                .values_list("pk", flat=True)
+                .using(using)
+            )
+            container_image_root_pk = root_node_pks_queryset.filter(
+                component__type=Component.Type.CONTAINER_IMAGE
+            ).first()
+            if container_image_root_pk:
                 # TODO if we change the CONTAINER->RPM ComponentNode.type to something besides
                 # 'PROVIDES' we would check for that type here to prevent 'hardcoding' the
                 # container -> rpm relationship here.
@@ -1707,10 +1716,24 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
                     .exists()
                 )
                 if not rpm_descendant:
-                    roots.append(root)
+                    # If the root for this tree is a container image
+                    # AND we're not an RPM, or a child of an RPM,
+                    # include the container in the list of roots
+                    root_node_pks.add(container_image_root_pk)
+                # Else the root for this tree is a container, but we're an RPM or its child
+                # So ignore the container image root for this tree
+
+            # Else the root for this tree is not a container, so it could be an SRPM or RPM module
+            # or a GitHub repo for a managed service, or a Red Hat Maven component
+            # We always include these roots just in case
+            # although RPM module and GitHub repo roots should never have any upstreams
+            # We can't do this in one query (excluding all the container roots)
+            # because GenericForeignKey / GenericRelation doesn't support .exclude()
             else:
-                roots.append(root)
-        return roots
+                root_node_pks.add(root_node_pks_queryset.get())
+
+        # return non-container roots, AND container roots if self is not an RPM descendant
+        return ComponentNode.objects.filter(pk__in=root_node_pks).using(using)
 
     @property
     def build_meta(self):
@@ -1890,9 +1913,8 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         """Return an SPDX-style manifest in JSON format."""
         return ComponentManifestFile(self).render_content()
 
-    def get_provides_nodes(self, include_dev: bool = True, using: str = "read_only") -> set[str]:
-        """return a set of descendant ids with PROVIDES ComponentNode type"""
-        # Used in taxonomies. Returns only PKs
+    def get_provides_pks(self, include_dev: bool = True, using: str = "read_only") -> set[str]:
+        """Return Component PKs which are PROVIDES descendants of this Component, for taxonomies"""
         provides_set = set()
 
         type_list: tuple[ComponentNode.ComponentNodeType, ...] = (
@@ -1913,8 +1935,8 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     def get_provides_nodes_queryset(
         self, include_dev: bool = True, using: str = "read_only"
     ) -> QuerySet[ComponentNode]:
-        """return a QuerySet of descendants with PROVIDES ComponentNode type"""
-        # Used in manifests. Returns a QuerySet of (node_purl, node type, linked component UUID)
+        """Return (node purl, node type, component PK) which are PROVIDES descendants of this Component,
+        for manifests"""
         type_list: tuple[ComponentNode.ComponentNodeType, ...] = (
             ComponentNode.ComponentNodeType.PROVIDES,
         )
@@ -1940,8 +1962,9 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             .iterator()
         )
 
-    def get_sources_nodes(self, include_dev: bool = True, using: str = "read_only") -> set[str]:
-        """Return a set of ancestors ids for all PROVIDES ComponentNodes"""
+    def get_sources_pks(self, include_dev: bool = True, using: str = "read_only") -> set[str]:
+        """Return Component PKs which are ancestors of this Component's PROVIDES nodes,
+        for taxonomies"""
         sources_set = set()
         type_list: tuple[ComponentNode.ComponentNodeType, ...] = (
             ComponentNode.ComponentNodeType.PROVIDES,
@@ -1960,52 +1983,62 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             )
         return sources_set
 
-    def get_upstreams_nodes(self, using: str = "read_only") -> list[ComponentNode]:
+    def get_upstreams_nodes(self, using: str = "read_only") -> QuerySet[ComponentNode]:
         """return upstreams component ancestors in family trees"""
-        # The get_roots logic is too complicated to use only Django filtering
-        # So it has to use Python logic and return a set, instead of a QuerySet
-        # which forces us to use Python in this + all other get_upstreams_* methods
-        upstreams = []
-        roots = self.get_roots(using=using)
-        for root in roots:
-            # For SRPM/RPMS, and noarch containers, these are the cnodes we want.
-            source_descendants = (
-                root.get_descendants()
-                .filter(type=ComponentNode.ComponentNodeType.SOURCE)
-                .using(using)
-            )
-            # Cachito builds nest components under the relevant source component for that
-            # container build, eg. buildID=1911112. In that case we need to walk up the
-            # tree from the current node to find its relevant source
+        upstream_pks = set()
+        for root in self.get_roots(using=using).iterator():
             root_obj = root.obj
             if (
                 root_obj
                 and root_obj.type == Component.Type.CONTAINER_IMAGE
-                and root_obj.arch == "noarch"
-                and source_descendants.count() > 1
+                and self.type != Component.Type.CONTAINER_IMAGE
             ):
-                upstreams.extend(
-                    self.cnodes.get_queryset()
-                    .get_ancestors(include_self=True)
-                    .filter(
-                        type=ComponentNode.ComponentNodeType.SOURCE,
-                        component__namespace=Component.Namespace.UPSTREAM,
-                    )
-                    .using(using)
-                    .iterator()
-                )
-            else:
-                upstreams.extend(source_descendants)
-        return upstreams
+                # If the root obj is a container, but this child component is not,
+                # skip reporting any upstreams from this container tree, because:
 
-    def get_upstreams_pks(self, using: str = "read_only") -> tuple[str, ...]:
-        """Return only the primary keys from the set of all upstream nodes"""
-        linked_pks = set(str(node.object_id) for node in self.get_upstreams_nodes(using=using))
-        return tuple(linked_pks)
+                # Binary RPMs should only report upstreams from a source RPM tree
+                # If one exists, we'll process it in a later loop iteration
+                # So the source RPM and binary RPMs both report the same upstreams
+                # and the binary RPMs won't report the container's upstreams
 
-    def get_upstreams_purls(self, using: str = "read_only") -> set[str]:
+                # Red Hat GitHub / Maven components might be root components (in another tree)
+                # If one exists, we'll process it in a later loop iteration
+                # So REDHAT components report only their upstreams, if any
+                # and won't report the container's upstreams
+
+                # Other remote-source components will never reach this point at all
+                # since get_roots only gives results for REDHAT components
+                # UPSTREAM components are already upstream, so don't list any new upstreams
+                continue
+
+            # Else we're processing a non-container root
+            # So include all SOURCE-type descendants of the root
+            # Source RPM roots should only have 1, binary RPMs will share it
+
+            # RPM module and managed service GitHub repo roots should have 0
+            # Not sure about Red Hat Maven component roots, probably depends on CORGI-796
+
+            # OR the root obj is a container, and so is the component we're processing
+            # "Source descendants of the root" should just be the Brew "sources"
+            # as well as the upstream Go modules, if any
+            # So index / arch-independent and arch-specific containers will report
+            # the same upstreams for all variations of the same container
+            source_descendants = (
+                root.get_descendants()
+                .filter(type=ComponentNode.ComponentNodeType.SOURCE)
+                .values_list("pk", flat=True)
+                .using(using)
+            )
+            upstream_pks.update(source_descendants)
+        return ComponentNode.objects.filter(pk__in=upstream_pks).using(using)
+
+    def get_upstreams_pks(self, using: str = "read_only") -> QuerySet:
+        """Return only the linked Component primary keys from the set of all upstream nodes"""
+        return self.get_upstreams_nodes(using=using).values_list("object_id", flat=True).distinct()
+
+    def get_upstreams_purls(self, using: str = "read_only") -> QuerySet:
         """Return only the purls from the set of all upstream nodes"""
-        return set(node.purl for node in self.get_upstreams_nodes(using=using))
+        return self.get_upstreams_nodes(using=using).values_list("purl", flat=True).distinct()
 
     def disassociate_with_product(self, product_ref: ProductModel) -> None:
         """Disassociate this component with the passed in ProductModel and any child ProductModels

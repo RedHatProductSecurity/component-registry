@@ -1268,7 +1268,7 @@ def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, moc
                 build_id = "1781353"
                 slow_fetch_brew_build(build_id, SoftwareBuild.Type.BREW)
                 wrapped_save_children.assert_called_once_with(
-                    build_id, SoftwareBuild.Type.BREW, ANY, ANY, True
+                    build_id, SoftwareBuild.Type.BREW, ANY, ANY, ANY, True
                 )
             wrapped_check_namespace.assert_called()
         save_taxonomy_call = call(build_id, SoftwareBuild.Type.BREW)

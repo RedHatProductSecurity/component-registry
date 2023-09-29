@@ -11,12 +11,14 @@ from corgi.web.templatetags.base_extras import provided_relationship
 
 from .conftest import setup_product
 from .factories import (
+    BinaryRpmComponentFactory,
     ComponentFactory,
     ContainerImageComponentFactory,
     ProductComponentRelationFactory,
     ProductStreamFactory,
     SoftwareBuildFactory,
     SrpmComponentFactory,
+    UpstreamComponentFactory,
 )
 
 logger = logging.getLogger()
@@ -139,7 +141,7 @@ def test_slim_rpm_in_containers_manifest():
     provided = set()
     # Each component has 1 node each
     for released_component in released_components:
-        component_nodes = released_component.get_provides_nodes()
+        component_nodes = released_component.get_provides_pks()
         assert len(component_nodes) == 1
         provided.update(component_nodes)
 
@@ -310,7 +312,7 @@ def test_manifest_cpes_from_patterns_and_brew_tags():
     manifest = json.loads(stream.manifest)
     product_data = manifest["packages"][-1]
     cpes_in_manifest = set(ref["referenceLocator"] for ref in product_data["externalRefs"])
-    assert set([test_cpe, another_test_cpe]) == cpes_in_manifest
+    assert {test_cpe, another_test_cpe} == cpes_in_manifest
 
 
 def test_product_manifest_properties():
@@ -415,7 +417,7 @@ def test_component_manifest_properties():
 
     manifest = json.loads(component.manifest)
 
-    num_provided = len(component.get_provides_nodes())
+    num_provided = len(component.get_provides_pks())
 
     assert num_provided == 2
 
@@ -466,13 +468,9 @@ def setup_products_and_components_upstreams():
         meta_attr=meta_attr,
     )
 
-    upstream = ComponentFactory(namespace=Component.Namespace.UPSTREAM)
-    component = ComponentFactory(
-        software_build=build, type=Component.Type.CONTAINER_IMAGE, arch="noarch"
-    )
-    other_component = ComponentFactory(
-        software_build=other_build, type=Component.Type.CONTAINER_IMAGE, arch="noarch"
-    )
+    upstream = UpstreamComponentFactory()
+    component = ContainerImageComponentFactory(software_build=build)
+    other_component = ContainerImageComponentFactory(software_build=other_build)
     cnode = ComponentNode.objects.create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
@@ -508,6 +506,8 @@ def setup_products_and_components_upstreams():
     )
     ProductComponentRelationFactory(
         software_build=other_build,
+        build_id=other_build.build_id,
+        build_type=other_build.build_type,
         product_ref=variant.name,
         type=ProductComponentRelation.Type.ERRATA,
     )
@@ -523,15 +523,21 @@ def setup_products_and_components_provides(released=True, internal_component=Fal
     build = SoftwareBuildFactory(build_id=1)
     if released:
         ProductComponentRelationFactory(
-            type=ProductComponentRelation.Type.ERRATA, software_build=build
+            software_build=build,
+            build_id=build.build_id,
+            build_type=build.build_type,
+            product_ref=variant.name,
+            type=ProductComponentRelation.Type.ERRATA,
         )
 
     if internal_component:
-        provided = ComponentFactory(name="gitlab.cee.redhat.com/", type=Component.Type.GOLANG)
-        dev_provided = ComponentFactory(name="github.com/blah.redhat.com", type=Component.Type.NPM)
+        provided = UpstreamComponentFactory(name="blah.redhat.com/", type=Component.Type.GOLANG)
+        dev_provided = UpstreamComponentFactory(
+            name="github.com/blah.redhat.com", type=Component.Type.NPM
+        )
     else:
-        provided = ComponentFactory(type=Component.Type.RPM, arch="x86_64")
-        dev_provided = ComponentFactory(type=Component.Type.NPM)
+        provided = BinaryRpmComponentFactory()
+        dev_provided = UpstreamComponentFactory(type=Component.Type.NPM)
     component = SrpmComponentFactory(
         software_build=build,
     )
@@ -557,6 +563,8 @@ def setup_products_and_components_provides(released=True, internal_component=Fal
     # to generate the manifest
     ProductComponentRelationFactory(
         software_build=build,
+        build_id=build.build_id,
+        build_type=build.build_type,
         product_ref=stream.name,
         type=ProductComponentRelation.Type.BREW_TAG,
     )
@@ -567,15 +575,17 @@ def setup_products_and_components_provides(released=True, internal_component=Fal
 
 def setup_products_and_rpm_in_containers():
     stream, variant = setup_product()
-    rpm_in_container = ComponentFactory(type=Component.Type.RPM, arch="x86_64")
+    rpm_in_container = BinaryRpmComponentFactory()
     containers = []
-    for name in ["", "", "some-container-source"]:
+    for name in ("", "", "some-container-source"):
         build, container = _build_rpm_in_containers(rpm_in_container, name=name)
 
         # The product_ref here is a variant name but below we use it's parent stream
         # to generate the manifest
         ProductComponentRelationFactory(
             software_build=build,
+            build_id=build.build_id,
+            build_type=build.build_type,
             product_ref=variant.name,
             type=ProductComponentRelation.Type.ERRATA,
         )

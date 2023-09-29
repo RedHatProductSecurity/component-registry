@@ -599,7 +599,8 @@ def save_container(
     slow_save_container_children.delay(
         softwarebuild.build_id,
         softwarebuild.build_type,
-        build_data,
+        build_data["meta"].get("upstream_go_modules", ()),
+        build_data.get("sources", ()),
         str(root_node.pk),
         save_product,
     )
@@ -619,7 +620,8 @@ def save_container(
 def slow_save_container_children(
     build_id: str,
     build_type: str,
-    build_data: dict,
+    upstream_go_modules: list[str],
+    sources: list[dict],
     root_node_pk: str,
     save_product: bool,
 ) -> bool:
@@ -630,7 +632,7 @@ def slow_save_container_children(
     any_go_module_created = any_source_created = any_cachito_created = False
 
     meta_attr = {"go_component_type": "gomod", "source": ["collectors/brew"]}
-    for module in build_data["meta"].get("upstream_go_modules", ()):
+    for module in upstream_go_modules:
         # the upstream commit is included in the dist-git commit history, but is not
         # exposed anywhere in the brew data that I can find, so can't set version
         _, _, temp_created = save_upstream(
@@ -638,7 +640,7 @@ def slow_save_container_children(
         )
         any_go_module_created |= temp_created
 
-    for source in build_data.get("sources", ()):
+    for source in sources:
         component_name = source["meta"].pop("name")
         component_version = source["meta"].pop("version")
         related_url = source["meta"].pop("url", "")

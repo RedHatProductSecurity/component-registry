@@ -20,8 +20,10 @@ from corgi.tasks.sca import save_component
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def refresh_service_manifests() -> None:
-    services = ProductStream.objects.filter(meta_attr__managed_service_components__isnull=False)
-    service_metadata = AppInterface.fetch_service_metadata(list(services))
+    services = ProductStream.objects.filter(
+        meta_attr__managed_service_components__isnull=False
+    ).distinct()
+    service_metadata = AppInterface.fetch_service_metadata(services)
 
     # Find previous builds and delete them and their components, so we can create a fresh
     # manifest structure for each "new" build. This is done specifically because we don't

@@ -10,6 +10,7 @@ from corgi.core.models import (
     Component,
     ComponentNode,
     ProductComponentRelation,
+    ProductStream,
     SoftwareBuild,
 )
 
@@ -680,6 +681,38 @@ def test_component_tags_duplicate(client, api_path):
     )
     assert response.status_code == 400
     assert response.json()["error"] == "Tag already exists."
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_product_stream_tag_filter(client, api_path):
+    ProductStreamFactory()
+    response = client.get(f"{api_path}/product_streams?tags=manifest")
+    assert response.status_code == 200
+    assert response.json()["count"] == 0
+
+    the_second_stream = ProductStreamFactory(tag__name="manifest", tag__value="")
+    response = client.get(f"{api_path}/product_streams?tags=manifest")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 1
+    assert response["results"][0]["name"] == the_second_stream.name
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_product_stream_without_tag_filter(client, api_path):
+    the_first_stream = ProductStreamFactory()
+    assert ProductStream.objects.exclude(tags__name="manifest").count() == 1
+    response = client.get(f"{api_path}/product_streams?tags=!manifest")
+    assert response.status_code == 200
+    assert response.json()["count"] == 1
+
+    ProductStreamFactory(tag__name="manifest", tag__value="")
+    assert ProductStream.objects.exclude(tags__name="manifest").count() == 1
+    response = client.get(f"{api_path}/product_streams?tags=!manifest")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 1
+    assert response["results"][0]["name"] == the_first_stream.name
 
 
 @pytest.mark.skip(reason="Disabled until auth for write endpoints is implemented")

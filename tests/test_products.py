@@ -69,6 +69,7 @@ def test_products(requests_mock):
     rhel_product = Product.objects.get(name="rhel")
     assert rhel_product.name == "rhel"
     assert rhel_product.ofuri == "o:redhat:rhel"
+    assert rhel_product.meta_attr["business_unit"] == "Core RHEL"
 
     assert "HighAvailability-8.6.0.Z.MAIN.EUS" in rhel_product.productvariants.values_list(
         "name", flat=True

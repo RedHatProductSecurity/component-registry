@@ -1,3 +1,5 @@
+from typing import Any, DefaultDict
+
 from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.conf import settings
@@ -76,21 +78,7 @@ def slow_load_errata(erratum_name: str, force_process: bool = False) -> None:
         # Save PCR
         logger.info("Saving product components for errata %s", erratum_id)
         variant_to_component_map = et.get_erratum_components(str(erratum_id))
-        for variant_id, build_objects in variant_to_component_map.items():
-            for build_obj in build_objects:
-                for build_id, errata_components in build_obj.items():
-                    # Add to relations list as we go, so we can fetch them below
-                    build_ids.add(build_id)
-                    ProductComponentRelation.objects.update_or_create(
-                        external_system_id=erratum_id,
-                        product_ref=variant_id,
-                        build_id=build_id,
-                        build_type=build_type,
-                        defaults={
-                            "type": ProductComponentRelation.Type.ERRATA,
-                            "meta_attr": {"components": errata_components},
-                        },
-                    )
+        save_errata_relation(build_ids, build_type, erratum_id, variant_to_component_map)
 
     # If the number of relations was more than 0 check if we've processed all the builds
     # in the errata
@@ -124,6 +112,40 @@ def slow_load_errata(erratum_name: str, force_process: bool = False) -> None:
         slow_save_errata_product_taxonomy.delay(erratum_id)
 
     logger.info("Finished processing %s", erratum_id)
+
+
+def save_errata_relation(
+    build_ids: set[int],
+    build_type: str,
+    erratum_id: int,
+    variant_to_component_map: DefaultDict[str, list],
+) -> None:
+    for variant_id, build_objects in variant_to_component_map.items():
+        for build_obj in build_objects:
+            for build_id, errata_components in build_obj.items():
+                # Add to relations list as we go, so we can fetch them below
+                build_ids.add(build_id)
+                defaults: dict[str, Any] = {
+                    "type": ProductComponentRelation.Type.ERRATA,
+                    "meta_attr": {"components": errata_components},
+                }
+                software_build = SoftwareBuild.objects.filter(
+                    build_id=build_id, build_type=build_type
+                ).first()
+                if software_build:
+                    # If software_build is None, this code will not add a "software_build": None
+                    # key / value pair to the defaults dict, so we won't remove the linked
+                    # software_build from any existing relations by mistake
+                    # If software_build is None / doesn't exist, there shouldn't be any other
+                    # relations with a linked build.
+                    defaults["software_build"] = software_build
+                ProductComponentRelation.objects.update_or_create(
+                    external_system_id=erratum_id,
+                    product_ref=variant_id,
+                    build_id=build_id,
+                    build_type=build_type,
+                    defaults=defaults,
+                )
 
 
 def _get_relation_builds(erratum_id: int) -> QuerySet:

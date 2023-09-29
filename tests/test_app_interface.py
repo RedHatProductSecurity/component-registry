@@ -112,10 +112,10 @@ def test_metadata_fetch(requests_mock):
             "repo/image",
             nullcontext(),
         ),
+        # Code works with public Quay.io instance or any internal Quay server
+        ({"tags": {"t1": {}}}, "t1", "internal.quay", "repo2/image2", nullcontext()),
         # If no tags, default to latest. nullcontext here means "no exception raised"
-        ({"tags": {}}, "latest", "quay.io", "repo2/image2", nullcontext()),
-        # Code works with public QUay.io instance or any internal Quay server
-        ({"tags": {}}, "latest", "internal.quay", "repo3/image3", nullcontext()),
+        ({"tags": {}}, "latest", "quay.io", "repo3/image3", nullcontext()),
         # Fails with no retry if the image to pull already had a tag given explicitly
         (
             {"tags": {}},

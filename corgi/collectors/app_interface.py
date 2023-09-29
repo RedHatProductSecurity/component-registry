@@ -10,10 +10,11 @@ logger = logging.getLogger(__name__)
 
 
 class AppInterface:
-    @classmethod
+    @staticmethod
     def fetch_service_metadata(
-        cls, services: list[ProductStream]
+        services: list[ProductStream],
     ) -> dict[ProductStream, list[dict[str, str]]]:
+        # TODO: Check parentApp / childrenApps / dependencies / statusPageComponents as well?
         repo_query = """
         {
             apps_v1 {
@@ -53,24 +54,24 @@ class AppInterface:
             component_name = component["name"]
             subcomponent_data: defaultdict[str, dict[str, str]] = defaultdict(dict)
 
-            quay_repos_data = component.get("quayRepos")
-            if quay_repos_data:
-                for org_repos in quay_repos_data:
-                    # Ignore container images in other registries since we assume all images are
-                    # in Quay.io.
-                    if org_repos["org"]["instance"]["url"] != "quay.io":
-                        raise ValueError(
-                            f"Found non-quay.io container images for {component_name} in "
-                            f"app-interface: {org_repos['org']['instance']}"
-                        )
-                    for repo in org_repos["items"]:
-                        repo_name = f"{org_repos['org']['name']}/{repo['name']}"
-                        subcomponent_data[repo["name"]]["quay_repo_name"] = repo_name
+            # Handle case when key is present but value is None
+            quay_repos_data = component.get("quayRepos") or ()
+            for org_repos in quay_repos_data:
+                # Ignore container images in other registries since we assume all images are
+                # in Quay.io.
+                if org_repos["org"]["instance"]["url"] != "quay.io":
+                    raise ValueError(
+                        f"Found non-quay.io container images for {component_name} in "
+                        f"app-interface: {org_repos['org']['instance']}"
+                    )
+                for repo in org_repos["items"]:
+                    repo_name = f"{org_repos['org']['name']}/{repo['name']}"
+                    subcomponent_data[repo["name"]]["quay_repo_name"] = repo_name
 
-            source_repos_data = component.get("codeComponents")
-            if source_repos_data:
-                for source_repo in source_repos_data:
-                    subcomponent_data[source_repo["name"]]["git_repo_url"] = source_repo["url"]
+            # Handle case when key is present but value is None
+            source_repos_data = component.get("codeComponents") or ()
+            for source_repo in source_repos_data:
+                subcomponent_data[source_repo["name"]]["git_repo_url"] = source_repo["url"]
 
             # Convert data indexed by subcomponent name to list that contains component names and
             # their Git/Quay repo data. Set this as a list of subcomponents for the processed
@@ -78,6 +79,7 @@ class AppInterface:
             subcomponent_list = [{"name": k, **v} for k, v in subcomponent_data.items()]
             service_component_map[component_name] = subcomponent_list
 
+        # TODO: Do we need defaultdict here? How is service_metadata used after return?
         service_metadata = defaultdict(list)
         for service in services:
             components = []

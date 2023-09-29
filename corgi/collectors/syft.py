@@ -6,6 +6,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
 
+import requests
 from django.conf import settings
 from packageurl import PackageURL
 
@@ -59,29 +60,71 @@ class Syft:
         return scan_results
 
     @classmethod
-    def scan_repo_image(cls, target_image: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    def scan_repo_image(
+        cls, target_image: str, target_host: str = "quay.io"
+    ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         """Scan a remote container image
 
-        `target_image` can point to a specific tag or a digest, e.g.:
+        `target_image` can point to a general image name, a specific tag or a digest, e.g.:
+        quay.io/somerepo/example-container
         quay.io/somerepo/example-container:latest
         quay.io/somerepo/example-container@sha256:03103d6d7e04755319eb303953669182da42246397e32b30afee3f67ebd4d2bb
 
         Note that this method assumes authentication credentials are set in ~/.docker/config.json
         (or a location pointed to by DOCKER_CONFIG) for repositories in registries that are private.
         """
-        scan_result = subprocess.check_output(  # nosec B603
-            [
-                "/usr/bin/syft",
-                "packages",
-                "-q",
-                "-o=syft-json",
-                "--exclude=**/vendor/**",
-                f"registry:{target_image}",
-            ],
-            text=True,
-        )
+        syft_args = [
+            "/usr/bin/syft",
+            "packages",
+            "-q",
+            "-o=syft-json",
+            "--exclude=**/vendor/**",
+            f"registry:{target_host}/{target_image}",
+        ]
+
+        try:
+            scan_result = subprocess.check_output(syft_args, text=True)  # nosec B603
+        except subprocess.CalledProcessError as e:
+            # Some images cannot be pulled because they have no implicit "latest" tag
+            # If a version / tag was already given explicitly, just fail here
+            if ":" in target_image:
+                raise e
+            # Else append the most-recently updated tag to the image we try to pull
+            target_version = cls.get_quay_repo_version(target_image, target_host)
+            syft_args[-1] = f"{syft_args[-1]}:{target_version}"
+            scan_result = subprocess.check_output(syft_args, text=True)  # nosec B603
+
         parsed_components, source_data = cls.parse_components(scan_result)
         return parsed_components, source_data
+
+    @staticmethod
+    def get_quay_repo_version(target_image: str, target_host: str) -> str:
+        """Helper function to find a Quay image version / ref for a given repo name"""
+        # We pull the "latest" tag by default, but not all images have one
+        # App-interface data is too complex, so apps_v1.saasFiles.resourceTemplates.targets.ref
+        # versions can't be matched to their corresponding apps_v1.quayRepos.items.name repos
+        # Multiple resourceTemplates.targets also exist, but we only want the prod ones
+        # There's no easy and reliable way to know if a target is for stage / should be skipped
+        # So just make a separate query to the Quay API for this repo - it's much simpler
+
+        headers = {"Authorization": f"Bearer {settings.QUAY_TOKEN}"}
+        response = requests.get(
+            # Assumes we have a Quay instance - either public Quay.io or internal
+            f"https://{target_host}/api/v1/repository/{target_image}?includeTags=true",
+            headers=headers,
+        )
+        response.raise_for_status()
+
+        version = "latest"
+        # Some images have no tags at all, so pulling the image will fail either way
+        # If empty, the for-loop below won't be entered, so we default version to "latest"
+        # to get a meaningful error when pulling instead of "NameError: version undefined" here
+        for tag in response.json()["tags"]:
+            # The tags key is a nested dict and not a list, so we can't just grab tags[0]
+            # The first key in the dict is always the newest / most recently updated tag name
+            version = tag
+            break
+        return version
 
     @classmethod
     def scan_git_repo(

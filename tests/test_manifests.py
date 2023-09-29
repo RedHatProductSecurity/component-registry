@@ -139,13 +139,13 @@ def test_slim_rpm_in_containers_manifest():
     assert num_components == 2, released_components
 
     provided = set()
-    # Each component has 1 node each
+    # Each released component has 1 provided component each
     for released_component in released_components:
-        component_nodes = released_component.get_provides_pks()
-        assert len(component_nodes) == 1
-        provided.update(component_nodes)
+        provided_components = released_component.get_provides_pks()
+        assert len(provided_components) == 1
+        provided.update(provided_components)
 
-    # Here we are checking that the components share a single provided component
+    # Here we are checking that all the released components share a single provided component
     num_provided = len(provided)
     assert num_provided == 1
 
@@ -160,14 +160,15 @@ def test_slim_rpm_in_containers_manifest():
     # Plus one package for the stream itself
     assert len(manifest["packages"]) == num_components + num_provided + 1
 
-    # For each provided in component, one "provided contained by component"
-    # For each provided in component, one "provided contains none" indicating a leaf node
     # For each component, one "component is package of product" relationship
+    # For each provided in component, one "provided contained by component"
+    # (only one unique provided component, but two relationships for two parent components)
     # Plus one "document describes product" relationship for the whole document at the end
     assert len(manifest["relationships"]) == num_components + (num_provided + 1) + 1
 
     provided_uuid = provided.pop()
     component = containers[0]
+    # Manifest packages are ordered by UUID, so make sure we assert on the right container
     if containers[0].uuid > containers[1].uuid:
         component = containers[1]
 

@@ -1,5 +1,3 @@
-from collections.abc import Mapping
-from typing import Any
 from urllib.parse import parse_qs
 
 from celery.utils.log import get_task_logger
@@ -53,8 +51,8 @@ def slow_fetch_pyxis_manifest(
 def _slow_fetch_pyxis_manifest_for_repository(
     oid: str,
     image_id: str,
-    repository: Mapping[str, Any],
-    manifest: Mapping[str, Any],
+    repository: dict,
+    manifest: dict,
     save_product: bool = True,
     force_process: bool = False,
 ) -> bool:
@@ -141,7 +139,7 @@ def save_container(
     component_name: str,
     repository_url: str,
     component_version: str,
-    manifest: Mapping[str, Any],
+    manifest: dict,
 ) -> tuple[ComponentNode, bool]:
     obj, root_created = Component.objects.update_or_create(
         type=Component.Type.CONTAINER_IMAGE,

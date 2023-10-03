@@ -191,7 +191,6 @@ class UMBReceiverHandler(MessagingHandler):
             slow_fetch_pnc_sbom.delay(
                 message["purl"],
                 message["productConfig"]["errataTool"],
-                message["build"],
                 message["sbom"],
             )
         except Exception as e:

@@ -19,7 +19,7 @@ logger = get_task_logger(__name__)
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def slow_fetch_pnc_sbom(purl: str, product_data, build_data, sbom_data) -> None:
+def slow_fetch_pnc_sbom(purl: str, product_data: dict, sbom_data: dict) -> None:
     """Fetch a PNC SBOM from sbomer"""
     logger.info("Fetching PNC SBOM %s for purl %s", sbom_data["id"], purl)
 

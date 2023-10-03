@@ -1,8 +1,11 @@
 import json
+from string import Template
 from unittest.mock import patch
 
 import pytest
+from django.conf import settings
 
+from corgi.collectors.pyxis import query
 from corgi.core.models import Component, SoftwareBuild
 from corgi.tasks.pyxis import slow_fetch_pyxis_manifest
 from tests.factories import ProductComponentRelationFactory
@@ -16,7 +19,7 @@ pytestmark = pytest.mark.unit
 @patch("corgi.collectors.pyxis.session.post")
 def test_slow_fetch_pyxis_manifest(post, sca, taxonomy):
     with open("tests/data/pyxis/manifest.json", "r") as data:
-        manifest = json.loads(data.read())
+        manifest = json.load(data)
     wrapped_manifest = {"data": {"get_content_manifest": {"data": manifest}}}
     post.return_value.json.return_value = wrapped_manifest
 
@@ -51,10 +54,9 @@ def test_slow_fetch_pyxis_manifest(post, sca, taxonomy):
     assert new_relation.software_build == software_build
 
     components = {}
-    for node in image_index.cnodes.get_queryset():
-        for child in node.get_children():
-            components[child.obj.type] = components.get(child.obj.type, [])
-            components[child.obj.type].append(child.purl)
+    for descendant in image_index.cnodes.get_queryset().get_descendants():
+        components[descendant.obj.type] = components.get(descendant.obj.type, [])
+        components[descendant.obj.type].append(descendant.purl)
 
     assert set(components.keys()) == {Component.Type.RPM, Component.Type.GOLANG}
     assert len(components[Component.Type.RPM]) == 104
@@ -95,6 +97,27 @@ def test_slow_fetch_pyxis_manifest(post, sca, taxonomy):
             break
     # And assert at least 1 component had multiple CPEs / we broke out of the loop above
     assert len(multiple_cpes) > 1
+
+    # The query's text, structure, or included fields may change and this test will still pass
+    # But we can at least assert it's called once with the right image ID and other args
+    post.assert_called_once_with(
+        settings.PYXIS_GRAPHQL_URL,
+        json={"query": Template(query).substitute(manifest_id=image_id, page=0, page_size=50)},
+        headers={"Content-Type": "application/json", "Accept": "application/json"},
+        cert=(settings.PYXIS_CERT, settings.PYXIS_KEY),
+        timeout=10,
+    )
+    # We can also assert some important fields are in the query
+    for field in (
+        "incompleteness_reasons {",
+        " org_id",
+        " creation_date",
+        "external_references {",
+        "properties {",
+        "supplier {",
+        "licenses {",
+    ):
+        assert field in query
 
     assert software_build.source
     sca.assert_called_once_with(str(software_build.uuid), force_process=False)

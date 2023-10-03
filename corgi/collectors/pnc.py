@@ -51,6 +51,8 @@ class SbomerSbom:
             else:
                 component["namespace"] = Component.Namespace.UPSTREAM
 
+            meta_attr["group_id"] = component["group"]
+
             # Declared purl
             meta_attr["purl_declared"] = component["purl"]
 

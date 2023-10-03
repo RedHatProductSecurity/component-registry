@@ -3,6 +3,7 @@ from unittest.mock import Mock, call, patch
 
 import koji
 import pytest
+from packageurl import PackageURL
 
 from corgi.collectors.brew import ADVISORY_REGEX, Brew
 from corgi.collectors.models import (
@@ -540,6 +541,28 @@ def test_slow_fetch_pnc_sbom():
             get_mock.assert_called_once_with(sbom["link"])
 
         wrapped_save_taxonomy.assert_called_once_with(build["id"], SoftwareBuild.Type.PNC)
+
+        # Make sure the purls match, or at least that derived is a superset of declared
+        def _purl_matches_or_extends(first: PackageURL, second: PackageURL) -> bool:
+            """Checks whether the first of two purls equals the second, or if it differs,
+            does so only by having additional qualifiers"""
+            return (
+                first.type == second.type
+                and first.namespace == second.namespace
+                and first.name == second.name
+                and first.version == second.version
+                and first.subpath == second.subpath
+                and all([qualifier in first.qualifiers for qualifier in second.qualifiers])
+            )
+
+        assert Component.objects.count() == 6
+        # The root component is a GENERIC type
+        assert Component.objects.filter(type=Component.Type.MAVEN).count() == 5
+
+        for component in Component.objects.filter(type=Component.Type.MAVEN):
+            declared_purl = PackageURL.from_string(component.meta_attr["purl_declared"])
+            derived_purl = PackageURL.from_string(component.purl)
+            assert _purl_matches_or_extends(derived_purl, declared_purl)
 
         # Test with an SBOM available message that has a PV that
         # doesn't exist in ET. An sbom object shouldn't be created,

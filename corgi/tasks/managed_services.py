@@ -208,7 +208,8 @@ def cpu_manifest_service(stream_name: str, service_components: list) -> None:
                 type=ProductComponentRelation.Type.APP_INTERFACE,
             )
 
-            slow_save_taxonomy.delay(build.build_id, build.build_type)
+        # Give the transaction time to commit, before looking up the build we just created
+        slow_save_taxonomy.apply_async(args=(build.build_id, build.build_type), countdown=10)
 
         logger.info(
             f"Finished processing service component {service_component['name']} "

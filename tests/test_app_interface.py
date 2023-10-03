@@ -7,13 +7,14 @@ from django.conf import settings
 
 from corgi.collectors.app_interface import AppInterface
 from corgi.collectors.syft import Syft
+from corgi.tasks.managed_services import cpu_manifest_service
 
 from .factories import ProductStreamFactory
 
 pytestmark = pytest.mark.unit
 
 
-@pytest.mark.django_db(databases=("default",))
+@pytest.mark.django_db
 def test_metadata_fetch(requests_mock):
     example_response = {
         "data": {
@@ -84,6 +85,12 @@ def test_metadata_fetch(requests_mock):
             "managed_service_components": [
                 {"name": "Red", "app_interface_name": "Red"},
                 {"name": "Blue", "app_interface_name": "Blue"},
+                # This component defines a Quay repo directly and isn't in App Interface
+                # But should still end up in our results after we parse the list
+                {"name": "Yellow", "quay_repo_name": "yellow-org/yellow-image"},
+                # This one isn't in App Interface either, but doesn't have a quay_repo_name
+                # It should not end up in the results. In the future we can raise an error
+                {"name": "Green", "app_interface_name": "GreenDoesNotExist"},
             ]
         }
     )
@@ -91,6 +98,7 @@ def test_metadata_fetch(requests_mock):
 
     assert ps in result
     assert sorted(result[ps], key=lambda x: x["name"]) == [
+        {"name": "Yellow", "quay_repo_name": "yellow-org/yellow-image"},
         {"name": "blue-app", "git_repo_url": "https://github.com/blue/example"},
         {"name": "example", "quay_repo_name": "blue-org/example"},
         {"name": "example-ui", "quay_repo_name": "blue-org/example-ui"},
@@ -185,3 +193,53 @@ def test_image_pull_error_handling(
         assert result == ([], "source_not_used")
 
     mock_scan.assert_has_calls(calls)
+
+
+@pytest.mark.django_db
+def test_metadata_error_handling_for_non_quay_images(requests_mock):
+    """Test that images for non-Quay repos raise an error"""
+    example_response = {
+        "data": {
+            "apps_v1": [
+                {
+                    "path": "/services/blue/app.yml",
+                    "name": "Blue",
+                    "quayRepos": [
+                        {
+                            "org": {"name": "blue-org", "instance": {"url": "hub.docker.com"}},
+                            "items": [
+                                {
+                                    "name": "example",
+                                    "public": True,
+                                    "description": "Some tracking tool",
+                                },
+                                {
+                                    "name": "example-ui",
+                                    "public": True,
+                                    "description": "Some tracking tool UI",
+                                },
+                            ],
+                        }
+                    ],
+                },
+            ]
+        }
+    }
+
+    requests_mock.post(f"{settings.APP_INTERFACE_URL}/graphql", json=example_response)
+    ps = ProductStreamFactory(
+        meta_attr={"managed_service_components": [{"name": "Blue", "app_interface_name": "Blue"}]}
+    )
+    # Fails because some images do not use Quay
+    with pytest.raises(ValueError):
+        AppInterface.fetch_service_metadata(services=[ps])
+    assert requests_mock.call_count == 1
+
+
+@pytest.mark.django_db
+def test_missing_github_quay_repo_names():
+    """Test that components without either GitHub or Quay repo names raise an error"""
+    ps = ProductStreamFactory(meta_attr={"managed_service_components": [{"name": "Blue"}]})
+    # Fails because some images do not define app_interface, Quay, or GitHub names
+    with pytest.raises(ValueError):
+        cpu_manifest_service(ps.name, ps.meta_attr["managed_service_components"])

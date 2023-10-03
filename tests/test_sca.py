@@ -675,7 +675,7 @@ def test_save_component_skips_duplicates():
         namespace=Component.Namespace.UPSTREAM,
         name="requests_ntlm",
         release="",
-        arch="",
+        arch="noarch",
     )
     image_component = ContainerImageComponentFactory(name="image_component")
     root_node = ComponentNode.objects.create(
@@ -709,3 +709,64 @@ def test_save_component_skips_duplicates():
     assert save_component(new_component_with_purl, root_node) is False
     assert not Component.objects.filter(name=new_component_with_purl["name"]).exists()
     assert old_component.cnodes.count() == 1
+
+
+@pytest.mark.django_db
+def test_save_component_handles_rpms():
+    """Test that RPM components discovered by Syft, which may not
+    have an epoch, arch, or release in their dict of component metadata,
+    still get created with the correct values"""
+    old_component = SrpmComponentFactory()
+    root_node = ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        obj=old_component,
+    )
+
+    new_arch = "x86_64"
+    new_component = {
+        "type": old_component.type,
+        "name": old_component.name,
+        # Syft always reports a combined version-release as the discovered version
+        # No separate release key here because Syft doesn't understand RPM versioning
+        "version": f"{old_component.version}-{old_component.release}",
+    }
+    new_component["meta"] = {
+        "name": new_component["name"],
+        "version": new_component["version"],
+        # RPM purls created by Syft are very different from RPM purls created by Corgi
+        # We pull out and use only the epoch, arch, and release values
+        # The whole Syft purl is also saved to the meta_attr
+        # so other (unknown) qualifiers can be used in the future if needed
+        "purl": f"pkg:rpm/redhatrhel/{old_component.name}@{old_component.version}"
+        f"-{old_component.release}?arch={new_arch}"
+        f"&upstream={old_component.nevra}.rpm&distro=rhel-X.y",
+    }
+    if old_component.epoch:
+        new_component["meta"]["purl"] += f"&epoch={old_component.epoch}"
+
+    dupe_component = copy.deepcopy(new_component)
+
+    # Find the root component, create a child of it
+    assert save_component(new_component, root_node) is True
+    # Our code should split Syft's combined version-release into separate values,
+    # then parse the qualifiers to determine epoch and arch
+    # So the lookup below should always return exactly one result for the new RPM
+    new_rpm = Component.objects.get(
+        type=new_component["type"],
+        namespace=old_component.namespace,
+        name=new_component["name"],
+        epoch=old_component.epoch,
+        version=old_component.version,
+        release=old_component.release,
+        arch=new_arch,
+    )
+    assert new_rpm.cnodes.count() == 1
+    # The whole Syft purl should be saved in the meta_attr
+    assert new_rpm.meta_attr == {"purl": new_component["meta"]["purl"]}
+
+    # Find the existing component, don't create a duplicate
+    # Find the existing node, don't create a duplicate
+    assert save_component(dupe_component, root_node) is False
+    new_rpm.refresh_from_db()
+    assert new_rpm.cnodes.count() == 1

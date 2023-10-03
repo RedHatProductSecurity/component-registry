@@ -1,8 +1,8 @@
-import logging
 import subprocess
 from datetime import datetime, timedelta
 from typing import Optional
 
+from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.db.utils import InterfaceError as DjangoInterfaceError
 from django.utils import timezone
@@ -13,6 +13,8 @@ from requests.exceptions import RequestException
 
 from config.celery import app
 from corgi.core.models import ProductComponentRelation, SoftwareBuild
+
+logger = get_task_logger(__name__)
 
 BACKOFF_KWARGS = {"max_tries": 5, "jitter": None}
 
@@ -34,8 +36,6 @@ RETRY_KWARGS = {
 }
 
 BUILD_TYPE = SoftwareBuild.Type.KOJI if settings.COMMUNITY_MODE_ENABLED else SoftwareBuild.Type.BREW
-
-logger = logging.getLogger(__name__)
 
 
 def fatal_code(e):

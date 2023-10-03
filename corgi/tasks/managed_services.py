@@ -1,3 +1,4 @@
+from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.conf import settings
 from django.db import transaction
@@ -17,9 +18,13 @@ from corgi.tasks.brew import slow_save_taxonomy
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 from corgi.tasks.sca import save_component
 
+logger = get_task_logger(__name__)
+
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def refresh_service_manifests() -> None:
+    """Collect data for all Red Hat managed services from product-definitions
+    and App Interface, then remove and recreate all services"""
     services = ProductStream.objects.filter(
         meta_attr__managed_service_components__isnull=False
     ).distinct()
@@ -46,7 +51,7 @@ def refresh_service_manifests() -> None:
     #  Check cleanup logic
 
     for service, components in service_metadata.items():
-        cpu_manifest_service.delay(str(service.pk), components)
+        cpu_manifest_service.delay(service.name, components)
 
 
 @app.task(
@@ -55,28 +60,44 @@ def refresh_service_manifests() -> None:
     retry_kwargs=RETRY_KWARGS,
     soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
 )
-def cpu_manifest_service(product_stream_id: str, service_components: list) -> None:
-    service = ProductStream.objects.get(pk=product_stream_id)
+def cpu_manifest_service(stream_name: str, service_components: list) -> None:
+    """Analyze components for some Red Hat managed service
+    based on data from product-definitions and App Interface"""
+    logger.info(f"Manifesting service {stream_name}")
+    service = ProductStream.objects.get(name=stream_name)
 
     for service_component in service_components:
+        logger.info(f"Processing component for service {stream_name}: {service_component}")
         now = timezone.now()
         analyzed_components = []
         component_version = ""
 
         quay_repo = service_component.get("quay_repo_name")
         if quay_repo:
+            logger.info(f"Scanning Quay repo {quay_repo} for service {stream_name}")
             component_data, quay_scan_source = Syft.scan_repo_image(target_image=quay_repo)
             component_version = quay_scan_source["target"]["imageID"]
             analyzed_components.extend(component_data)
 
         git_repo = service_component.get("git_repo_url")
         if git_repo:
+            logger.info(f"Scanning Git repo {git_repo} for service {stream_name}")
             component_data, source_ref = Syft.scan_git_repo(target_url=git_repo)
             if not component_version:
                 component_version = source_ref
             analyzed_components.extend(component_data)
 
         if not analyzed_components:
+            if not quay_repo and not git_repo:
+                raise ValueError(
+                    f"Service component {service_component['name']} for service {stream_name} "
+                    f"didn't define either a Quay repo or Git repo URL"
+                )
+            logger.warning(
+                f"Service component {service_component['name']} for service {stream_name} "
+                "didn't have any child components after analyzing "
+                f"its Quay ({quay_repo}) and / or Git ({git_repo}) repos"
+            )
             continue
 
         with transaction.atomic():
@@ -96,6 +117,12 @@ def cpu_manifest_service(product_stream_id: str, service_components: list) -> No
                 )
                 build.meta_attr["services"].append(service.name)
                 build.save()
+                logger.info(
+                    f"Service component {service_component['name']} for service {stream_name} "
+                    f"had an existing {build.build_type} build with ID {build_id}, "
+                    f"and is used by multiple services: {build.meta_attr['services']}"
+                )
+
             except SoftwareBuild.DoesNotExist:
                 build = SoftwareBuild.objects.create(
                     name=service_component["name"],
@@ -103,6 +130,10 @@ def cpu_manifest_service(product_stream_id: str, service_components: list) -> No
                     build_id=build_id,
                     completion_time=now,
                     meta_attr={"services": [service.name]},
+                )
+                logger.info(
+                    f"Service component {service_component['name']} for service {stream_name} "
+                    f"created a new {build.build_type} build with ID {build_id}"
                 )
 
             # Root components can only be linked to one build
@@ -130,8 +161,16 @@ def cpu_manifest_service(product_stream_id: str, service_components: list) -> No
             }
             try:
                 root_component = Component.objects.get(**root_component_kwargs)
+                logger.info(
+                    f"Service component {service_component['name']} for service {stream_name} "
+                    f"had an existing root component with purl {root_component.purl}"
+                )
             except Component.DoesNotExist:
                 root_component = Component.objects.create(**root_component_kwargs)
+                logger.info(
+                    f"Service component {service_component['name']} for service {stream_name} "
+                    f"created a new root component with purl {root_component.purl}"
+                )
 
             # the index uses type / parent / purl for lookups
             root_node, _ = ComponentNode.objects.get_or_create(
@@ -143,9 +182,24 @@ def cpu_manifest_service(product_stream_id: str, service_components: list) -> No
                 },
             )
 
+            logger.info(
+                f"Service component {service_component['name']} for service {stream_name} "
+                f"has {len(analyzed_components)} child components"
+            )
+            created_count = 0
             for component in analyzed_components:
-                save_component(component, root_node)
+                logger.debug(
+                    f"Service component {service_component['name']} for service {stream_name} "
+                    f"had a child component {component}"
+                )
+                obj_or_node_created = save_component(component, root_node)
+                if obj_or_node_created:
+                    created_count += 1
 
+            logger.info(
+                f"service component {service_component['name']} for service {stream_name} "
+                f"had {created_count} new child components created, now saving relation / taxonomy"
+            )
             ProductComponentRelation.objects.create(
                 product_ref=service.name,
                 build_id=build_id,
@@ -155,3 +209,9 @@ def cpu_manifest_service(product_stream_id: str, service_components: list) -> No
             )
 
             slow_save_taxonomy.delay(build.build_id, build.build_type)
+
+        logger.info(
+            f"Finished processing service component {service_component['name']} "
+            f"for service {stream_name}"
+        )
+    logger.info(f"Finished manifesting service {stream_name}")

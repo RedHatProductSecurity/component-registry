@@ -19,7 +19,9 @@ from corgi.core.models import (
     ProductNode,
     ProductVariant,
 )
+from corgi.tasks.common import BUILD_TYPE
 from corgi.tasks.errata_tool import (
+    save_errata_relation,
     slow_load_errata,
     slow_save_errata_product_taxonomy,
     update_variant_repos,
@@ -226,10 +228,30 @@ def test_save_product_component_for_errata(
         )
     build_list_url = f"{settings.ERRATA_TOOL_URL}/api/v1/erratum/{erratum_id}/builds_list.json"
     requests_mock.get(build_list_url, text=build_list)
+    sb = SoftwareBuildFactory(build_id="1636922", build_type=BUILD_TYPE)
     slow_load_errata(erratum_id)
-    pcr = ProductComponentRelation.objects.filter(external_system_id=erratum_id)
-    assert len(pcr) == no_of_objs
+    pcrs = ProductComponentRelation.objects.filter(external_system_id=erratum_id)
+    assert len(pcrs) == no_of_objs
     assert mock_send.call_count == no_of_objs
+    for pcr in pcrs:
+        # If the relation uses this build's ID
+        if pcr.build_id == sb.build_id:
+            # assert it is linked to the build using the ForeignKey field
+            assert pcr.software_build_id == sb.pk
+        else:
+            # else assert the ForeignKey is unset / other build IDs have not been fetched
+            assert pcr.software_build_id is None
+
+
+def test_update_product_component_relation():
+    sb = SoftwareBuildFactory()
+    ProductComponentRelation.objects.create(
+        external_system_id=1, product_ref="variant", build_id=sb.build_id, build_type=sb.build_type
+    )
+    variant_to_component_map = defaultdict(list)
+    variant_to_component_map["variant"].append({sb.build_id: []})
+    save_errata_relation(set(), sb.build_type, 1, variant_to_component_map)
+    assert ProductComponentRelation.objects.all().count() == 1
 
 
 @patch("corgi.tasks.errata_tool.app")

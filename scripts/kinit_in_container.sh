@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
 if [[ -z "$1" ]]; then
-    user=$(whoami)@REDHAT.COM
+    user=$(whoami)@IPA.REDHAT.COM
 else
-    user="$1"@REDHAT.COM
+    user="$1"@IPA.REDHAT.COM
 fi
 
 # Only ask the password one time here and reuse in each pod

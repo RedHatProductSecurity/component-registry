@@ -32,6 +32,12 @@ class Command(BaseCommand):
             help="Call tasks inline, not in a celery task",
         )
         parser.add_argument(
+            "-f",
+            "--force",
+            action="store_true",
+            help="Force process task",
+        )
+        parser.add_argument(
             "-p", "--product_variants", nargs="+", help="A list of variants to load errata for"
         )
 
@@ -41,9 +47,9 @@ class Command(BaseCommand):
             for erratum_id in errata_ids:
                 self.stdout.write(self.style.SUCCESS(f"Loading Errata {erratum_id}"))
                 if options["inline"]:
-                    slow_load_errata(erratum_id)
+                    slow_load_errata(erratum_id, force_process=options["force"])
                 else:
-                    slow_load_errata.delay(erratum_id)
+                    slow_load_errata.delay(erratum_id, force_process=options["force"])
         elif options["repos"]:
             self.stdout.write(self.style.SUCCESS("Loading channels"))
             if options["inline"]:
@@ -91,7 +97,7 @@ class Command(BaseCommand):
 
             for erratum in all_errata:
                 self.stdout.write(self.style.SUCCESS(f"Loading erratum: {erratum}"))
-                slow_load_errata.delay(erratum)
+                slow_load_errata.delay(erratum, force_process=options["force"])
 
         else:
             self.stderr.write(self.style.ERROR("No errata IDs or repo flag, or variants specified"))

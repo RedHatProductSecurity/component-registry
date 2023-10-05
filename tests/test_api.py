@@ -448,11 +448,25 @@ def test_latest_components_by_streams_filter(client, api_path):
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_released_components_filter(client, api_path):
+    """Test that the released components filter
+    gives the correct results with no duplicates in the API"""
     released_build = SoftwareBuildFactory()
     unreleased_build = SoftwareBuildFactory()
     ProductComponentRelationFactory(
-        type=ProductComponentRelation.Type.ERRATA, software_build=released_build
+        type=ProductComponentRelation.Type.ERRATA,
+        software_build=released_build,
+        build_id=released_build.build_id,
+        build_type=released_build.build_type,
     )
+    # Duplicate relations for the same build
+    # shouldn't give duplicate results in the API
+    ProductComponentRelationFactory(
+        type=ProductComponentRelation.Type.ERRATA,
+        software_build=released_build,
+        build_id=released_build.build_id,
+        build_type=released_build.build_type,
+    )
+
     ComponentFactory(name="released", software_build=released_build)
     ComponentFactory(name="unreleased", software_build=unreleased_build)
 

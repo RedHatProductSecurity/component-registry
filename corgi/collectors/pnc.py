@@ -1,6 +1,8 @@
 import logging
 from typing import Any
 
+from packageurl import PackageURL
+
 from corgi.core.constants import SBOMER_PRODUCT_MAP
 from corgi.core.models import Component
 
@@ -51,8 +53,14 @@ class SbomerSbom:
             else:
                 component["namespace"] = Component.Namespace.UPSTREAM
 
+            meta_attr["group_id"] = component["group"]
+
             # Declared purl
             meta_attr["purl_declared"] = component["purl"]
+
+            # Purl qualifiers
+            for qualifier, value in PackageURL.from_string(component["purl"]).qualifiers.items():
+                meta_attr[qualifier] = value
 
             # License info
             licenses = []

@@ -219,13 +219,15 @@ def slow_fetch_modular_build(
     node, node_created = save_node(ComponentNode.ComponentNodeType.SOURCE, None, obj)
 
     any_child_created = False
-    for c in rhel_module_data.get("components", []):
+    for component in rhel_module_data.get("components", ()):
         # Request fetch of the SRPM build_ids here to ensure software_builds are created and linked
         # to the RPM components. We don't link the SRPM into the tree because some of it's RPMs
         # might not be included in the module
-        if "brew_build_id" in c:
-            slow_fetch_brew_build.delay(c["brew_build_id"])
-        any_child_created |= save_component(c, node)
+        if "brew_build_id" in component:
+            slow_fetch_brew_build.delay(
+                component["brew_build_id"], save_product=save_product, force_process=force_process
+            )
+        any_child_created |= save_component(component, node)
     slow_fetch_brew_build.delay(build_id, save_product=save_product, force_process=force_process)
     logger.info("Finished fetching modular build: %s", build_id)
     return created or node_created or any_child_created

@@ -1,8 +1,8 @@
-import logging
 import urllib.parse
 from collections.abc import Mapping
 from typing import Any, Optional
 
+from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.conf import settings
 from django.utils import dateparse
@@ -20,7 +20,7 @@ from corgi.tasks.brew import slow_save_taxonomy
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 from corgi.tasks.sca import cpu_software_composition_analysis
 
-logger = logging.getLogger(__name__)
+logger = get_task_logger(__name__)
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)

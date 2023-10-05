@@ -1,5 +1,6 @@
 import logging
 from collections import defaultdict
+from typing import Iterable
 
 import requests
 from django.conf import settings
@@ -12,7 +13,7 @@ logger = logging.getLogger(__name__)
 class AppInterface:
     @staticmethod
     def fetch_service_metadata(
-        services: list[ProductStream],
+        services: Iterable[ProductStream],
     ) -> dict[ProductStream, list[dict[str, str]]]:
         # TODO: Check parentApp / childrenApps / dependencies / statusPageComponents as well?
         repo_query = """
@@ -87,6 +88,7 @@ class AppInterface:
                 app_interface_component = component.get("app_interface_name")
                 if app_interface_component:
                     if app_interface_component not in service_component_map:
+                        # TODO: Raise an error once prod-defs data is cleaned up
                         logger.error(
                             f"Prod-def component {component} for service {service.name} includes a "
                             "component name that does not exist in app-interface!"

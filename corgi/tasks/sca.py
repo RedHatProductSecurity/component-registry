@@ -12,13 +12,12 @@ import requests
 from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.conf import settings
-from packageurl import PackageURL
+from django.db.models import Q
 
 from config.celery import app
 from corgi.collectors.brew import Brew
 from corgi.collectors.go_list import GoList
 from corgi.collectors.syft import Syft
-from corgi.core.constants import RED_HAT_MAVEN_REPOSITORY
 from corgi.core.models import Component, ComponentNode, SoftwareBuild
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 
@@ -33,11 +32,14 @@ lookaside_source_regexes = tuple(re.compile(p) for p in LOOKASIDE_REGEX_SOURCE_P
 logger = get_task_logger(__name__)
 
 
-def find_duplicate_component(meta_name: str, syft_purl: str) -> Component:
-    """Find a component with matching purl but different name
+def find_duplicate_component(
+    component_type: str, name: str, version: str, release: str, arch: str
+) -> Component:
+    """Find a component with matching type, version, release, and arch but different name
     Raise an error if the mismatch isn't a known edge case"""
     logger.warning(
-        f"Duplicate component {meta_name} detected by Syft, trying to find purl: {syft_purl}"
+        f"Duplicate component {name} with type {component_type}, "
+        f"version {version}, release {release}, and arch {arch} detected by Syft"
     )
     # Syft generates some purls like pkg:pypi/PyYAML@3.12
     # Happens for packages like PyYAML or PySocks with uppercase names
@@ -46,37 +48,57 @@ def find_duplicate_component(meta_name: str, syft_purl: str) -> Component:
     # This probably isn't a bug in Syft, but we need names to match Brew's case
     # Sometimes Brew has lowercase and sometimes it's mixed-case
     # We can't just lowercase all names / NEVRAs because e.g. search apps need the original casing
-    # TODO: This is wrong - purl is not guaranteed to be lowercase either
-    #  Only certain types like GitHub or PyPI have their purls lowercased
-    syft_purl = syft_purl.lower()
-    possible_dupe = Component.objects.get(purl=syft_purl)
+    possible_dupes = Component.objects.filter(
+        type=component_type, version=version, release=release, arch=arch
+    ).filter(
+        # Find a matching case-insensitive name
+        # that may or may not have dashes / underscores replaced with the other
+        Q(name__iexact=name)
+        | Q(name__iexact=name.replace("_", "-"))
+        | Q(name__iexact=name.replace("-", "_"))
+    )
 
-    # Check if the dupe component fits one of our known edge cases
+    if len(possible_dupes) != 1:
+        # Some other case we need to consider / handle in our code
+        raise ValueError(
+            f"New edge case for duplicate {component_type} component: {name} "
+            f"had wrong number of matches ({len(possible_dupes)})"
+        )
+    possible_dupe = possible_dupes[0]
+
+    # Check if the dupe component is due to mixed-case names
     # Ignore dashes / underscores which are handled below
     old_name = possible_dupe.name.replace("-", "_")
-    new_name = meta_name.replace("-", "_")
+    new_name = name.replace("-", "_")
     same_name_different_case = old_name.lower() == new_name.lower()
     same_name_different_case &= old_name != new_name
 
     if same_name_different_case:
         # e.g. requests-ntlm and requests-NTLM
-        logger.warning("Duplicate component had case-insensitive matching name: %s", syft_purl)
+        logger.warning(
+            f"Duplicate component had case-insensitive matching name: {possible_dupe.name}"
+        )
 
     # Ignore case differences which were handled above
     old_name = possible_dupe.name.lower()
-    new_name = meta_name.lower()
+    new_name = name.lower()
     dash_underscore_confusion = old_name.replace("-", "_") == new_name.replace("-", "_")
     dash_underscore_confusion &= old_name != new_name
 
     if dash_underscore_confusion:
         # e.g. requests-ntlm and requests_ntlm
-        logger.warning("Duplicate component had mismatched dash or underscore: %s", syft_purl)
+        logger.warning(
+            f"Duplicate component had mismatched dash or underscore: {possible_dupe.name}"
+        )
 
+    # TODO: check Parsley edge-case / error in monitoring email
     if same_name_different_case or dash_underscore_confusion:
         return possible_dupe
     else:
         # Some other case we need to consider / handle in our code
-        raise ValueError(f"New edge case for duplicate component: {syft_purl}")
+        raise ValueError(
+            f"New edge case for duplicate {possible_dupe.type} component: {possible_dupe.nevra}"
+        )
 
 
 def save_component(
@@ -86,57 +108,35 @@ def save_component(
     if component["type"] not in Component.Type.values:
         raise ValueError("Tried to save component with unknown type: %s", component["type"])
 
-    component_type = component["type"].lower()
-    syft_purl = meta.get("purl")
-    if not syft_purl:
-        # TODO: Needs a lot more work and tests
-        # But this fixes the most basic issues for now
-        qualifiers = {}
-
-        version = meta.get("version", "")
-        release = meta.get("release")
-        if version and release:
-            version = f"{version}-{release}"
-
-        arch = meta.get("arch")
-        if arch:
-            qualifiers["arch"] = arch
-        # TODO: Might need a epoch qualifier
-
-        syft_purl = PackageURL(
-            type=component_type,
-            name=meta.get("name", ""),
-            version=version,
-            qualifiers=qualifiers,
-        ).to_string()
-
     created = False
     name = meta.pop("name", "")
+    epoch = meta.pop("epoch", 0)
     version = meta.pop("version", "")
     release = meta.pop("release", "")
     arch = meta.pop("arch", "noarch")
 
     namespace = Brew.check_red_hat_namespace(component["type"], version)
-    if namespace == Component.Namespace.REDHAT:
-        if component["type"] == Component.Type.MAVEN:
-            # Don't prepend the namespace, Maven-type purls don't allow this
-            # Add an extra &repository_url= qualifier to the end
-            # if any other qualifiers are already present
-            # Otherwise add the first (only) qualifier, ?repository_url=
-            # TODO: Check Syft isn't encoding these weirdly
-            suffix = "&repository_url=" if "?" in syft_purl else "?repository_url="
-            syft_purl = f"{syft_purl}{suffix}{RED_HAT_MAVEN_REPOSITORY}"
-        elif component["type"] not in Component.CUSTOM_NAMESPACE_TYPES:
-            # Add the REDHAT namespace to the beginning
-            syft_purl = syft_purl.replace(
-                f"pkg:{component_type}/", f"pkg:{component_type}/{namespace.lower()}", 1
-            )
-        # Else it was a type with custom logic for namespace handling, don't prepend the namespace
-
     if component["type"] == Component.Type.GOLANG:
         # Syft doesn't support go-package detection
         # "go list" does, so we need to know which called this function
         meta["go_component_type"] = "go-package" if is_go_package else "gomod"
+
+    elif component["type"] == Component.Type.RPM:
+        # Syft doesn't set release properly in the discovered component's metadata
+        if not release and "-" in version:
+            version, release = version.rsplit("-", 1)
+
+        # Syft doesn't set arch / epoch properly in the discovered component's metadata
+        syft_purl = meta.get("purl", "")
+        if syft_purl:
+            qualifiers = syft_purl.split("?", 1)[-1].split("&")
+            for qualifier in qualifiers:
+                if qualifier.startswith("epoch="):
+                    _, epoch = qualifier.split("=", 1)
+                elif qualifier.startswith("arch="):
+                    _, arch = qualifier.split("=", 1)
+                # else we don't need to save any unknown qualifiers
+                # because we already save the whole Syft purl in the meta_attr
 
     try:
         # Use all fields from Component index and uniqueness constraint
@@ -148,6 +148,7 @@ def save_component(
             release=release,
             arch=arch,
             defaults={
+                "epoch": epoch,
                 "meta_attr": meta,
                 "namespace": namespace,
             },
@@ -157,8 +158,9 @@ def save_component(
         # "Create the component" fails if the purl is the same
         # Find the existing component with the same purl / different name
         # So we can add e.g. an existing PyPI package to a new container parent
-        obj = find_duplicate_component(name, syft_purl)
+        obj = find_duplicate_component(component["type"], name, version, release, arch)
 
+    syft_purl = meta.get("purl", "")
     if syft_purl and syft_purl != obj.purl:
         # TODO: This warning appears a lot due to encoding / escaping differences
         logger.warning("Saved component purl %s, does not match Syft purl: %s", obj.purl, syft_purl)

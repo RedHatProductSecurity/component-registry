@@ -61,7 +61,7 @@ class Syft:
 
     @classmethod
     def scan_repo_image(
-        cls, target_image: str, target_host: str = "quay.io"
+        cls, target_image: str, target_host: str = "quay.io", token: str = settings.QUAY_TOKEN
     ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         """Scan a remote container image
 
@@ -90,7 +90,7 @@ class Syft:
             if ":" in target_image:
                 raise e
             # Else append the most-recently updated tag to the image we try to pull
-            target_version = cls.get_quay_repo_version(target_image, target_host)
+            target_version = cls.get_quay_repo_version(target_image, target_host, token)
             syft_args[-1] = f"{syft_args[-1]}:{target_version}"
             scan_result = subprocess.check_output(syft_args, text=True)  # nosec B603
 
@@ -98,7 +98,7 @@ class Syft:
         return parsed_components, source_data
 
     @staticmethod
-    def get_quay_repo_version(target_image: str, target_host: str) -> str:
+    def get_quay_repo_version(target_image: str, target_host: str, token: str) -> str:
         """Helper function to find a Quay image version / ref for a given repo name"""
         # We pull the "latest" tag by default, but not all images have one
         # App-interface data is too complex, so apps_v1.saasFiles.resourceTemplates.targets.ref
@@ -107,7 +107,7 @@ class Syft:
         # There's no easy and reliable way to know if a target is for stage / should be skipped
         # So just make a separate query to the Quay API for this repo - it's much simpler
 
-        headers = {"Authorization": f"Bearer {settings.QUAY_TOKEN}"}
+        headers = {"Authorization": f"Bearer {token}"}
         response = requests.get(
             # Assumes we have a Quay instance - either public Quay.io or internal
             f"https://{target_host}/api/v1/repository/{target_image}?includeTags=true",

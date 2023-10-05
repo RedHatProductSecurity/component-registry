@@ -1,6 +1,5 @@
-import logging
-
 import requests
+from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 
 from config.celery import app
@@ -16,20 +15,20 @@ from corgi.core.models import (
 from corgi.tasks.brew import set_license_declared_safely, slow_save_taxonomy
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 
-logger = logging.getLogger(__name__)
+logger = get_task_logger(__name__)
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def slow_fetch_pnc_sbom(purl: str, product_data, build_data, sbom_data) -> None:
-    logger.info("Fetching PNC SBOM %s for purl %s", sbom_data["id"], purl)
     """Fetch a PNC SBOM from sbomer"""
+    logger.info("Fetching PNC SBOM %s for purl %s", sbom_data["id"], purl)
 
     # Validate the supplied product information
     try:
         CollectorErrataProductVariant.objects.get(name=product_data["productVariant"])
     except CollectorErrataProductVariant.DoesNotExist:
         logger.warning(
-            "PNC SBOM provided for nonexistant product variant: %s", product_data["productVariant"]
+            "PNC SBOM provided for nonexistent product variant: %s", product_data["productVariant"]
         )
         return
 

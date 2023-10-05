@@ -1010,9 +1010,12 @@ class ComponentQuerySet(models.QuerySet):
         errata_relations = Q(software_build__relations__type=ProductComponentRelation.Type.ERRATA)
         if include:
             # Truthy values return only released components
-            return self.filter(errata_relations)
-        # Falsey values return only unreleased components
-        return self.exclude(errata_relations)
+            queryset = self.filter(errata_relations)
+        else:
+            # Falsey values return only unreleased components
+            queryset = self.exclude(errata_relations)
+        # Clear ordering and apply distinct() to avoid duplicates from above filter
+        return queryset.order_by().distinct()
 
     def root_components(self, include: bool = True) -> "ComponentQuerySet":
         """Show only root components by default, or only non-root components if include=False"""
@@ -1038,14 +1041,20 @@ class ComponentQuerySet(models.QuerySet):
         non_container_source_components = self.exclude(name__endswith="-container-source").using(
             "read_only"
         )
-        if settings.COMMUNITY_MODE_ENABLED:
-            roots = non_container_source_components.root_components()
-        else:
-            roots = non_container_source_components.root_components().released_components()
-        if quick:
-            return roots
-        else:
-            return roots.latest_components().order_by("pk").distinct("pk")
+        roots = non_container_source_components.root_components()
+        if not settings.COMMUNITY_MODE_ENABLED:
+            # Only filter in enterprise Corgi, where we have ERRATA-type relations
+            roots = roots.released_components()
+
+        if not quick:
+            # Only filter when we're actually generating a manifest
+            # not when checking if there are components to manifest, since it's slow
+            roots = roots.latest_components()
+
+        # Order by UUID to give stable results in manifests
+        # Other querysets should not define an ordering
+        # or should clear it with .order_by() if they use .distinct()
+        return roots.order_by("pk")
 
     def srpms(self, include: bool = True) -> models.QuerySet["Component"]:
         """Show only source RPMs by default, or only non-SRPMs if include=False"""

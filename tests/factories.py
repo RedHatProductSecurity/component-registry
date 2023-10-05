@@ -189,6 +189,7 @@ class SrpmComponentFactory(ComponentFactory):
     type = models.Component.Type.RPM
     namespace = models.Component.Namespace.REDHAT
     arch = "src"
+    epoch = random.randint(0, 10)
 
 
 class BinaryRpmComponentFactory(SrpmComponentFactory):

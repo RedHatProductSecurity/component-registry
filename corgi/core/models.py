@@ -1237,18 +1237,13 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         return PackageURL(type=str(self.type).lower(), **purl_data)
 
     def _build_maven_purl(self) -> dict[str, Union[str, dict[str, str]]]:
-        # Prefer some declared qualifiers to inferred qualifiers
-        declared_qualifiers = {}
-        if "purl_declared" in self.meta_attr:
-            declared_qualifiers = PackageURL.from_string(self.meta_attr["purl_declared"]).qualifiers
-
         qualifiers = {}
 
         classifier = self.meta_attr.get("classifier")
         if classifier:
             qualifiers["classifier"] = classifier
 
-        extension = declared_qualifiers.get("type") or self.meta_attr.get("type")
+        extension = self.meta_attr.get("type")
         if extension:
             qualifiers["type"] = extension
 

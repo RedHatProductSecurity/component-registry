@@ -1240,7 +1240,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
                 condition=ROOT_COMPONENTS_CONDITION,
             ),
             models.Index(
-                fields=("uuid", "software_build_id", "type", "name", "arch"),
+                fields=("uuid", "name", "namespace", "software_build_id", "type", "arch"),
                 name="compon_latest_idx",
                 condition=ROOT_COMPONENTS_CONDITION,
             ),

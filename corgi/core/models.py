@@ -1089,7 +1089,7 @@ class ComponentQuerySet(models.QuerySet):
                     .distinct("pk")
                 )
             else:
-               roots = roots.latest_components()
+                roots = roots.latest_components()
 
         # Order by UUID to give stable results in manifests
         # Other querysets should not define an ordering

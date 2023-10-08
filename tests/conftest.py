@@ -32,8 +32,8 @@ def api_path(api_version):
 @pytest.fixture(scope="session")
 def stored_proc(django_db_setup, django_db_blocker):
     """setup stored procedure"""
-    # depends on corgi/core/migration/0091_install_stored_proc.py data migration
-    stored_proc = importlib.import_module("corgi.core.migrations.0091_install_stored_proc")
+    # depends on corgi/core/migration/0092_install_stored_proc.py data migration
+    stored_proc = importlib.import_module("corgi.core.migrations.0092_install_stored_proc")
     with django_db_blocker.unblock():
         with connection.cursor() as c:
             c.execute("DROP FUNCTION if exists rpmvercmp;"),

@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("core", "0091_install_stored_proc"),
+        ("core", "0092_install_stored_proc"),
     ]
 
     operations = [

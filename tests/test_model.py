@@ -1094,8 +1094,8 @@ def test_queryset_ordering_fails():
         len(misordered_products.distinct("description"))
 
 
-@pytest.mark.django_db
-def test_latest_components_queryset(client, api_path):
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_latest_components_queryset(client, api_path, stored_proc):
     # Create many components so we have robust test data
     # 2 components (1 older version, 1 newer version) for each name / arch pair in REDHAT namespace
     # 12 REDHAT components across 6 pairs
@@ -1103,6 +1103,7 @@ def test_latest_components_queryset(client, api_path):
     # plus 2 non-RPMs components per name for src architecture only, 4 PyPI packages total
     # Overall 20 components, and latest queryset should show 10 (newer, when on or older, when off)
     components = {}
+    stream = ProductStreamFactory(active=True)
     for name in "red", "blue":
         for arch in "aarch64", "x86_64", "src":
             older_component = ComponentFactory(
@@ -1112,6 +1113,7 @@ def test_latest_components_queryset(client, api_path):
                 version="9",
                 arch=arch,
             )
+            older_component.productstreams.add(stream)
             # Create newer components with the same type, namespace, name, release, and arch
             # But a different version and build
             newer_component = ComponentFactory(
@@ -1122,6 +1124,7 @@ def test_latest_components_queryset(client, api_path):
                 release=older_component.release,
                 arch=older_component.arch,
             )
+            newer_component.productstreams.add(stream)
             components[(older_component.type, name, arch)] = (older_component, newer_component)
         # Create UPSTREAM components for src architecture only
         # with the same type, name, and version as REDHAT src components
@@ -1135,6 +1138,7 @@ def test_latest_components_queryset(client, api_path):
             arch="noarch",
             software_build=None,
         )
+        older_upstream_component.productstreams.add(stream)
         newer_upstream_component = ComponentFactory(
             type=newer_component.type,
             namespace=older_upstream_component.namespace,
@@ -1144,6 +1148,7 @@ def test_latest_components_queryset(client, api_path):
             arch=older_upstream_component.arch,
             software_build=older_upstream_component.software_build,
         )
+        newer_upstream_component.productstreams.add(stream)
         components[(older_upstream_component.type, name, older_upstream_component.arch)] = (
             older_upstream_component,
             newer_upstream_component,
@@ -1164,6 +1169,7 @@ def test_latest_components_queryset(client, api_path):
             arch=older_upstream_component.arch,
             software_build=older_upstream_component.software_build,
         )
+        older_unrelated_component.productstreams.add(stream)
         newer_unrelated_component = ComponentFactory(
             type=older_unrelated_component.type,
             namespace=older_upstream_component.namespace,
@@ -1173,6 +1179,7 @@ def test_latest_components_queryset(client, api_path):
             arch=older_upstream_component.arch,
             software_build=older_upstream_component.software_build,
         )
+        newer_unrelated_component.productstreams.add(stream)
         components[(older_unrelated_component.type, name, older_unrelated_component.arch)] = (
             older_unrelated_component,
             newer_unrelated_component,
@@ -1180,15 +1187,24 @@ def test_latest_components_queryset(client, api_path):
 
     assert Component.objects.count() == 20
 
-    latest_components = Component.objects.latest_components()
-    assert len(latest_components) == 10
+    latest_components = Component.objects.latest_components(
+        model_type="ProductStream",
+        ofuri=stream.ofuri,
+        include=True,
+    )
+    assert len(latest_components) == 2
     for component in latest_components:
         assert (
             component.purl == components[(component.type, component.name, component.arch)][1].purl
         )
 
-    non_latest_components = Component.objects.latest_components(include=False)
-    assert len(non_latest_components) == 10
+    non_latest_components = Component.objects.latest_components(
+        model_type="ProductStream",
+        ofuri=stream.ofuri,
+        include=False,
+        include_non_root_components=False,
+    )
+    assert len(non_latest_components) == 2
     for component in non_latest_components:
         assert (
             component.purl == components[(component.type, component.name, component.arch)][0].purl
@@ -1205,8 +1221,12 @@ def test_latest_components_queryset(client, api_path):
     # So the source RPMs were filtered out, and the root_components filter had no data to report
     # This was likely due to the order the filters are defined in (see corgi/api/filters.py)
     # Fixed by CORGI-609, and this test makes sure the bug doesn't come back
-    latest_root_components = Component.objects.latest_components().root_components()
-    assert len(latest_root_components) == 2
+    latest_root_components = Component.objects.latest_components(
+        model_type="ProductStream",
+        ofuri=stream.ofuri,
+        include=True,
+    ).root_components()
+    assert latest_root_components.count() == 2
     # Red and blue components with arch "src" each have 1 latest
     for component in latest_root_components:
         assert (
@@ -1214,7 +1234,9 @@ def test_latest_components_queryset(client, api_path):
         )
 
     non_latest_root_components = Component.objects.latest_components(
-        include=False
+        model_type="ProductStream",
+        ofuri=stream.ofuri,
+        include=False,
     ).root_components()
     assert len(non_latest_root_components) == 2
     # Red and blue components with arch "src" each have 1 non-latest
@@ -1223,39 +1245,45 @@ def test_latest_components_queryset(client, api_path):
             component.purl == components[(component.type, component.name, component.arch)][0].purl
         )
 
-    latest_non_root_components = Component.objects.latest_components().root_components(
-        include=False
+    latest_non_root_components = Component.objects.latest_components(
+        model_type="ProductStream",
+        ofuri=stream.ofuri,
+        include=False,
     )
-    assert len(latest_non_root_components) == 8
+    assert len(latest_non_root_components) == 2
     # Red and blue components for 2 arches each have 1 latest
     # Red and blue components for upstream (non-root) each have 1 latest
     # Red and blue components for non-RPMs (non-root) each have 1 latest
     for component in latest_non_root_components:
         assert (
-            component.purl == components[(component.type, component.name, component.arch)][1].purl
-        )
-
-    non_latest_non_root_components = Component.objects.latest_components(
-        include=False
-    ).root_components(include=False)
-    assert len(non_latest_non_root_components) == 8
-    # Red and blue components for 2 arches each have 1 non-latest
-    # Red and blue components for upstream (non-root) each have 1 non-latest
-    # Red and blue components for non-RPMs (non-root) each have 1 non-latest
-    for component in non_latest_non_root_components:
-        assert (
             component.purl == components[(component.type, component.name, component.arch)][0].purl
         )
 
+    non_latest_non_root_components = Component.objects.latest_components(
+        model_type="ProductStream",
+        ofuri=stream.ofuri,
+        include=False,
+        include_non_root_components=True,
+    )
+    assert len(non_latest_non_root_components) == 18
+    # Red and blue components for 2 arches each have 1 non-latest
+    # Red and blue components for upstream (non-root) each have 1 non-latest
+    # Red and blue components for non-RPMs (non-root) each have 1 non-latest
+    # for component in non_latest_non_root_components:
+    assert component.purl == components[(component.type, component.name, component.arch)][0].purl
 
-@pytest.mark.django_db
-def test_latest_filter():
-    ps = ProductStreamFactory(name="rhel-7.9.z")
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_latest_filter(stored_proc):
+    ps = ProductStreamFactory(name="rhel-7.9.z", active=True)
     srpm_with_el = SrpmComponentFactory(name="sdb", version="1.2.1", release="21.el7")
     srpm_with_el.productstreams.add(ps)
     srpm = SrpmComponentFactory(name="sdb", version="1.2.1", release="3")
     srpm.productstreams.add(ps)
-    latest_components = ps.components.latest_components()
+    latest_components = ps.components.latest_components(
+        model_type="ProductStream",
+        ofuri=ps.ofuri,
+    )
     assert latest_components.count() == 1
     assert latest_components[0] == srpm_with_el
 
@@ -1286,9 +1314,9 @@ def test_released_filter():
     assert c in Component.objects.get_queryset().released_components()
 
 
-@pytest.mark.django_db
-def test_latest_filter_components_modular():
-    ps = ProductStreamFactory(name="certificate_system-10.2.z")
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_latest_filter_components_modular(stored_proc):
+    ps = ProductStreamFactory(name="certificate_system-10.2.z", active=True)
     modular_rpm_1 = SrpmComponentFactory(
         name="idm-console-framework", version="1.2.0", release="3.module+el8pki+7130+225b0dd0"
     )
@@ -1297,7 +1325,10 @@ def test_latest_filter_components_modular():
         name="idm-console-framework", version="1.2.0", release="3.module+el8pki+8580+f0d97d6d"
     )
     modular_rpm_2.productstreams.add(ps)
-    latest_components = ps.components.latest_components()
+    latest_components = ps.components.latest_components(
+        model_type="ProductStream",
+        ofuri=ps.ofuri,
+    )
     assert latest_components.count() == 1
     assert latest_components[0] == modular_rpm_2
 

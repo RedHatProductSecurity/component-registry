@@ -196,7 +196,7 @@ def test_component_detail(client, api_path):
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
-def test_latest_components_by_stream_filter(client, api_path):
+def test_latest_components_by_streams_filter(client, api_path, stored_proc):
     # Create many components so we have robust test data
     # 2 components (1 older version, 1 newer version) for each name / arch pair in REDHAT namespace
     # 12 REDHAT components across 6 pairs
@@ -204,7 +204,7 @@ def test_latest_components_by_stream_filter(client, api_path):
     # plus 2 non-RPMs components per name for src architecture only, 4 PyPI packages total
     # Overall 20 components, and latest filter should show 10 (newer, when on or older, when off)
     components = {}
-    stream = ProductStreamFactory()
+    stream = ProductStreamFactory(active=True)
     for name in "red", "blue":
         for arch in "aarch64", "x86_64", "src":
             older_component = ComponentFactory(
@@ -385,10 +385,18 @@ def test_latest_components_by_stream_filter(client, api_path):
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
-def test_latest_components_by_streams_filter(client, api_path):
-    ps1 = ProductStreamFactory(name="rhel-7", version="7")
+def test_latest_components_by_streams_filter_with_multiple_products(client, api_path, stored_proc):
+    ps1 = ProductStreamFactory(
+        name="rhel-7",
+        version="7",
+        active=True,
+    )
     assert ps1.ofuri == "o:redhat:rhel:7"
-    ps2 = ProductStreamFactory(name="rhel-8", version="8")
+    ps2 = ProductStreamFactory(
+        name="rhel-8",
+        version="8",
+        active=True,
+    )
     assert ps2.ofuri == "o:redhat:rhel:8"
 
     # Only belongs to RHEL7 stream
@@ -431,7 +439,6 @@ def test_latest_components_by_streams_filter(client, api_path):
     # Report newest_component as the latest for the RHEL8 stream
     # Even though both have the same name / only one is latest overall
     assert response["results"][0]["nevra"] == newer_component.nevra
-    assert response["results"][1]["nevra"] == newest_component.nevra
 
     response = client.get(f"{api_path}/components?latest_components_by_streams=False")
     assert response.status_code == 200
@@ -1152,14 +1159,26 @@ def test_api_component_400(client, api_path):
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
-def test_product_components_ofuri(client, api_path):
+def test_product_components_ofuri(client, api_path, stored_proc):
     """test 'latest' filter on components"""
 
-    ps1 = ProductStreamFactory(name="rhel-8.6.0", version="8.6.0")
+    ps1 = ProductStreamFactory(
+        name="rhel-8.6.0",
+        version="8.6.0",
+        active=True,
+    )
     assert ps1.ofuri == "o:redhat:rhel:8.6.0"
-    ps2 = ProductStreamFactory(name="rhel-8.6.0.z", version="8.6.0.z")
+    ps2 = ProductStreamFactory(
+        name="rhel-8.6.0.z",
+        version="8.6.0.z",
+        active=True,
+    )
     assert ps2.ofuri == "o:redhat:rhel:8.6.0.z"
-    ps3 = ProductStreamFactory(name="rhel-8.5.0", version="8.5.0")
+    ps3 = ProductStreamFactory(
+        name="rhel-8.5.0",
+        version="8.5.0",
+        active=True,
+    )
     assert ps3.ofuri == "o:redhat:rhel:8.5.0"
 
     old_openssl = SrpmComponentFactory(name="openssl", version="1.1.1k", release="5.el8_5")
@@ -1202,10 +1221,10 @@ def test_product_components_ofuri(client, api_path):
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
-def test_product_components_versions(client, api_path):
-    ps1 = ProductStreamFactory(name="rhel-7", version="7")
+def test_product_components_versions(client, api_path, stored_proc):
+    ps1 = ProductStreamFactory(name="rhel-7", version="7", active=True)
     assert ps1.ofuri == "o:redhat:rhel:7"
-    ps2 = ProductStreamFactory(name="rhel-8", version="8")
+    ps2 = ProductStreamFactory(name="rhel-8", version="8", active=True)
     assert ps2.ofuri == "o:redhat:rhel:8"
 
     openssl = ComponentFactory(

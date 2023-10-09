@@ -66,9 +66,9 @@ class ProductManifestFile(ManifestFile):
     # Or to handle different ways of generating manifest properties from Product properties
 
     def render_content(self) -> str:
-
         components = self.obj.components  # type: ignore[attr-defined]
-        released_components = components.manifest_components()
+        # As this is a ProductManifestFile so we can assume self.obj has an ofuri
+        released_components = components.manifest_components(ofuri=self.obj.ofuri)  # type: ignore[attr-defined] # noqa: E501
         distinct_provides = self.obj.provides_queryset  # type: ignore[attr-defined]
         distinct_upstreams = self.obj.upstreams_queryset  # type: ignore[attr-defined]
         cpes = self._get_stream_cpes(self.obj)

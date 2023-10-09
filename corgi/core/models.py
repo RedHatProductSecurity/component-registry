@@ -1111,6 +1111,14 @@ class ComponentQuerySet(models.QuerySet):
         # Falsey values return the excluded queryset (only non-SRPM components)
         return self.exclude(SRPM_CONDITION)
 
+    def active_streams(self, include: bool = True) -> "ComponentQuerySet":
+        """Show only components in active product streams"""
+        if include:
+            # Truthy values return the filtered queryset (only components in active streams)
+            return self.filter(productstreams__active=True).distinct()
+        # Falsey values return the excluded queryset (only components in no active streams)
+        return self.exclude(productstreams__active=True).distinct()
+
 
 class Component(TimeStampedModel, ProductTaxonomyMixin):
     class Type(models.TextChoices):

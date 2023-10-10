@@ -1040,7 +1040,12 @@ class ComponentQuerySet(models.QuerySet):
 
     def released_components(self, include: bool = True) -> "ComponentQuerySet":
         """Show only released components by default, or unreleased components if include=False"""
-        errata_relations = Q(software_build__relations__type=ProductComponentRelation.Type.ERRATA)
+        errata_relations = Q(
+            software_build__relations__type__in=(
+                ProductComponentRelation.Type.ERRATA,
+                ProductComponentRelation.Type.COMPOSE,
+            )
+        )
         if include:
             # Truthy values return only released components
             queryset = self.filter(errata_relations)

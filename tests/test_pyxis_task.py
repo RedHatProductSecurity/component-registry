@@ -39,5 +39,14 @@ def test_slow_fetch_pyxis_manifest(post, sca, taxonomy):
     assert len(components[Component.Type.RPM]) == 104
     assert len(components[Component.Type.GOLANG]) == 627
 
+    # TODO: Check that real license values in Pyxis are sane / match our expectations
+    #  For now we just use garbage data to test that we can set them correctly
+    assert (
+        Component.objects.exclude(license_declared_raw="")
+        .values_list("license_declared_raw", flat=True)
+        .first()
+        == "USE-GARBAGE-DATA OR ELSE-WE-CANT-TEST"
+    )
+
     sca.assert_called_once_with(str(software_build.uuid), force_process=False)
     taxonomy.assert_called_once_with(image_id, SoftwareBuild.Type.PYXIS)

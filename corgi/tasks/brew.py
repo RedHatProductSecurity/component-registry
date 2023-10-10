@@ -468,15 +468,13 @@ def handle_dash_underscore_confusion(
 def save_srpm(softwarebuild: SoftwareBuild, build_data: dict) -> tuple[ComponentNode, bool]:
     name = build_data["meta"].pop("name")
     version = build_data["meta"].pop("version")
-    related_url = build_data["meta"].pop("url", "")
     epoch = build_data["meta"].pop("epoch", 0)
-    if not related_url:
-        # Handle case when key is present but value is None
-        related_url = ""
+    license_declared_raw = build_data["meta"].pop("license", "")
+    # Handle case when key is present but value is None
+    related_url = build_data["meta"].pop("url", "") or ""
 
     extra = {
         "description": build_data["meta"].pop("description", ""),
-        "license_declared_raw": build_data["meta"].pop("license", ""),
         "related_url": related_url,
     }
 
@@ -494,11 +492,13 @@ def save_srpm(softwarebuild: SoftwareBuild, build_data: dict) -> tuple[Component
             "epoch": int(epoch),
         },
     )
+
+    set_license_declared_safely(obj, license_declared_raw)
     node, node_created = save_node(ComponentNode.ComponentNodeType.SOURCE, None, obj)
     upstream_created = False
     if related_url:
         _, _, upstream_created = save_upstream(
-            build_data["type"], name, version, build_data["meta"], extra, node
+            build_data["type"], name, version, build_data["meta"], extra, node, license_declared_raw
         )
     return node, created or node_created or upstream_created
 
@@ -514,12 +514,7 @@ def process_image_components(image):
 
 def set_license_declared_safely(obj: Component, license_declared_raw: str) -> None:
     """Save a declared license onto a Component, without erasing any existing value"""
-    # The license value we have in the DB doesn't match the value from Brew
-    different_license = Component.objects.filter(pk=obj.pk).exclude(
-        license_declared_raw=license_declared_raw
-    )
-    # AND the value from Brew isn't an empty string
-    if license_declared_raw and different_license:
+    if license_declared_raw:
         # Any non-empty license here should be reported
         # We only rely on OpenLCS if we don't know the license_declared
         # But we can't set license_declared in update_or_create
@@ -528,7 +523,12 @@ def set_license_declared_safely(obj: Component, license_declared_raw: str) -> No
         # They cannot erase any licenses we set ourselves (when the field is not empty)
         # API endpoint blocks this (400 Bad Request)
         # Use .update() to avoid possible race conditions
-        different_license.update(license_declared_raw=license_declared_raw)
+        # We only update if the current license in the DB doesn't match the new value
+        Component.objects.filter(pk=obj.pk).exclude(
+            license_declared_raw=license_declared_raw
+        ).update(license_declared_raw=license_declared_raw)
+    # else the value from Brew is an empty string
+    # so don't overwrite any value OpenLCS may have submitted
 
 
 def save_container(
@@ -725,7 +725,13 @@ def save_module(softwarebuild, build_data) -> tuple[ComponentNode, bool]:
 
 
 def save_upstream(
-    component_type: str, name: str, version: str, meta_attr: dict, extra: dict, node: ComponentNode
+    component_type: str,
+    name: str,
+    version: str,
+    meta_attr: dict,
+    extra: dict,
+    node: ComponentNode,
+    license_declared_raw: str = "",
 ) -> tuple[Component, ComponentNode, bool]:
     """Helper function to save an upstream component and create a node for it"""
     upstream_component, created = Component.objects.update_or_create(
@@ -740,6 +746,9 @@ def save_upstream(
             "namespace": Component.Namespace.UPSTREAM,
         },
     )
+
+    if license_declared_raw:
+        set_license_declared_safely(upstream_component, license_declared_raw)
     upstream_node, node_created = save_node(
         ComponentNode.ComponentNodeType.SOURCE, node, upstream_component
     )

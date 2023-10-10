@@ -5,6 +5,7 @@ from typing import Any, Optional
 from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.conf import settings
+from django.db import transaction
 from django.utils import dateparse
 from django.utils.timezone import make_aware
 
@@ -16,7 +17,7 @@ from corgi.core.models import (
     ProductComponentRelation,
     SoftwareBuild,
 )
-from corgi.tasks.brew import slow_save_taxonomy
+from corgi.tasks.brew import set_license_declared_safely, slow_save_taxonomy
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 from corgi.tasks.sca import cpu_software_composition_analysis
 
@@ -260,21 +261,26 @@ def save_component(component: dict, parent: ComponentNode) -> bool:
         "related_url": related_url,
     }
 
-    obj, created = Component.objects.update_or_create(
-        type=component_type,
-        name=name,
-        version=version,
-        release=release,
-        arch=arch,
-        defaults=defaults,
-        license_declared_raw=license_declared_raw,
-    )
+    with transaction.atomic():
+        obj, created = Component.objects.update_or_create(
+            type=component_type,
+            name=name,
+            version=version,
+            release=release,
+            arch=arch,
+            defaults=defaults,
+        )
 
-    # Save the remaining attributes
-    props = component.pop("properties", [])
-    props = dict([(prop["name"], prop["value"]) for prop in props])
-    obj.meta_attr = obj.meta_attr | component | props
-    obj.save()
+        # Save the remaining attributes
+        props = component.pop("properties", [])
+        props = dict([(prop["name"], prop["value"]) for prop in props])
+        obj.meta_attr = obj.meta_attr | component | props
+        obj.save()
+
+    # Wait until after transaction so obj lookup / atomic update succeeds
+    # We don't set this above in case the value from Pyxis is empty
+    # Otherwise we could overwrite a value submitted from OpenLCS
+    set_license_declared_safely(obj, license_declared_raw)
 
     node, node_created = save_node(node_type, parent, obj)
     return created or node_created

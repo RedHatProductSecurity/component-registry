@@ -6161,7 +6161,7 @@
           "description": null,
           "scope": "required",
           "hashes": null,
-          "licenses": null,
+          "licenses": "USE-GARBAGE-DATA OR ELSE-WE-CANT-TEST",
           "copyright": null,
           "purl": "pkg:rpm/rhel/redhat-release@9.2-0.13.el9?arch=x86_64&upstream=redhat-release-9.2-0.13.el9.src.rpm&distro=rhel-9.2",
           "swid": null,

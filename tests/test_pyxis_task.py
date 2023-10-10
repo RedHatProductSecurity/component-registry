@@ -5,6 +5,7 @@ import pytest
 
 from corgi.core.models import Component, SoftwareBuild
 from corgi.tasks.pyxis import slow_fetch_pyxis_manifest
+from tests.factories import ProductComponentRelationFactory
 
 pytestmark = pytest.mark.unit
 
@@ -16,18 +17,38 @@ pytestmark = pytest.mark.unit
 def test_slow_fetch_pyxis_manifest(post, sca, taxonomy):
     with open("tests/data/pyxis/manifest.json", "r") as data:
         manifest = json.loads(data.read())
-    post.return_value.json.return_value = {"data": {"get_content_manifest": {"data": manifest}}}
+    wrapped_manifest = {"data": {"get_content_manifest": {"data": manifest}}}
+    post.return_value.json.return_value = wrapped_manifest
 
     image_id = "64dccc5b6d82013739c4f7b8"
-    slow_fetch_pyxis_manifest(image_id)
+    old_relation = ProductComponentRelationFactory(
+        build_id=image_id, build_type=SoftwareBuild.Type.PYXIS, software_build=None
+    )
+    # We create a build and root component the first time we process this manifest
+    result = slow_fetch_pyxis_manifest(image_id)
+    assert result is True
+    post.reset_mock()
+    post.return_value.json.return_value = wrapped_manifest
 
     image_index = Component.objects.get(
         name="image-controller", type=Component.Type.CONTAINER_IMAGE
     )
 
+    # assert we link the relations to the build
     software_build = SoftwareBuild.objects.get(
         build_id=image_id, build_type=SoftwareBuild.Type.PYXIS
     )
+    old_relation.refresh_from_db()
+    assert old_relation.software_build == software_build
+
+    # even if we're reprocessing a Pyxis manifest, so the build already exists / wasn't just created
+    new_relation = ProductComponentRelationFactory(
+        build_id=image_id, build_type=SoftwareBuild.Type.PYXIS, software_build=None
+    )
+    result = slow_fetch_pyxis_manifest(image_id)
+    assert result is False
+    new_relation.refresh_from_db()
+    assert new_relation.software_build == software_build
 
     components = {}
     for node in image_index.cnodes.get_queryset():

@@ -1,6 +1,6 @@
-import urllib.parse
 from collections.abc import Mapping
 from typing import Any
+from urllib.parse import parse_qs
 
 from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
@@ -44,7 +44,7 @@ def slow_fetch_pyxis_manifest(
     repositories = data["image"]["repositories"] or ()
     logger.info("Manifest %s is related to %i repositories", oid, len(repositories))
     for repository in repositories:
-        result = result or _slow_fetch_pyxis_manifest_for_repository(
+        result |= _slow_fetch_pyxis_manifest_for_repository(
             oid, image_id, repository, data, save_product, force_process
         )
     return result
@@ -60,6 +60,7 @@ def _slow_fetch_pyxis_manifest_for_repository(
 ) -> bool:
 
     # According to the PURL spec, the name part is the last fragment of the repository url
+    # TODO: This isn't right
     component_name = repository["repository"].split("/")[-1]
     repository_url = f"{repository['registry']}/{repository['repository']}"
     logger.info("Processing slow fetch of %s - %s", repository_url, component_name)
@@ -92,13 +93,15 @@ def _slow_fetch_pyxis_manifest_for_repository(
             },
         },
     )
-    if build_created:
-        # Create foreign key from Relations to the new SoftwareBuild, where they don't already exist
-        ProductComponentRelation.objects.filter(
-            build_id=image_id, build_type=SoftwareBuild.Type.PYXIS, software_build__isnull=True
-        ).update(software_build=softwarebuild)
+    # Create foreign key from Relations to the new SoftwareBuild, where they don't already exist
+    ProductComponentRelation.objects.filter(
+        build_id=softwarebuild.build_id,
+        build_type=softwarebuild.build_type,
+        software_build_id__isnull=True,
+    ).update(software_build_id=softwarebuild.pk)
 
     if not force_process and not build_created:
+        # TODO: We use singleton tasks, do we still need this logic?
         # If another task starts while this task is downloading data this can result in processing
         # the same build twice, let's just bail out here to save cpu
         logger.warning("SoftwareBuild with build_id %s already existed, not reprocessing", image_id)
@@ -157,7 +160,7 @@ def save_container(
     anything_else_created = False
 
     for component in manifest["edges"]["components"]["data"]:
-        save_component(component, root_node)
+        anything_else_created |= save_component(component, root_node)
 
     return root_node, (root_created or root_node_created or anything_else_created)
 
@@ -193,6 +196,7 @@ def save_component(component: dict, parent: ComponentNode) -> bool:
 
     name = component.pop("name") or ""
     version = component.pop("version") or ""
+    # TODO: Is the data format of below correct?
     license_declared_raw = component.pop("licenses") or ""
 
     # Grab release from the syft properties if available
@@ -213,7 +217,10 @@ def save_component(component: dict, parent: ComponentNode) -> bool:
     arch = "noarch"
     if "?" in purl:
         querystring = purl.split("?")[-1]
-        values = urllib.parse.parse_qs(querystring)
+        values = parse_qs(querystring)
+        # Names may have multiple values if a parameter appears more than once
+        # e.g. ?arch=1&arch=2, so just take the first value if there are multiple
+        # or else default to "noarch" if the "arch" parameter isn't present
         arch = values.get("arch", [arch])[0]
 
     defaults = {

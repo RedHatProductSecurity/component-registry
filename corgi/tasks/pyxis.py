@@ -10,6 +10,7 @@ from django.utils import dateparse
 from django.utils.timezone import make_aware
 
 from config.celery import app
+from corgi.collectors.brew import Brew
 from corgi.collectors.pyxis import get_manifest_data
 from corgi.core.models import (
     Component,
@@ -201,14 +202,11 @@ def save_component(component: dict, parent: ComponentNode) -> bool:
         values = urllib.parse.parse_qs(querystring)
         arch = values.get("arch", [arch])[0]
 
-    if component.pop("publisher", "") == "Red Hat, Inc.":
-        namespace = Component.Namespace.REDHAT
-    else:
-        namespace = Component.Namespace.UPSTREAM
-
     defaults = {
         "epoch": epoch,
-        "namespace": namespace,
+        "namespace": Brew.check_red_hat_namespace(
+            component_type, version, component.pop("publisher", "")
+        ),
         "related_url": related_url,
     }
 

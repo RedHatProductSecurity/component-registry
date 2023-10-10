@@ -384,9 +384,14 @@ class Brew:
         return parsed_provides
 
     @staticmethod
-    def check_red_hat_namespace(component_type, version) -> Component.Namespace:
-        """Given a component type and version, return the correct namespace"""
-        if component_type == Component.Type.RPM:
+    def check_red_hat_namespace(
+        component_type: str, version: str, publisher: str = ""
+    ) -> Component.Namespace:
+        """Given a component type, version, and optional publisher, return the correct namespace"""
+        if publisher == "Red Hat, Inc.":
+            # Components from Pyxis manifests may specify a publisher
+            return Component.Namespace.REDHAT
+        elif component_type == Component.Type.RPM:
             # RPMs are always built at Red Hat
             return Component.Namespace.REDHAT
         elif component_type == Component.Type.MAVEN and "redhat" in version:

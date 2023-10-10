@@ -1486,26 +1486,32 @@ def test_get_relation_builds():
 # So it doesn't need to handle OCI / RPMMOD types
 # We could handle these anyway just for safety
 @pytest.mark.parametrize(
-    "component_type,version,expected_value",
+    "component_type,version,publisher,expected_value",
     (
+        # Specifying the (optional) publisher overrides any type-specific logic
+        (Component.Type.RPM, "", "Red Hat, Inc.", Component.Namespace.REDHAT),
+        (Component.Type.MAVEN, "", "Red Hat, Inc.", Component.Namespace.REDHAT),
+        (Component.Type.PYPI, "", "Red Hat, Inc.", Component.Namespace.REDHAT),
         # RPMs are always built in a Red Hat build system
-        (Component.Type.RPM, "", Component.Namespace.REDHAT),
-        (Component.Type.RPM, "1.2.3.redhat.0001", Component.Namespace.REDHAT),
-        (Component.Type.RPM, "1.2.3-redhat.0002", Component.Namespace.REDHAT),
+        (Component.Type.RPM, "", "", Component.Namespace.REDHAT),
+        (Component.Type.RPM, "1.2.3.redhat.0001", "", Component.Namespace.REDHAT),
+        (Component.Type.RPM, "1.2.3-redhat.0002", "", Component.Namespace.REDHAT),
         # Maven types were built in a Red Hat build system
         # only if they have "redhat" somewhere in their version string
         # usually like .redhat or -redhat in the data I checked
         # Otherwise we assume they're built upstream
-        (Component.Type.MAVEN, "", Component.Namespace.UPSTREAM),
-        (Component.Type.MAVEN, "1.2.3-0003", Component.Namespace.UPSTREAM),
-        (Component.Type.MAVEN, "1.2.3.redhat-0004", Component.Namespace.REDHAT),
-        (Component.Type.MAVEN, "1.2.3-redhat.0005", Component.Namespace.REDHAT),
+        (Component.Type.MAVEN, "", "", Component.Namespace.UPSTREAM),
+        (Component.Type.MAVEN, "1.2.3-0003", "", Component.Namespace.UPSTREAM),
+        (Component.Type.MAVEN, "1.2.3.redhat-0004", "", Component.Namespace.REDHAT),
+        (Component.Type.MAVEN, "1.2.3-redhat.0005", "", Component.Namespace.REDHAT),
         # PYPI and all other types are always built upstream
-        (Component.Type.PYPI, "", Component.Namespace.UPSTREAM),
-        (Component.Type.PYPI, "1.2.3.redhat-0006", Component.Namespace.UPSTREAM),
-        (Component.Type.PYPI, "1.2.3-redhat-0007", Component.Namespace.UPSTREAM),
+        (Component.Type.PYPI, "", "", Component.Namespace.UPSTREAM),
+        (Component.Type.PYPI, "1.2.3.redhat-0006", "", Component.Namespace.UPSTREAM),
+        (Component.Type.PYPI, "1.2.3-redhat-0007", "", Component.Namespace.UPSTREAM),
     ),
 )
-def test_check_red_hat_namespace(component_type, version, expected_value):
+def test_check_red_hat_namespace(component_type, version, publisher, expected_value):
     """Test that we return the right namespace using component type and version"""
-    assert Brew.check_red_hat_namespace(component_type, version) == expected_value
+    assert (
+        Brew.check_red_hat_namespace(component_type, version, publisher=publisher) == expected_value
+    )

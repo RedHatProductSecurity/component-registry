@@ -60,6 +60,21 @@ def test_slow_fetch_pyxis_manifest(post, sca, taxonomy):
     # rhel-release specifies an issue-tracker and website, we prefer websites
     assert related_urls_for_rpms.last() == "https://www.redhat.com/"
 
+    # If the same property name appears multiple times, save all the values, not just the first one
+    # A little complicated since not every component has multiple CPEs that we need for this test
+    pyxis_props = Component.objects.exclude(meta_attr__pyxis_properties=[]).values_list(
+        "meta_attr__pyxis_properties", flat=True
+    )
+    multiple_cpes = ()
+    for props in pyxis_props:
+        multiple_cpes = tuple(prop["value"] for prop in props if prop["name"] == "syft:cpe23")
+        if len(multiple_cpes) > 1:
+            # Assert we store all the CPE values in the meta_attr
+            assert multiple_cpes[0] != multiple_cpes[-1]
+            break
+    # And assert at least 1 component had multiple CPEs / we broke out of the loop above
+    assert len(multiple_cpes) > 1
+
     assert software_build.source
     sca.assert_called_once_with(str(software_build.uuid), force_process=False)
     taxonomy.assert_called_once_with(image_id, SoftwareBuild.Type.PYXIS)

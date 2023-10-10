@@ -234,10 +234,11 @@ def save_component(component: dict, parent: ComponentNode) -> bool:
             defaults=defaults,
         )
 
-        # Save the remaining attributes
-        props = component.pop("properties", [])
-        props = dict([(prop["name"], prop["value"]) for prop in props])
-        obj.meta_attr = obj.meta_attr | component | props
+        # Save the remaining attributes without transforming them or losing data
+        # Handle case when key is present but value is None
+        props = component.pop("properties", ()) or ()
+        props = {"pyxis_properties": props}
+        obj.meta_attr |= component | props
         obj.save()
 
     # Wait until after transaction so obj lookup / atomic update succeeds

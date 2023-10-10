@@ -40,7 +40,8 @@ def slow_fetch_pyxis_manifest(
     image_id = data["image"]["_id"]
 
     result = False
-    repositories = data["image"]["repositories"]
+    # Handle case when key is present but value is None
+    repositories = data["image"]["repositories"] or ()
     logger.info("Manifest %s is related to %i repositories", oid, len(repositories))
     for repository in repositories:
         result = result or _slow_fetch_pyxis_manifest_for_repository(
@@ -116,7 +117,8 @@ def _slow_fetch_pyxis_manifest_for_repository(
         logger.info("Requesting persistance of node structure for %s", softwarebuild.pk)
         slow_save_taxonomy.delay(softwarebuild.build_id, softwarebuild.build_type)
 
-    if settings.SCA_ENABLED:
+    # TODO: manifest["image"]["source"] is not always present
+    if settings.SCA_ENABLED and softwarebuild.source:
         logger.info("Requesting software composition analysis for %s", softwarebuild.pk)
         cpu_software_composition_analysis.delay(str(softwarebuild.pk), force_process=force_process)
 
@@ -161,10 +163,13 @@ def save_container(
 
 
 def save_component(component: dict, parent: ComponentNode) -> bool:
-    logger.debug("Called save component with component %s", component)
-    purl = component["purl"]
+    """Save a component found in a Pyxis manifest"""
+    logger.debug(f"Called Pyxis save component with component: {component}")
+    purl = component.get("purl", "")
     if not purl:
-        logger.warning("Cannot process component with no purl (%s)", purl)
+        # We can't raise an error here, since some "components" are really products
+        # so this error is expected for certain data in the manifest
+        logger.warning(f"Cannot process component with no purl: {component}")
         return False
 
     if not purl.startswith("pkg:"):
@@ -175,7 +180,8 @@ def save_component(component: dict, parent: ComponentNode) -> bool:
         raise ValueError(f"Tried to create component with invalid component_type: {component_type}")
 
     # A related url can be only one of any number of externalReferences provided, prefer a website.
-    external_references = component["external_references"] or ()
+    # Handle case when key is present but value is None
+    external_references = component.get("external_references", ()) or ()
     for reference in external_references:
         if reference["type"] == "website":
             related_url = reference["url"]
@@ -190,13 +196,16 @@ def save_component(component: dict, parent: ComponentNode) -> bool:
     license_declared_raw = component.pop("licenses") or ""
 
     # Grab release from the syft properties if available
+    # Handle case when key is present but value is None
     release = ""
-    for prop in component["properties"]:
+    for prop in component.get("properties", ()) or ():
         if prop["name"] == "syft:metadata:release":
             release = prop["value"]
 
+    # Grab epoch from the syft properties if available
+    # Handle case when key is present but value is None
     epoch = 0
-    for prop in component["properties"]:
+    for prop in component.get("properties", ()) or ():
         if prop["name"] == "syft:metadata:epoch":
             epoch = int(prop["value"])
 

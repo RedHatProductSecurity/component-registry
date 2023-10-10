@@ -122,7 +122,7 @@ def get_manifest_data(manifest_id: str, page_size: int = 50) -> Mapping[str, Any
 
     has_more = True
     page = 0
-    components = []
+    components: list[dict] = []
     manifest = {}
     while has_more:
         variables = {"manifest_id": manifest_id, "page": page, "page_size": page_size}
@@ -134,7 +134,7 @@ def get_manifest_data(manifest_id: str, page_size: int = 50) -> Mapping[str, Any
         data = response.json()
         manifest = data["data"]["get_content_manifest"]["data"]
 
-        components_batch = manifest["edges"]["components"]["data"]
+        components_batch = manifest["edges"]["components"]["data"] or ()
         components.extend(components_batch)
         has_more = len(components_batch) == page_size
         page += 1

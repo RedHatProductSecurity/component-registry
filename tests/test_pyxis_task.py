@@ -60,5 +60,28 @@ def test_slow_fetch_pyxis_manifest(post, sca, taxonomy):
     # rhel-release specifies an issue-tracker and website, we prefer websites
     assert related_urls_for_rpms.last() == "https://www.redhat.com/"
 
+    assert software_build.source
     sca.assert_called_once_with(str(software_build.uuid), force_process=False)
     taxonomy.assert_called_once_with(image_id, SoftwareBuild.Type.PYXIS)
+
+
+@pytest.mark.django_db
+@patch("corgi.tasks.brew.slow_save_taxonomy.delay")
+@patch("corgi.tasks.sca.cpu_software_composition_analysis.delay")
+@patch("corgi.collectors.pyxis.session.post")
+def test_slow_fetch_empty_pyxis_manifest(post, sca, taxonomy):
+    """Test that we can process a manifest with no repositories"""
+    with open("tests/data/pyxis/empty_manifest.json", "r") as data:
+        manifest = json.load(data)
+    post.return_value.json.return_value = {"data": {"get_content_manifest": {"data": manifest}}}
+
+    image_id = "64dccc5b6d82013739c4f7b8"
+    slow_fetch_pyxis_manifest(image_id)
+    assert Component.objects.count() == 0
+    assert SoftwareBuild.objects.count() == 0
+
+    # The build / Pyxis manifest doesn't have a source URL for this image
+    # We don't call the SCA task in this case to avoid many errors in the monitoring email
+    assert not manifest["image"].get("source")
+    sca.assert_not_called()
+    taxonomy.assert_not_called()

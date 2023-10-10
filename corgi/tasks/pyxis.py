@@ -76,19 +76,18 @@ def _slow_fetch_pyxis_manifest_for_repository(
         build_id=image_id,
         build_type=SoftwareBuild.Type.PYXIS,
         defaults={
+            "completion_time": completion_dt,
             "name": component_name,
             "source": manifest["image"].get("source", ""),
             # Arbitrary dict can go here
             "meta_attr": {
                 "image_id": image_id,
-                "manifest_id": oid,
-                "repository": repository,
                 "incompleteness_reasons": manifest["incompleteness_reasons"],
+                "manifest_id": oid,
                 "org_id": manifest["org_id"],
-                "creation_date": manifest["creation_date"],
+                "repository": repository,
             },
         },
-        completion_time=completion_dt,
     )
     if build_created:
         # Create foreign key from Relations to the new SoftwareBuild, where they don't already exist

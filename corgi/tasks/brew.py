@@ -82,11 +82,11 @@ def slow_fetch_brew_build(
         build_id=build_id,
         build_type=build_type,
         defaults={
-            "source": build_meta.pop("source"),
+            "completion_time": completion_dt,
             "meta_attr": build_meta,
             "name": component["meta"]["name"],
+            "source": build_meta.pop("source"),
         },
-        completion_time=completion_dt,
     )
 
     update_relation_software_build_fk(build_id, build_type, softwarebuild)

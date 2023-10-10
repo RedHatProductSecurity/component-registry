@@ -377,6 +377,8 @@ class SoftwareBuildViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled
         ofuri = req.query_params.get("ofuri")
         if ofuri:
             model, _ = get_model_ofuri_type(ofuri)
+            if not model:
+                raise Http404
             self.queryset = model.builds
         return super().list(request)
 

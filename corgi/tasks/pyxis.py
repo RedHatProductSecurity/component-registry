@@ -1,6 +1,6 @@
 import urllib.parse
 from collections.abc import Mapping
-from typing import Any, Optional
+from typing import Any
 
 from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
@@ -17,7 +17,7 @@ from corgi.core.models import (
     ProductComponentRelation,
     SoftwareBuild,
 )
-from corgi.tasks.brew import set_license_declared_safely, slow_save_taxonomy
+from corgi.tasks.brew import save_node, set_license_declared_safely, slow_save_taxonomy
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 from corgi.tasks.sca import cpu_software_composition_analysis
 
@@ -103,13 +103,8 @@ def _slow_fetch_pyxis_manifest_for_repository(
         return False
 
     # Use the creation time of the manifest entry in pyxis as a monotonically increasing version
-    # identifier.  TODO once RHTAP-1590 completes, revisit this and parse the tag to get the version
-    dt = dateparse.parse_datetime(manifest["creation_date"].split(".")[0])
-    if dt:
-        creation_dt = make_aware(dt)
-    else:
-        raise ValueError(f"Could not parse creation_date for build {image_id}")
-    component_version = str(int(creation_dt.timestamp()))
+    # identifier. TODO once RHTAP-1590 completes, revisit this and parse the tag to get the version
+    component_version = str(int(completion_dt.timestamp()))
 
     root_node, root_created = save_container(
         softwarebuild, component_name, repository_url, component_version, manifest
@@ -164,19 +159,6 @@ def save_container(
     return root_node, (root_created or root_node_created or anything_else_created)
 
 
-def save_node(
-    node_type: str, parent: Optional[ComponentNode], related_component: Component
-) -> tuple[ComponentNode, bool]:
-    """Helper function that wraps ComponentNode creation"""
-    node, created = ComponentNode.objects.get_or_create(
-        type=node_type,
-        parent=parent,
-        purl=related_component.purl,
-        defaults={"obj": related_component},
-    )
-    return node, created
-
-
 def save_component(component: dict, parent: ComponentNode) -> bool:
     logger.debug("Called save component with component %s", component)
     purl = component["purl"]
@@ -186,24 +168,9 @@ def save_component(component: dict, parent: ComponentNode) -> bool:
 
     if not purl.startswith("pkg:"):
         raise ValueError(f"Encountered unrecognized purl prefix {purl}")
-    component_type = purl[4:].split("/")[0]
+    component_type = purl[4:].split("/")[0].upper()
 
-    node_type = ComponentNode.ComponentNodeType.PROVIDES
-
-    # Map found type to Corgi TYPE or raise error
-    mapping = {
-        "rpm": Component.Type.RPM,
-        "golang": Component.Type.GOLANG,
-        "npm": Component.Type.NPM,
-        "gem": Component.Type.GEM,
-        "github": Component.Type.GITHUB,
-        "generic": Component.Type.GENERIC,
-        "maven": Component.Type.MAVEN,
-    }
-
-    if component_type in mapping:
-        component_type = mapping[component_type]
-    else:
+    if component_type not in Component.Type.values:
         raise ValueError(f"Tried to create component with invalid component_type: {component_type}")
 
     # A related url can be only one of any number of externalReferences provided. Pick the first.
@@ -234,28 +201,12 @@ def save_component(component: dict, parent: ComponentNode) -> bool:
         values = urllib.parse.parse_qs(querystring)
         arch = values.get("arch", [arch])[0]
 
-    description = ""
-
     if component.pop("publisher", "") == "Red Hat, Inc.":
         namespace = Component.Namespace.REDHAT
     else:
         namespace = Component.Namespace.UPSTREAM
 
-    nevra = f"{name}"
-    if epoch:
-        nevra = f"{nevra}:{epoch}"
-
-    if version:
-        nevra = f"{nevra}-{version}"
-
-    if release:
-        nevra = f"{nevra}-{release}"
-
-    if arch:
-        nevra = f"{nevra}.{arch}"
-
     defaults = {
-        "description": description,
         "epoch": epoch,
         "namespace": namespace,
         "related_url": related_url,
@@ -282,5 +233,5 @@ def save_component(component: dict, parent: ComponentNode) -> bool:
     # Otherwise we could overwrite a value submitted from OpenLCS
     set_license_declared_safely(obj, license_declared_raw)
 
-    node, node_created = save_node(node_type, parent, obj)
+    node, node_created = save_node(ComponentNode.ComponentNodeType.PROVIDES, parent, obj)
     return created or node_created

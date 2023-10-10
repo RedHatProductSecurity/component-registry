@@ -67,6 +67,26 @@ def test_software_build_details(client, api_path, build_type):
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_software_build_by_product(client, api_path):
+    stream_a = ProductStreamFactory()
+    stream_b = ProductStreamFactory()
+    build_a = SoftwareBuildFactory()
+    build_b = SoftwareBuildFactory()
+    ProductComponentRelationFactory(product_ref=stream_a, software_build=build_a)
+    ProductComponentRelationFactory(product_ref=stream_b, software_build=build_b)
+
+    response = client.get(f"{api_path}/builds")
+    assert response.status_code == 200
+    assert response.json()["count"] == 2
+
+    response = client.get(f"{api_path}/builds?ofuri={stream_a.ofuri}")
+    assert response.status_code == 200
+    response_json = response.json()
+    assert response_json["count"] == 1
+    assert response_json["results"][0]["uuid"] == str(build_a.pk)
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 @pytest.mark.parametrize(
     "model, endpoint_name",
     [

@@ -372,6 +372,14 @@ class SoftwareBuildViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend, filters.SearchFilter]
     filterset_class = SoftwareBuildFilter
 
+    def list(self, request: Request, *args: tuple, **kwargs: dict) -> Response:
+        req = self.request
+        ofuri = req.query_params.get("ofuri")
+        if ofuri:
+            model, _ = get_model_ofuri_type(ofuri)
+            self.queryset = model.builds
+        return super().list(request)
+
 
 class ProductDataViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled until auth is added
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend, filters.SearchFilter]

@@ -34,6 +34,9 @@ def stored_proc(django_db_setup, django_db_blocker):
     """setup stored procedure"""
     # depends on corgi/core/migration/0092_install_stored_proc.py data migration
     stored_proc = importlib.import_module("corgi.core.migrations.0092_install_stored_proc")
+    updated_stored_proc = importlib.import_module(
+        "corgi.core.migrations.0094_fix_stored_proc_inactive_filter"
+    )
     with django_db_blocker.unblock():
         with connection.cursor() as c:
             c.execute("DROP FUNCTION if exists rpmvercmp;"),
@@ -41,7 +44,7 @@ def stored_proc(django_db_setup, django_db_blocker):
             c.execute("DROP FUNCTION if exists rpmvercmp_epoch;"),
             c.execute(stored_proc.RPMVERCMP_EPOCH_STOREDPROC_SQL),
             c.execute("DROP FUNCTION if exists get_latest_component;"),
-            c.execute(stored_proc.GET_LATEST_COMPONENT_STOREDPROC_SQL)
+            c.execute(updated_stored_proc.GET_LATEST_COMPONENT_STOREDPROC_SQL)
 
 
 def setup_product(version_name: str = "", stream_name: str = ""):

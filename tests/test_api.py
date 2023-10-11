@@ -451,6 +451,7 @@ def test_latest_components_by_streams_filter_with_multiple_products(client, api_
     # Report newest_component as the latest for the RHEL8 stream
     # Even though both have the same name / only one is latest overall
     assert response["results"][0]["nevra"] == newer_component.nevra
+    assert response["results"][1]["nevra"] == newest_component.nevra
 
     response = client.get(f"{api_path}/components?latest_components_by_streams=False")
     assert response.status_code == 200

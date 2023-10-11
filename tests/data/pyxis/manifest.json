@@ -6110,7 +6110,13 @@
           "copyright": null,
           "purl": "pkg:rpm/rhel/readline@8.1-4.el9?arch=x86_64&upstream=readline-8.1-4.el9.src.rpm&distro=rhel-9.2",
           "swid": null,
-          "external_references": null,
+          "external_references": [
+            {
+              "url": "https://bugzilla.redhat.com/",
+              "type": "issue-tracker",
+              "comment": null
+            }
+          ],
           "release_notes": null,
           "build_dependency": null,
           "properties": [
@@ -6165,7 +6171,18 @@
           "copyright": null,
           "purl": "pkg:rpm/rhel/redhat-release@9.2-0.13.el9?arch=x86_64&upstream=redhat-release-9.2-0.13.el9.src.rpm&distro=rhel-9.2",
           "swid": null,
-          "external_references": null,
+          "external_references": [
+            {
+              "url": "https://bugzilla.redhat.com/",
+              "type": "issue-tracker",
+              "comment": null
+            },
+            {
+              "url": "https://www.redhat.com/",
+              "type": "website",
+              "comment": null
+            }
+          ],
           "release_notes": null,
           "build_dependency": null,
           "properties": [

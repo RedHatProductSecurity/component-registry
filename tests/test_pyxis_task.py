@@ -48,5 +48,17 @@ def test_slow_fetch_pyxis_manifest(post, sca, taxonomy):
         == "USE-GARBAGE-DATA OR ELSE-WE-CANT-TEST"
     )
 
+    related_urls_for_rpms = (
+        Component.objects.filter(type=Component.Type.RPM)
+        .exclude(related_url="")
+        .values_list("related_url", flat=True)
+        .order_by("name")
+    )
+    assert len(related_urls_for_rpms) == 2
+    # readline specifies only an issue tracker, we just use the first ref
+    assert related_urls_for_rpms.first() == "https://bugzilla.redhat.com/"
+    # rhel-release specifies an issue-tracker and website, we prefer websites
+    assert related_urls_for_rpms.last() == "https://www.redhat.com/"
+
     sca.assert_called_once_with(str(software_build.uuid), force_process=False)
     taxonomy.assert_called_once_with(image_id, SoftwareBuild.Type.PYXIS)

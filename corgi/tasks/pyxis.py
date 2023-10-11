@@ -174,11 +174,16 @@ def save_component(component: dict, parent: ComponentNode) -> bool:
     if component_type not in Component.Type.values:
         raise ValueError(f"Tried to create component with invalid component_type: {component_type}")
 
-    # A related url can be only one of any number of externalReferences provided. Pick the first.
-    related_url = ""
-    for reference in component["external_references"] or []:
-        related_url = reference["url"]
-        break
+    # A related url can be only one of any number of externalReferences provided, prefer a website.
+    external_references = component["external_references"] or ()
+    for reference in external_references:
+        if reference["type"] == "website":
+            related_url = reference["url"]
+            break
+
+    # None of the references were a website, so just pick the first.
+    else:
+        related_url = external_references[0]["url"] if external_references else ""
 
     name = component.pop("name") or ""
     version = component.pop("version") or ""

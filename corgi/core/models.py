@@ -1089,7 +1089,9 @@ class ComponentQuerySet(models.QuerySet):
             # not when checking if there are components to manifest, since it's slow
             if ofuri:
                 roots = (
-                    roots.latest_components(model_type="ProductStream", ofuri=ofuri, include=True)
+                    roots.latest_components(
+                        model_type="ProductStream", ofuri=ofuri, include_inactive_streams=True
+                    )
                     .order_by("pk")
                     .distinct("pk")
                 )

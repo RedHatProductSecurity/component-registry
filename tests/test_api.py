@@ -1796,3 +1796,62 @@ def test_product_streams_exclude_components(client, api_path):
     assert response.status_code == 200
     response = response.json()
     assert response["exclude_components"] == ["starfish", "seahorse"]
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_latest_components_by_active_filter(client, api_path):
+    active_stream = ProductStreamFactory(active=True)
+    other_active_stream = ProductStreamFactory(active=True)
+    inactive_stream = ProductStreamFactory(active=False)
+
+    for active_name in "red", "orange":
+        new_srpm = SrpmComponentFactory(name=active_name)
+        new_srpm.productstreams.add(active_stream)
+        for arch in "aarch64", "x86_64":
+            new_binary_rpm = BinaryRpmComponentFactory(
+                name=active_name,
+                arch=arch,
+            )
+            new_binary_rpm.sources.add(new_srpm)
+            new_binary_rpm.productstreams.add(active_stream)
+
+    for active_name in "blue", "green":
+        new_srpm = SrpmComponentFactory(name=active_name)
+        new_srpm.productstreams.add(active_stream)
+        new_srpm.productstreams.add(other_active_stream)
+        for arch in "aarch64", "x86_64":
+            new_binary_rpm = BinaryRpmComponentFactory(
+                name=active_name,
+                arch=arch,
+            )
+            new_binary_rpm.sources.add(new_srpm)
+            new_binary_rpm.productstreams.add(active_stream)
+            new_binary_rpm.productstreams.add(other_active_stream)
+
+    for inactive_name in "purple", "pink":
+        inactive_component = BinaryRpmComponentFactory(
+            name=inactive_name,
+        )
+        inactive_component.productstreams.add(inactive_stream)
+
+    for both_name in "brown", "yellow":
+        both_component = BinaryRpmComponentFactory(
+            name=both_name,
+        )
+        both_component.productstreams.add(active_stream)
+        both_component.productstreams.add(inactive_stream)
+
+    response = client.get(f"{api_path}/components")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 16
+
+    response = client.get(f"{api_path}/components?active_streams=True")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 14
+
+    response = client.get(f"{api_path}/components?active_streams=False")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 2

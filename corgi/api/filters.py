@@ -120,6 +120,11 @@ class ComponentFilter(FilterSet):
         method="filter_gomod_components",
     )
 
+    active_streams = BooleanFilter(
+        label="Show components from active streams",
+        method="filter_active_streams",
+    )
+
     @staticmethod
     def filter_gomod_components(
         qs: QuerySet[Component], _name: str, value: bool
@@ -194,6 +199,16 @@ class ComponentFilter(FilterSet):
         # Truthy values return the filtered queryset (only latest components)
         # Falsey values return the excluded queryset (only older components)
         return queryset.latest_components_by_streams(include=value)
+
+    @staticmethod
+    def filter_active_streams(
+        queryset: ComponentQuerySet, _name: str, value: bool
+    ) -> QuerySet["Component"]:
+        """Show only components from active streams when True"""
+        if value in EMPTY_VALUES:
+            # User gave an empty ?param= so return the unfiltered queryset
+            return queryset
+        return queryset.active_streams(include=value)
 
 
 class ProductDataFilter(FilterSet):

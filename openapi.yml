@@ -301,6 +301,11 @@ paths:
       description: View for api/v1/components
       parameters:
       - in: query
+        name: active_streams
+        schema:
+          type: boolean
+        description: Show components from active streams
+      - in: query
         name: arch
         schema:
           type: string

@@ -537,7 +537,7 @@ def test_slow_fetch_pnc_sbom():
         "corgi.tasks.brew.slow_save_taxonomy.delay", wraps=slow_save_taxonomy
     ) as wrapped_save_taxonomy:
         with patch("requests.get", return_value=response) as get_mock:
-            slow_fetch_pnc_sbom(purl, product_config, build, sbom)
+            slow_fetch_pnc_sbom(purl, product_config, sbom)
             get_mock.assert_called_once_with(sbom["link"])
 
         wrapped_save_taxonomy.assert_called_once_with(build["id"], SoftwareBuild.Type.PNC)
@@ -575,7 +575,6 @@ def test_slow_fetch_pnc_sbom():
             slow_fetch_pnc_sbom(
                 complete_data["purl"],
                 complete_data["productConfig"]["errataTool"],
-                complete_data["build"],
                 complete_data["sbom"],
             )
 

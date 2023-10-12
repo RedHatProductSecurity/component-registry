@@ -381,7 +381,6 @@ def test_sbomer_handles_sbom_available():
             mock_fetch_sbom.assert_called_once_with(
                 test_data["msg"]["purl"],
                 test_data["msg"]["productConfig"]["errataTool"],
-                test_data["msg"]["build"],
                 test_data["msg"]["sbom"],
             )
 

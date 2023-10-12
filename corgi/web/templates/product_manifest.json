@@ -83,7 +83,7 @@
       "packageFileName": "NOASSERTION",
       "SPDXID": "SPDXRef-{{obj.uuid}}",
       "supplier": "Organization: Red Hat",
-      "versionInfo": "{% if obj.epoch %}{{obj.epoch|escapejs}}-{% endif %}{{obj.version|escapejs}}{% if obj.release %}-{{obj.release|escapejs}}{% endif %}"
+      "versionInfo": "{{obj.version}}"
     }{% endblock packages %}
 {% block relationships %}{% for component in released_components %}{% for node_purl, node_type, node_id in component.get_provides_nodes_queryset %}
     {

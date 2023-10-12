@@ -1,16 +1,15 @@
 import logging
-from collections.abc import Mapping
 from string import Template
-from typing import Any
 
-import requests
-import urllib3.util.retry
 from django.conf import settings
+from requests import Session
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 logger = logging.getLogger(__name__)
 
-session = requests.Session()
-retries = urllib3.util.retry.Retry(
+session = Session()
+retries = Retry(
     total=10,
     backoff_factor=1.0,
     status_forcelist=(408, 500, 502, 503, 504),
@@ -19,7 +18,7 @@ retries = urllib3.util.retry.Retry(
     # Response.raise_for_status.
     raise_on_status=False,
 )
-adapter = requests.adapters.HTTPAdapter(max_retries=retries)
+adapter = HTTPAdapter(max_retries=retries)
 session.mount("https://", adapter)
 
 
@@ -103,7 +102,7 @@ query = """{
 """
 
 
-def get_manifest_data(manifest_id: str, page_size: int = 50) -> Mapping[str, Any]:
+def get_manifest_data(manifest_id: str, page_size: int = 50) -> dict:
     """Pull a manifest from pyxis"""
 
     url = settings.PYXIS_GRAPHQL_URL
@@ -122,7 +121,7 @@ def get_manifest_data(manifest_id: str, page_size: int = 50) -> Mapping[str, Any
 
     has_more = True
     page = 0
-    components = []
+    components: list[dict] = []
     manifest = {}
     while has_more:
         variables = {"manifest_id": manifest_id, "page": page, "page_size": page_size}
@@ -134,8 +133,10 @@ def get_manifest_data(manifest_id: str, page_size: int = 50) -> Mapping[str, Any
         data = response.json()
         manifest = data["data"]["get_content_manifest"]["data"]
 
-        components_batch = manifest["edges"]["components"]["data"]
+        components_batch = manifest["edges"]["components"]["data"] or ()
         components.extend(components_batch)
+        # If there are fewer components on this page than the page size,
+        # this page must be the last page
         has_more = len(components_batch) == page_size
         page += 1
 

@@ -1,14 +1,14 @@
-import urllib.parse
-from collections.abc import Mapping
-from typing import Any, Optional
+from urllib.parse import parse_qs
 
 from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.conf import settings
+from django.db import transaction
 from django.utils import dateparse
 from django.utils.timezone import make_aware
 
 from config.celery import app
+from corgi.collectors.brew import Brew
 from corgi.collectors.pyxis import get_manifest_data
 from corgi.core.models import (
     Component,
@@ -16,7 +16,7 @@ from corgi.core.models import (
     ProductComponentRelation,
     SoftwareBuild,
 )
-from corgi.tasks.brew import slow_save_taxonomy
+from corgi.tasks.brew import save_node, set_license_declared_safely, slow_save_taxonomy
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 from corgi.tasks.sca import cpu_software_composition_analysis
 
@@ -38,10 +38,11 @@ def slow_fetch_pyxis_manifest(
     image_id = data["image"]["_id"]
 
     result = False
-    repositories = data["image"]["repositories"]
+    # Handle case when key is present but value is None
+    repositories = data["image"]["repositories"] or ()
     logger.info("Manifest %s is related to %i repositories", oid, len(repositories))
     for repository in repositories:
-        result = result or _slow_fetch_pyxis_manifest_for_repository(
+        result |= _slow_fetch_pyxis_manifest_for_repository(
             oid, image_id, repository, data, save_product, force_process
         )
     return result
@@ -50,13 +51,14 @@ def slow_fetch_pyxis_manifest(
 def _slow_fetch_pyxis_manifest_for_repository(
     oid: str,
     image_id: str,
-    repository: Mapping[str, Any],
-    manifest: Mapping[str, Any],
+    repository: dict,
+    manifest: dict,
     save_product: bool = True,
     force_process: bool = False,
 ) -> bool:
 
     # According to the PURL spec, the name part is the last fragment of the repository url
+    # TODO: This isn't right
     component_name = repository["repository"].split("/")[-1]
     repository_url = f"{repository['registry']}/{repository['repository']}"
     logger.info("Processing slow fetch of %s - %s", repository_url, component_name)
@@ -76,40 +78,36 @@ def _slow_fetch_pyxis_manifest_for_repository(
         build_id=image_id,
         build_type=SoftwareBuild.Type.PYXIS,
         defaults={
+            "completion_time": completion_dt,
             "name": component_name,
             "source": manifest["image"].get("source", ""),
             # Arbitrary dict can go here
             "meta_attr": {
                 "image_id": image_id,
-                "manifest_id": oid,
-                "repository": repository,
                 "incompleteness_reasons": manifest["incompleteness_reasons"],
+                "manifest_id": oid,
                 "org_id": manifest["org_id"],
-                "creation_date": manifest["creation_date"],
+                "repository": repository,
             },
         },
-        completion_time=completion_dt,
     )
-    if build_created:
-        # Create foreign key from Relations to the new SoftwareBuild, where they don't already exist
-        ProductComponentRelation.objects.filter(
-            build_id=image_id, build_type=SoftwareBuild.Type.PYXIS, software_build__isnull=True
-        ).update(software_build=softwarebuild)
+    # Create foreign key from Relations to the new SoftwareBuild, where they don't already exist
+    ProductComponentRelation.objects.filter(
+        build_id=softwarebuild.build_id,
+        build_type=softwarebuild.build_type,
+        software_build_id__isnull=True,
+    ).update(software_build_id=softwarebuild.pk)
 
     if not force_process and not build_created:
+        # TODO: We use singleton tasks, do we still need this logic?
         # If another task starts while this task is downloading data this can result in processing
         # the same build twice, let's just bail out here to save cpu
         logger.warning("SoftwareBuild with build_id %s already existed, not reprocessing", image_id)
         return False
 
     # Use the creation time of the manifest entry in pyxis as a monotonically increasing version
-    # identifier.  TODO once RHTAP-1590 completes, revisit this and parse the tag to get the version
-    dt = dateparse.parse_datetime(manifest["creation_date"].split(".")[0])
-    if dt:
-        creation_dt = make_aware(dt)
-    else:
-        raise ValueError(f"Could not parse creation_date for build {image_id}")
-    component_version = str(int(creation_dt.timestamp()))
+    # identifier. TODO once RHTAP-1590 completes, revisit this and parse the tag to get the version
+    component_version = str(int(completion_dt.timestamp()))
 
     root_node, root_created = save_container(
         softwarebuild, component_name, repository_url, component_version, manifest
@@ -120,7 +118,8 @@ def _slow_fetch_pyxis_manifest_for_repository(
         logger.info("Requesting persistance of node structure for %s", softwarebuild.pk)
         slow_save_taxonomy.delay(softwarebuild.build_id, softwarebuild.build_type)
 
-    if settings.SCA_ENABLED:
+    # TODO: manifest["image"]["source"] is not always present
+    if settings.SCA_ENABLED and softwarebuild.source:
         logger.info("Requesting software composition analysis for %s", softwarebuild.pk)
         cpu_software_composition_analysis.delay(str(softwarebuild.pk), force_process=force_process)
 
@@ -140,7 +139,7 @@ def save_container(
     component_name: str,
     repository_url: str,
     component_version: str,
-    manifest: Mapping[str, Any],
+    manifest: dict,
 ) -> tuple[ComponentNode, bool]:
     obj, root_created = Component.objects.update_or_create(
         type=Component.Type.CONTAINER_IMAGE,
@@ -159,71 +158,56 @@ def save_container(
     anything_else_created = False
 
     for component in manifest["edges"]["components"]["data"]:
-        save_component(component, root_node)
+        anything_else_created |= save_component(component, root_node)
 
     return root_node, (root_created or root_node_created or anything_else_created)
 
 
-def save_node(
-    node_type: str, parent: Optional[ComponentNode], related_component: Component
-) -> tuple[ComponentNode, bool]:
-    """Helper function that wraps ComponentNode creation"""
-    node, created = ComponentNode.objects.get_or_create(
-        type=node_type,
-        parent=parent,
-        purl=related_component.purl,
-        defaults={"obj": related_component},
-    )
-    return node, created
-
-
 def save_component(component: dict, parent: ComponentNode) -> bool:
-    logger.debug("Called save component with component %s", component)
-    purl = component["purl"]
+    """Save a component found in a Pyxis manifest"""
+    logger.debug(f"Called Pyxis save component with component: {component}")
+    purl = component.get("purl", "")
     if not purl:
-        logger.warning("Cannot process component with no purl (%s)", purl)
+        # We can't raise an error here, since some "components" are really products
+        # so this error is expected for certain data in the manifest
+        logger.warning(f"Cannot process component with no purl: {component}")
         return False
 
     if not purl.startswith("pkg:"):
         raise ValueError(f"Encountered unrecognized purl prefix {purl}")
-    component_type = purl[4:].split("/")[0]
+    component_type = purl[4:].split("/")[0].upper()
 
-    node_type = ComponentNode.ComponentNodeType.PROVIDES
-
-    # Map found type to Corgi TYPE or raise error
-    mapping = {
-        "rpm": Component.Type.RPM,
-        "golang": Component.Type.GOLANG,
-        "npm": Component.Type.NPM,
-        "gem": Component.Type.GEM,
-        "github": Component.Type.GITHUB,
-        "generic": Component.Type.GENERIC,
-        "maven": Component.Type.MAVEN,
-    }
-
-    if component_type in mapping:
-        component_type = mapping[component_type]
-    else:
+    if component_type not in Component.Type.values:
         raise ValueError(f"Tried to create component with invalid component_type: {component_type}")
 
-    # A related url can be only one of any number of externalReferences provided. Pick the first.
-    related_url = ""
-    for reference in component["external_references"] or []:
-        related_url = reference["url"]
-        break
+    # A related url can be only one of any number of externalReferences provided, prefer a website.
+    # Handle case when key is present but value is None
+    external_references = component.get("external_references", ()) or ()
+    for reference in external_references:
+        if reference["type"] == "website":
+            related_url = reference["url"]
+            break
+
+    # None of the references were a website, so just pick the first.
+    else:
+        related_url = external_references[0]["url"] if external_references else ""
 
     name = component.pop("name") or ""
     version = component.pop("version") or ""
+    # TODO: Is the data format of below correct?
     license_declared_raw = component.pop("licenses") or ""
 
     # Grab release from the syft properties if available
+    # Handle case when key is present but value is None
     release = ""
-    for prop in component["properties"]:
+    for prop in component.get("properties", ()) or ():
         if prop["name"] == "syft:metadata:release":
             release = prop["value"]
 
+    # Grab epoch from the syft properties if available
+    # Handle case when key is present but value is None
     epoch = 0
-    for prop in component["properties"]:
+    for prop in component.get("properties", ()) or ():
         if prop["name"] == "syft:metadata:epoch":
             epoch = int(prop["value"])
 
@@ -231,51 +215,41 @@ def save_component(component: dict, parent: ComponentNode) -> bool:
     arch = "noarch"
     if "?" in purl:
         querystring = purl.split("?")[-1]
-        values = urllib.parse.parse_qs(querystring)
+        values = parse_qs(querystring)
+        # Names may have multiple values if a parameter appears more than once
+        # e.g. ?arch=1&arch=2, so just take the first value if there are multiple
+        # or else default to "noarch" if the "arch" parameter isn't present
         arch = values.get("arch", [arch])[0]
 
-    description = ""
-
-    if component.pop("publisher", "") == "Red Hat, Inc.":
-        namespace = Component.Namespace.REDHAT
-    else:
-        namespace = Component.Namespace.UPSTREAM
-
-    nevra = f"{name}"
-    if epoch:
-        nevra = f"{nevra}:{epoch}"
-
-    if version:
-        nevra = f"{nevra}-{version}"
-
-    if release:
-        nevra = f"{nevra}-{release}"
-
-    if arch:
-        nevra = f"{nevra}.{arch}"
-
     defaults = {
-        "description": description,
         "epoch": epoch,
-        "namespace": namespace,
+        "namespace": Brew.check_red_hat_namespace(
+            component_type, version, component.pop("publisher", "")
+        ),
         "related_url": related_url,
     }
 
-    obj, created = Component.objects.update_or_create(
-        type=component_type,
-        name=name,
-        version=version,
-        release=release,
-        arch=arch,
-        defaults=defaults,
-        license_declared_raw=license_declared_raw,
-    )
+    with transaction.atomic():
+        obj, created = Component.objects.update_or_create(
+            type=component_type,
+            name=name,
+            version=version,
+            release=release,
+            arch=arch,
+            defaults=defaults,
+        )
 
-    # Save the remaining attributes
-    props = component.pop("properties", [])
-    props = dict([(prop["name"], prop["value"]) for prop in props])
-    obj.meta_attr = obj.meta_attr | component | props
-    obj.save()
+        # Save the remaining attributes without transforming them or losing data
+        # Handle case when key is present but value is None
+        props = component.pop("properties", ()) or ()
+        props = {"pyxis_properties": props}
+        obj.meta_attr |= component | props
+        obj.save()
 
-    node, node_created = save_node(node_type, parent, obj)
+    # Wait until after transaction so obj lookup / atomic update succeeds
+    # We don't set this above in case the value from Pyxis is empty
+    # Otherwise we could overwrite a value submitted from OpenLCS
+    set_license_declared_safely(obj, license_declared_raw)
+
+    node, node_created = save_node(ComponentNode.ComponentNodeType.PROVIDES, parent, obj)
     return created or node_created

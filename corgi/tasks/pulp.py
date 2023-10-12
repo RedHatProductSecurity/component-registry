@@ -22,7 +22,7 @@ logger = get_task_logger(__name__)
 
 @app.task(
     base=Singleton,
-    autorety_for=RETRYABLE_ERRORS,
+    autoretry_for=RETRYABLE_ERRORS,
     retry_kwargs=RETRY_KWARGS,
     soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
 )

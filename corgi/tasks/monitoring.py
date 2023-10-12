@@ -13,8 +13,7 @@ from django_celery_results.models import TaskResult
 
 from config.celery import app
 from config.utils import running_dev
-
-from .common import get_last_success_for_task
+from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS, get_last_success_for_task
 
 logger = get_task_logger(__name__)
 
@@ -135,7 +134,7 @@ def email_failed_tasks():
     ).send()
 
 
-@app.task(base=Singleton)
+@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def expire_task_results():
     """Delete task results older than 30 days.
 

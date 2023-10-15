@@ -925,7 +925,9 @@ class ComponentQuerySet(models.QuerySet):
                 .using("read_only")
             )
         if ofuri:
-            components = components.filter(productstreams__ofuri=ofuri).using("read_only")
+            components = (
+                components.filter(productstreams__ofuri=ofuri).distinct().using("read_only")
+            )
 
         latest_components_uuids = set(
             components.values("name", "namespace")

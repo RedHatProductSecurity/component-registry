@@ -5,7 +5,7 @@ from typing import Any, Type, Union
 import django_filters.rest_framework
 from django.conf import settings
 from django.db import connections
-from django.db.models import QuerySet, Value
+from django.db.models import QuerySet
 from django.http import Http404
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
@@ -52,7 +52,6 @@ from .serializers import (
     AppStreamLifeCycleSerializer,
     ChannelSerializer,
     ComponentListSerializer,
-    ComponentProductStreamSummarySerializer,
     ComponentSerializer,
     ProductSerializer,
     ProductStreamSerializer,
@@ -567,33 +566,10 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
     filterset_class = ComponentFilter
 
     def get_queryset(self) -> QuerySet[Component]:
-        # 'latest' and 'root components' filter automagically turn on
-        # when the ofuri parameter is given
-        # We should remove this parameter and rely on standard Django filters instead
-        ofuri = self.request.query_params.get("ofuri")
-        if not ofuri:
-            return self.queryset
-
-        model, model_type = get_model_ofuri_type(ofuri)
-        if isinstance(model, Product):
-            components_for_model = self.queryset.filter(products__ofuri=ofuri)
-        elif isinstance(model, ProductVersion):
-            components_for_model = self.queryset.filter(productversions__ofuri=ofuri)
-        elif isinstance(model, ProductStream):
-            components_for_model = self.queryset.filter(productstreams__ofuri=ofuri)
-        elif isinstance(model, ProductVariant):
-            components_for_model = self.queryset.filter(productvariants__ofuri=ofuri)
-        else:
-            # No matching model instance found, or invalid ofuri
-            raise Http404
-        return components_for_model.root_components().latest_components(
-            model_type=model_type,
-            ofuri=ofuri,
-        )
+        return self.queryset
 
     @extend_schema(
         parameters=[
-            OpenApiParameter("ofuri", OpenApiTypes.STR, OpenApiParameter.QUERY),
             OpenApiParameter("view", OpenApiTypes.STR, OpenApiParameter.QUERY),
             OpenApiParameter("purl", OpenApiTypes.STR, OpenApiParameter.QUERY),
         ]
@@ -606,25 +582,6 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         view = request.query_params.get("view")
         purl = request.query_params.get("purl")
         if not purl:
-            if view == "product":
-                component_name = self.request.query_params.get("name", "")
-                product_streams_arr = []
-                for c in (
-                    self.get_queryset()
-                    .filter(name=component_name)
-                    .prefetch_related("productstreams")
-                ):
-                    annotated_ps_qs = c.productstreams.annotate(component_purl=Value(c.purl)).using(
-                        "read_only"
-                    )
-                    product_streams_arr.append(annotated_ps_qs)
-
-                ps_qs = ProductStream.objects.none()
-                productstreams = ps_qs.union(*product_streams_arr).using("read_only")
-                serializer = ComponentProductStreamSummarySerializer(
-                    productstreams, many=True, read_only=True
-                )
-                return Response({"count": productstreams.count(), "results": serializer.data})
             if view == "summary":
                 self.serializer_class = ComponentListSerializer
             return super().list(request)

@@ -981,7 +981,9 @@ class ComponentQuerySet(models.QuerySet):
                 .using("read_only")
             )
         if not (include_inactive_streams):
-            components = components.filter(productstreams__active=True).using("read_only")
+            components = (
+                components.filter(productstreams__active=True).distinct().using("read_only")
+            )
         product_stream_ofuris = set(
             (
                 components.values_list("productstreams__ofuri", flat=True)

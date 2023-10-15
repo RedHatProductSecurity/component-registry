@@ -4,7 +4,17 @@ from django.core.validators import EMPTY_VALUES
 from django.db.models import QuerySet
 from django_filters.rest_framework import BooleanFilter, CharFilter, Filter, FilterSet
 
-from corgi.core.models import Channel, Component, ComponentQuerySet, SoftwareBuild
+from corgi.api.serializers import get_model_ofuri_type
+from corgi.core.models import (
+    Channel,
+    Component,
+    ComponentQuerySet,
+    Product,
+    ProductStream,
+    ProductVersion,
+    ProductVariant,
+    SoftwareBuild,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +78,9 @@ class ComponentFilter(FilterSet):
     tags = TagFilter()
 
     # User gave a filter like ?ofuri= in URL, assume they wanted a stream
-    ofuri = CharFilter(field_name="productstreams", lookup_expr="ofuri")
+    ofuri = CharFilter(
+        method="filter_ofuri_components", label="Show only latest root components of product"
+    )
     products = CharFilter(method="filter_ofuri_or_name")
     product_versions = CharFilter(field_name="productversions", method="filter_ofuri_or_name")
     product_streams = CharFilter(field_name="productstreams", method="filter_ofuri_or_name")
@@ -209,6 +221,30 @@ class ComponentFilter(FilterSet):
             # User gave an empty ?param= so return the unfiltered queryset
             return queryset
         return queryset.active_streams(include=value)
+
+    @staticmethod
+    def filter_ofuri_components(
+        queryset: QuerySet[Component], name: str, value: str
+    ) -> QuerySet["Component"]:
+        """'latest' and 'root components' filter automagically turn on
+        when the ofuri parameter is provided"""
+        if value in EMPTY_VALUES:
+            return queryset
+        model, model_type = get_model_ofuri_type(value)
+        if isinstance(model, Product):
+            components_for_model = queryset.filter(products__ofuri=value)
+        elif isinstance(model, ProductVersion):
+            components_for_model = queryset.filter(productversions__ofuri=value)
+        elif isinstance(model, ProductStream):
+            components_for_model = queryset.filter(productstreams__ofuri=value)
+        elif isinstance(model, ProductVariant):
+            components_for_model = queryset.filter(productvariants__ofuri=value)
+        else:
+            components_for_model = queryset
+        return components_for_model.root_components().latest_components(
+            model_type=model_type,
+            ofuri=value,
+        )
 
 
 class ProductDataFilter(FilterSet):

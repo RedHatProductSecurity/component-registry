@@ -402,6 +402,7 @@ paths:
         name: ofuri
         schema:
           type: string
+        description: Show only latest root components of product
       - in: query
         name: product_streams
         schema:

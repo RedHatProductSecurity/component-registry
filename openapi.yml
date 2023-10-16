@@ -424,6 +424,10 @@ paths:
         schema:
           type: string
       - in: query
+        name: provides_name
+        schema:
+          type: string
+      - in: query
         name: purl
         schema:
           type: string
@@ -440,6 +444,10 @@ paths:
         schema:
           type: string
       - in: query
+        name: re_provides_name
+        schema:
+          type: string
+      - in: query
         name: re_purl
         schema:
           type: string
@@ -448,7 +456,15 @@ paths:
         schema:
           type: string
       - in: query
+        name: re_sources_name
+        schema:
+          type: string
+      - in: query
         name: re_upstreams
+        schema:
+          type: string
+      - in: query
+        name: re_upstreams_name
         schema:
           type: string
       - in: query
@@ -480,6 +496,10 @@ paths:
         schema:
           type: string
       - in: query
+        name: sources_name
+        schema:
+          type: string
+      - in: query
         name: tags
         schema:
           type: integer
@@ -501,6 +521,10 @@ paths:
           - RPMMOD
       - in: query
         name: upstreams
+        schema:
+          type: string
+      - in: query
+        name: upstreams_name
         schema:
           type: string
       - in: query

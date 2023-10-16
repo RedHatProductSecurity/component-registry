@@ -11,8 +11,8 @@ from corgi.core.models import (
     ComponentQuerySet,
     Product,
     ProductStream,
-    ProductVersion,
     ProductVariant,
+    ProductVersion,
     SoftwareBuild,
 )
 
@@ -89,14 +89,20 @@ class ComponentFilter(FilterSet):
 
     # Normally we are interested in retrieving provides,sources or upstreams of a specific component
     sources = CharFilter(lookup_expr="purl")
+    sources_name = CharFilter(field_name="sources", lookup_expr="name")
     provides = CharFilter(lookup_expr="purl")
+    provides_name = CharFilter(field_name="provides", lookup_expr="name")
     upstreams = CharFilter(lookup_expr="purl")
+    upstreams_name = CharFilter(field_name="upstreams", lookup_expr="name")
     downstreams = CharFilter(lookup_expr="purl")
 
     # otherwise use regex to match provides,sources or upstreams purls
     re_sources = CharFilter(field_name="sources", lookup_expr="purl__iregex")
+    re_sources_name = CharFilter(field_name="sources", lookup_expr="name__iregex")
     re_provides = CharFilter(field_name="provides", lookup_expr="purl__iregex")
+    re_provides_name = CharFilter(field_name="provides", lookup_expr="name__iregex")
     re_upstreams = CharFilter(field_name="upstreams", lookup_expr="purl__iregex")
+    re_upstreams_name = CharFilter(field_name="upstreams", lookup_expr="name__iregex")
     re_downstreams = CharFilter(field_name="downstreams", lookup_expr="purl__iregex")
 
     el_match = CharFilter(label="RHEL version for layered products", lookup_expr="icontains")

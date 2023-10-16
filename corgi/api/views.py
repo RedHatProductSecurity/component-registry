@@ -566,8 +566,8 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
     filterset_class = ComponentFilter
 
     def get_queryset(self) -> QuerySet[Component]:
-        # we always want a distinct result from REST API
-        return self.queryset.distinct()
+        # ensure we always return distinct set of components from REST API and enforce a common sort
+        return self.queryset.order_by("name").distinct()
 
     @extend_schema(
         parameters=[

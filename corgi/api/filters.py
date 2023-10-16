@@ -145,7 +145,7 @@ class ComponentFilter(FilterSet):
 
     @staticmethod
     def filter_gomod_components(
-        qs: QuerySet[Component], _name: str, value: bool
+        qs: ComponentQuerySet, _name: str, value: bool
     ) -> QuerySet[Component]:
         """Show only GOLANG components that are Go modules, and hide Go packages"""
         # TODO: Probably should be added to ComponentQuerySet instead of here
@@ -165,7 +165,7 @@ class ComponentFilter(FilterSet):
 
     @staticmethod
     def filter_ofuri_or_name(
-        queryset: QuerySet[Component], name: str, value: str
+        queryset: ComponentQuerySet, name: str, value: str
     ) -> QuerySet[Component]:
         """Filter some field by a ProductModel subclass's ofuri
         Or else by a name, depending on the user's input"""
@@ -230,7 +230,7 @@ class ComponentFilter(FilterSet):
 
     @staticmethod
     def filter_ofuri_components(
-        queryset: QuerySet[Component], name: str, value: str
+        queryset: ComponentQuerySet, name: str, value: str
     ) -> QuerySet["Component"]:
         """'latest' and 'root components' filter automagically turn on
         when the ofuri parameter is provided"""
@@ -238,16 +238,14 @@ class ComponentFilter(FilterSet):
             return queryset
         model, model_type = get_model_ofuri_type(value)
         if isinstance(model, Product):
-            components_for_model = queryset.filter(products__ofuri=value)
+            queryset = queryset.filter(products__ofuri=value)
         elif isinstance(model, ProductVersion):
-            components_for_model = queryset.filter(productversions__ofuri=value)
+            queryset = queryset.filter(productversions__ofuri=value)
         elif isinstance(model, ProductStream):
-            components_for_model = queryset.filter(productstreams__ofuri=value)
+            queryset = queryset.filter(productstreams__ofuri=value)
         elif isinstance(model, ProductVariant):
-            components_for_model = queryset.filter(productvariants__ofuri=value)
-        else:
-            components_for_model = queryset
-        return components_for_model.root_components().latest_components(
+            queryset = queryset.filter(productvariants__ofuri=value)
+        return queryset.root_components().latest_components(
             model_type=model_type,
             ofuri=value,
         )

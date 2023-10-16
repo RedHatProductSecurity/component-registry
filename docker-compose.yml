@@ -107,7 +107,11 @@ services:
       timeout: "3s"
       retries: 3
     volumes:
+      # Mount local source files in the container so file changes do not require container respins. But, ignore
+      # the venv directory so that locally installed (using local paths) dependencies don't clash with
+      # the container-specific virtual environment.
       - .:/opt/app-root/src:z
+      - /opt/app-root/src/venv/
 
   corgi-monitor:
     container_name: corgi-monitor
@@ -124,6 +128,7 @@ services:
     # TODO: add healthcheck
     volumes:
       - .:/opt/app-root/src:z
+      - /opt/app-root/src/venv/
 
   corgi-celery-beat:
     container_name: corgi-celery-beat
@@ -141,6 +146,7 @@ services:
     # TODO: add healthcheck
     volumes:
       - .:/opt/app-root/src:z
+      - /opt/app-root/src/venv/
 
   corgi-celery-fast:
     deploy:
@@ -158,6 +164,7 @@ services:
     # TODO: add healthcheck
     volumes:
       - .:/opt/app-root/src:z
+      - /opt/app-root/src/venv/
 
   corgi-celery-slow:
     deploy:
@@ -176,6 +183,7 @@ services:
     # TODO: add healthcheck
     volumes:
       - .:/opt/app-root/src:z
+      - /opt/app-root/src/venv/
 
   corgi-celery-cpu:
     deploy:
@@ -194,6 +202,7 @@ services:
     # TODO: add healthcheck
     volumes:
       - .:/opt/app-root/src:z
+      - /opt/app-root/src/venv/
 
   flower:
     container_name: corgi-flower
@@ -213,6 +222,7 @@ services:
       - "5555:9455"
     volumes:
       - .:/opt/app-root/src:z
+      - /opt/app-root/src/venv/
 
 volumes:
   corgi-pg-data:

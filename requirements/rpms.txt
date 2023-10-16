@@ -8,13 +8,10 @@ krb5-devel
 krb5-workstation
 # For psycopg2 compilation - postgresql-devel is just an alias of below
 libpq-devel
-openldap-devel
 # Dependency for SSL support in the python-qpid-proton Python package
 openssl
 openssl-devel
-python39
-python39-devel
-python39-pip
-python39-setuptools
-python39-wheel
+python3.11
+python3.11-devel
+python3.11-pip
 https://github.com/anchore/syft/releases/download/v0.74.1/syft_0.74.1_linux_amd64.rpm

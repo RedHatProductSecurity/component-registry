@@ -9,6 +9,7 @@ from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
+from django.contrib.postgres.indexes import GinIndex
 from django.db import models
 from django.db.models import Q, QuerySet
 from django.db.models.expressions import F, Func, Value
@@ -1262,6 +1263,12 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
                 fields=("uuid", "name", "namespace", "software_build_id", "type", "arch"),
                 name="compon_latest_idx",
                 condition=ROOT_COMPONENTS_CONDITION,
+            ),
+            # requires btree_gin and pg_trgm postgres extensions enabled (which are
+            # by default enabled in stage/prod)
+            GinIndex(
+                fields=["name"],
+                name="compon_search_name",
             ),
         )
 

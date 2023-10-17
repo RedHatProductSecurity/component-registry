@@ -1,4 +1,4 @@
-FROM registry.redhat.io/ubi8/ubi
+FROM registry.redhat.io/ubi9/ubi:9.2
 
 ARG PIP_INDEX_URL="https://pypi.org/simple"
 ENV PYTHONUNBUFFERED=1 \
@@ -26,10 +26,25 @@ RUN dnf --nodocs -y install --setopt install_weak_deps=false $(grep '^[^#]' ./re
 
 COPY ./requirements ./requirements
 
+# Create a virtual env and activate it (by setting the necessary env vars) so python3 points to
+# python3.11 within the venv (otherwise we'd have to update all uses of python3 to python3.11).
+ENV VIRTUAL_ENV=/opt/app-root/src/venv
+RUN python3.11 -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
 # Install Python package dependencies from requirements file passed in PIP_REQUIREMENT (local
-# docker-compose may override this in the build step).
-ARG PIP_REQUIREMENT="./requirements/base.txt"
-RUN python3.9 -m pip install -r "${PIP_REQUIREMENT}"
+# docker-compose overrides this in the build step). First, install build dependencies of the gssapi
+# package and use no build isolation in the pip install step to prevent these errors:
+#
+# In --require-hashes mode, all requirements must have their versions pinned with ==
+#
+# which are caused by the gssapi package not specifying hashes for its build dependencies:
+# https://github.com/pythongssapi/python-gssapi/blob/b15b1394/pyproject.toml#LL3C5-L3C33
+# Using build isolation would try to install those deps in a separate ephemeral venv where they
+# would be installed without hashes, causing the entire pip install command to fail.
+RUN python3 -m pip install -r requirements/gssapi_build.txt
+ARG PIP_REQUIREMENT="requirements/base.txt"
+RUN python3 -m pip install --no-build-isolation
 
 # Limit copied files to only the ones required to run the app
 COPY ./files/krb5.conf /etc

@@ -2,6 +2,7 @@ import logging
 
 from django.core.validators import EMPTY_VALUES
 from django.db.models import QuerySet
+from django.http import Http404
 from django_filters.rest_framework import BooleanFilter, CharFilter, Filter, FilterSet
 
 from corgi.api.serializers import get_model_ofuri_type
@@ -245,6 +246,9 @@ class ComponentFilter(FilterSet):
             queryset = queryset.filter(productstreams__ofuri=value)
         elif isinstance(model, ProductVariant):
             queryset = queryset.filter(productvariants__ofuri=value)
+        else:
+            # No matching model instance found, or invalid ofuri
+            raise Http404
         return queryset.root_components().latest_components(
             model_type=model_type,
             ofuri=value,

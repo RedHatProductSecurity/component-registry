@@ -1264,19 +1264,6 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
                 name="compon_latest_idx",
                 condition=ROOT_COMPONENTS_CONDITION,
             ),
-            # requires btree_gin and pg_trgm postgres extensions enabled (which are
-            # by default enabled in stage/prod)
-            # these enable fast searching of name and purl (esp for re_provides and re_upstreams)
-            GinIndex(
-                fields=["name"],
-                name="compon_search_name",
-                opclasses=["gin_trgm_ops"],
-            ),
-            GinIndex(
-                fields=["purl"],
-                name="compon_search_purl",
-                opclasses=["gin_trgm_ops"],
-            ),
         )
 
     def __str__(self) -> str:

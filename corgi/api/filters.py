@@ -98,13 +98,15 @@ class ComponentFilter(FilterSet):
     downstreams = CharFilter(lookup_expr="purl")
 
     # otherwise use regex to match provides,sources or upstreams purls
-    re_sources = CharFilter(field_name="sources", lookup_expr="purl__iregex")
-    re_sources_name = CharFilter(field_name="sources", lookup_expr="name__iregex")
-    re_provides = CharFilter(field_name="provides", lookup_expr="purl__iregex")
-    re_provides_name = CharFilter(field_name="provides", lookup_expr="name__iregex")
-    re_upstreams = CharFilter(field_name="upstreams", lookup_expr="purl__iregex")
-    re_upstreams_name = CharFilter(field_name="upstreams", lookup_expr="name__iregex")
-    re_downstreams = CharFilter(field_name="downstreams", lookup_expr="purl__iregex")
+    re_sources = CharFilter(field_name="sources", lookup_expr="purl__iregex", distinct=True)
+    re_sources_name = CharFilter(field_name="sources", lookup_expr="name__iregex", distinct=True)
+    re_provides = CharFilter(field_name="provides", lookup_expr="purl__iregex", distinct=True)
+    re_provides_name = CharFilter(field_name="provides", lookup_expr="name__iregex", distinct=True)
+    re_upstreams = CharFilter(field_name="upstreams", lookup_expr="purl__iregex", distinct=True)
+    re_upstreams_name = CharFilter(
+        field_name="upstreams", lookup_expr="name__iregex", distinct=True
+    )
+    re_downstreams = CharFilter(field_name="downstreams", lookup_expr="purl__iregex", distinct=True)
 
     el_match = CharFilter(label="RHEL version for layered products", lookup_expr="icontains")
     released_components = BooleanFilter(

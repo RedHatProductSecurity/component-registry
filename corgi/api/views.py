@@ -565,10 +565,6 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend, filters.SearchFilter]
     filterset_class = ComponentFilter
 
-    def get_queryset(self) -> QuerySet[Component]:
-        # ensure we always return distinct set of components from REST API
-        return self.queryset.distinct()
-
     @extend_schema(
         parameters=[
             OpenApiParameter("view", OpenApiTypes.STR, OpenApiParameter.QUERY),

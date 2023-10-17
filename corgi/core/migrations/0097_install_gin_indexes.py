@@ -7,7 +7,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("core", "0095_clean_rpmlint_invalid_syft_deps"),
+        ("core", "0096_fix_nevra_formatting"),
     ]
 
     operations = [

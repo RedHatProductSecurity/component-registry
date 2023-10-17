@@ -1949,3 +1949,14 @@ def test_re_provides_upstreams_names(setup_gin_extension, client, api_path):
     assert response.status_code == 200
     response = response.json()
     assert response["count"] == 2
+
+    response = client.get(f"{api_path}/components?re_purl=oci/root_c")
+    assert response.status_code == 200
+    response = response.json()
+    assert "pkg:oci/root_comp?tag=" in response["results"][0]["purl"]
+    assert response["count"] == 1
+
+    response = client.get(f"{api_path}/components?provides={quote(root_comp.purl)}")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 1

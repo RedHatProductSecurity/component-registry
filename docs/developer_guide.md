@@ -4,7 +4,7 @@
 
 Install and activate a Python virtual environment:
 ```bash
-> python3.9 -m venv venv  # Create Python virtual environment
+> python3.11 -m venv venv  # Create Python virtual environment
 > echo "export CORGI_REDIS_URL='redis://localhost:6379'  # This allows running celery inspect commands in a local shell" >> venv/bin/activate
 > source venv/bin/activate  # Enable virtual env
 > pip install pip-tools  # Install pip-tools

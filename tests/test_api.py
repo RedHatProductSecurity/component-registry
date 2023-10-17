@@ -1949,4 +1949,3 @@ def test_re_provides_upstreams_names(setup_gin_extension, client, api_path):
     assert response.status_code == 200
     response = response.json()
     assert response["count"] == 2
-

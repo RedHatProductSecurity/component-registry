@@ -1630,15 +1630,21 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         return self.type == Component.Type.RPM and self.arch == "src"
 
     def get_nvr(self) -> str:
+        # Many GOLANG components don't have a version or release set
+        # so don't return an oddly formatted NVR, like f"{name}-"
+        version = f"-{self.version}" if self.version else ""
         release = f"-{self.release}" if self.release else ""
-        return f"{self.name}-{self.version}{release}"
+        return f"{self.name}{version}{release}"
 
     def get_nevra(self) -> str:
         epoch = f":{self.epoch}" if self.epoch else ""
+        # Many GOLANG components don't have a version or release set
+        # so don't return an oddly formatted NEVRA, like f"{name}-.{arch}"
+        version = f"-{self.version}" if self.version else ""
         release = f"-{self.release}" if self.release else ""
         arch = f".{self.arch}" if self.arch else ""
 
-        return f"{self.name}{epoch}-{self.version}{release}{arch}"
+        return f"{self.name}{epoch}{version}{release}{arch}"
 
     def _build_repo_url_for_type(self) -> str:
         """Get an upstream repo URL based on a purl"""

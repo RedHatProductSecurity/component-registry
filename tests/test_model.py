@@ -99,21 +99,43 @@ def test_cpes():
 
 
 def test_nevra():
+    """Test that NEVRAs are formatted properly for certain known edge-cases"""
     for component_type in Component.Type.values:
         no_release = ComponentFactory(
             name=component_type, release="", version="1", type=component_type
         )
+        assert "-." not in no_release.nevra
         assert not no_release.nvr.endswith("-")
         package_url = PackageURL.from_string(no_release.purl)
+
         # container images get their purl version from the digest value, not version & release
         if component_type == Component.Type.CONTAINER_IMAGE:
             assert not package_url.qualifiers["tag"].endswith("-")
         else:
             assert not package_url.version.endswith("-")
-        # epoch is a property of Component which retrieves the value for meta_attr
-        no_epoch_or_arch = ComponentFactory(name=component_type, arch="", type=component_type)
+
+        no_epoch_or_arch = ComponentFactory(
+            name=component_type, epoch=0, arch="", type=component_type
+        )
         assert ":" not in no_epoch_or_arch.nevra
         assert not no_epoch_or_arch.nevra.endswith("-")
+        assert not no_epoch_or_arch.nevra.endswith(".")
+
+        no_version_or_release = ComponentFactory(
+            name=component_type, version="", release="", type=component_type
+        )
+        assert "-." not in no_version_or_release.nevra
+        assert not no_version_or_release.nvr.endswith("-")
+        package_url = PackageURL.from_string(no_version_or_release.purl)
+
+        if component_type == Component.Type.CONTAINER_IMAGE:
+            assert package_url.qualifiers.get("tag") is None
+        elif component_type == Component.Type.RPMMOD:
+            # RPMMOD with no version and no release gives "::" in its purl
+            # We don't care, since all modules have at least a version / don't hit this bug
+            assert package_url.version == "::"
+        else:
+            assert package_url.version is None
 
 
 def test_product_taxonomic_queries():

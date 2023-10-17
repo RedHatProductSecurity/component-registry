@@ -81,6 +81,6 @@ def filter_response(response):
 
 
 @pytest.fixture(autouse=True)
-def setup_db(request):
+def setup_gin_extension(request):
     BtreeGinExtension(),
     TrigramExtension(),

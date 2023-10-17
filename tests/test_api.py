@@ -1855,3 +1855,98 @@ def test_latest_components_by_active_filter(client, api_path):
     assert response.status_code == 200
     response = response.json()
     assert response["count"] == 2
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_re_provides_upstreams_names(setup_gin_extension, client, api_path):
+    """
+    Given an OCI component node structure:
+    /
+    └──(SOURCE) root_comp: top level root component
+        ├──(SOURCE) upstream_comp
+        └──(PROVIDES) dep1_comp
+            └──(PROVIDES) dep2_comp
+
+    The following are expectations in terms of sources, providers and upstreams on these components:
+
+    +--------------------+---------+----------+-----------+
+    |                    | sources | provides | upstreams |
+    +--------------------+---------+----------+-----------+
+    | root_component     | 0       | 2        | 1         |
+    +--------------------+---------+----------+-----------+
+    | upstream_component | 0       | 0        | 0         |
+    +--------------------+---------+----------+-----------+
+    | dep1_component     | 1       | 1        | 0         |
+    +--------------------+---------+----------+-----------+
+    | dep2_component     | 2       | 0        | 0         |
+    +--------------------+---------+----------+-----------+
+
+    The data model does not impose this constraint
+    eg. provides, sources and upstream property queries enforce this behaviour.
+
+    """
+
+    # create a top level root source component
+    root_comp = ComponentFactory(
+        name="root_comp",
+        type=Component.Type.CONTAINER_IMAGE,
+        arch="noarch",
+        namespace=Component.Namespace.REDHAT,
+        related_url="https://example.org/related",
+    )
+    root_node = ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        obj=root_comp,
+    )
+
+    # create upstream child node
+    upstream_comp = ComponentFactory(
+        name="upstream_comp",
+        type=Component.Type.RPM,
+        namespace=Component.Namespace.UPSTREAM,
+        related_url="https://example.org/related",
+    )
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=root_node,
+        obj=upstream_comp,
+    )
+
+    # create dep component
+    dep_comp = ComponentFactory(
+        name="cool_dep_component",
+        arch="src",
+        type=Component.Type.RPM,
+        namespace=Component.Namespace.REDHAT,
+    )
+    # make it a child of root OCI component
+    dep_provide_node = ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.PROVIDES,
+        parent=root_node,
+        obj=dep_comp,
+    )
+    # create 2nd level dep
+    dep2_comp = ComponentFactory(
+        name="cool_dep2_component",
+        type=Component.Type.RPM,
+        arch="aarch64",
+        namespace=Component.Namespace.REDHAT,
+    )
+    # making it a child node of dep1_component
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.PROVIDES,
+        parent=dep_provide_node,
+        obj=dep2_comp,
+    )
+
+    response = client.get(f"{api_path}/components")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 4
+
+    response = client.get(f"{api_path}/components?re_name=cool")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 2
+

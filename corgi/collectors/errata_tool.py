@@ -262,13 +262,6 @@ class ErrataTool:
         shipped_live = errata_type_details[0]["status"] == "SHIPPED_LIVE"
         return erratum_id, shipped_live
 
-    def get_builds_for_errata(self, errata_id: int) -> list[int]:
-        build_ids = set()
-        for variant in self.get_erratum_components(str(errata_id)).values():
-            for component in variant:
-                build_ids.update(component.keys())
-        return list(build_ids)
-
     def _parse_module(
         self,
         module_name: str,

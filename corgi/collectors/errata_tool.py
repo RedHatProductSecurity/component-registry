@@ -215,6 +215,11 @@ class ErrataTool:
 
         return dict(variant_to_component_map)
 
+    @staticmethod
+    def _get_url_by_erratum_type(erratum_id: str, is_rpm: bool) -> str:
+        endpoint = "builds_list.json" if is_rpm else "builds"
+        return f"api/v1/erratum/{erratum_id}/{endpoint}"
+
     def save_variant_cdn_repo_mapping(self):
         """Fetches all existing Errata Tool Variants and the CDN repos they are configured with.
 
@@ -315,3 +320,44 @@ class ErrataTool:
                 product_versions.append(data)
             product["product_versions"] = product_versions
         return products
+
+    def get_errata_matching_variants(
+        self, product_variants: list[str], container_only: bool = False
+    ) -> set[str]:
+        """Given a list of variants in a single ET product, find all errata shipping builds to those
+        variants"""
+        if not product_variants:
+            return set()
+        product_ids = set()
+        for et_variant in CollectorErrataProductVariant.objects.filter(name__in=product_variants):
+            variant_version = et_variant.product_version
+            if variant_version:
+                product_ids.add(variant_version.product.et_id)
+        # make sure there is only 1 product id for the given variants
+        if len(product_ids) > 1:
+            raise ValueError(f"Variants had more than 1 product id. Found: {product_ids}")
+
+        product_id = product_ids.pop()
+        logger.info(f"Searching shipped errata for product with id {product_id}")
+        # Unfortunately we can't use the variant id directly here
+        search_values = f"show_state_SHIPPED_LIVE=1&product[]={product_id}"
+        if container_only:
+            search_values += "&content_type[]=docker"
+        product_errata = self.get_paged(
+            f"api/v1/erratum/search?{search_values}",
+            page_data_attr="data",
+        )
+
+        all_errata: set[str] = set()
+        for erratum in product_errata:
+            logger.info(f"Found shipped erratum {erratum['id']}")
+            is_rpm = "rpm" in erratum["content_types"]
+            builds = self.get(self._get_url_by_erratum_type(erratum["id"], is_rpm))
+            for product_version in builds.values():
+                for build in product_version["builds"]:
+                    for _, build_data in build.items():
+                        for variant in build_data["variant_arch"].keys():
+                            if variant in product_variants:
+                                logger.info(f"Found variant {variant} in {erratum['id']}")
+                                all_errata.add(str(erratum["id"]))
+        return all_errata

@@ -330,15 +330,7 @@ def _parse_cpes_from_brew_tags(
         logger.debug(f"Found brew tags {brew_tags} in product stream: {stream_name}")
         cpes: set[str] = set()
         for brew_tag in brew_tags.keys():
-            # Also match brew tags in prod_defs with those from ET
-            # When ingesting products from ET to the Collectors models we strip -candidate as well
-            trimmed_brew_tag = brew_tag.removesuffix(BREW_TAG_CANDIDATE_SUFFIX)
-            # Brew tags in ET often have -candidate suffixes but switches them
-            # to released ones once that build is attached to an erratum and released.
-            trimmed_brew_tag = trimmed_brew_tag.removesuffix("-released")
-            # This is a special case for 'rhaos-4-*` brew tags which don't have the -container
-            # suffix in ET, but do have that suffix in product_definitions
-            sans_container_released = brew_tag.removesuffix("-container-released")
+            trimmed_brew_tag, sans_container_released = brew_tag_to_et_prefixes(brew_tag)
             brew_tag_cpes = CollectorErrataProductVersion.objects.filter(
                 brew_tags__overlap=[trimmed_brew_tag, sans_container_released],
                 variants__cpe__isnull=False,
@@ -347,6 +339,16 @@ def _parse_cpes_from_brew_tags(
         return list(cpes)
     else:
         return []
+
+
+def brew_tag_to_et_prefixes(brew_tag: str) -> tuple[str, str]:
+    """Match brew tags in prod_defs with those from ET by reducing them to common prefixes"""
+    trimmed_brew_tag = brew_tag.removesuffix(BREW_TAG_CANDIDATE_SUFFIX)
+    trimmed_brew_tag = trimmed_brew_tag.removesuffix("-released")
+    # This is a special case for 'rhaos-4-*` brew tags which don't have the -container
+    # suffix in ET, but do have that suffix in product_definitions
+    sans_container_released = brew_tag.removesuffix("-container-released")
+    return trimmed_brew_tag, sans_container_released
 
 
 def parse_errata_info(

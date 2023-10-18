@@ -82,5 +82,6 @@ def filter_response(response):
 
 @pytest.fixture(autouse=True)
 def setup_gin_extension(request):
+    """Setup pg gin and trigram extensions. Note: not required for tests to pass."""
     BtreeGinExtension(),
     TrigramExtension(),

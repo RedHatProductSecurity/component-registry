@@ -1939,6 +1939,9 @@ def test_re_provides_upstreams_names(setup_gin_extension, client, api_path):
         parent=dep_provide_node,
         obj=dep2_comp,
     )
+    root_comp.save_component_taxonomy()
+    dep_comp.save_component_taxonomy()
+    dep2_comp.save_component_taxonomy()
 
     response = client.get(f"{api_path}/components")
     assert response.status_code == 200
@@ -1956,7 +1959,47 @@ def test_re_provides_upstreams_names(setup_gin_extension, client, api_path):
     assert "pkg:oci/root_comp?tag=" in response["results"][0]["purl"]
     assert response["count"] == 1
 
-    response = client.get(f"{api_path}/components?provides={quote(root_comp.purl)}")
+    response = client.get(f"{api_path}/components?sources={quote(root_comp.purl)}")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 2
+
+    response = client.get(f"{api_path}/components?re_sources=root_")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 2
+
+    response = client.get(f"{api_path}/components?re_sources_name=root_")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 2
+
+    response = client.get(f"{api_path}/components?provides={quote(dep_comp.purl)}")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 1
+
+    response = client.get(f"{api_path}/components?re_provides=dep_")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 1
+
+    response = client.get(f"{api_path}/components?re_provides_name=dep")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 2
+
+    response = client.get(f"{api_path}/components?upstreams={quote(upstream_comp.purl)}")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 1
+
+    response = client.get(f"{api_path}/components?re_upstreams=stream_")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 1
+
+    response = client.get(f"{api_path}/components?re_upstreams_name=upstream_")
     assert response.status_code == 200
     response = response.json()
     assert response["count"] == 1

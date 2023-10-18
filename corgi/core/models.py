@@ -925,7 +925,7 @@ class ComponentQuerySet(models.QuerySet):
                 .using("read_only")
             )
         if ofuri:
-            components = components.filter(productstreams__ofuri=ofuri).using("read_only")
+            components = components.filter(productstreams__ofuri=ofuri).distinct()
 
         latest_components_uuids = set(
             components.values("name", "namespace")
@@ -981,7 +981,9 @@ class ComponentQuerySet(models.QuerySet):
                 .using("read_only")
             )
         if not (include_inactive_streams):
-            components = components.filter(productstreams__active=True).using("read_only")
+            components = (
+                components.filter(productstreams__active=True).distinct().using("read_only")
+            )
         product_stream_ofuris = set(
             (
                 components.values_list("productstreams__ofuri", flat=True)
@@ -1259,6 +1261,9 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
                 name="compon_latest_idx",
                 condition=ROOT_COMPONENTS_CONDITION,
             ),
+            # setting gin indexes with gin_trgm_ops does not work when define here
+            # django Component model indexes - so we set them manually in
+            # corgi/core/migrations/0096_install_gin_indexes.py
         )
 
     def __str__(self) -> str:

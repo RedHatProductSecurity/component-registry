@@ -2,9 +2,20 @@ import logging
 
 from django.core.validators import EMPTY_VALUES
 from django.db.models import QuerySet
+from django.http import Http404
 from django_filters.rest_framework import BooleanFilter, CharFilter, Filter, FilterSet
 
-from corgi.core.models import Channel, Component, ComponentQuerySet, SoftwareBuild
+from corgi.api.serializers import get_model_ofuri_type
+from corgi.core.models import (
+    Channel,
+    Component,
+    ComponentQuerySet,
+    Product,
+    ProductStream,
+    ProductVariant,
+    ProductVersion,
+    SoftwareBuild,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +79,9 @@ class ComponentFilter(FilterSet):
     tags = TagFilter()
 
     # User gave a filter like ?ofuri= in URL, assume they wanted a stream
-    ofuri = CharFilter(field_name="productstreams", lookup_expr="ofuri")
+    ofuri = CharFilter(
+        method="filter_ofuri_components", label="Show only latest root components of product"
+    )
     products = CharFilter(method="filter_ofuri_or_name")
     product_versions = CharFilter(field_name="productversions", method="filter_ofuri_or_name")
     product_streams = CharFilter(field_name="productstreams", method="filter_ofuri_or_name")
@@ -77,15 +90,23 @@ class ComponentFilter(FilterSet):
 
     # Normally we are interested in retrieving provides,sources or upstreams of a specific component
     sources = CharFilter(lookup_expr="purl")
+    sources_name = CharFilter(field_name="sources", lookup_expr="name")
     provides = CharFilter(lookup_expr="purl")
+    provides_name = CharFilter(field_name="provides", lookup_expr="name")
     upstreams = CharFilter(lookup_expr="purl")
+    upstreams_name = CharFilter(field_name="upstreams", lookup_expr="name")
     downstreams = CharFilter(lookup_expr="purl")
 
     # otherwise use regex to match provides,sources or upstreams purls
-    re_sources = CharFilter(field_name="sources", lookup_expr="purl__iregex")
-    re_provides = CharFilter(field_name="provides", lookup_expr="purl__iregex")
-    re_upstreams = CharFilter(field_name="upstreams", lookup_expr="purl__iregex")
-    re_downstreams = CharFilter(field_name="downstreams", lookup_expr="purl__iregex")
+    re_sources = CharFilter(field_name="sources", lookup_expr="purl__iregex", distinct=True)
+    re_sources_name = CharFilter(field_name="sources", lookup_expr="name__iregex", distinct=True)
+    re_provides = CharFilter(field_name="provides", lookup_expr="purl__iregex", distinct=True)
+    re_provides_name = CharFilter(field_name="provides", lookup_expr="name__iregex", distinct=True)
+    re_upstreams = CharFilter(field_name="upstreams", lookup_expr="purl__iregex", distinct=True)
+    re_upstreams_name = CharFilter(
+        field_name="upstreams", lookup_expr="name__iregex", distinct=True
+    )
+    re_downstreams = CharFilter(field_name="downstreams", lookup_expr="purl__iregex", distinct=True)
 
     el_match = CharFilter(label="RHEL version for layered products", lookup_expr="icontains")
     released_components = BooleanFilter(
@@ -127,7 +148,7 @@ class ComponentFilter(FilterSet):
 
     @staticmethod
     def filter_gomod_components(
-        qs: QuerySet[Component], _name: str, value: bool
+        qs: ComponentQuerySet, _name: str, value: bool
     ) -> QuerySet[Component]:
         """Show only GOLANG components that are Go modules, and hide Go packages"""
         # TODO: Probably should be added to ComponentQuerySet instead of here
@@ -147,7 +168,7 @@ class ComponentFilter(FilterSet):
 
     @staticmethod
     def filter_ofuri_or_name(
-        queryset: QuerySet[Component], name: str, value: str
+        queryset: ComponentQuerySet, name: str, value: str
     ) -> QuerySet[Component]:
         """Filter some field by a ProductModel subclass's ofuri
         Or else by a name, depending on the user's input"""
@@ -209,6 +230,31 @@ class ComponentFilter(FilterSet):
             # User gave an empty ?param= so return the unfiltered queryset
             return queryset
         return queryset.active_streams(include=value)
+
+    @staticmethod
+    def filter_ofuri_components(
+        queryset: ComponentQuerySet, name: str, value: str
+    ) -> QuerySet["Component"]:
+        """'latest' and 'root components' filter automagically turn on
+        when the ofuri parameter is provided"""
+        if value in EMPTY_VALUES:
+            return queryset
+        model, model_type = get_model_ofuri_type(value)
+        if isinstance(model, Product):
+            queryset = queryset.filter(products__ofuri=value)
+        elif isinstance(model, ProductVersion):
+            queryset = queryset.filter(productversions__ofuri=value)
+        elif isinstance(model, ProductStream):
+            queryset = queryset.filter(productstreams__ofuri=value)
+        elif isinstance(model, ProductVariant):
+            queryset = queryset.filter(productvariants__ofuri=value)
+        else:
+            # No matching model instance found, or invalid ofuri
+            raise Http404
+        return queryset.root_components().latest_components(
+            model_type=model_type,
+            ofuri=value,
+        )
 
 
 class ProductDataFilter(FilterSet):

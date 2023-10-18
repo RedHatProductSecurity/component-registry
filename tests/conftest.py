@@ -1,6 +1,7 @@
 import importlib
 
 import pytest
+from django.contrib.postgres.operations import BtreeGinExtension, TrigramExtension
 from django.db import connection
 from rest_framework.test import APIClient
 
@@ -77,3 +78,10 @@ def filter_response(response):
     response["headers"].pop("Set-Cookie", None)
     response["headers"].pop("x-ausername", None)
     return response
+
+
+@pytest.fixture(autouse=True)
+def setup_gin_extension(request):
+    """Setup pg gin and trigram extensions. Note: not required for tests to pass."""
+    BtreeGinExtension(),
+    TrigramExtension(),

@@ -65,10 +65,17 @@ class SbomerSbom:
             # License info
             licenses = []
             for _license in component.get("licenses", ()):
-                if _license["license"].get("id"):
-                    licenses.append(_license["license"].get("id"))
-                if _license["license"].get("name"):
-                    licenses.append(_license["license"].get("name"))
+                # Licenses may be either listed individually or
+                # as an SPDX license string
+                if "expression" in _license:  # SPDX string
+                    licenses.append(_license["expression"])
+                elif "license" in _license:  # Individual license
+                    if _license["license"].get("id"):
+                        licenses.append(_license["license"].get("id"))
+                    if _license["license"].get("name"):
+                        licenses.append(_license["license"].get("name"))
+                else:  # bomref
+                    raise NotImplementedError("Unsupported license type in SBOMer manifest")
 
             component["licenses"] = licenses
 

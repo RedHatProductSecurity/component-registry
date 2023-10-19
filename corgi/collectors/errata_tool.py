@@ -148,12 +148,13 @@ class ErrataTool:
             # CORGI-648 the value can be null
             if not cpe:
                 cpe = ""
+            # Allow variants to update their et_id, see CORGI-867
             et_product_variant, created = CollectorErrataProductVariant.objects.update_or_create(
-                et_id=variant["id"],
+                name=attributes.pop("name"),
                 defaults={
                     "cpe": cpe,
                     "product_version": et_product_version,
-                    "name": variant["attributes"]["name"],
+                    "et_id": variant["id"],
                     "meta_attr": attributes,
                 },
             )

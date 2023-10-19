@@ -44,7 +44,6 @@ copy the URLs needed to run tests from the internal Gitlab server's CI variables
 ```bash
 # Internal hostnames or URLs that appear in build metadata; used in tests
 export CORGI_APP_INTERFACE_URL
-export CORGI_TEST_DOWNLOAD_URL=https://download.example.com
 export CORGI_PULP_URL=https://rhsm-pulp.example.com/pulp
 # Not used in tests directly, but needed for tests to pass
 export CORGI_BREW_URL=https://koji.fedoraproject.org/kojihub

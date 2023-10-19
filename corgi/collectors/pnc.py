@@ -40,10 +40,15 @@ class SbomerSbom:
             # build info
             if "supplier" in component and component["supplier"].get("name") == "Red Hat":
                 component["namespace"] = Component.Namespace.REDHAT
+                # Build URL info for Red Hat internal build systems is in the format
+                # { "comment": "pnc-build-id",
+                #   "url": "https://pnc-url.redhat.com/pnc-rest/v2/builds/XXXXXXXX",
+                #   "type": "build-system" }
+                # External build systems may be missing one or more of these parameters
                 build_urls = {
                     ref["comment"]: ref["url"]
                     for ref in component.get("externalReferences", {})
-                    if ref["type"] == "build-system"
+                    if ("comment" in ref and "url" in ref and ref["type"] == "build-system")
                 }
 
                 if "pnc-build-id" in build_urls:

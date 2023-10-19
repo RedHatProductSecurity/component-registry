@@ -1,4 +1,5 @@
 from collections import defaultdict
+from copy import deepcopy
 from unittest.mock import call, patch
 
 import pytest
@@ -10,6 +11,7 @@ from corgi.collectors.models import (
     CollectorErrataProduct,
     CollectorErrataProductVariant,
     CollectorErrataProductVersion,
+    CollectorErrataRelease,
     CollectorRPMRepository,
 )
 from corgi.core.constants import MODEL_NODE_LEVEL_MAPPING
@@ -33,6 +35,40 @@ from .factories import (
     ProductVariantFactory,
     SoftwareBuildFactory,
 )
+
+RELEASE_1659_DATA = {
+    "id": 1659,
+    "attributes": {
+        "name": "3SCALE-3SCALE API MANAGEMENT 2.12.0-RHEL-7",
+        "default_brew_tag": "3scale-3scale API Management 2.12.0-rhel-7-candidate",
+    },
+    "brew_tags": [
+        "3scale-3scale API Management 2.12.0-rhel-7-candidate",
+        "3scale-3scale API Management 2.12.0-rhel-7-container-candidate",
+        "3scale-3scale API Management 2.12.0-rhel-7-candidate",
+    ],
+    "relationships": {
+        "sig_key": {"id": 8, "name": "redhatrelease2"},
+        "container_sig_key": {"id": 8, "name": "redhatrelease2"},
+    },
+}
+
+RELEASE_1660_DATA = {
+    "id": 1660,
+    "attributes": {
+        "name": "3SCALE-3SCALE API MANAGEMENT 2.12.0-RHEL-8",
+        "default_brew_tag": "3scale-3scale API Management 2.12.0-rhel-8-candidate",
+    },
+    "brew_tags": [
+        "3scale-3scale API Management 2.12.0-rhel-8-candidate",
+        "3scale-3scale API Management 2.12.0-rhel-8-container-candidate",
+        "3scale-3scale API Management 2.12.0-rhel-8-candidate",
+    ],
+    "relationships": {
+        "sig_key": {"id": 8, "name": "redhatrelease2"},
+        "container_sig_key": {"id": 8, "name": "redhatrelease2"},
+    },
+}
 
 pytestmark = [pytest.mark.unit, pytest.mark.django_db]
 
@@ -482,3 +518,180 @@ def test_invalid_errtaum_details(requests_mock):
         )
     with pytest.raises(ValueError):
         ErrataTool().get_errata_key_details("123456")
+
+
+def test_strip_brew_tag_candidate_suffixes():
+    brew_tags = ["some-tag", "other-tag-candidate"]
+    expected = ["some-tag", "other-tag"]
+    result: list[str] = ErrataTool.strip_brew_tag_candidate_suffixes(brew_tags)
+    assert expected == result
+
+
+def test_get_products_and_version(monkeypatch):
+    def product_data(path):
+        return [
+            {
+                "id": 176,
+                "type": "products",
+                "attributes": {"name": "3scale"},
+                "relationships": {"product_versions": [{"id": 1659}, {"id": 1660}]},
+            }
+        ]
+
+    def product_version_data(path):
+        if "1659" in path:
+            return {"data": RELEASE_1659_DATA}
+        elif "1660" in path:
+            return {"data": RELEASE_1660_DATA}
+
+    et = ErrataTool()
+    monkeypatch.setattr(et, "get_paged", product_data)
+    monkeypatch.setattr(et, "get", product_version_data)
+    results = et.get_products_and_versions()
+    assert "product_versions" in results[0]
+    assert "product_versions" not in results[0]["relationships"].keys()
+    assert results[0]["product_versions"][0]["id"] == 1659
+    assert results[0]["product_versions"][1]["id"] == 1660
+
+
+def test_load_products_and_versions(monkeypatch):
+    products_and_versions = [
+        {
+            "id": 176,
+            "type": "products",
+            "attributes": {"name": "3scale", "short_name": "3scale"},
+            "relationships": {},
+            "product_versions": [
+                RELEASE_1659_DATA,
+                RELEASE_1660_DATA,
+            ],
+        }
+    ]
+
+    et = ErrataTool()
+    et.load_products_and_versions(products_and_versions)
+    product = CollectorErrataProduct.objects.first()
+    assert product
+    assert product.et_id == 176
+    assert product.name == "3scale"
+    assert CollectorErrataProductVersion.objects.count() == 2
+    first_version = CollectorErrataProductVersion.objects.first()
+    assert first_version.product == product
+    assert first_version.name == "3SCALE-3SCALE API MANAGEMENT 2.12.0-RHEL-7"
+    expected_brew_tags = [
+        "3scale-3scale API Management 2.12.0-rhel-7",
+        "3scale-3scale API Management " "2.12.0-rhel-7-container",
+        "3scale-3scale API Management 2.12.0-rhel-7",
+    ]
+    assert first_version.brew_tags == expected_brew_tags
+    assert "attributes", "relationships" in first_version.meta_attr
+
+
+def test_load_releases():
+    product = CollectorErrataProduct.objects.create(et_id=125, name="3scale")
+    product_version = CollectorErrataProductVersion.objects.create(
+        et_id=632, name="RHEL-7-3scale-AMP-2.0", product=product
+    )
+    releases = [
+        {
+            "id": 680,
+            "type": "releases",
+            "attributes": {
+                "name": "3scale API Management 2.0",
+                "is_active": True,
+                "enabled": True,
+                "enable_batching": False,
+                "is_async": True,
+                "is_silent": False,
+            },
+            "relationships": {
+                "brew_tags": [{"id": 1037, "name": "3scale-amp-2.0-rhel-7-candidate"}],
+                "product": {"id": 125, "short_name": "3scale API Management"},
+                "product_versions": [{"id": 632, "name": "RHEL-7-3scale-AMP-2.0"}],
+                "state_machine_rule_set": {"id": 1, "name": "Default"},
+            },
+        }
+    ]
+    et = ErrataTool()
+    et.load_releases(releases)
+    release_20 = CollectorErrataRelease.objects.get(name="3scale API Management 2.0")
+    assert release_20.et_id == 680
+    assert release_20.enabled
+    assert release_20.brew_tags == ["3scale-amp-2.0-rhel-7"]
+    assert product_version in release_20.product_versions.get_queryset()
+
+    # Missing product versions this time
+    releases = [
+        {
+            "id": 1567,
+            "type": "releases",
+            "attributes": {
+                "name": "3scale API Management 2.12",
+                "is_active": True,
+                "enabled": True,
+                "is_deferred": False,
+                "zstream_target_release": None,
+                "notify_bugzilla_about_release_status": False,
+                "is_silent": False,
+            },
+            "relationships": {
+                "brew_tags": [],
+                "product": {"id": 125, "short_name": "3scale API Management"},
+                "product_versions": [
+                    {"id": 1678, "name": "3SCALE-2.12-RHEL-8"},
+                    {"id": 1679, "name": "3SCALE-2.12-RHEL-7"},
+                ],
+                "state_machine_rule_set": None,
+            },
+        }
+    ]
+    et = ErrataTool()
+    et.load_releases(releases)
+    release_212 = CollectorErrataRelease.objects.get(name="3scale API Management 2.12")
+    assert not release_212.product_versions.count()
+
+
+def test_load_variants():
+    variants = [
+        {
+            "id": 2594,
+            "type": "variants",
+            "attributes": {
+                "name": "11Server-11.4.SLES-SAT-TOOLS-6.5",
+                "description": "Satellite Tools 6.5 (v. 11sp4 SLES Server)",
+                "cpe": "cpe:/a:redhat:sles_satellite_tools:6.5::sles11",
+                "override_ftp_base_folder": None,
+                "enabled": True,
+                "buildroot": False,
+                "tps_stream": "None",
+                "relationships": {
+                    "product": {
+                        "id": 107,
+                        "name": "Red Hat Satellite Tools",
+                        "short_name": "SAT-TOOLS",
+                    },
+                    "product_version": {"id": 1060, "name": "SAT-TOOLS-6.5-SLES-11.4"},
+                    "rhel_release": {"id": 98, "name": "SLES-11"},
+                    "rhel_variant": {"id": 2594, "name": "11Server-11.4.SLES-SAT-TOOLS-6.5"},
+                    "push_targets": [{"id": 7, "name": "cdn_stage"}, {"id": 4, "name": "cdn"}],
+                },
+            },
+        }
+    ]
+    et = ErrataTool()
+    copy_of_variants = deepcopy(variants)
+    et.load_variants(variants)
+    variant = CollectorErrataProductVariant.objects.first()
+    assert not variant.product_version
+
+    # This time create the linked product variant
+    product = CollectorErrataProduct.objects.create(et_id=107, name="Red Hat Satellite Tools")
+    product_version = CollectorErrataProductVersion.objects.create(
+        et_id=1060, name="SAT-TOOLS-6.5-SLES-11.4", product=product
+    )
+    copy_of_variants[0]["id"] = 2595
+    copy_of_variants[0]["attributes"]["name"] = "Some other variant"
+    et.load_variants(copy_of_variants)
+    variant = CollectorErrataProductVariant.objects.get(et_id=2595)
+    assert variant.name == "Some other variant"
+    assert product_version == variant.product_version

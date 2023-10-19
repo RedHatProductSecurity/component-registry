@@ -55,19 +55,27 @@ class ErrataTool:
             else:
                 break
 
-    def load_et_products(self):
+    def load_et_products(self) -> None:
+        self.load_products()
+        self.load_product_versions()
+        self.load_releases()
+        self.load_variants()
+
+    def load_products(self) -> None:
         products = self.get_paged("api/v1/products", page_data_attr="data")
         for product in products:
+            product_versions = product["relationships"].pop("product_versions")
             et_product, created = CollectorErrataProduct.objects.update_or_create(
-                et_id=product["id"],
+                et_id=product.pop("id"),
                 defaults={
-                    "name": product["attributes"]["name"],
-                    "short_name": product["attributes"]["short_name"],
+                    "name": product["attributes"].pop("name"),
+                    "short_name": product["attributes"].pop("short_name"),
+                    "meta_attr": product,
                 },
             )
             if created:
-                logger.info("Created ET Product: %s", et_product.short_name)
-            for product_version in product["relationships"]["product_versions"]:
+                logger.info(f"Created ET Product: {et_product.short_name}")
+            for product_version in product_versions:
                 (
                     et_product_version,
                     created,
@@ -76,15 +84,26 @@ class ErrataTool:
                     defaults={"name": product_version["name"], "product": et_product},
                 )
                 if created:
-                    logger.info("Created ET ProductVersion: %s", et_product_version.name)
+                    logger.info(f"Created ET ProductVersion: {et_product_version.name}")
+
+    def load_product_versions(self) -> None:
         for pv in CollectorErrataProductVersion.objects.get_queryset():
             pv_details = self.get(f"api/v1/products/{pv.product.et_id}/product_versions/{pv.et_id}")
-            brew_tags = [t.removesuffix("-candidate") for t in pv_details["data"]["brew_tags"]]
+            pv_detail_data = pv_details["data"]
+            brew_tags = [t.removesuffix("-candidate") for t in pv_detail_data.pop("brew_tags")]
+            update = False
             if pv.brew_tags != brew_tags:
+                update = True
                 pv.brew_tags = brew_tags
+                logger.info(f"Updated Product Version {pv.name} Brew Tags to {pv.brew_tags}")
+            if pv.meta_attr != pv_detail_data:
+                update = True
+                pv.meta_attr = pv_detail_data
+                print(f"Updated Product Version {pv.name} meta_attr")
+            if update:
                 pv.save()
-                logger.info("Updated Product Version %s Brew Tags to %s", pv.name, pv.brew_tags)
 
+    def load_releases(self) -> None:
         releases = self.get_paged("api/v1/releases", page_data_attr="data")
         for release in releases:
             attributes = release["attributes"]
@@ -111,18 +130,21 @@ class ErrataTool:
             )
             release.product_versions.set(product_versions)
 
+    def load_variants(self) -> None:
         variants = self.get_paged("api/v1/variants", page_data_attr="data")
         for variant in variants:
-            product_version_id = variant["attributes"]["relationships"]["product_version"]["id"]
+            attributes = variant["attributes"]
+            product_version = attributes["relationships"].pop("product_version")
+            product_version_id = product_version["id"]
             try:
                 et_product_version = CollectorErrataProductVersion.objects.get(
                     et_id=product_version_id
                 )
             except CollectorErrataProductVersion.DoesNotExist:
-                logger.warning("Did not find product version with id %s", product_version_id)
+                logger.warning(f"Did not find product version with id {product_version_id}")
                 continue
 
-            cpe = variant["attributes"]["cpe"]
+            cpe = attributes.pop("cpe", "")
             # CORGI-648 the value can be null
             if not cpe:
                 cpe = ""
@@ -132,10 +154,11 @@ class ErrataTool:
                     "cpe": cpe,
                     "product_version": et_product_version,
                     "name": variant["attributes"]["name"],
+                    "meta_attr": attributes,
                 },
             )
             if created:
-                logger.info("Created ET Product Variant: %s", et_product_variant.name)
+                logger.info(f"Created ET Product Variant: {et_product_variant.name}")
 
     def get_erratum_components(self, erratum_id: str):
         """Fetch components attached to erratum and index by their Variant.

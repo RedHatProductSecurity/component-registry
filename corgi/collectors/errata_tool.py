@@ -12,6 +12,7 @@ from corgi.collectors.models import (
     CollectorErrataProduct,
     CollectorErrataProductVariant,
     CollectorErrataProductVersion,
+    CollectorErrataRelease,
 )
 from corgi.core.models import SoftwareBuild
 
@@ -83,6 +84,32 @@ class ErrataTool:
                 pv.brew_tags = brew_tags
                 pv.save()
                 logger.info("Updated Product Version %s Brew Tags to %s", pv.name, pv.brew_tags)
+
+        releases = self.get_paged("api/v1/releases", page_data_attr="data")
+        for release in releases:
+            attributes = release["attributes"]
+            name = attributes.pop("name")
+            relationships = release.pop("relationships")
+            release, created = CollectorErrataRelease.objects.update_or_create(
+                et_id=release.pop("id"),
+                name=name,
+                defaults={
+                    "is_active": attributes.pop("is_active"),
+                    "enabled": attributes.pop("enabled"),
+                    "brew_tags": relationships.pop("brew_tags"),
+                    "meta_attr": attributes,
+                },
+            )
+            if created:
+                logger.info(f"Created ET Release: {name}")
+
+            product_version_ids = []
+            for product_version in relationships["product_versions"]:
+                product_version_ids.append(product_version["id"])
+            product_versions = CollectorErrataProductVersion.objects.filter(
+                et_id__in=product_version_ids
+            )
+            release.product_versions.set(product_versions)
 
         variants = self.get_paged("api/v1/variants", page_data_attr="data")
         for variant in variants:

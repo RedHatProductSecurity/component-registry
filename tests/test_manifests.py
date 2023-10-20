@@ -210,7 +210,7 @@ def test_product_manifest_excludes_unreleased_components(stored_proc):
     manifest = json.loads(stream.manifest)
 
     # No released components linked to this product
-    num_components = len(stream.components.manifest_components())
+    num_components = len(stream.components.manifest_components(ofuri=stream.ofuri))
     assert num_components == 0
 
     num_provided = len(stream.provides_queryset)
@@ -272,7 +272,9 @@ def test_manifest_no_duplicate_released_components():
 
     unique_components = set()
 
-    for purl in stream.components.manifest_components().values_list("purl", flat=True):
+    for purl in stream.components.manifest_components(ofuri=stream.ofuri).values_list(
+        "purl", flat=True
+    ):
         assert purl not in unique_components
         unique_components.add(purl)
 

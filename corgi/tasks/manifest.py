@@ -37,7 +37,7 @@ def cpu_update_ps_manifest(product_stream: str):
     # file has been modified before obtaining the updated copy.
     # collectstatic does not modify a file in staticfiles directory if it
     # hasn't been updated in outputfiles.
-    if ps.components.manifest_components(quick=True).exists():
+    if ps.components.manifest_components(quick=True, ofuri=ps.ofuri).exists():
         logger.info(f"Generating manifest for {product_stream}")
         with open(f"{settings.STATIC_ROOT}/{product_stream}-{ps.pk}.json", "w") as fh:
             fh.write(ps.manifest)

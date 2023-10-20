@@ -1716,8 +1716,12 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         if self.type == Component.Type.RPM:
             # Filenames for non-RPM components are set with data from build system / meta_attr
             self.filename = f"{self.nevra}.rpm"
-        purl = self.get_purl()
-        self.purl = purl.to_string()
+
+        purl = self.get_purl().to_string()
+        if self.purl != purl:
+            self.purl = purl
+        self.cnodes.exclude(purl=purl).update(purl=purl)
+
         self.related_url = self._build_repo_url_for_type()
 
         # generate el_match field needed for filter

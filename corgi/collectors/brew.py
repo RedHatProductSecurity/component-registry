@@ -391,8 +391,12 @@ class Brew:
         if publisher == "Red Hat, Inc.":
             # Components from Pyxis manifests may specify a publisher
             return Component.Namespace.REDHAT
-        elif component_type == Component.Type.RPM:
-            # RPMs are always built at Red Hat
+        elif component_type in (
+            Component.Type.RPM,
+            Component.Type.RPMMOD,
+            Component.Type.CONTAINER_IMAGE,
+        ):
+            # RPMs, modules, and containers are always built at Red Hat
             return Component.Namespace.REDHAT
         elif component_type == Component.Type.MAVEN and "redhat" in version:
             # .redhat or -redhat in the version string indicate this Maven component

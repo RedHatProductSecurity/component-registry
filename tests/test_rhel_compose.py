@@ -83,15 +83,67 @@ def test_get_builds(mock_fetch_rhel_module, mock_slow_fetch_brew_build):
 def test_fetch_compose_build(mock_fetch_brew):
     modular_rpm = _set_up_rhel_compose()
     slow_fetch_modular_build(module_build_id)
+
     module_obj = Component.objects.get(type=Component.Type.RPMMOD)
-    assert module_obj
-    assert module_obj.nvr == modular_rpm.rhel_module.first().nvr
+    assert module_obj.nvr == modular_rpm.rhel_module.get().nvr
     assert module_obj.cnodes.count() == 1
+
     modular_rpm_obj = Component.objects.get(type=Component.Type.RPM)
-    assert modular_rpm_obj
     assert not modular_rpm_obj.software_build
     assert modular_rpm.nvra == f"{modular_rpm_obj.nvr}.{modular_rpm_obj.arch}"
-    assert mock_fetch_brew.called_with(srpm_build_id)
+    assert mock_fetch_brew.called_once_with(srpm_build_id)
+
+
+@pytest.mark.django_db
+@patch("corgi.tasks.brew.slow_fetch_brew_build.delay")
+def test_updated_module_node_purl_generation(mock_fetch_brew):
+    """Test that purls on RPM modules, and on ComponentNodes linked to them,
+    are generated and saved correctly on both whenever the component changes"""
+    modular_rpm = _set_up_rhel_compose()
+    slow_fetch_modular_build(module_build_id)
+    module_obj = Component.objects.get(type=Component.Type.RPMMOD)
+    module_node = module_obj.cnodes.get()
+
+    # name-version-release.commit_id in an NVR
+    # becomes name@version:release:commit_id in a purl
+    modular_nvr = modular_rpm.rhel_module.get().nvr
+    modular_purl = modular_nvr.replace("-", "@", 2).replace("-", ":", 1).replace(".", ":", 2)
+    # Put back the extra - in the name and the . in the version
+    # No simple way to avoid replacing these with @ and : above
+    modular_purl = modular_purl.replace("@", "-", 1).replace(":", ".", 1)
+    modular_purl = (
+        f"pkg:{Component.Type.RPMMOD.lower()}/{Component.Namespace.REDHAT.lower()}/{modular_purl}"
+    )
+
+    # Purls should match on both the module and all its nodes
+    assert module_obj.purl == modular_purl
+    assert module_node.purl == modular_purl
+    assert mock_fetch_brew.called_once_with(srpm_build_id)
+    mock_fetch_brew.reset_mock()
+
+    # Pretend this module was originally missing "/redhat/" in its purl
+    # AKA it was created with an empty "" string namespace by mistake
+    module_obj.namespace = ""
+    module_obj.save()
+    module_node.save()
+    # Purls should match on both the module and all its nodes
+    assert module_obj.purl == modular_purl.replace("/redhat/", "/", 1)
+    assert module_node.purl == modular_purl.replace("/redhat/", "/", 1)
+
+    # When we force-reprocess a component, its purl may change
+    # e.g. to set the namespace correctly if we missed this before
+    slow_fetch_modular_build(module_build_id, force_process=True)
+    module_obj.refresh_from_db()
+    module_node.refresh_from_db()
+    assert module_obj.namespace == Component.Namespace.REDHAT
+
+    # The purl on all of its currently-existing nodes should be updated to match
+    # so we shouldn't create new nodes with the new purl
+    # and we shouldn't leave behind duplicate nodes with the old purl
+    assert module_obj.purl == modular_purl
+    assert module_obj.cnodes.count() == 1
+    assert module_node.purl == modular_purl
+    assert mock_fetch_brew.called_once_with(srpm_build_id)
 
 
 @pytest.mark.django_db

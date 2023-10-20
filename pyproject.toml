@@ -22,6 +22,12 @@ markers = [
     "performance",
     "unit",
 ]
+filterwarnings = [
+    # make warnings into errors that fail tests
+    "error",
+    # except DeprecationWarnings from libraries
+    "ignore::DeprecationWarning"
+]
 
 [tool.black]
 line-length = 100

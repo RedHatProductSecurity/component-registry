@@ -338,6 +338,8 @@ CELERY_RESULT_BACKEND = "django-db"
 # https://django-celery-results.readthedocs.io/en/latest/reference/django_celery_results.managers.html
 CELERY_RESULT_BACKEND_ALWAYS_RETRY = True
 CELERY_RESULT_BACKEND_MAX_RETRIES = 2
+# Store the task name and args / kwargs
+CELERY_RESULT_EXTENDED = True
 
 # Set a global 15-minute task timeout. Override this on individual tasks by decorating them with:
 # @app.task(soft_time_limit=<TIME_IN_SECONDS>)

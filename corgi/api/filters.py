@@ -90,11 +90,11 @@ class ComponentFilter(FilterSet):
 
     # Normally we are interested in retrieving provides,sources or upstreams of a specific component
     sources = CharFilter(lookup_expr="purl")
-    sources_name = CharFilter(field_name="sources", lookup_expr="name")
+    sources_name = CharFilter(field_name="sources", lookup_expr="name", distinct=True)
     provides = CharFilter(lookup_expr="purl")
-    provides_name = CharFilter(field_name="provides", lookup_expr="name")
+    provides_name = CharFilter(field_name="provides", lookup_expr="name", distinct=True)
     upstreams = CharFilter(lookup_expr="purl")
-    upstreams_name = CharFilter(field_name="upstreams", lookup_expr="name")
+    upstreams_name = CharFilter(field_name="upstreams", lookup_expr="name", distinct=True)
     downstreams = CharFilter(lookup_expr="purl")
 
     # otherwise use regex to match provides,sources or upstreams purls

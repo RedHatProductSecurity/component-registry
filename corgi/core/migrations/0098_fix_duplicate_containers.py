@@ -1,4 +1,5 @@
 from django.db import migrations
+from django.db.models import F, Value, functions
 
 # Must use non-historical models which support cnodes and get_descendants()
 from corgi.core.models import Component, ComponentNode
@@ -73,9 +74,16 @@ def fix_container_data(apps, schema_editor):
         bad_node_qs = ComponentNode.objects.filter(type="SOURCE", parent=None, purl=bad_node.purl)
 
         # No duplicate node is present
-        # So we can just fix the bad node's purl
+        # So we can just fix the bad root node's purl, as well as bad child node purls
         if not good_node:
             bad_node_qs.update(purl=good_purl)
+            # Fix component nodes for non-index / arch-specific child containers
+            # which have an incorrect REDHAT namespace in their purl, if any
+            # The child containers themselves were fixed in the first loop above
+            bad_children = bad_node.get_children().filter(purl__startswith=red_hat_purl_prefix)
+            bad_children.update(
+                purl=functions.Replace(F("purl"), Value(red_hat_purl_prefix), Value(purl_prefix))
+            )
             continue
 
         bad_descendants = (
@@ -96,52 +104,9 @@ def fix_container_data(apps, schema_editor):
                 break
         # Either both root nodes / index containers have all the same children
         # Or the good node will have the same children, after it finishes reprocessing
+        # This includes bad OCI-type children of the root node with "/redhat/" in their purls
+        # The good node will have the same child nodes, but without "/redhat/" in their purls
         bad_node_qs.delete()
-
-    # Fix component nodes for non-index / arch-specific child containers
-    # which have an incorrect REDHAT namespace in their purl
-    # (unknown number, can't write a fast query to find out how many)
-    # The child containers themselves were fixed in the first loop above
-    for root_node in ComponentNode.objects.filter(
-        type="SOURCE", parent=None, purl__startswith=purl_prefix
-    ).iterator():
-        for child_node in (
-            root_node.get_children().filter(purl__startswith=red_hat_purl_prefix).iterator()
-        ):
-            good_purl = child_node.purl.replace(red_hat_purl_prefix, purl_prefix, 1)
-            good_node = ComponentNode.objects.filter(
-                type=child_node.type, parent=root_node, purl=good_purl
-            ).first()
-            # .delete() and .update() functions on querysets are atomic, even outside transactions
-            child_node_qs = ComponentNode.objects.filter(
-                type=child_node.type, parent=root_node, purl=child_node.purl
-            )
-
-            # No duplicate node is present
-            # So we can just fix the bad node's purl
-            if not good_node:
-                child_node_qs.update(purl=good_purl)
-                continue
-
-            bad_descendants = (
-                child_node.get_descendants().values_list("purl", flat=True).distinct().iterator()
-            )
-            good_descendants = set(
-                good_node.get_descendants().values_list("purl", flat=True).distinct().iterator()
-            )
-
-            # Check to make sure the new / good child container
-            # has the same (or more) data as the old / bad one
-            # If not, reprocess the good child container to complete its data
-            for descendant_purl in bad_descendants:
-                if descendant_purl not in good_descendants:
-                    slow_fetch_brew_build.delay(
-                        root_node.obj.software_build.build_id, force_process=True
-                    )
-                    break
-            # Either both child nodes / arch-specific containers have all the same children
-            # Or the good node will have the same children, after it finishes reprocessing
-            child_node_qs.delete()
 
 
 class Migration(migrations.Migration):

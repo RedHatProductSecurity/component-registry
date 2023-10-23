@@ -62,7 +62,9 @@ class Command(BaseCommand):
             for et_variant in CollectorErrataProductVariant.objects.filter(
                 name__in=options["product_variants"]
             ):
-                product_ids.add(et_variant.product_version.product.et_id)
+                variant_version = et_variant.product_version
+                if variant_version:
+                    product_ids.add(variant_version.product.et_id)
             # make sure there is only 1 product id for the names
             if len(product_ids) > 1:
                 self.stderr.write(
@@ -79,10 +81,12 @@ class Command(BaseCommand):
                 f"api/v1/erratum/search?show_state_SHIPPED_LIVE=1&product[]={product_id}",
                 page_data_attr="data",
             )
-            all_errata = set()
-            for erratum in product_errata:
-                self.stdout.write(self.style.SUCCESS(f"Found shipped erratum {erratum['id']}"))
-                builds = et.get(f"api/v1/erratum/{erratum['id']}/builds_list.json")
+            all_errata: set[str] = set()
+            for product_erratum in product_errata:
+                self.stdout.write(
+                    self.style.SUCCESS(f"Found shipped erratum {product_erratum['id']}")
+                )
+                builds = et.get(f"api/v1/erratum/{product_erratum['id']}/builds_list.json")
                 for product_version in builds.values():
                     for build in product_version["builds"]:
                         for _, build_data in build.items():
@@ -90,10 +94,10 @@ class Command(BaseCommand):
                                 if variant in options["product_variants"]:
                                     self.stdout.write(
                                         self.style.SUCCESS(
-                                            f"Found variant {variant} in {erratum['id']}"
+                                            f"Found variant {variant} in {product_erratum['id']}"
                                         )
                                     )
-                                    all_errata.add(str(erratum["id"]))
+                                    all_errata.add(str(product_erratum["id"]))
 
             for erratum in all_errata:
                 self.stdout.write(self.style.SUCCESS(f"Loading erratum: {erratum}"))

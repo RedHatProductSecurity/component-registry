@@ -8,6 +8,7 @@ from django.db import transaction
 from django.db.models import Q, QuerySet
 
 from config.celery import app
+from corgi.collectors.errata_tool import BREW_TAG_CANDIDATE_SUFFIX
 from corgi.collectors.models import (
     CollectorErrataProductVariant,
     CollectorErrataProductVersion,
@@ -330,8 +331,10 @@ def _parse_cpes_from_brew_tags(
         cpes: set[str] = set()
         for brew_tag in brew_tags.keys():
             # Also match brew tags in prod_defs with those from ET
-            # Brew tags in ET
-            trimmed_brew_tag = brew_tag.removesuffix("-candidate")
+            # When ingesting products from ET to the Collectors models we strip -candidate as well
+            trimmed_brew_tag = brew_tag.removesuffix(BREW_TAG_CANDIDATE_SUFFIX)
+            # Brew tags in ET often have -candidate suffixes but switches them
+            # to released ones once that build is attached to an erratum and released.
             trimmed_brew_tag = trimmed_brew_tag.removesuffix("-released")
             # This is a special case for 'rhaos-4-*` brew tags which don't have the -container
             # suffix in ET, but do have that suffix in product_definitions

@@ -21,8 +21,6 @@ include:
 .common_test_setup: &common_test_setup
   # Define below in CI settings, then export here so subprocesses can use also
   # Keep in sync with OpenShift
-  # Internal hostnames or URLs that appear in build metadata; used in tests
-  - export CORGI_TEST_DOWNLOAD_URL
   # Not used in tests directly, but needed for tests to pass
   - export CORGI_APP_STREAMS_LIFE_CYCLE_URL
   - export CORGI_BREW_URL

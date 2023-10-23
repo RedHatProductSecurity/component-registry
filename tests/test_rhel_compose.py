@@ -1,4 +1,3 @@
-import os
 from unittest.mock import patch
 
 import pytest
@@ -10,10 +9,9 @@ from corgi.core.models import Component, ProductComponentRelation, ProductStream
 from corgi.tasks.brew import slow_fetch_modular_build
 from corgi.tasks.rhel_compose import get_builds, save_compose
 from tests.factories import ProductVersionFactory
+from tests.test_products import TEST_DOWNLOAD_URL
 
 pytestmark = pytest.mark.unit
-
-base_url = os.getenv("CORGI_TEST_DOWNLOAD_URL")
 
 module_build_id = "0"
 module_nvr = "389-ds-1.4-8060020220204145416.ce3e8c9c"
@@ -25,7 +23,7 @@ rpm_nvr = "389-ds-base-1.4.3.28-6.module+el8.6.0+14129+983ceada.x86_64"
 @patch("corgi.collectors.brew.Brew.brew_srpm_lookup")
 @patch("corgi.collectors.brew.Brew.brew_rpm_lookup")
 def test_fetch_module_data(mock_brew_rpm_lookup, mock_brew_srpm_lookup, requests_mock):
-    compose_url = f"{base_url}/rhel-8/rel-eng/RHEL-8/latest-RHEL-8.6.0/compose/metadata/"
+    compose_url = f"{TEST_DOWNLOAD_URL}/rhel-8/rel-eng/RHEL-8/latest-RHEL-8.6.0/compose/metadata/"
     with open("tests/data/compose/RHEL-8.6.0-20220420.3/modules.json") as compose:
         requests_mock.get(f"{compose_url}modules.json", text=compose.read())
 
@@ -173,7 +171,7 @@ def _set_up_rhel_compose() -> CollectorRPM:
 
 @patch("corgi.collectors.brew.Brew.brew_srpm_lookup")
 def test_fetch_rpm_data(mock_brew_srpm_lookup, requests_mock):
-    compose_url = f"{base_url}/rhel-8/rel-eng/RHEL-8/RHEL-8.4.0-RC-1.2/compose/metadata"
+    compose_url = f"{TEST_DOWNLOAD_URL}/rhel-8/rel-eng/RHEL-8/RHEL-8.4.0-RC-1.2/compose/metadata"
     with open("tests/data/compose/RHEL-8.4.0-RC-1.2/rpms.json") as module_data:
         requests_mock.get(f"{compose_url}rpms.json", text=module_data.read())
     result = MockBrewResult()
@@ -197,7 +195,9 @@ def mock_fetch_rpm_data(compose_url, variants):
 @patch("corgi.tasks.brew.slow_fetch_modular_build.delay")
 @patch("corgi.collectors.rhel_compose.RhelCompose._fetch_rpm_data", new=mock_fetch_rpm_data)
 def test_save_compose(mock_fetch_modular_build, requests_mock):
-    composes = {f"{base_url}/rhel-8/rel-eng/RHEL-8/RHEL-8.4.0-RC-1.2/compose": ["AppStream"]}
+    composes = {
+        f"{TEST_DOWNLOAD_URL}/rhel-8/rel-eng/RHEL-8/RHEL-8.4.0-RC-1.2/compose": ["AppStream"]
+    }
     compose_url = next(iter(composes))
     for path in ["composeinfo", "rpms", "osbs", "modules"]:
         with open(f"tests/data/compose/RHEL-8.4.0-RC-1.2/{path}.json") as compose:

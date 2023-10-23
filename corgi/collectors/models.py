@@ -9,6 +9,7 @@ class CollectorErrataModel(models.Model):
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     et_id = models.IntegerField(unique=True)
     name = models.TextField(unique=True)
+    meta_attr = models.JSONField(default=dict)
 
     class Meta:
         abstract = True
@@ -26,10 +27,19 @@ class CollectorErrataProductVersion(CollectorErrataModel):
     brew_tags = fields.ArrayField(models.CharField(max_length=1024), default=list)
 
 
+class CollectorErrataRelease(CollectorErrataModel):
+    brew_tags = fields.ArrayField(models.CharField(max_length=1024), default=list)
+    product_versions = models.ManyToManyField(
+        CollectorErrataProductVersion, related_name="releases"
+    )
+    is_active = models.BooleanField(default=False)
+    enabled = models.BooleanField(default=False)
+
+
 class CollectorErrataProductVariant(CollectorErrataModel):
     cpe = models.TextField(default="")
     product_version = models.ForeignKey(
-        CollectorErrataProductVersion, on_delete=models.CASCADE, related_name="variants"
+        CollectorErrataProductVersion, on_delete=models.CASCADE, related_name="variants", null=True
     )
     repos = fields.ArrayField(models.CharField(max_length=1024), default=list)
 

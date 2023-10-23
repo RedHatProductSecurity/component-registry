@@ -1,10 +1,11 @@
 import json
 import logging
-import typing
 from collections import defaultdict
+from typing import Any, DefaultDict, Iterable
 
 import requests
 from django.conf import settings
+from django.db import transaction
 from requests_gssapi import HTTPSPNEGOAuth
 
 from corgi.collectors.brew import Brew
@@ -12,10 +13,13 @@ from corgi.collectors.models import (
     CollectorErrataProduct,
     CollectorErrataProductVariant,
     CollectorErrataProductVersion,
+    CollectorErrataRelease,
 )
 from corgi.core.models import SoftwareBuild
 
 logger = logging.getLogger(__name__)
+
+BREW_TAG_CANDIDATE_SUFFIX = "-candidate"
 
 
 class ErrataTool:
@@ -30,8 +34,8 @@ class ErrataTool:
     def get(
         self,
         path: str,
-        **request_kwargs: typing.Any,
-    ) -> dict:
+        **request_kwargs: Any,
+    ) -> dict[str, Any]:
         """Get the response to a REST API call or raise an exception."""
         url = f"{settings.ERRATA_TOOL_URL}/{path}"
         response = self.session.get(url, **request_kwargs)
@@ -39,76 +43,114 @@ class ErrataTool:
         return response.json()
 
     def get_paged(
-        self, path: str, page_data_attr: typing.Optional[str] = None, pager: str = "page[number]"
-    ):
+        self, path: str, page_data_attr: str = "data", pager: str = "page[number]"
+    ) -> list[dict[str, Any]]:
         """Generator to iterate over data from paged Errata Tool API endpoint."""
         params = {pager: 1}
-
+        data: list[dict[str, Any]] = []
         while True:
             page = self.get(path, params=params)
-            if page_data_attr:
-                page = page[page_data_attr]
-            if page:
-                yield from page
+            page_data: Iterable[dict[str, Any]] = page[page_data_attr]
+            if page_data:
+                data.extend(page_data)
                 params[pager] += 1
             else:
                 break
+        return data
 
-    def load_et_products(self):
-        products = self.get_paged("api/v1/products", page_data_attr="data")
-        for product in products:
-            et_product, created = CollectorErrataProduct.objects.update_or_create(
-                et_id=product["id"],
-                defaults={
-                    "name": product["attributes"]["name"],
-                    "short_name": product["attributes"]["short_name"],
-                },
+    def load_et_products(self) -> None:
+        # preload the data from ET before starting a DB transaction
+        products_and_versions = self.get_products_and_versions()
+        releases = self.get_paged("api/v1/releases")
+        variants = self.get_paged("api/v1/variants")
+        with transaction.atomic():
+            self._delete_collector_objects()
+            self.load_products_and_versions(products_and_versions)
+            self.load_releases(releases)
+            self.load_variants(variants)
+
+    def _delete_collector_objects(self) -> None:
+        CollectorErrataProduct.objects.all().delete()
+        CollectorErrataProductVersion.objects.all().delete()
+        CollectorErrataRelease.objects.all().delete()
+        CollectorErrataProductVariant.objects.all().delete()
+
+    @staticmethod
+    def load_products_and_versions(products_and_versions: list[dict[str, Any]]) -> None:
+        for product in products_and_versions:
+            product_versions = product.pop("product_versions", [])
+            et_product = CollectorErrataProduct.objects.create(
+                et_id=product.pop("id"),
+                name=product["attributes"].pop("name"),
+                short_name=product["attributes"].pop("short_name"),
+                meta_attr=product,
             )
-            if created:
-                logger.info("Created ET Product: %s", et_product.short_name)
-            for product_version in product["relationships"]["product_versions"]:
-                (
-                    et_product_version,
-                    created,
-                ) = CollectorErrataProductVersion.objects.update_or_create(
-                    et_id=product_version["id"],
-                    defaults={"name": product_version["name"], "product": et_product},
+            logger.debug(f"Created ET Product: {et_product.short_name}")
+            for product_version in product_versions:
+                name = product_version["attributes"].pop("name")
+                brew_tags = ErrataTool.strip_brew_tag_candidate_suffixes(
+                    product_version.pop("brew_tags")
                 )
-                if created:
-                    logger.info("Created ET ProductVersion: %s", et_product_version.name)
-        for pv in CollectorErrataProductVersion.objects.get_queryset():
-            pv_details = self.get(f"api/v1/products/{pv.product.et_id}/product_versions/{pv.et_id}")
-            brew_tags = [t.removesuffix("-candidate") for t in pv_details["data"]["brew_tags"]]
-            if pv.brew_tags != brew_tags:
-                pv.brew_tags = brew_tags
-                pv.save()
-                logger.info("Updated Product Version %s Brew Tags to %s", pv.name, pv.brew_tags)
+                CollectorErrataProductVersion.objects.create(
+                    et_id=product_version.pop("id"),
+                    name=name,
+                    product=et_product,
+                    brew_tags=brew_tags,
+                    meta_attr=product_version,
+                )
+                logger.debug(f"Created ET ProductVersion: {name}")
 
-        variants = self.get_paged("api/v1/variants", page_data_attr="data")
+    @staticmethod
+    def strip_brew_tag_candidate_suffixes(brew_tags: list[str]) -> list[str]:
+        return [t.removesuffix(BREW_TAG_CANDIDATE_SUFFIX) for t in brew_tags]
+
+    def load_releases(self, releases: list[dict[str, Any]]) -> None:
+        for release in releases:
+            attributes = release["attributes"]
+            name = attributes.pop("name")
+            relationships = release["relationships"]
+            brew_tags_dict = relationships.pop("brew_tags")
+            brew_tags = [tag["name"] for tag in brew_tags_dict]
+            release_obj = CollectorErrataRelease.objects.create(
+                et_id=release.pop("id"),
+                name=name,
+                is_active=attributes.pop("is_active"),
+                enabled=attributes.pop("enabled"),
+                brew_tags=self.strip_brew_tag_candidate_suffixes(brew_tags),
+                meta_attr=attributes,
+            )
+            logger.debug(f"Created ET Release: {name}")
+
+            # Sometimes releases can refer to Product Versions which no longer exist
+            product_version_names = [pv["name"] for pv in relationships.pop("product_versions")]
+            product_versions = CollectorErrataProductVersion.objects.filter(
+                name__in=product_version_names
+            )
+            release_obj.product_versions.set(product_versions)
+
+    def load_variants(self, variants: list[dict[str, Any]]) -> None:
         for variant in variants:
-            product_version_id = variant["attributes"]["relationships"]["product_version"]["id"]
-            try:
-                et_product_version = CollectorErrataProductVersion.objects.get(
-                    et_id=product_version_id
-                )
-            except CollectorErrataProductVersion.DoesNotExist:
-                logger.warning("Did not find product version with id %s", product_version_id)
-                continue
+            attributes = variant["attributes"]
+            product_version = attributes["relationships"].pop("product_version")
+            product_version_name = product_version["name"]
 
-            cpe = variant["attributes"]["cpe"]
+            # Sometimes variants can refer to Product Versions which no longer exist
+            et_product_version = CollectorErrataProductVersion.objects.filter(
+                name=product_version_name
+            ).first()
+            name = attributes.pop("name")
+            cpe = attributes.pop("cpe", "")
             # CORGI-648 the value can be null
             if not cpe:
                 cpe = ""
-            et_product_variant, created = CollectorErrataProductVariant.objects.update_or_create(
-                et_id=variant["id"],
-                defaults={
-                    "cpe": cpe,
-                    "product_version": et_product_version,
-                    "name": variant["attributes"]["name"],
-                },
+            CollectorErrataProductVariant.objects.create(
+                name=name,
+                cpe=cpe,
+                product_version=et_product_version,
+                et_id=variant.pop("id"),
+                meta_attr=attributes,
             )
-            if created:
-                logger.info("Created ET Product Variant: %s", et_product_variant.name)
+            logger.debug(f"Created ET Product Variant: {name}")
 
     def get_erratum_components(self, erratum_id: str):
         """Fetch components attached to erratum and index by their Variant.
@@ -151,7 +193,7 @@ class ErrataTool:
           }
         }
         """
-        variant_to_component_map: typing.DefaultDict[str, list] = defaultdict(list)
+        variant_to_component_map: DefaultDict[str, list] = defaultdict(list)
         builds = self.get(f"api/v1/erratum/{erratum_id}/builds_list.json")
         brew = Brew(SoftwareBuild.Type.BREW)
         for product_version in builds.values():
@@ -180,7 +222,7 @@ class ErrataTool:
         the content gets pushed to.
         """
 
-        for repo in self.get_paged("api/v1/cdn_repos", page_data_attr="data"):
+        for repo in self.get_paged("api/v1/cdn_repos"):
             repo_attrs = repo["attributes"]
             repo_rels = repo["relationships"]
 
@@ -232,7 +274,7 @@ class ErrataTool:
         module_name: str,
         module_data: dict[str, dict[str, list[str]]],
         brew: Brew,
-        variant_to_component_map: typing.DefaultDict[str, list],
+        variant_to_component_map: DefaultDict[str, list],
     ) -> None:
         """Persist collector models for modular builds from errata build_list.json. This allows
         later processing of modular builds in the Brew task slow_fetch_modular_build"""
@@ -268,3 +310,15 @@ class ErrataTool:
             logger.warning(f"Couldn't load Notes for erratum {erratum_id}")
             raise error
         return notes
+
+    def get_products_and_versions(self) -> list[dict[str, Any]]:
+        products = self.get_paged("api/v1/products")
+        for product in products:
+            product_versions: list[dict[str, Any]] = []
+            pv_relation = product["relationships"].pop("product_versions")
+            for pv in pv_relation:
+                response = self.get(f"api/v1/products/{product['id']}/product_versions/{pv['id']}")
+                data = response["data"]
+                product_versions.append(data)
+            product["product_versions"] = product_versions
+        return products

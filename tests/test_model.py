@@ -1223,7 +1223,7 @@ def test_latest_components_queryset(client, api_path, stored_proc):
     # or latest versions of unshipped components, which are not linked to any stream
     # This may have implications for OpenLCS
     # As well as other users of the ?latest_components_by_streams= filter / API parameter
-    assert len(latest_components) == 2
+    assert len(latest_components) == 4
     for component in latest_components:
         assert (
             component.purl == components[(component.type, component.name, component.arch)][1].purl

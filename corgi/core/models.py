@@ -907,15 +907,17 @@ class ComponentQuerySet(models.QuerySet):
         components: "ComponentQuerySet", model_type: str, ofuri: str, include_inactive_streams: bool
     ) -> Iterable[str]:
         return (
-            components.values("name", "namespace")
+            components.values("type", "namespace", "name", "arch")
             .order_by()  # required to avoid cross-join fun
             .distinct()
             .annotate(
                 latest_version=Func(
                     Value(model_type),
                     Value(ofuri),
+                    F("type"),
                     F("namespace"),
                     F("name"),
+                    F("arch"),
                     Value(include_inactive_streams),
                     function="get_latest_component",
                     output_field=models.UUIDField(),

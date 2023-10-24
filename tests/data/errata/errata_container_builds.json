@@ -1,0 +1,25 @@
+{
+  "RHEL-8-RHACM-2.4": {
+    "name": "RHEL-8-RHACM-2.4",
+    "description": "Red Hat Advanced Cluster Management for Kubernetes 2.4 for RHEL 8",
+    "builds": [
+      {
+        "multiclusterhub-repo-container-v2.4.6-7": {
+          "nvr": "multiclusterhub-repo-container-v2.4.6-7",
+          "nevr": "multiclusterhub-repo-container-0:v2.4.6-7",
+          "id": 2177946,
+          "is_module": false,
+          "variant_arch": {
+            "8Base-RHACM-2.4": {
+              "multi": [
+                "docker-image-sha256:79c31323551c48813ad5fadfabfa164450422148098343b4d6122f7d6c22fd7b.x86_64.tar.gz",
+                "docker-image-sha256:3132fbf348680f0196db5967d206480ee90748174eace7131ea92ed52a6f8df5.s390x.tar.gz",
+                "docker-image-sha256:add9b314e46ac6b6604cdb5b745d3124562a651124be81f6a5d7938b002e7f8e.ppc64le.tar.gz"
+              ]
+            }
+          }
+        }
+      }
+    ]
+  }
+}

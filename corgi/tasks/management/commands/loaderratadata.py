@@ -2,8 +2,7 @@ import sys
 
 from django.core.management.base import BaseCommand, CommandParser
 
-from corgi.collectors.errata_tool import ErrataTool
-from corgi.tasks.errata_tool import slow_load_errata
+from corgi.tasks.errata_tool import slow_load_errata, slow_load_stream_errata
 from corgi.tasks.pulp import update_cdn_repo_channels
 
 
@@ -36,9 +35,7 @@ class Command(BaseCommand):
             action="store_true",
             help="Force process task",
         )
-        parser.add_argument(
-            "-p", "--product_variants", nargs="+", help="A list of variants to load errata for"
-        )
+        parser.add_argument("-s", "--product_stream", help="Product Stream to load errata for.")
 
     def handle(self, *args, **options) -> None:
         if options["errata_ids"]:
@@ -55,13 +52,11 @@ class Command(BaseCommand):
                 update_cdn_repo_channels()
             else:
                 update_cdn_repo_channels.delay()
-        elif options["product_variants"]:
-            et = ErrataTool()
-
-            errata = et.get_errata_matching_variants(options["product_variants"])
-            for erratum in errata:
-                self.stdout.write(self.style.SUCCESS(f"Loading erratum: {erratum}"))
-                slow_load_errata.delay(erratum, force_process=options["force"])
+        elif options["product_stream"]:
+            self.stdout.write(
+                self.style.SUCCESS(f"Loading errata matching variants {options['product_stream']}")
+            )
+            slow_load_stream_errata(options["product_stream"], force_process=options["force"])
 
         else:
             self.stderr.write(self.style.ERROR("No errata IDs or repo flag, or variants specified"))

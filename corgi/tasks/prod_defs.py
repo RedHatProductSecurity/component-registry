@@ -12,6 +12,7 @@ from corgi.collectors.errata_tool import BREW_TAG_CANDIDATE_SUFFIX
 from corgi.collectors.models import (
     CollectorErrataProductVariant,
     CollectorErrataProductVersion,
+    CollectorErrataRelease,
 )
 from corgi.collectors.prod_defs import ProdDefs
 from corgi.core.models import (
@@ -214,6 +215,37 @@ def parse_product_version(
         _match_and_save_stream_cpes(product_version)
 
 
+def _parse_variants_from_brew_tags(brew_tags) -> list[str]:
+    """We don't link core ProductVariant models to streams via brew_tags because it results in too
+    many builds being linked to the stream. These variants should include all possible builds that
+    could match the stream. We use them for finding which errata match this stream, so it's OK to
+    find too many errata"""
+    variant_names: set[str] = set()
+    for brew_tag in brew_tags:
+        trimmed_brew_tag, sans_container_released = brew_tag_to_et_prefixes(brew_tag)
+        variants = CollectorErrataProductVersion.objects.filter(
+            brew_tags__overlap=[trimmed_brew_tag, sans_container_released]
+        ).values_list("variants__name", flat=True)
+        variant_names.update(variants)
+    return list(variant_names)
+
+
+def _parse_releases_from_brew_tags(brew_tags) -> list[int]:
+    """Match releases using stream brew tags"""
+    release_ids: set[int] = set()
+    for brew_tag in brew_tags:
+        trimmed_brew_tag, sans_container_released = brew_tag_to_et_prefixes(brew_tag)
+        releases = (
+            CollectorErrataRelease.objects.filter(
+                brew_tags__overlap=[trimmed_brew_tag, sans_container_released]
+            )
+            .values_list("et_id", flat=True)
+            .distinct()
+        )
+        release_ids.update(releases)
+    return list(release_ids)
+
+
 def parse_product_stream(
     pd_product_stream: dict[str, Any],
     product: Product,
@@ -239,6 +271,10 @@ def parse_product_stream(
         version = match_version.group()
 
     cpes_from_brew_tags = _parse_cpes_from_brew_tags(brew_tags_dict, name, product_version.name)
+    brew_tag_names = brew_tags_dict.keys()
+    # TODO move these to ProductStream attributes?
+    pd_product_stream["variants_from_brew_tags"] = _parse_variants_from_brew_tags(brew_tag_names)
+    pd_product_stream["releases_from_brew_tags"] = _parse_releases_from_brew_tags(brew_tag_names)
 
     logger.debug("Creating or updating Product Stream: name=%s", name)
 
@@ -270,7 +306,7 @@ def parse_product_stream(
     parse_errata_info(errata_info, product, product_stream, product_stream_node, product_version)
     if not stream_created:
         _clean_orphaned_relations_and_builds(
-            set(brew_tags_dict.keys()),
+            set(brew_tag_names),
             name,
             str(product_stream.pk),
             ProductComponentRelation.Type.BREW_TAG,

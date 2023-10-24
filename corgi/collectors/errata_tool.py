@@ -26,6 +26,7 @@ class ErrataTool:
     """Interface to the Errata Tool APIs."""
 
     GSSAPI_AUTH = HTTPSPNEGOAuth()
+    SHIPPED_LIVE_SEARCH = "show_state_SHIPPED_LIVE=1"
 
     def __init__(self):
         self.session = requests.Session()
@@ -45,7 +46,7 @@ class ErrataTool:
     def get_paged(
         self, path: str, page_data_attr: str = "data", pager: str = "page[number]"
     ) -> list[dict[str, Any]]:
-        """Generator to iterate over data from paged Errata Tool API endpoint."""
+        """Iterate over data from paged Errata Tool API endpoint."""
         params = {pager: 1}
         data: list[dict[str, Any]] = []
         while True:
@@ -321,13 +322,41 @@ class ErrataTool:
             product["product_versions"] = product_versions
         return products
 
+    def _do_errata_search(
+        self, search_values: str, product_variants: list[str], container_only: bool = False
+    ) -> list[int]:
+        if not search_values:
+            raise ValueError("search_values cannot be an empty string")
+        if container_only:
+            search_values += "&content_type[]=docker"
+        product_errata = self.get_paged(f"api/v1/erratum/search?{search_values}")
+        all_errata: set[int] = set()
+        for erratum in product_errata:
+            logger.debug(f"Found shipped erratum {erratum['id']}")
+            # If we are passed a list of variants, check that there are builds matching those
+            # variants on the erratum before returning that erratum_id
+            if not product_variants:
+                all_errata.add(erratum["id"])
+                continue
+            is_rpm = "rpm" in erratum["content_types"]
+            builds_url = self._get_url_by_erratum_type(erratum["id"], is_rpm)
+            builds = self.get(builds_url)
+            for product_version in builds.values():
+                for build in product_version["builds"]:
+                    for build_data in build.values():
+                        for variant in build_data["variant_arch"].keys():
+                            if variant in product_variants:
+                                logger.info(f"Found variant {variant} in {erratum['id']}")
+                                all_errata.add(erratum["id"])
+        return list(all_errata)
+
     def get_errata_matching_variants(
         self, product_variants: list[str], container_only: bool = False
-    ) -> set[str]:
-        """Given a list of variants in a single ET product, find all errata shipping builds to those
+    ) -> list[int]:
+        """Given a list of variants in a single ET product, load all errata shipping builds to those
         variants"""
         if not product_variants:
-            return set()
+            return []
         product_ids = set()
         for et_variant in CollectorErrataProductVariant.objects.filter(name__in=product_variants):
             variant_version = et_variant.product_version
@@ -336,28 +365,22 @@ class ErrataTool:
         # make sure there is only 1 product id for the given variants
         if len(product_ids) > 1:
             raise ValueError(f"Variants had more than 1 product id. Found: {product_ids}")
-
+        elif len(product_ids) == 0:
+            raise ValueError(f"Variants passed do not exist in DB: {product_variants}")
         product_id = product_ids.pop()
         logger.info(f"Searching shipped errata for product with id {product_id}")
         # Unfortunately we can't use the variant id directly here
-        search_values = f"show_state_SHIPPED_LIVE=1&product[]={product_id}"
-        if container_only:
-            search_values += "&content_type[]=docker"
-        product_errata = self.get_paged(
-            f"api/v1/erratum/search?{search_values}",
-            page_data_attr="data",
-        )
+        search_values = f"{self.SHIPPED_LIVE_SEARCH}&product[]={product_id}"
+        return self._do_errata_search(search_values, product_variants, container_only)
 
-        all_errata: set[str] = set()
-        for erratum in product_errata:
-            logger.info(f"Found shipped erratum {erratum['id']}")
-            is_rpm = "rpm" in erratum["content_types"]
-            builds = self.get(self._get_url_by_erratum_type(erratum["id"], is_rpm))
-            for product_version in builds.values():
-                for build in product_version["builds"]:
-                    for _, build_data in build.items():
-                        for variant in build_data["variant_arch"].keys():
-                            if variant in product_variants:
-                                logger.info(f"Found variant {variant} in {erratum['id']}")
-                                all_errata.add(str(erratum["id"]))
-        return all_errata
+    def get_errata_for_releases(
+        self, releases: list[int], container_only: bool = False
+    ) -> set[int]:
+        all_errata: set[int] = set()
+        if not releases:
+            return all_errata
+        search = self.SHIPPED_LIVE_SEARCH
+        for release in releases:
+            search += f"&release[]={release}"
+        # When doing a search for errata by releases, don't filter by product_variants
+        return set(self._do_errata_search(search, [], container_only))

@@ -1,12 +1,9 @@
 import logging
 
 import pytest
-from rest_framework.request import Request
-from rest_framework.test import APIRequestFactory
 from rest_framework.viewsets import GenericViewSet
 
 from corgi.api import views
-from tests.factories import ProductFactory
 
 logger = logging.getLogger(__name__)
 
@@ -41,41 +38,33 @@ def test_viewset_ordering(api_path, stored_proc):
             "ReadOnlyModelViewSet",
             "StatusViewSet",
             "ProductDataViewSet",
-            "SoftwareBuildViewSet",
-            "ComponentViewSet",
-            "AppStreamLifeCycleViewSet",
-            "ChannelViewSet",
         ):
             # Skip imported names and special cases which have no queryset
-            # last four pass or fail depending on whether query planner
-            # uses an index scan or a sorted table scan
             continue
 
-        viewset = cls()
-        if name == "AppStreamLifeCycleViewSet":
-            # This viewset is ordered based on all fields in a unique constraint
+        sql = cls.queryset.explain()
+        if name in (
+            "AppStreamLifeCycleViewSet",
+            "ChannelViewSet",
+            "ComponentViewSet",
+            "SoftwareBuildViewSet",
+        ) or issubclass(cls, views.ProductDataViewSet):
+            # These viewsets are ordered based on all fields in a unique constraint
+            # or a single field which sets unique=True and has a Django-managed index
             # and the query shouldn't contain some SQL to sort the objects
             # since rows are returned sorted in unique index order by default
-            assert "Sort " not in viewset.get_queryset().explain()
 
-        elif name == "ComponentViewSet":
-            # Special case that needs to be initialized with a request object
-            # Otherwise get_queryset() fails due to "ComponentViewSet has no attribute 'request'"
-            viewset = cls(action_map={"get": "list"})
-            product = ProductFactory(name="rhel")
+            # But the query planner may choose to sort based on unique / indexed fields
+            # instead of using the index for those fields directly
+            # https://stackoverflow.com/questions/5203755/
+            # why-does-postgresql-perform-sequential-scan-on-indexed-column
 
-            # Can also use Django's HTTPRequest or Django's RequestFactory
-            # Didn't test DRF's HTTPRequest
-            request = APIRequestFactory().get(f"{api_path}/components?ofuri={product.ofuri}")
-            # Instead of converting above to a DRF Request,
-            # you can also use viewset.initialize_request(request) with any of above types
-            # It requires type X and mypy passes, but Pycharm hints complain request isn't type Y
-            request = Request(request)
-            viewset.setup(request)
-
-            assert "Sort " in viewset.get_queryset().explain()
+            # So make sure that we get unique / sorted output either way
+            # and don't accept / fail the test if we receive completely unsorted output
+            assert "Index Scan " in sql or "Sort " in sql
 
         else:
             # These viewsets are ordered based on some other fields
             # and the query should contain some SQL to sort the objects
-            assert "Sort " in viewset.get_queryset().explain()
+            assert "Sort " in sql
+            assert "Index Scan " not in sql

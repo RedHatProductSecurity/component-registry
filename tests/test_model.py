@@ -1179,13 +1179,11 @@ def test_latest_components_queryset(client, api_path, stored_proc):
         # A NEVRA like "PyYAML version 1.2.3 with no release or architecture"
         # could be a PyPI package, or an upstream RPM
         # We want to see the latest version of both components
-        # Create PyPI components once per loop, like src architecture components
+        # Create RPMMOD components once per loop, like src architecture components
         # with the same namespace, name and version as UPSTREAM noarch components
-        # and no release, arch, or software_build
-        # TODO: We should use RPMMOD instead of PyPI here, but then the test fails
-        #  because we reintroduced a bug we fixed previously
-        #  Whe hide results if two components have the same name and namespace
-        #  but different types or arches, for example a source RPM and its related RPM module
+        # and no release, arch, or software_build. Otherwise we hide results if two
+        # components have the same name and namespace but different types or arches,
+        # for example a source RPM and its related RPM module
         older_unrelated_component = ComponentFactory(
             type=Component.Type.RPMMOD,
             namespace=older_component.namespace,
@@ -1218,11 +1216,6 @@ def test_latest_components_queryset(client, api_path, stored_proc):
         ofuri=stream.ofuri,
         include=True,
     )
-    # Latest_components is now really "latest_root_components" for a particular stream
-    # We no longer show latest versions of non-root components
-    # or latest versions of unshipped components, which are not linked to any stream
-    # This may have implications for OpenLCS
-    # As well as other users of the ?latest_components_by_streams= filter / API parameter
     assert len(latest_components) == 4
     for component in latest_components:
         assert (

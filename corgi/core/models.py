@@ -939,11 +939,17 @@ class ComponentQuerySet(models.QuerySet):
         # we want to constrain by product type/ofuri which is why we pass in model_type and ofuri
         # into the get_latest_component stored proc annotation
 
+        product_prefetch = "productstreams"
+        if model_type == "Product":
+            product_prefetch = "products"
+        if model_type == "ProductVersion":
+            product_prefetch = "productversions"
+        if model_type == "ProductVariant":
+            product_prefetch = "productvariants"
         components = (
             self.root_components()
             .select_related("software_build")
-            # TODO: What if model_type isn't ProductStream?
-            .prefetch_related("productstreams")
+            .prefetch_related(product_prefetch)
             .filter(productstreams__ofuri=ofuri)
         )
 

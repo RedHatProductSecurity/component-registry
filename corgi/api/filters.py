@@ -254,6 +254,7 @@ class ComponentFilter(FilterSet):
         return queryset.root_components().latest_components(
             model_type=model_type,
             ofuri=value,
+            include_inactive_streams=True,
         )
 
 

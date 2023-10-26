@@ -931,7 +931,7 @@ class ComponentQuerySet(models.QuerySet):
         ofuri: str,
         model_type: str = "ProductStream",
         include: bool = True,
-        include_inactive_streams=False,
+        include_inactive_streams: bool = False,
     ) -> "ComponentQuerySet":
         """Return components from latest builds in a single stream."""
 
@@ -939,13 +939,7 @@ class ComponentQuerySet(models.QuerySet):
         # we want to constrain by product type/ofuri which is why we pass in model_type and ofuri
         # into the get_latest_component stored proc annotation
 
-        product_prefetch = "productstreams"
-        if model_type == "Product":
-            product_prefetch = "products"
-        if model_type == "ProductVersion":
-            product_prefetch = "productversions"
-        if model_type == "ProductVariant":
-            product_prefetch = "productvariants"
+        product_prefetch = f"{model_type.lower()}s"
         components = (
             self.root_components()
             .select_related("software_build")
@@ -977,7 +971,7 @@ class ComponentQuerySet(models.QuerySet):
     def latest_components_by_streams(
         self,
         include: bool = True,
-        include_inactive_streams=False,
+        include_inactive_streams: bool = False,
     ) -> "ComponentQuerySet":
         """Return only root components from latest builds for each product stream."""
         components = (

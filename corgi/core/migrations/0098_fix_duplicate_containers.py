@@ -1,17 +1,16 @@
 from django.db import migrations
-from django.db.models import F, Value, functions
 
 # Must use non-historical models which support cnodes and get_descendants()
 from corgi.core.models import Component, ComponentNode
 from corgi.tasks.brew import slow_fetch_brew_build
 
+purl_prefix = "pkg:oci/"
+red_hat_purl_prefix = f"{purl_prefix}redhat/"
+
 
 def fix_container_data(apps, schema_editor):
     """Clean up duplicate containers / nodes with bad purls
     and ensure the non-duplicated containers / nodes have all the same data"""
-    purl_prefix = "pkg:oci/"
-    red_hat_purl_prefix = f"{purl_prefix}redhat/"
-
     # Fix index containers which have an incorrect REDHAT namespace in their purl
     # Also fix non-index / arch-specific child containers with the same issue
     # This code left behind just in case prod has bad data, but at least in stage it's not needed
@@ -24,9 +23,12 @@ def fix_container_data(apps, schema_editor):
 
         # No duplicate container is present
         # So we can just fix the bad container / node purls
+        # As well as the bad children, after we check for duplicates
         if not good_container:
             bad_container_qs.update(purl=good_purl)
             bad_node_qs.update(purl=good_purl)
+            for bad_node in bad_node_qs.iterator():
+                fix_bad_children(bad_node)
             continue
 
         # No nodes means no descendants to check for dupes / missing data
@@ -74,16 +76,16 @@ def fix_container_data(apps, schema_editor):
         bad_node_qs = ComponentNode.objects.filter(type="SOURCE", parent=None, purl=bad_node.purl)
 
         # No duplicate node is present
-        # So we can just fix the bad root node's purl, as well as bad child node purls
+        # So we can just fix the bad root node's purl
+        # We can also fix bad child node purls either by deleting them,
+        # then reprocessing the build, if the bad children have duplicates
+        # or updating them, only if they don't have any duplicates
         if not good_node:
             bad_node_qs.update(purl=good_purl)
             # Fix component nodes for non-index / arch-specific child containers
             # which have an incorrect REDHAT namespace in their purl, if any
             # The child containers themselves were fixed in the first loop above
-            bad_children = bad_node.get_children().filter(purl__startswith=red_hat_purl_prefix)
-            bad_children.update(
-                purl=functions.Replace(F("purl"), Value(red_hat_purl_prefix), Value(purl_prefix))
-            )
+            fix_bad_children(bad_node)
             continue
 
         bad_descendants = (
@@ -107,6 +109,24 @@ def fix_container_data(apps, schema_editor):
         # This includes bad OCI-type children of the root node with "/redhat/" in their purls
         # The good node will have the same child nodes, but without "/redhat/" in their purls
         bad_node_qs.delete()
+
+
+def fix_bad_children(bad_node):
+    """Helper method to find and clean up child containers with bad purls"""
+    bad_children = bad_node.get_children().filter(purl__startswith=red_hat_purl_prefix)
+    for bad_child in bad_children:
+        good_child_purl = bad_child.purl.replace(red_hat_purl_prefix, purl_prefix, 1)
+        if ComponentNode.objects.filter(
+            type=bad_child.type, parent=bad_child.parent, purl=good_child_purl
+        ).exists():
+            # Duplicate exists, just delete the old node
+            # then reprocess this container to avoid data loss
+            bad_children.filter(purl=bad_child.purl).delete()
+            slow_fetch_brew_build.delay(bad_node.obj.software_build.build_id, force_process=True)
+        else:
+            # No duplicate exists, so we can just update the current node
+            # No need to delete or reprocess anything
+            bad_children.filter(purl=bad_child.purl).update(purl=good_child_purl)
 
 
 class Migration(migrations.Migration):

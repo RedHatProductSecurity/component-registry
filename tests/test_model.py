@@ -65,10 +65,18 @@ def test_cpes():
         productversions=pv2,
     )
     pvariant1 = ProductVariantFactory(
-        cpe="cpe:/o:redhat:enterprise_linux:7", products=p1, productversions=pv1, productstreams=ps1
+        name=ps1.name,
+        cpe="cpe:/o:redhat:enterprise_linux:7",
+        products=p1,
+        productversions=pv1,
+        productstreams=ps1,
     )
     pvariant2 = ProductVariantFactory(
-        cpe="cpe:/o:redhat:Brantabernicla:8", products=p1, productversions=pv2, productstreams=ps3
+        name=ps3.name,
+        cpe="cpe:/o:redhat:Brantabernicla:8",
+        products=p1,
+        productversions=pv2,
+        productstreams=ps3,
     )
 
     p1node = ProductNode.objects.create(parent=None, obj=p1)

@@ -45,7 +45,12 @@
     {
       "copyrightText": {% if obj.copyright_text %}"{{obj.copyright_text|escapejs}}"{% else %}"NOASSERTION"{% endif %},
       "downloadLocation": {% if obj.download_url %}"{{obj.download_url|escapejs}}"{% else %}"NOASSERTION"{% endif %},
-      "externalRefs": [
+      "externalRefs": [{% for cpe in obj.cpes %}
+        {
+          "referenceCategory": "SECURITY",
+          "referenceLocator": "{{cpe}}",
+          "referenceType": "cpe22Type"
+        },{% endfor %}
         {
           "referenceCategory": "PACKAGE_MANAGER",
           "referenceLocator": "{{obj.purl|safe}}",

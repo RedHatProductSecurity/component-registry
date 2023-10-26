@@ -3,7 +3,12 @@
     {
       "copyrightText": {% if component.copyright_text %}"{{component.copyright_text|escapejs}}"{% else %}"NOASSERTION"{% endif %},
       "downloadLocation": {% if component.download_url %}"{{component.download_url|escapejs}}"{% else %}"NOASSERTION"{% endif %},
-      "externalRefs": [
+      "externalRefs": [{% for cpe in component.cpes %}
+        {
+          "referenceCategory": "SECURITY",
+          "referenceLocator": "{{cpe}}",
+          "referenceType": "cpe22Type"
+        },{% endfor %}
         {
           "referenceCategory": "PACKAGE_MANAGER",
           "referenceLocator": "{{component.purl|safe}}",

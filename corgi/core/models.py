@@ -960,10 +960,9 @@ class ComponentQuerySet(models.QuerySet):
         if latest_components_uuids:
             lookup = {"pk__in": latest_components_uuids}
             if include:
-                components = components.filter(**lookup)
+                return components.filter(**lookup)
             else:
-                components = components.exclude(**lookup)
-            return components.order_by().distinct()
+                return components.exclude(**lookup)
 
         else:
             if include:

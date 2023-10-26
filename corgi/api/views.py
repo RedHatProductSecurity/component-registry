@@ -366,7 +366,7 @@ def get_component_taxonomy(
 class SoftwareBuildViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled until auth is added
     """View for api/v1/builds"""
 
-    queryset = SoftwareBuild.objects.order_by("build_type", "build_id").using("read_only")
+    queryset = SoftwareBuild.objects.order_by("build_id", "build_type").using("read_only")
     serializer_class = SoftwareBuildSerializer
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend, filters.SearchFilter]
     filterset_class = SoftwareBuildFilter
@@ -453,7 +453,7 @@ class ProductVersionViewSet(ProductDataViewSet):
 
 
 @INCLUDE_EXCLUDE_FIELDS_SCHEMA
-class ProductStreamViewSetSet(ProductDataViewSet):
+class ProductStreamViewSet(ProductDataViewSet):
     """View for api/v1/product_streams"""
 
     queryset = (
@@ -509,7 +509,7 @@ class ProductStreamViewSetSet(ProductDataViewSet):
 
 
 @INCLUDE_EXCLUDE_FIELDS_SCHEMA
-class ProductVariantViewSetSet(ProductDataViewSet):
+class ProductVariantViewSet(ProductDataViewSet):
     """View for api/v1/product_variants"""
 
     queryset = ProductVariant.objects.order_by(ProductDataViewSet.ordering_field).using("read_only")

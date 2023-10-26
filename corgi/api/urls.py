@@ -5,8 +5,8 @@ from rest_framework import routers
 from .views import (
     ChannelViewSet,
     ComponentViewSet,
-    ProductStreamViewSetSet,
-    ProductVariantViewSetSet,
+    ProductStreamViewSet,
+    ProductVariantViewSet,
     ProductVersionViewSet,
     ProductViewSet,
     SoftwareBuildViewSet,
@@ -36,8 +36,8 @@ router.register(r"components", ComponentViewSet)
 # router.register(r"lifecycles", AppStreamLifeCycleView)
 router.register(r"products", ProductViewSet)
 router.register(r"product_versions", ProductVersionViewSet)
-router.register(r"product_streams", ProductStreamViewSetSet)
-router.register(r"product_variants", ProductVariantViewSetSet)
+router.register(r"product_streams", ProductStreamViewSet)
+router.register(r"product_variants", ProductVariantViewSet)
 # Comment out until we start loading Channels and tying them to products/errata
 router.register(r"channels", ChannelViewSet)
 router.register(r"status", StatusViewSet, basename="status")

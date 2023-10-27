@@ -61,7 +61,7 @@ def slow_fetch_pnc_sbom(purl: str, product_data: dict, sbom_data: dict) -> None:
         if bomref == "root":
             defaults["software_build"] = root_build
 
-        if component["package_type"] == "maven":
+        if component["package_type"] == "maven" or bomref == "root":
             component_type = Component.Type.MAVEN
         else:
             component_type = Component.Type.GENERIC
@@ -139,15 +139,21 @@ def slow_handle_pnc_errata_released(erratum_id: int, erratum_status: str) -> Non
     root_components: set[Component] = set()
     for purl in related_purls:
         # There should only be one root component of SOURCE type
+        # But the SBOMer purl_declared won't match the Corgi purls exactly
+        # SBOMer copies its purls from PNC builds, before artifacts are released
+        # (if they're ever released)
+        # so SBOMer / PNC purls won't contain any ?repository_url= qualifier
+        # Customers need this, so Corgi must always add it
+        # and purls in the two systems will always be slightly different
         components = Component.objects.filter(
             type=Component.Type.MAVEN, meta_attr__purl_declared=purl
         )
         component_count = components.count()
         if component_count == 0:
-            logger.warning(
+            raise ValueError(
                 f"Erratum {erratum_id} refers to purl {purl} which matches no components"
             )
-            continue
+
         if component_count > 1:
             logger.warning(
                 f"Erratum {erratum_id} refers to purl {purl} which matches {component_count}"

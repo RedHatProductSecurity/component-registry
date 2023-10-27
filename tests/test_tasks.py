@@ -11,6 +11,7 @@ from corgi.collectors.models import (
     CollectorErrataProductVariant,
     CollectorErrataProductVersion,
 )
+from corgi.core.constants import RED_HAT_MAVEN_REPOSITORY
 from corgi.core.models import (
     Component,
     ComponentNode,
@@ -556,13 +557,35 @@ def test_slow_fetch_pnc_sbom():
             )
 
         assert Component.objects.count() == 6
-        # The root component is a GENERIC type
-        assert Component.objects.filter(type=Component.Type.MAVEN).count() == 5
 
-        for component in Component.objects.filter(type=Component.Type.MAVEN):
+        # The root component and all its children should have MAVEN type
+        maven_components = Component.objects.filter(type=Component.Type.MAVEN)
+        assert maven_components.count() == 6
+
+        # One component is only available upstream, the rest are built at Red Hat / in PNC
+        red_hat_maven_components = maven_components.filter(namespace=Component.Namespace.REDHAT)
+        assert red_hat_maven_components.count() == 5
+
+        for component in maven_components:
             declared_purl = PackageURL.from_string(component.meta_attr["purl_declared"])
             derived_purl = PackageURL.from_string(component.purl)
             assert _purl_matches_or_extends(derived_purl, declared_purl)
+
+            if component.namespace == Component.Namespace.REDHAT:
+                # Purls in Corgi are almost identical to purls in SBOMer
+                # Corgi adds only the ?repository_url= for Red Hat Maven componnts
+                # This is needed for customers, so we can't stop adding this
+                # SBOMer can't start adding this
+                # since it doesn't know whether / where an artifact will eventually ship
+                assert "repository_url" in derived_purl.qualifiers
+                assert "repository_url" not in declared_purl.qualifiers
+                declared_purl.qualifiers["repository_url"] = RED_HAT_MAVEN_REPOSITORY
+                assert declared_purl.to_string() == derived_purl.to_string()
+            else:
+                # Purls in Corgi should be completely identical to purls in SBOMer
+                assert "repository_url" not in derived_purl.qualifiers
+                assert "repository_url" not in declared_purl.qualifiers
+                assert declared_purl.to_string() == derived_purl.to_string()
 
         # Test with an SBOM available message that has a PV that
         # doesn't exist in ET. An sbom object shouldn't be created,
@@ -597,7 +620,9 @@ def test_slow_handle_pnc_errata_released():
     with patch(
         "corgi.collectors.errata_tool.ErrataTool.get_erratum_notes", return_value=notes
     ) as get_notes_mock:
-        slow_handle_pnc_errata_released(120325, "SHIPPED_LIVE")
+        # Well-formed notes data with no matching Corgi component
+        with pytest.raises(ValueError):
+            slow_handle_pnc_errata_released(120325, "SHIPPED_LIVE")
 
         get_notes_mock.assert_called_once_with(120325)
 
@@ -605,6 +630,10 @@ def test_slow_handle_pnc_errata_released():
     with open("tests/data/pnc/notes_no_manifest.json") as notes_file:
         notes = json.load(notes_file)
 
-    with patch("corgi.collectors.errata_tool.ErrataTool.get_erratum_notes", return_value=notes):
+    with patch(
+        "corgi.collectors.errata_tool.ErrataTool.get_erratum_notes", return_value=notes
+    ) as get_notes_mock:
         with pytest.raises(ValueError):
             slow_handle_pnc_errata_released(120325, "SHIPPED_LIVE")
+
+            get_notes_mock.assert_not_called()

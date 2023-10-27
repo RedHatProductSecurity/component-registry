@@ -80,7 +80,7 @@ def slow_fetch_pnc_sbom(purl: str, product_data: dict, sbom_data: dict) -> None:
             defaults=defaults,
         )
 
-        set_license_declared_safely(components[bomref], ";".join(component["licenses"]))
+        set_license_declared_safely(components[bomref], " OR ".join(component["licenses"]))
 
     # Link dependencies
     nodes = {}

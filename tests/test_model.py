@@ -106,6 +106,74 @@ def test_cpes():
     ]
 
 
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_component_cpes():
+    """Test the CPEs property on the Component model finds CPEs for any Variant
+    linked directly to that Component, whenever the CPE is not empty"""
+    # Below Variant has an empty CPE, so we shouldn't discover it
+    empty_cpe_variant = ProductVariantFactory(
+        name="empty_cpe_variant",
+        cpe="",
+    )
+
+    rhel_7_variant = ProductVariantFactory(
+        name="rhel_7_variant",
+        cpe="cpe:/o:redhat:enterprise_linux:7",
+    )
+    rhel_8_variant = ProductVariantFactory(
+        name="rhel_8_variant",
+        cpe="cpe:/o:redhat:enterprise_linux:8",
+    )
+
+    # Below Variant has a duplicate CPE, so we shouldn't discover it twice
+    duplicate_variant = ProductVariantFactory(
+        name="duplicate_variant",
+        cpe="cpe:/o:redhat:enterprise_linux:8",
+    )
+    variants = (empty_cpe_variant, rhel_7_variant, rhel_8_variant, duplicate_variant)
+
+    # Below Variant is not linked, so we shouldn't discover it
+    unused_variant = ProductVariantFactory(
+        name="unused_variant",
+        cpe="cpe:/o:redhat:enterprise_linux:9",
+    )
+
+    index_container = ContainerImageComponentFactory()
+    child_container = ChildContainerImageComponentFactory(
+        name=index_container.name,
+        epoch=index_container.epoch,
+        version=index_container.version,
+        release=index_container.release,
+    )
+    binary_rpm = BinaryRpmComponentFactory()
+    upstream = UpstreamComponentFactory()
+
+    child_container.sources.set((index_container,))
+    binary_rpm.sources.set((index_container, child_container))
+    upstream.sources.set((index_container, child_container, binary_rpm))
+    components = (index_container, child_container, binary_rpm, upstream)
+
+    for component in components:
+        # Components with an unsaved taxonomy should not have any CPEs
+        assert not component.cpes.exists()
+        # Mocking up builds, relations, and nodes for a taxonomy
+        # would be a lot of work, so just set the variants directly instead
+        component.productvariants.set(variants)
+
+        cpes = component.cpes
+        # Now we've "saved this component's taxonomy" / linked it to above variants
+        # Both root and non-root components should have CPEs
+        assert len(cpes)
+
+        # Components should not have any empty or duplicate CPEs
+        assert "" not in cpes
+        assert len(cpes) == len(set(cpes))
+
+        # Components should give their CPEs in sorted order, to keep manifests stable
+        assert list(cpes) == [rhel_7_variant.cpe, rhel_8_variant.cpe]
+        assert unused_variant.cpe not in cpes
+
+
 def test_nevra():
     """Test that NEVRAs are formatted properly for certain known edge-cases"""
     for component_type in Component.Type.values:

@@ -353,11 +353,15 @@ def test_product_manifest_properties(stored_proc):
     component_data = manifest["packages"][0]
     product_data = manifest["packages"][-1]
 
-    # UUID and PURL, for each component attached to product, should be included in manifest
+    # UUID, CPE, and PURL for each root component attached to product should be included in manifest
     assert component_data["SPDXID"] == f"SPDXRef-{component.uuid}"
     assert component_data["name"] == component.name
     assert component_data["packageFileName"] == f"{component.nevra}.rpm"
-    assert component_data["externalRefs"][0]["referenceLocator"] == component.purl
+    assert (
+        component_data["externalRefs"][0]["referenceLocator"]
+        == stream.productvariants.values_list("cpe", flat=True).get()
+    )
+    assert component_data["externalRefs"][-1]["referenceLocator"] == component.purl
 
     assert product_data["SPDXID"] == f"SPDXRef-{stream.uuid}"
     assert product_data["name"] == stream.name
@@ -436,6 +440,16 @@ def test_component_manifest_properties():
     num_provided = len(component.get_provides_pks())
 
     assert num_provided == 2
+
+    # Last component is the one we're manifesting
+    component_data = manifest["packages"][-1]
+
+    # UUID, CPE, and PURL for the component we're manifesting should be included in manifest
+    assert component_data["SPDXID"] == f"SPDXRef-{component.uuid}"
+    assert component_data["name"] == component.name
+    assert component_data["packageFileName"] == f"{component.nevra}.rpm"
+    assert component_data["externalRefs"][0]["referenceLocator"] == component.cpes.get()
+    assert component_data["externalRefs"][-1]["referenceLocator"] == component.purl
 
     document_describes_product = {
         "relatedSpdxElement": f"SPDXRef-{component.uuid}",

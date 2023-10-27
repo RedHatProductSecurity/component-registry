@@ -1789,8 +1789,26 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         return ComponentNode.objects.filter(pk__in=root_node_pks).using(using)
 
     @property
-    def build_meta(self):
-        return self.software_build.meta_attr
+    def cpes(self) -> QuerySet:
+        """Build and return a list of CPEs from all Variants this Component relates to"""
+        # For each Variant-type relation, get the linked Variant's CPE directly
+        # Remove any duplicates, and return the CPEs in sorted order so manifests are stable
+        return (
+            self.productvariants.exclude(cpe="")
+            .values_list("cpe", flat=True)
+            .distinct()
+            .order_by("cpe")
+        )
+
+        # For Stream-type relations, we no longer link any Variants
+        # since this caused data quality issues, where Components were linked to Variants
+        # that didn't actually ship those Components
+        # We could look at all the linked streams to get CPEs from all their child Variants
+        # But this would cause the same problem - we'd report too many Variants / incorrect CPEs
+
+        # TODO: We return an empty QuerySet if no Variants are linked, or none have CPEs
+        #  But do we want to raise an error / make manifesting fail,
+        #  whenever we can't find CPEs for some root component?
 
     def _build_download_url_for_type(self) -> str:
         """Get a source code or binary download URL based on a purl"""

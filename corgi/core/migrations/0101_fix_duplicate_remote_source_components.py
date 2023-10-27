@@ -43,7 +43,7 @@ class Migration(migrations.Migration):
     # and will take forever, so we need to pick up where we left off after timeouts
     atomic = False
     dependencies = [
-        ("core", "0099_fix_duplicate_rpms"),
+        ("core", "0100_fix_duplicate_rpms"),
     ]
 
     operations = [

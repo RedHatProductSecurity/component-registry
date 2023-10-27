@@ -21,16 +21,10 @@ logger = get_task_logger(__name__)
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def slow_fetch_pnc_sbom(purl: str, product_data: dict, sbom_data: dict) -> None:
     """Fetch a PNC SBOM from sbomer"""
-    logger.info("Fetching PNC SBOM %s for purl %s", sbom_data["id"], purl)
+    logger.info(f"Fetching PNC SBOM {sbom_data['id']} for purl {purl} from {sbom_data['link']}")
 
     # Validate the supplied product information
-    try:
-        CollectorErrataProductVariant.objects.get(name=product_data["productVariant"])
-    except CollectorErrataProductVariant.DoesNotExist:
-        logger.warning(
-            "PNC SBOM provided for nonexistent product variant: %s", product_data["productVariant"]
-        )
-        return
+    CollectorErrataProductVariant.objects.get(name=product_data["productVariant"])
 
     # Fetch and parse the SBOM
     response = requests.get(sbom_data["link"])
@@ -119,11 +113,8 @@ def slow_fetch_pnc_sbom(purl: str, product_data: dict, sbom_data: dict) -> None:
                 },
             )
 
-    # Save product taxonomy
+    # Save product and component taxonomies
     slow_save_taxonomy.delay(root_build.build_id, root_build.build_type)
-
-    # Save component taxonomy
-    root_component.save_component_taxonomy()
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
@@ -183,3 +174,5 @@ def slow_handle_pnc_errata_released(erratum_id: int, erratum_status: str) -> Non
                 "type": ProductComponentRelation.Type.ERRATA,
             },
         )
+        # Save product and component taxonomies
+        slow_save_taxonomy.delay(build.build_id, build.build_type)

@@ -50,9 +50,10 @@ def slow_fetch_pnc_sbom(purl: str, product_data: dict, sbom_data: dict) -> None:
     # Create ProductComponentRelation
     ProductComponentRelation.objects.create(
         build_id=root_build.build_id,
-        build_type=SoftwareBuild.Type.PNC,
+        build_type=root_build.build_type,
         software_build=root_build,
         product_ref=sbom.product_variant,
+        external_system_id=sbom_data["id"],
         type=ProductComponentRelation.Type.SBOMER,
     )
 
@@ -169,14 +170,16 @@ def slow_handle_pnc_errata_released(erratum_id: int, erratum_status: str) -> Non
             raise ValueError(f"Component {component.purl} has no build, can't relate {erratum_id}")
 
         build = component.software_build
-        build_relation = ProductComponentRelation.objects.get(software_build=build)
+        build_relation = ProductComponentRelation.objects.get(
+            type=ProductComponentRelation.Type.SBOMER, software_build=build
+        )
         ProductComponentRelation.objects.update_or_create(
             external_system_id=erratum_id,
             product_ref=build_relation.product_ref,
             build_id=build.build_id,
             build_type=build.build_type,
             defaults={
+                "software_build": build,
                 "type": ProductComponentRelation.Type.ERRATA,
-                "meta_attr": {"component_purl": component.purl},
             },
         )

@@ -1,8 +1,8 @@
 from django.db import migrations
-from django.db.models import F, Manager, Value, functions
+from django.db.models import F, Value, functions
 
 # Must use non-historical model which supports cnodes
-from corgi.core.models import Component
+from corgi.core.models import Component, ComponentNode
 
 NEVRA_FIELD = F("nevra")
 NOARCH_VALUE = Value(".noarch")
@@ -14,7 +14,6 @@ RED_HAT_PURL_PREFIX = f"{PURL_PREFIX}redhat/"
 
 def find_duplicate_rpms(apps, schema_editor) -> None:
     """Find duplicate RPMs / nodes with bad purls, NEVRAs, arches, or namespaces"""
-    ComponentNode = apps.get_model("core", "ComponentNode")
     arches = (
         "ia64",
         "ppc64le",
@@ -55,15 +54,15 @@ def find_duplicate_rpms(apps, schema_editor) -> None:
                 good_purl = bad_rpm.purl.replace("?", f"?arch={arch}&", 1)
             else:
                 good_purl = f"{bad_rpm.purl}?arch={arch}"
-            clean_duplicate_rpms(good_purl, bad_rpm, ComponentNode)
+            clean_duplicate_rpms(good_purl, bad_rpm)
 
         # Fix binary RPM purls which are missing a namespace value
         for bad_rpm in rpms_for_arch.exclude(purl__startswith=RED_HAT_PURL_PREFIX).iterator():
             good_purl = bad_rpm.purl.replace(PURL_PREFIX, RED_HAT_PURL_PREFIX, 1)
-            clean_duplicate_rpms(good_purl, bad_rpm, ComponentNode)
+            clean_duplicate_rpms(good_purl, bad_rpm)
 
 
-def clean_duplicate_rpms(good_purl: str, bad_rpm: Component, ComponentNode: Manager):
+def clean_duplicate_rpms(good_purl: str, bad_rpm: Component):
     """Clean up binary RPM purls, NEVRAs, nodes, etc. that may or may not have duplicates"""
     # We don't reuse this code in other migrations because we have to make assumptions
     # about what to check and which fields / values to update, based on component type
@@ -76,7 +75,7 @@ def clean_duplicate_rpms(good_purl: str, bad_rpm: Component, ComponentNode: Mana
     # As well as the bad node purls, after we check for duplicates
     if not good_rpm:
         bad_rpm_qs.update(purl=good_purl)
-        fix_bad_nodes(good_purl, bad_rpm, ComponentNode)
+        fix_bad_nodes(good_purl, bad_rpm)
         return
 
     # Else both RPMs exist, we assume the old / bad one should just be deleted
@@ -89,7 +88,7 @@ def clean_duplicate_rpms(good_purl: str, bad_rpm: Component, ComponentNode: Mana
     bad_rpm_qs.delete()
 
 
-def fix_bad_nodes(good_purl: str, bad_rpm: Component, ComponentNode: Manager):
+def fix_bad_nodes(good_purl: str, bad_rpm: Component):
     """Helper method to find and clean up RPM nodes with bad purls"""
     for bad_node in bad_rpm.cnodes.iterator():
         bad_node_qs = ComponentNode.objects.filter(

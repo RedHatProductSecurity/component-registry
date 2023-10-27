@@ -92,7 +92,7 @@ class Migration(migrations.Migration):
     # and will take forever, so we need to pick up where we left off after timeouts
     atomic = False
     dependencies = [
-        ("core", "0098_fix_duplicate_containers"),
+        ("core", "0099_add_type_arch_stored_proc_filter"),
     ]
 
     operations = [

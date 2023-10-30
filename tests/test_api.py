@@ -68,8 +68,9 @@ def test_software_build_details(client, api_path, build_type):
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_software_build_by_product(client, api_path):
-    stream_a = ProductStreamFactory()
-    stream_b = ProductStreamFactory()
+    version = ProductVersionFactory()
+    stream_a = ProductStreamFactory(products=version.products, productversions=version)
+    stream_b = ProductStreamFactory(products=version.products, productversions=version)
     build_a = SoftwareBuildFactory()
     build_b = SoftwareBuildFactory()
     ProductComponentRelationFactory(product_ref=stream_a, software_build=build_a)
@@ -450,6 +451,8 @@ def test_latest_components_by_streams_filter_with_multiple_products(client, api_
     # Even though it's "not the latest" for the RHEL8 stream
     # Report newest_component as the latest for the RHEL8 stream
     # Even though both have the same name / only one is latest overall
+    # TODO: This is failing occasionally, for unknown reasons
+    #  AssertionError: assert 'memory:3-8.6.5-11.src' == 'memory:3-8.6.5-10.src'
     assert response["results"][0]["nevra"] == newer_component.nevra
     assert response["results"][1]["nevra"] == newest_component.nevra
 

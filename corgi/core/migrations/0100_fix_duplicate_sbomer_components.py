@@ -56,6 +56,7 @@ def find_duplicate_sbomer_components(apps, schema_editor) -> None:
         # Now "?" and "type=" are both guaranteed to be in the purl
         # So prepend the "repository_url=" qualifier (to keep them in alphabetical order)
         good_purl = good_purl.replace("?", f"?repository_url={RED_HAT_MAVEN_REPOSITORY}&", 1)
+        component.purl = good_purl
         component.save()
 
         ComponentNode.objects.filter(type="SOURCE", parent=None, purl=bad_purl).update(

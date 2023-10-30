@@ -364,10 +364,15 @@ paths:
           type: boolean
         description: Show only unscanned components (where copyright text is empty)
       - in: query
-        name: missing_license
+        name: missing_license_concluded
         schema:
           type: boolean
         description: Show only unscanned components (where license concluded is empty)
+      - in: query
+        name: missing_license_declared
+        schema:
+          type: boolean
+        description: Show only unscanned components (where license declared is empty)
       - in: query
         name: missing_scan_url
         schema:

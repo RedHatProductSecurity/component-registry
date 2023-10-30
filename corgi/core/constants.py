@@ -17,7 +17,7 @@ CORGI_COMPONENT_TAXONOMY_VERSION = "v1"
 # There's also an Early Access repo: https://maven.repository.redhat.com/earlyaccess/all
 # But anything in there should become GA eventually
 # and we don't want the purls to change over time / we don't know when GA will happen
-RED_HAT_MAVEN_REPOSITORY = "https://maven.repository.redhat.com/ga"
+RED_HAT_MAVEN_REPOSITORY = "https://maven.repository.redhat.com/ga/"
 
 # Map MPTT node levels in our product taxonomy to model names as defined in models.py
 NODE_LEVEL_MODEL_MAPPING = {

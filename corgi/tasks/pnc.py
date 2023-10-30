@@ -21,16 +21,10 @@ logger = get_task_logger(__name__)
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def slow_fetch_pnc_sbom(purl: str, product_data: dict, sbom_data: dict) -> None:
     """Fetch a PNC SBOM from sbomer"""
-    logger.info("Fetching PNC SBOM %s for purl %s", sbom_data["id"], purl)
+    logger.info(f"Fetching PNC SBOM {sbom_data['id']} for purl {purl} from {sbom_data['link']}")
 
     # Validate the supplied product information
-    try:
-        CollectorErrataProductVariant.objects.get(name=product_data["productVariant"])
-    except CollectorErrataProductVariant.DoesNotExist:
-        logger.warning(
-            "PNC SBOM provided for nonexistent product variant: %s", product_data["productVariant"]
-        )
-        return
+    CollectorErrataProductVariant.objects.get(name=product_data["productVariant"])
 
     # Fetch and parse the SBOM
     response = requests.get(sbom_data["link"])
@@ -50,9 +44,10 @@ def slow_fetch_pnc_sbom(purl: str, product_data: dict, sbom_data: dict) -> None:
     # Create ProductComponentRelation
     ProductComponentRelation.objects.create(
         build_id=root_build.build_id,
-        build_type=SoftwareBuild.Type.PNC,
+        build_type=root_build.build_type,
         software_build=root_build,
         product_ref=sbom.product_variant,
+        external_system_id=sbom_data["id"],
         type=ProductComponentRelation.Type.SBOMER,
     )
 
@@ -66,7 +61,7 @@ def slow_fetch_pnc_sbom(purl: str, product_data: dict, sbom_data: dict) -> None:
         if bomref == "root":
             defaults["software_build"] = root_build
 
-        if component["package_type"] == "maven":
+        if component["package_type"] == "maven" or bomref == "root":
             component_type = Component.Type.MAVEN
         else:
             component_type = Component.Type.GENERIC
@@ -80,7 +75,7 @@ def slow_fetch_pnc_sbom(purl: str, product_data: dict, sbom_data: dict) -> None:
             defaults=defaults,
         )
 
-        set_license_declared_safely(components[bomref], ";".join(component["licenses"]))
+        set_license_declared_safely(components[bomref], " OR ".join(component["licenses"]))
 
     # Link dependencies
     nodes = {}
@@ -118,11 +113,8 @@ def slow_fetch_pnc_sbom(purl: str, product_data: dict, sbom_data: dict) -> None:
                 },
             )
 
-    # Save product taxonomy
+    # Save product and component taxonomies
     slow_save_taxonomy.delay(root_build.build_id, root_build.build_type)
-
-    # Save component taxonomy
-    root_component.save_component_taxonomy()
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
@@ -147,15 +139,21 @@ def slow_handle_pnc_errata_released(erratum_id: int, erratum_status: str) -> Non
     root_components: set[Component] = set()
     for purl in related_purls:
         # There should only be one root component of SOURCE type
+        # But the SBOMer purl_declared won't match the Corgi purls exactly
+        # SBOMer copies its purls from PNC builds, before artifacts are released
+        # (if they're ever released)
+        # so SBOMer / PNC purls won't contain any ?repository_url= qualifier
+        # Customers need this, so Corgi must always add it
+        # and purls in the two systems will always be slightly different
         components = Component.objects.filter(
             type=Component.Type.MAVEN, meta_attr__purl_declared=purl
         )
         component_count = components.count()
         if component_count == 0:
-            logger.warning(
+            raise ValueError(
                 f"Erratum {erratum_id} refers to purl {purl} which matches no components"
             )
-            continue
+
         if component_count > 1:
             logger.warning(
                 f"Erratum {erratum_id} refers to purl {purl} which matches {component_count}"
@@ -169,14 +167,18 @@ def slow_handle_pnc_errata_released(erratum_id: int, erratum_status: str) -> Non
             raise ValueError(f"Component {component.purl} has no build, can't relate {erratum_id}")
 
         build = component.software_build
-        build_relation = ProductComponentRelation.objects.get(software_build=build)
+        build_relation = ProductComponentRelation.objects.get(
+            type=ProductComponentRelation.Type.SBOMER, software_build=build
+        )
         ProductComponentRelation.objects.update_or_create(
             external_system_id=erratum_id,
             product_ref=build_relation.product_ref,
             build_id=build.build_id,
             build_type=build.build_type,
             defaults={
+                "software_build": build,
                 "type": ProductComponentRelation.Type.ERRATA,
-                "meta_attr": {"component_purl": component.purl},
             },
         )
+        # Save product and component taxonomies
+        slow_save_taxonomy.delay(build.build_id, build.build_type)

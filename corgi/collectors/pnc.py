@@ -75,12 +75,19 @@ class SbomerSbom:
                 if "expression" in _license:  # SPDX string
                     licenses.append(_license["expression"])
                 elif "license" in _license:  # Individual license
+                    # Prefer license IDs, only fallback to names if no ID is available
                     if _license["license"].get("id"):
                         licenses.append(_license["license"].get("id"))
-                    if _license["license"].get("name"):
+                    elif _license["license"].get("name"):
                         licenses.append(_license["license"].get("name"))
+                    else:
+                        raise NotImplementedError(
+                            "Unsupported license type (no ID or name) in SBOMer manifest"
+                        )
                 else:  # bomref
-                    raise NotImplementedError("Unsupported license type in SBOMer manifest")
+                    raise NotImplementedError(
+                        "Unsupported license type (bomref) in SBOMer manifest"
+                    )
 
             component["licenses"] = licenses
 

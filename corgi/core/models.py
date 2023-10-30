@@ -1532,7 +1532,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         # Red Hat components use the repository_url from their purl
         # Upstream components use the default repository_url from the purl spec
         repository_url = (
-            purl_data.qualifiers.get("repository_url") or "https://repo.maven.apache.org/maven2"
+            purl_data.qualifiers.get("repository_url") or "https://repo.maven.apache.org/maven2/"
         )
 
         namespace = purl_data.namespace
@@ -1549,12 +1549,12 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
         if namespace and name and version and extension:
             return (
-                f"{repository_url}/{namespace}/{name}/{version}/"
+                f"{repository_url}{namespace}/{name}/{version}/"
                 f"{name}-{version}{classifier}.{extension}"
             )
 
         elif namespace and name and version:
-            return f"{repository_url}/{namespace}/{name}/{version}"
+            return f"{repository_url}{namespace}/{name}/{version}"
 
         else:
             return ""

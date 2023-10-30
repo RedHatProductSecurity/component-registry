@@ -4,6 +4,11 @@ from django.db.models import F, Value, functions
 from corgi.core.constants import RED_HAT_MAVEN_REPOSITORY
 
 LICENSE_DECLARED_RAW_FIELD = F("license_declared_raw")
+PURL_FIELD = F("purl")
+
+# Identical except for a trailing / slash we just added
+RED_HAT_MAVEN_REPOSITORY_OLD = "https://maven.repository.redhat.com/ga"
+
 SEMICOLON_VALUE = Value(";")
 SPDX_OR_VALUE = Value(" OR ")
 
@@ -62,6 +67,15 @@ def find_duplicate_sbomer_components(apps, schema_editor) -> None:
                 LICENSE_DECLARED_RAW_FIELD, SEMICOLON_VALUE, SPDX_OR_VALUE
             )
         )
+
+    # Now that RED_HAT_MAVEN_REPOSITORY has a trailing / slash, fix values without this (if any)
+    Component.objects.filter(
+        purl__contains=f"repository_url={RED_HAT_MAVEN_REPOSITORY_OLD}"
+    ).exclude(purl__contains=f"repository_url={RED_HAT_MAVEN_REPOSITORY}").update(
+        purl=functions.Replace(
+            PURL_FIELD, Value(RED_HAT_MAVEN_REPOSITORY_OLD), Value(RED_HAT_MAVEN_REPOSITORY)
+        )
+    )
 
 
 class Migration(migrations.Migration):

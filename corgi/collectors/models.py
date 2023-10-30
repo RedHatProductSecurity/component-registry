@@ -88,3 +88,20 @@ class CollectorRPMRepository(models.Model):
 
     def __str__(self):
         return f"{self.name}"
+
+
+class CollectorPyxisNameLabel(models.Model):
+    name = models.CharField(primary_key=True, max_length=200)
+
+    def __str__(self):
+        return f"{self.name}"
+
+
+class CollectorPyxisRepository(models.Model):
+    name = models.CharField(primary_key=True, max_length=200)
+    name_label = models.ForeignKey(
+        CollectorPyxisNameLabel, on_delete=models.CASCADE, related_name="repos"
+    )
+
+    def __str__(self):
+        return f"{self.name}"

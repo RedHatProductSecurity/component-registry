@@ -1,0 +1,615 @@
+{
+  "data": {
+    "find_images_by_nvr": {
+      "error": null,
+      "page_size": 50,
+      "page": 0,
+      "data": [
+        {
+          "_id": "63b627e3deb37662f5bff840",
+          "architecture": "arm64",
+          "parsed_data": {
+            "labels": [
+              {
+                "name": "License",
+                "value": "GPLv2+"
+              },
+              {
+                "name": "architecture",
+                "value": "aarch64"
+              },
+              {
+                "name": "build-date",
+                "value": "2023-01-05T01:13:18"
+              },
+              {
+                "name": "com.redhat.build-host",
+                "value": "arm-002.osbs.prod.upshift.rdu2.redhat.com"
+              },
+              {
+                "name": "com.redhat.component",
+                "value": "ose-cluster-ovirt-csi-operator-container"
+              },
+              {
+                "name": "com.redhat.license_terms",
+                "value": "https://www.redhat.com/agreements"
+              },
+              {
+                "name": "description",
+                "value": "The ovirt-csi-driver-operator installs and maintains the oVirt CSI Driver on a cluster."
+              },
+              {
+                "name": "distribution-scope",
+                "value": "public"
+              },
+              {
+                "name": "io.buildah.version",
+                "value": "1.27.1"
+              },
+              {
+                "name": "io.k8s.description",
+                "value": "The ovirt-csi-driver-operator installs and maintains the oVirt CSI Driver on a cluster."
+              },
+              {
+                "name": "io.k8s.display-name",
+                "value": "OpenShift ovirt-csi-driver-operator"
+              },
+              {
+                "name": "io.openshift.build.commit.id",
+                "value": "feb14fbb7c7e91fd721a23b5c7307469da5c1aec"
+              },
+              {
+                "name": "io.openshift.build.commit.url",
+                "value": "https://github.com/openshift/ovirt-csi-driver-operator/commit/feb14fbb7c7e91fd721a23b5c7307469da5c1aec"
+              },
+              {
+                "name": "io.openshift.build.source-location",
+                "value": "https://github.com/openshift/ovirt-csi-driver-operator"
+              },
+              {
+                "name": "io.openshift.expose-services",
+                "value": ""
+              },
+              {
+                "name": "io.openshift.maintainer.component",
+                "value": "Storage"
+              },
+              {
+                "name": "io.openshift.maintainer.product",
+                "value": "OpenShift Container Platform"
+              },
+              {
+                "name": "io.openshift.maintainer.subcomponent",
+                "value": "oVirt CSI Driver"
+              },
+              {
+                "name": "io.openshift.tags",
+                "value": "openshift,base"
+              },
+              {
+                "name": "maintainer",
+                "value": "Red Hat, Inc."
+              },
+              {
+                "name": "name",
+                "value": "openshift/ose-ovirt-csi-driver-operator"
+              },
+              {
+                "name": "release",
+                "value": "202301042354.p0.gfeb14fb.assembly.stream"
+              },
+              {
+                "name": "summary",
+                "value": "Provides the latest release of the Red Hat Extended Life Base Image."
+              },
+              {
+                "name": "url",
+                "value": "https://access.redhat.com/containers/#/registry.access.redhat.com/openshift/ose-ovirt-csi-driver-operator/images/v4.12.0-202301042354.p0.gfeb14fb.assembly.stream"
+              },
+              {
+                "name": "vcs-ref",
+                "value": "ebe0f6326608fffb488fffbfbf8f291e0fb86f98"
+              },
+              {
+                "name": "vcs-type",
+                "value": "git"
+              },
+              {
+                "name": "vendor",
+                "value": "Red Hat, Inc."
+              },
+              {
+                "name": "version",
+                "value": "v4.12.0"
+              }
+            ]
+          },
+          "repositories": [
+            {
+              "image_advisory_id": "RHSA-2022:7399",
+              "registry": "registry.access.redhat.com",
+              "repository": "openshift4/ovirt-csi-driver-rhel8-operator",
+              "signatures": [
+                {
+                  "key_long_id": "199E2F91FD431D51"
+                }
+              ],
+              "tags": [
+                {
+                  "name": "v4.12.0-202301042354.p0.gfeb14fb.assembly.stream"
+                }
+              ]
+            },
+            {
+              "image_advisory_id": null,
+              "registry": "registry-proxy.engineering.redhat.com",
+              "repository": "rh-osbs/openshift-ose-ovirt-csi-driver-operator",
+              "signatures": null,
+              "tags": [
+                {
+                  "name": "v4.12.0-202301042354.p0.gfeb14fb.assembly.stream"
+                },
+                {
+                  "name": "rhaos-4.12-rhel-8-containers-candidate-89250-20230105011315-aarch64"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "_id": "63b627e5deb37662f5bff844",
+          "architecture": "s390x",
+          "parsed_data": {
+            "labels": [
+              {
+                "name": "License",
+                "value": "GPLv2+"
+              },
+              {
+                "name": "architecture",
+                "value": "s390x"
+              },
+              {
+                "name": "build-date",
+                "value": "2023-01-05T01:13:18"
+              },
+              {
+                "name": "com.redhat.build-host",
+                "value": "s390-c2-vm-04.prod.osbs.eng.bos.redhat.com"
+              },
+              {
+                "name": "com.redhat.component",
+                "value": "ose-cluster-ovirt-csi-operator-container"
+              },
+              {
+                "name": "com.redhat.license_terms",
+                "value": "https://www.redhat.com/agreements"
+              },
+              {
+                "name": "description",
+                "value": "The ovirt-csi-driver-operator installs and maintains the oVirt CSI Driver on a cluster."
+              },
+              {
+                "name": "distribution-scope",
+                "value": "public"
+              },
+              {
+                "name": "io.buildah.version",
+                "value": "1.27.1"
+              },
+              {
+                "name": "io.k8s.description",
+                "value": "The ovirt-csi-driver-operator installs and maintains the oVirt CSI Driver on a cluster."
+              },
+              {
+                "name": "io.k8s.display-name",
+                "value": "OpenShift ovirt-csi-driver-operator"
+              },
+              {
+                "name": "io.openshift.build.commit.id",
+                "value": "feb14fbb7c7e91fd721a23b5c7307469da5c1aec"
+              },
+              {
+                "name": "io.openshift.build.commit.url",
+                "value": "https://github.com/openshift/ovirt-csi-driver-operator/commit/feb14fbb7c7e91fd721a23b5c7307469da5c1aec"
+              },
+              {
+                "name": "io.openshift.build.source-location",
+                "value": "https://github.com/openshift/ovirt-csi-driver-operator"
+              },
+              {
+                "name": "io.openshift.expose-services",
+                "value": ""
+              },
+              {
+                "name": "io.openshift.maintainer.component",
+                "value": "Storage"
+              },
+              {
+                "name": "io.openshift.maintainer.product",
+                "value": "OpenShift Container Platform"
+              },
+              {
+                "name": "io.openshift.maintainer.subcomponent",
+                "value": "oVirt CSI Driver"
+              },
+              {
+                "name": "io.openshift.tags",
+                "value": "openshift,base"
+              },
+              {
+                "name": "maintainer",
+                "value": "Red Hat, Inc."
+              },
+              {
+                "name": "name",
+                "value": "openshift/ose-ovirt-csi-driver-operator"
+              },
+              {
+                "name": "release",
+                "value": "202301042354.p0.gfeb14fb.assembly.stream"
+              },
+              {
+                "name": "summary",
+                "value": "Provides the latest release of the Red Hat Extended Life Base Image."
+              },
+              {
+                "name": "url",
+                "value": "https://access.redhat.com/containers/#/registry.access.redhat.com/openshift/ose-ovirt-csi-driver-operator/images/v4.12.0-202301042354.p0.gfeb14fb.assembly.stream"
+              },
+              {
+                "name": "vcs-ref",
+                "value": "ebe0f6326608fffb488fffbfbf8f291e0fb86f98"
+              },
+              {
+                "name": "vcs-type",
+                "value": "git"
+              },
+              {
+                "name": "vendor",
+                "value": "Red Hat, Inc."
+              },
+              {
+                "name": "version",
+                "value": "v4.12.0"
+              }
+            ]
+          },
+          "repositories": [
+            {
+              "image_advisory_id": "RHSA-2022:7399",
+              "registry": "registry.access.redhat.com",
+              "repository": "openshift4/ovirt-csi-driver-rhel8-operator",
+              "signatures": [
+                {
+                  "key_long_id": "199E2F91FD431D51"
+                }
+              ],
+              "tags": [
+                {
+                  "name": "v4.12.0-202301042354.p0.gfeb14fb.assembly.stream"
+                }
+              ]
+            },
+            {
+              "image_advisory_id": null,
+              "registry": "registry-proxy.engineering.redhat.com",
+              "repository": "rh-osbs/openshift-ose-ovirt-csi-driver-operator",
+              "signatures": null,
+              "tags": [
+                {
+                  "name": "v4.12.0-202301042354.p0.gfeb14fb.assembly.stream"
+                },
+                {
+                  "name": "rhaos-4.12-rhel-8-containers-candidate-89250-20230105011315-s390x"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "_id": "63b627e6deb37662f5bff848",
+          "architecture": "ppc64le",
+          "parsed_data": {
+            "labels": [
+              {
+                "name": "License",
+                "value": "GPLv2+"
+              },
+              {
+                "name": "architecture",
+                "value": "ppc64le"
+              },
+              {
+                "name": "build-date",
+                "value": "2023-01-05T01:13:18"
+              },
+              {
+                "name": "com.redhat.build-host",
+                "value": "ppc64le-c3-vm-08.osbs.prod.psi.rdu2.redhat.com"
+              },
+              {
+                "name": "com.redhat.component",
+                "value": "ose-cluster-ovirt-csi-operator-container"
+              },
+              {
+                "name": "com.redhat.license_terms",
+                "value": "https://www.redhat.com/agreements"
+              },
+              {
+                "name": "description",
+                "value": "The ovirt-csi-driver-operator installs and maintains the oVirt CSI Driver on a cluster."
+              },
+              {
+                "name": "distribution-scope",
+                "value": "public"
+              },
+              {
+                "name": "io.buildah.version",
+                "value": "1.27.1"
+              },
+              {
+                "name": "io.k8s.description",
+                "value": "The ovirt-csi-driver-operator installs and maintains the oVirt CSI Driver on a cluster."
+              },
+              {
+                "name": "io.k8s.display-name",
+                "value": "OpenShift ovirt-csi-driver-operator"
+              },
+              {
+                "name": "io.openshift.build.commit.id",
+                "value": "feb14fbb7c7e91fd721a23b5c7307469da5c1aec"
+              },
+              {
+                "name": "io.openshift.build.commit.url",
+                "value": "https://github.com/openshift/ovirt-csi-driver-operator/commit/feb14fbb7c7e91fd721a23b5c7307469da5c1aec"
+              },
+              {
+                "name": "io.openshift.build.source-location",
+                "value": "https://github.com/openshift/ovirt-csi-driver-operator"
+              },
+              {
+                "name": "io.openshift.expose-services",
+                "value": ""
+              },
+              {
+                "name": "io.openshift.maintainer.component",
+                "value": "Storage"
+              },
+              {
+                "name": "io.openshift.maintainer.product",
+                "value": "OpenShift Container Platform"
+              },
+              {
+                "name": "io.openshift.maintainer.subcomponent",
+                "value": "oVirt CSI Driver"
+              },
+              {
+                "name": "io.openshift.tags",
+                "value": "openshift,base"
+              },
+              {
+                "name": "maintainer",
+                "value": "Red Hat, Inc."
+              },
+              {
+                "name": "name",
+                "value": "openshift/ose-ovirt-csi-driver-operator"
+              },
+              {
+                "name": "release",
+                "value": "202301042354.p0.gfeb14fb.assembly.stream"
+              },
+              {
+                "name": "summary",
+                "value": "Provides the latest release of the Red Hat Extended Life Base Image."
+              },
+              {
+                "name": "url",
+                "value": "https://access.redhat.com/containers/#/registry.access.redhat.com/openshift/ose-ovirt-csi-driver-operator/images/v4.12.0-202301042354.p0.gfeb14fb.assembly.stream"
+              },
+              {
+                "name": "vcs-ref",
+                "value": "ebe0f6326608fffb488fffbfbf8f291e0fb86f98"
+              },
+              {
+                "name": "vcs-type",
+                "value": "git"
+              },
+              {
+                "name": "vendor",
+                "value": "Red Hat, Inc."
+              },
+              {
+                "name": "version",
+                "value": "v4.12.0"
+              }
+            ]
+          },
+          "repositories": [
+            {
+              "image_advisory_id": "RHSA-2022:7399",
+              "registry": "registry.access.redhat.com",
+              "repository": "openshift4/ovirt-csi-driver-rhel8-operator",
+              "signatures": [
+                {
+                  "key_long_id": "199E2F91FD431D51"
+                }
+              ],
+              "tags": [
+                {
+                  "name": "v4.12.0-202301042354.p0.gfeb14fb.assembly.stream"
+                }
+              ]
+            },
+            {
+              "image_advisory_id": null,
+              "registry": "registry-proxy.engineering.redhat.com",
+              "repository": "rh-osbs/openshift-ose-ovirt-csi-driver-operator",
+              "signatures": null,
+              "tags": [
+                {
+                  "name": "v4.12.0-202301042354.p0.gfeb14fb.assembly.stream"
+                },
+                {
+                  "name": "rhaos-4.12-rhel-8-containers-candidate-89250-20230105011315-ppc64le"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "_id": "63b627e8deb37662f5bff84c",
+          "architecture": "amd64",
+          "parsed_data": {
+            "labels": [
+              {
+                "name": "License",
+                "value": "GPLv2+"
+              },
+              {
+                "name": "architecture",
+                "value": "x86_64"
+              },
+              {
+                "name": "build-date",
+                "value": "2023-01-05T01:13:18"
+              },
+              {
+                "name": "com.redhat.build-host",
+                "value": "cpt-1001.osbs.prod.upshift.rdu2.redhat.com"
+              },
+              {
+                "name": "com.redhat.component",
+                "value": "ose-cluster-ovirt-csi-operator-container"
+              },
+              {
+                "name": "com.redhat.license_terms",
+                "value": "https://www.redhat.com/agreements"
+              },
+              {
+                "name": "description",
+                "value": "The ovirt-csi-driver-operator installs and maintains the oVirt CSI Driver on a cluster."
+              },
+              {
+                "name": "distribution-scope",
+                "value": "public"
+              },
+              {
+                "name": "io.buildah.version",
+                "value": "1.27.1"
+              },
+              {
+                "name": "io.k8s.description",
+                "value": "The ovirt-csi-driver-operator installs and maintains the oVirt CSI Driver on a cluster."
+              },
+              {
+                "name": "io.k8s.display-name",
+                "value": "OpenShift ovirt-csi-driver-operator"
+              },
+              {
+                "name": "io.openshift.build.commit.id",
+                "value": "feb14fbb7c7e91fd721a23b5c7307469da5c1aec"
+              },
+              {
+                "name": "io.openshift.build.commit.url",
+                "value": "https://github.com/openshift/ovirt-csi-driver-operator/commit/feb14fbb7c7e91fd721a23b5c7307469da5c1aec"
+              },
+              {
+                "name": "io.openshift.build.source-location",
+                "value": "https://github.com/openshift/ovirt-csi-driver-operator"
+              },
+              {
+                "name": "io.openshift.expose-services",
+                "value": ""
+              },
+              {
+                "name": "io.openshift.maintainer.component",
+                "value": "Storage"
+              },
+              {
+                "name": "io.openshift.maintainer.product",
+                "value": "OpenShift Container Platform"
+              },
+              {
+                "name": "io.openshift.maintainer.subcomponent",
+                "value": "oVirt CSI Driver"
+              },
+              {
+                "name": "io.openshift.tags",
+                "value": "openshift,base"
+              },
+              {
+                "name": "maintainer",
+                "value": "Red Hat, Inc."
+              },
+              {
+                "name": "name",
+                "value": "openshift/ose-ovirt-csi-driver-operator"
+              },
+              {
+                "name": "release",
+                "value": "202301042354.p0.gfeb14fb.assembly.stream"
+              },
+              {
+                "name": "summary",
+                "value": "Provides the latest release of the Red Hat Extended Life Base Image."
+              },
+              {
+                "name": "url",
+                "value": "https://access.redhat.com/containers/#/registry.access.redhat.com/openshift/ose-ovirt-csi-driver-operator/images/v4.12.0-202301042354.p0.gfeb14fb.assembly.stream"
+              },
+              {
+                "name": "vcs-ref",
+                "value": "ebe0f6326608fffb488fffbfbf8f291e0fb86f98"
+              },
+              {
+                "name": "vcs-type",
+                "value": "git"
+              },
+              {
+                "name": "vendor",
+                "value": "Red Hat, Inc."
+              },
+              {
+                "name": "version",
+                "value": "v4.12.0"
+              }
+            ]
+          },
+          "repositories": [
+            {
+              "image_advisory_id": "RHSA-2022:7399",
+              "registry": "registry.access.redhat.com",
+              "repository": "openshift4/ovirt-csi-driver-rhel8-operator",
+              "signatures": [
+                {
+                  "key_long_id": "199E2F91FD431D51"
+                }
+              ],
+              "tags": [
+                {
+                  "name": "v4.12.0-202301042354.p0.gfeb14fb.assembly.stream"
+                }
+              ]
+            },
+            {
+              "image_advisory_id": null,
+              "registry": "registry-proxy.engineering.redhat.com",
+              "repository": "rh-osbs/openshift-ose-ovirt-csi-driver-operator",
+              "signatures": null,
+              "tags": [
+                {
+                  "name": "v4.12.0-202301042354.p0.gfeb14fb.assembly.stream"
+                },
+                {
+                  "name": "rhaos-4.12-rhel-8-containers-candidate-89250-20230105011315-x86_64"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,13 +1,13 @@
-import json
+import os
 from string import Template
 from unittest.mock import patch
 
 import pytest
-from django.conf import settings
 
-from corgi.collectors.pyxis import query
+from corgi.collectors.models import CollectorPyxisNameLabel
+from corgi.collectors.pyxis import Pyxis
 from corgi.core.models import Component, SoftwareBuild
-from corgi.tasks.pyxis import slow_fetch_pyxis_manifest
+from corgi.tasks.pyxis import slow_fetch_pyxis_manifest, fetch_repo_mapping_for_nvr
 from tests.factories import ProductComponentRelationFactory
 
 pytestmark = pytest.mark.unit
@@ -16,12 +16,9 @@ pytestmark = pytest.mark.unit
 @pytest.mark.django_db
 @patch("corgi.tasks.brew.slow_save_taxonomy.delay")
 @patch("corgi.tasks.sca.cpu_software_composition_analysis.delay")
-@patch("corgi.collectors.pyxis.session.post")
-def test_slow_fetch_pyxis_manifest(post, sca, taxonomy):
+def test_slow_fetch_pyxis_manifest(sca, taxonomy, requests_mock):
     with open("tests/data/pyxis/manifest.json", "r") as data:
-        manifest = json.load(data)
-    wrapped_manifest = {"data": {"get_content_manifest": {"data": manifest}}}
-    post.return_value.json.return_value = wrapped_manifest
+        adapter = requests_mock.post(os.getenv("CORGI_PYXIS_GRAPHQL_URL"), text=data.read())
 
     image_id = "64dccc5b6d82013739c4f7b8"
     old_relation = ProductComponentRelationFactory(
@@ -30,8 +27,6 @@ def test_slow_fetch_pyxis_manifest(post, sca, taxonomy):
     # We create a build and root component the first time we process this manifest
     result = slow_fetch_pyxis_manifest(image_id)
     assert result is True
-    post.reset_mock()
-    post.return_value.json.return_value = wrapped_manifest
 
     image_index = Component.objects.get(
         name="image-controller", type=Component.Type.CONTAINER_IMAGE
@@ -98,15 +93,12 @@ def test_slow_fetch_pyxis_manifest(post, sca, taxonomy):
     # And assert at least 1 component had multiple CPEs / we broke out of the loop above
     assert len(multiple_cpes) > 1
 
+    manifest_query = Pyxis().MANIFEST_QUERY
     # The query's text, structure, or included fields may change and this test will still pass
     # But we can at least assert it's called once with the right image ID and other args
-    post.assert_called_once_with(
-        settings.PYXIS_GRAPHQL_URL,
-        json={"query": Template(query).substitute(manifest_id=image_id, page=0, page_size=50)},
-        headers={"Content-Type": "application/json", "Accept": "application/json"},
-        cert=(settings.PYXIS_CERT, settings.PYXIS_KEY),
-        timeout=10,
-    )
+    assert adapter.last_request.json() == {
+        "query": Template(manifest_query).substitute(manifest_id=image_id, page=0, page_size=50)
+    }
     # We can also assert some important fields are in the query
     for field in (
         "incompleteness_reasons {",
@@ -117,7 +109,7 @@ def test_slow_fetch_pyxis_manifest(post, sca, taxonomy):
         "supplier {",
         "licenses {",
     ):
-        assert field in query
+        assert field in manifest_query
 
     assert software_build.source
     sca.assert_called_once_with(str(software_build.uuid), force_process=False)
@@ -127,12 +119,10 @@ def test_slow_fetch_pyxis_manifest(post, sca, taxonomy):
 @pytest.mark.django_db
 @patch("corgi.tasks.brew.slow_save_taxonomy.delay")
 @patch("corgi.tasks.sca.cpu_software_composition_analysis.delay")
-@patch("corgi.collectors.pyxis.session.post")
-def test_slow_fetch_empty_pyxis_manifest(post, sca, taxonomy):
+def test_slow_fetch_empty_pyxis_manifest(sca, taxonomy, requests_mock):
     """Test that we can process a manifest with no repositories"""
     with open("tests/data/pyxis/empty_manifest.json", "r") as data:
-        manifest = json.load(data)
-    post.return_value.json.return_value = {"data": {"get_content_manifest": {"data": manifest}}}
+        requests_mock.post(os.getenv("CORGI_PYXIS_GRAPHQL_URL"), text=data.read())
 
     image_id = "64dccc5b6d82013739c4f7b8"
     slow_fetch_pyxis_manifest(image_id)
@@ -141,6 +131,18 @@ def test_slow_fetch_empty_pyxis_manifest(post, sca, taxonomy):
 
     # The build / Pyxis manifest doesn't have a source URL for this image
     # We don't call the SCA task in this case to avoid many errors in the monitoring email
-    assert not manifest["image"].get("source")
     sca.assert_not_called()
     taxonomy.assert_not_called()
+
+
+def get_nvr_name_label_to_repo_mapping(requests_mock):
+    nvr = (
+        "ose-cluster-ovirt-csi-operator-container-v4.12.0-202301042354.p0.gfeb14fb.assembly.stream"
+    )
+    with open("tests/data/pyxis/images_by_nvr.json") as data:
+        requests_mock.post(os.getenv("CORGI_PYXIS_GRAPHQL_URL"), text=data.read())
+    fetch_repo_mapping_for_nvr(nvr, "openshift/ose-ovirt-csi-driver-operator")
+    name_label = CollectorPyxisNameLabel.objects.get(name="openshift/ose-ovirt-csi-driver-operator")
+    assert "openshift4/ovirt-csi-driver-rhel8-operator" in name_label.repos.values_list(
+        "name", flat=True
+    )

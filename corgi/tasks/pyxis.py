@@ -9,7 +9,7 @@ from django.utils.timezone import make_aware
 
 from config.celery import app
 from corgi.collectors.brew import Brew
-from corgi.collectors.pyxis import get_manifest_data
+from corgi.collectors.pyxis import Pyxis
 from corgi.core.models import (
     Component,
     ComponentNode,
@@ -33,7 +33,7 @@ def slow_fetch_pyxis_manifest(
     logger.info("Fetching pyxis manifest %s", oid)
 
     # Fetch and parse the SBOM
-    data = get_manifest_data(oid)
+    data = Pyxis().get_manifest_data(oid)
 
     image_id = data["image"]["_id"]
 
@@ -253,3 +253,10 @@ def save_component(component: dict, parent: ComponentNode) -> bool:
 
     node, node_created = save_node(ComponentNode.ComponentNodeType.PROVIDES, parent, obj)
     return created or node_created
+
+
+def fetch_repo_mapping_for_nvr(nvr: str, name_label: str):
+    """Looks ups the CollectorPyxis objects for the name_label, and returns the repo_mapping if one
+    exists. Otherwise, this does a lookup to Pyxis using the NVR, adds the returned name_label and
+    repo_mapping to the CollectoryPxis models then returns the repo_mapping"""
+    pass

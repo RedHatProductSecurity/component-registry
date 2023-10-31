@@ -257,7 +257,7 @@ class ErrataTool:
         }
         return variants_with_repos
 
-    def get_errata_key_details(self, name: str) -> tuple[int, bool]:
+    def get_errata_key_details(self, name: str) -> tuple[int, bool, bool]:
         erratum_details = self.get(f"api/v1/erratum/{name}")
         errata_type_details = list(erratum_details["errata"].values())
         if len(errata_type_details) != 1:
@@ -266,7 +266,8 @@ class ErrataTool:
             )
         erratum_id = errata_type_details[0]["id"]
         shipped_live = errata_type_details[0]["status"] == "SHIPPED_LIVE"
-        return erratum_id, shipped_live
+        is_container = "docker" in errata_type_details[0]["content_types"]
+        return erratum_id, shipped_live, is_container
 
     def _parse_module(
         self,

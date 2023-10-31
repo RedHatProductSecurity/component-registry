@@ -4,7 +4,8 @@
       "id": 120142,
       "revision": 2,
       "fulladvisory": "RHBA-2023:5017-02",
-      "status": "SHIPPED_LIVE"
+      "status": "SHIPPED_LIVE",
+      "content_types": ["docker"]
     }
   },
   "original_type": "RHBA",

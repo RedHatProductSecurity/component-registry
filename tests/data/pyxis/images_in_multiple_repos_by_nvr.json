@@ -1,0 +1,616 @@
+{
+  "data": [
+    {
+      "_id": "6531283bc4e9e385596b11ae",
+      "_links": {
+        "artifacts": {
+          "href": "/v1/images/id/6531283bc4e9e385596b11ae/artifacts"
+        },
+        "requests": {
+          "href": "/v1/images/id/6531283bc4e9e385596b11ae/requests"
+        },
+        "rpm_manifest": {
+          "href": "/v1/images/id/6531283bc4e9e385596b11ae/rpm-manifest"
+        },
+        "test_results": {
+          "href": "/v1/images/id/6531283bc4e9e385596b11ae/test-results"
+        },
+        "vulnerabilities": {
+          "href": "/v1/images/id/6531283bc4e9e385596b11ae/vulnerabilities"
+        }
+      },
+      "architecture": "amd64",
+      "brew": {
+        "build": "hostpath-csi-driver-container-v4.11.7-5",
+        "completion_date": "2023-10-19T12:57:44.488000+00:00",
+        "nvra": "hostpath-csi-driver-container-v4.11.7-5.amd64",
+        "package": "hostpath-csi-driver-container"
+      },
+      "certified": false,
+      "content_manifest": {
+        "_id": "6531284dab1f2ce1b452cbc0"
+      },
+      "content_sets": [
+        "rhel-8-for-x86_64-baseos-eus-rpms__8_DOT_6",
+        "rhel-8-for-x86_64-appstream-eus-rpms__8_DOT_6"
+      ],
+      "cpe_ids": [
+        "cpe:/a:redhat:openshift:4.12::el8",
+        "cpe:/a:redhat:rhel_eus:8.4::appstream",
+        "cpe:/a:redhat:rhel_eus:8.8::appstream",
+        "cpe:/a:redhat:rhosemc:1.0::el8",
+        "cpe:/o:redhat:rhel_eus:8.8::baseos",
+        "cpe:/a:redhat:rhel_tus:8.4::appstream",
+        "cpe:/a:redhat:rhel_eus:8.1::appstream",
+        "cpe:/a:redhat:rhel_eus:8.2::appstream",
+        "cpe:/o:redhat:rhel_e4s:8.2::baseos",
+        "cpe:/a:redhat:rhel_e4s:8.8::appstream",
+        "cpe:/o:redhat:rhel_e4s:8.0::baseos",
+        "cpe:/o:redhat:enterprise_linux:8::baseos",
+        "cpe:/o:redhat:rhel_e4s:8.1::baseos",
+        "cpe:/o:redhat:rhel_aus:8.4::baseos",
+        "cpe:/a:redhat:openshift_file_integrity_operator:1.0::el8",
+        "cpe:/a:redhat:rhel:8.3::appstream",
+        "cpe:/o:redhat:rhel_tus:8.4::baseos",
+        "cpe:/o:redhat:rhel_e4s:8.4::baseos",
+        "cpe:/o:redhat:rhel_eus:8.6::baseos",
+        "cpe:/o:redhat:rhel_tus:8.2::baseos",
+        "cpe:/a:redhat:enterprise_linux:8::appstream",
+        "cpe:/a:redhat:rhel_eus:8.6::appstream",
+        "cpe:/a:redhat:rhel_e4s:8.6::appstream",
+        "cpe:/a:redhat:rhel_tus:8.6::appstream",
+        "cpe:/o:redhat:rhel_e4s:8.8::baseos",
+        "cpe:/o:redhat:rhel_tus:8.6::baseos",
+        "cpe:/o:redhat:rhel_eus:8.2::baseos",
+        "cpe:/a:redhat:rhel_e4s:8.0::appstream",
+        "cpe:/o:redhat:rhel_eus:8.4::baseos",
+        "cpe:/o:redhat:rhel_tus:8.8::baseos",
+        "cpe:/a:redhat:rhel_e4s:8.1::appstream",
+        "cpe:/o:redhat:rhel_aus:8.2::baseos",
+        "cpe:/a:redhat:openshift_security_profiles_operator_stable:::el8",
+        "cpe:/a:redhat:rhel_tus:8.2::appstream",
+        "cpe:/o:redhat:rhel_aus:8.6::baseos",
+        "cpe:/o:redhat:rhel_e4s:8.6::baseos",
+        "cpe:/o:redhat:rhel:8.3::baseos",
+        "cpe:/a:redhat:rhel_aus:8.2::appstream",
+        "cpe:/a:redhat:rhel_aus:8.4::appstream",
+        "cpe:/o:redhat:enterprise_linux:8::hypervisor",
+        "cpe:/a:redhat:rhel_e4s:8.4::appstream",
+        "cpe:/a:redhat:rhel_tus:8.8::appstream",
+        "cpe:/o:redhat:rhel_eus:8.1::baseos",
+        "cpe:/a:redhat:rhel_e4s:8.2::appstream",
+        "cpe:/a:redhat:rhel_aus:8.6::appstream",
+        "cpe:/a:redhat:openshift_compliance_operator:1::el8"
+      ],
+      "creation_date": "2023-10-19T12:59:39.371000+00:00",
+      "docker_image_id": "sha256:c35747a9fa8cf0600db4f23befb9ba2cc154238812b6a2aa0e141d64ccfa0cc1",
+      "freshness_grades": [
+        {
+          "creation_date": "2023-10-19T12:59:43.993000+00:00",
+          "grade": "A",
+          "start_date": "2023-10-19T12:59:43.993000+00:00"
+        }
+      ],
+      "image_id": "sha256:20488cf9f269a34be9a3d82e04a28b598b26be0a495f51a47a8dba02f7e9d974",
+      "last_update_date": "2023-11-01T16:14:56.808000+00:00",
+      "object_type": "containerImage",
+      "parsed_data": {
+        "architecture": "amd64",
+        "comment": "FROM registry.redhat.io/rhel8-6-els/rhel@sha256:1bc18e346bc0cf8fca000e61116a38ea913fcfceefc09940a05c7e0cba985a4e",
+        "created": "2023-10-19T12:56:30.000848528Z",
+        "env_variables": [
+          "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+          "container=oci"
+        ],
+        "labels": [
+          {
+            "name": "architecture",
+            "value": "x86_64"
+          },
+          {
+            "name": "build-date",
+            "value": "2023-10-19T12:17:10"
+          },
+          {
+            "name": "com.redhat.component",
+            "value": "hostpath-csi-driver-container"
+          },
+          {
+            "name": "com.redhat.license_terms",
+            "value": "https://www.redhat.com/agreements"
+          },
+          {
+            "name": "description",
+            "value": "Hostpath csi driver for CNV VM disk images"
+          },
+          {
+            "name": "distribution-scope",
+            "value": "public"
+          },
+          {
+            "name": "io.buildah.version",
+            "value": "1.29.0"
+          },
+          {
+            "name": "io.k8s.description",
+            "value": "Hostpath csi driver for CNV VM disk images"
+          },
+          {
+            "name": "io.k8s.display-name",
+            "value": "hostpath-csi-driver"
+          },
+          {
+            "name": "io.openshift.expose-services",
+            "value": ""
+          },
+          {
+            "name": "io.openshift.tags",
+            "value": "storage"
+          },
+          {
+            "name": "maintainer",
+            "value": "The KubeVirt Project <kubevirt-dev@googlegroups.com"
+          },
+          {
+            "name": "name",
+            "value": "container-native-virtualization/hostpath-csi-driver-rhel8"
+          },
+          {
+            "name": "release",
+            "value": "5"
+          },
+          {
+            "name": "summary",
+            "value": "Hostpath storage csi driver"
+          },
+          {
+            "name": "url",
+            "value": "https://access.redhat.com/containers/#/registry.access.redhat.com/container-native-virtualization/hostpath-csi-driver-rhel8/images/v4.11.7-5"
+          },
+          {
+            "name": "vcs-ref",
+            "value": "d644bfccfa66111e6dc18cc716d19bdb5fb7f4d0"
+          },
+          {
+            "name": "vcs-type",
+            "value": "git"
+          },
+          {
+            "name": "vendor",
+            "value": "Red Hat, Inc."
+          },
+          {
+            "name": "version",
+            "value": "v4.11.7"
+          }
+        ],
+        "layers": [
+          "sha256:8d12392c5998833b8f494730f312c6b2eeadc8d8b351a5f5b7d00cf0dca36b34",
+          "sha256:507f4d3349f431a91ae9778464fafb97b9d931b21cd15ca4c38be6669d78bb3a"
+        ],
+        "os": "linux",
+        "ports": "[]",
+        "size": 0,
+        "uncompressed_layer_sizes": [
+          {
+            "layer_id": "sha256:63f52252647490f0f787ea025609bee24a8bc4c2c8032f26f22fe9801ca6eb52",
+            "size_bytes": 18215936
+          },
+          {
+            "layer_id": "sha256:5018846d376a3f0449e6a3b719539b90c30955ba150c3f4f24d6658fbcb20b6b",
+            "size_bytes": 214898176
+          }
+        ],
+        "uncompressed_size_bytes": 233114112
+      },
+      "repositories": [
+        {
+          "_links": {
+            "image_advisory": {
+              "href": "/v1/advisories/redhat/id/RHSA-2023:6251"
+            },
+            "repository": {
+              "href": "/v1/repositories/registry/registry.access.redhat.com/repository/container-native-virtualization/hostpath-csi-driver"
+            }
+          },
+          "comparison": {
+            "advisory_rpm_mapping": [
+              {
+                "advisory_ids": [
+                  "RHSA-2023:5610"
+                ],
+                "nvra": "tar-1.30-5.el8_6.1.x86_64"
+              },
+              {
+                "advisory_ids": [
+                  "RHSA-2023:5476"
+                ],
+                "nvra": "glibc-common-2.28-189.6.el8_6.x86_64"
+              },
+              {
+                "advisory_ids": [
+                  "RHSA-2023:5193"
+                ],
+                "nvra": "dbus-1.12.8-18.el8_6.3.x86_64"
+              },
+              {
+                "advisory_ids": [
+                  "RHSA-2023:4767"
+                ],
+                "nvra": "libxml2-2.9.7-13.el8_6.2.x86_64"
+              },
+              {
+                "advisory_ids": [
+                  "RHSA-2023:5531"
+                ],
+                "nvra": "python3-libs-3.6.8-47.el8_6.2.x86_64"
+              },
+              {
+                "advisory_ids": [
+                  "RHSA-2023:5193"
+                ],
+                "nvra": "dbus-libs-1.12.8-18.el8_6.3.x86_64"
+              },
+              {
+                "advisory_ids": [
+                  "RHSA-2023:5193"
+                ],
+                "nvra": "dbus-common-1.12.8-18.el8_6.3.noarch"
+              },
+              {
+                "advisory_ids": [
+                  "RHSA-2023:4767"
+                ],
+                "nvra": "python3-libxml2-2.9.7-13.el8_6.2.x86_64"
+              },
+              {
+                "advisory_ids": [
+                  "RHSA-2023:5531"
+                ],
+                "nvra": "platform-python-3.6.8-47.el8_6.2.x86_64"
+              },
+              {
+                "advisory_ids": [
+                  "RHSA-2023:5476"
+                ],
+                "nvra": "glibc-minimal-langpack-2.28-189.6.el8_6.x86_64"
+              },
+              {
+                "advisory_ids": [
+                  "RHSA-2023:5476"
+                ],
+                "nvra": "glibc-2.28-189.6.el8_6.x86_64"
+              },
+              {
+                "advisory_ids": [
+                  "RHSA-2023:5193"
+                ],
+                "nvra": "dbus-tools-1.12.8-18.el8_6.3.x86_64"
+              },
+              {
+                "advisory_ids": [
+                  "RHSA-2023:5769"
+                ],
+                "nvra": "libnghttp2-1.33.0-4.el8_6.1.x86_64"
+              },
+              {
+                "advisory_ids": [
+                  "RHBA-2023:5608"
+                ],
+                "nvra": "libgcc-8.5.0-10.3.el8_6.x86_64"
+              },
+              {
+                "advisory_ids": [
+                  "RHBA-2023:5611"
+                ],
+                "nvra": "ca-certificates-2023.2.60_v7.0.306-80.0.el8_6.noarch"
+              },
+              {
+                "advisory_ids": [
+                  "RHSA-2023:5193"
+                ],
+                "nvra": "dbus-daemon-1.12.8-18.el8_6.3.x86_64"
+              },
+              {
+                "advisory_ids": [
+                  "RHBA-2023:5608"
+                ],
+                "nvra": "libstdc++-8.5.0-10.3.el8_6.x86_64"
+              }
+            ],
+            "reason": "OK",
+            "reason_text": "No error",
+            "rpms": {
+              "downgrade": [],
+              "new": [],
+              "remove": [],
+              "upgrade": [
+                "tar-1.30-5.el8_6.1.x86_64",
+                "glibc-common-2.28-189.6.el8_6.x86_64",
+                "dbus-1.12.8-18.el8_6.3.x86_64",
+                "libxml2-2.9.7-13.el8_6.2.x86_64",
+                "python3-libs-3.6.8-47.el8_6.2.x86_64",
+                "dbus-libs-1.12.8-18.el8_6.3.x86_64",
+                "dbus-common-1.12.8-18.el8_6.3.noarch",
+                "python3-libxml2-2.9.7-13.el8_6.2.x86_64",
+                "platform-python-3.6.8-47.el8_6.2.x86_64",
+                "glibc-minimal-langpack-2.28-189.6.el8_6.x86_64",
+                "glibc-2.28-189.6.el8_6.x86_64",
+                "dbus-tools-1.12.8-18.el8_6.3.x86_64",
+                "libnghttp2-1.33.0-4.el8_6.1.x86_64",
+                "libgcc-8.5.0-10.3.el8_6.x86_64",
+                "ca-certificates-2023.2.60_v7.0.306-80.0.el8_6.noarch",
+                "dbus-daemon-1.12.8-18.el8_6.3.x86_64",
+                "libstdc++-8.5.0-10.3.el8_6.x86_64"
+              ]
+            },
+            "with_nvr": "hostpath-csi-driver-container-v4.11.6-3"
+          },
+          "content_advisory_ids": [
+            "RHSA-2023:5531",
+            "RHSA-2023:4767",
+            "RHSA-2023:5610",
+            "RHBA-2023:5608",
+            "RHSA-2023:5193",
+            "RHSA-2023:5476",
+            "RHSA-2023:5769",
+            "RHBA-2023:5611"
+          ],
+          "image_advisory_id": "RHSA-2023:6251",
+          "manifest_list_digest": "sha256:5e8c41ae029eb342f5b1ebb8a1fd3a5c350406c63197de2e9ddbba8e6ee9e00f",
+          "manifest_schema2_digest": "sha256:20488cf9f269a34be9a3d82e04a28b598b26be0a495f51a47a8dba02f7e9d974",
+          "published": true,
+          "published_date": "2023-11-01T15:51:52+00:00",
+          "push_date": "2023-11-01T16:14:42+00:00",
+          "registry": "registry.access.redhat.com",
+          "repository": "container-native-virtualization/hostpath-csi-driver",
+          "signatures": [
+            {
+              "key_long_id": "199E2F91FD431D51",
+              "tags": [
+                "v4.11.7",
+                "v4.11.7-5",
+                "v4.11"
+              ]
+            }
+          ],
+          "tags": [
+            {
+              "_links": {
+                "tag_history": {
+                  "href": "/v1/tag-history/registry/registry.access.redhat.com/repository/container-native-virtualization/hostpath-csi-driver/tag/v4.11.7"
+                }
+              },
+              "added_date": "2023-11-01T16:02:01.866000+00:00",
+              "name": "v4.11.7"
+            },
+            {
+              "_links": {
+                "tag_history": {
+                  "href": "/v1/tag-history/registry/registry.access.redhat.com/repository/container-native-virtualization/hostpath-csi-driver/tag/v4.11.7-5"
+                }
+              },
+              "added_date": "2023-11-01T16:02:01.866000+00:00",
+              "name": "v4.11.7-5"
+            },
+            {
+              "_links": {
+                "tag_history": {
+                  "href": "/v1/tag-history/registry/registry.access.redhat.com/repository/container-native-virtualization/hostpath-csi-driver/tag/v4.11"
+                }
+              },
+              "added_date": "2023-11-01T16:02:01.866000+00:00",
+              "name": "v4.11"
+            }
+          ]
+        },
+        {
+          "_links": {
+            "image_advisory": {
+              "href": "/v1/advisories/redhat/id/RHSA-2023:6251"
+            },
+            "repository": {
+              "href": "/v1/repositories/registry/registry.access.redhat.com/repository/container-native-virtualization/hostpath-csi-driver-rhel8"
+            }
+          },
+          "comparison": {
+            "advisory_rpm_mapping": [
+              {
+                "advisory_ids": [
+                  "RHSA-2023:5531"
+                ],
+                "nvra": "python3-libs-3.6.8-47.el8_6.2.x86_64"
+              },
+              {
+                "advisory_ids": [
+                  "RHSA-2023:5531"
+                ],
+                "nvra": "platform-python-3.6.8-47.el8_6.2.x86_64"
+              },
+              {
+                "advisory_ids": [
+                  "RHBA-2023:5608"
+                ],
+                "nvra": "libstdc++-8.5.0-10.3.el8_6.x86_64"
+              },
+              {
+                "advisory_ids": [
+                  "RHSA-2023:5193"
+                ],
+                "nvra": "dbus-daemon-1.12.8-18.el8_6.3.x86_64"
+              },
+              {
+                "advisory_ids": [
+                  "RHSA-2023:5193"
+                ],
+                "nvra": "dbus-common-1.12.8-18.el8_6.3.noarch"
+              },
+              {
+                "advisory_ids": [
+                  "RHSA-2023:5476"
+                ],
+                "nvra": "glibc-minimal-langpack-2.28-189.6.el8_6.x86_64"
+              },
+              {
+                "advisory_ids": [
+                  "RHSA-2023:5476"
+                ],
+                "nvra": "glibc-common-2.28-189.6.el8_6.x86_64"
+              },
+              {
+                "advisory_ids": [
+                  "RHBA-2023:5611"
+                ],
+                "nvra": "ca-certificates-2023.2.60_v7.0.306-80.0.el8_6.noarch"
+              },
+              {
+                "advisory_ids": [
+                  "RHSA-2023:4767"
+                ],
+                "nvra": "libxml2-2.9.7-13.el8_6.2.x86_64"
+              },
+              {
+                "advisory_ids": [
+                  "RHSA-2023:4767"
+                ],
+                "nvra": "python3-libxml2-2.9.7-13.el8_6.2.x86_64"
+              },
+              {
+                "advisory_ids": [
+                  "RHSA-2023:5476"
+                ],
+                "nvra": "glibc-2.28-189.6.el8_6.x86_64"
+              },
+              {
+                "advisory_ids": [
+                  "RHSA-2023:5193"
+                ],
+                "nvra": "dbus-tools-1.12.8-18.el8_6.3.x86_64"
+              },
+              {
+                "advisory_ids": [
+                  "RHSA-2023:5193"
+                ],
+                "nvra": "dbus-1.12.8-18.el8_6.3.x86_64"
+              },
+              {
+                "advisory_ids": [
+                  "RHSA-2023:5769"
+                ],
+                "nvra": "libnghttp2-1.33.0-4.el8_6.1.x86_64"
+              },
+              {
+                "advisory_ids": [
+                  "RHBA-2023:5608"
+                ],
+                "nvra": "libgcc-8.5.0-10.3.el8_6.x86_64"
+              },
+              {
+                "advisory_ids": [
+                  "RHSA-2023:5193"
+                ],
+                "nvra": "dbus-libs-1.12.8-18.el8_6.3.x86_64"
+              },
+              {
+                "advisory_ids": [
+                  "RHSA-2023:5610"
+                ],
+                "nvra": "tar-1.30-5.el8_6.1.x86_64"
+              }
+            ],
+            "reason": "OK",
+            "reason_text": "No error",
+            "rpms": {
+              "downgrade": [],
+              "new": [],
+              "remove": [],
+              "upgrade": [
+                "python3-libs-3.6.8-47.el8_6.2.x86_64",
+                "platform-python-3.6.8-47.el8_6.2.x86_64",
+                "libstdc++-8.5.0-10.3.el8_6.x86_64",
+                "dbus-daemon-1.12.8-18.el8_6.3.x86_64",
+                "dbus-common-1.12.8-18.el8_6.3.noarch",
+                "glibc-minimal-langpack-2.28-189.6.el8_6.x86_64",
+                "glibc-common-2.28-189.6.el8_6.x86_64",
+                "ca-certificates-2023.2.60_v7.0.306-80.0.el8_6.noarch",
+                "libxml2-2.9.7-13.el8_6.2.x86_64",
+                "python3-libxml2-2.9.7-13.el8_6.2.x86_64",
+                "glibc-2.28-189.6.el8_6.x86_64",
+                "dbus-tools-1.12.8-18.el8_6.3.x86_64",
+                "dbus-1.12.8-18.el8_6.3.x86_64",
+                "libnghttp2-1.33.0-4.el8_6.1.x86_64",
+                "libgcc-8.5.0-10.3.el8_6.x86_64",
+                "dbus-libs-1.12.8-18.el8_6.3.x86_64",
+                "tar-1.30-5.el8_6.1.x86_64"
+              ]
+            },
+            "with_nvr": "hostpath-csi-driver-container-v4.11.6-3"
+          },
+          "content_advisory_ids": [
+            "RHSA-2023:5476",
+            "RHSA-2023:5531",
+            "RHBA-2023:5608",
+            "RHBA-2023:5611",
+            "RHSA-2023:4767",
+            "RHSA-2023:5610",
+            "RHSA-2023:5193",
+            "RHSA-2023:5769"
+          ],
+          "image_advisory_id": "RHSA-2023:6251",
+          "manifest_list_digest": "sha256:5e8c41ae029eb342f5b1ebb8a1fd3a5c350406c63197de2e9ddbba8e6ee9e00f",
+          "manifest_schema2_digest": "sha256:20488cf9f269a34be9a3d82e04a28b598b26be0a495f51a47a8dba02f7e9d974",
+          "published": true,
+          "published_date": "2023-11-01T15:51:53+00:00",
+          "push_date": "2023-11-01T16:14:42+00:00",
+          "registry": "registry.access.redhat.com",
+          "repository": "container-native-virtualization/hostpath-csi-driver-rhel8",
+          "signatures": [
+            {
+              "key_long_id": "199E2F91FD431D51",
+              "tags": [
+                "v4.11.7",
+                "v4.11.7-5",
+                "v4.11"
+              ]
+            }
+          ],
+          "tags": [
+            {
+              "_links": {
+                "tag_history": {
+                  "href": "/v1/tag-history/registry/registry.access.redhat.com/repository/container-native-virtualization/hostpath-csi-driver-rhel8/tag/v4.11.7-5"
+                }
+              },
+              "added_date": "2023-11-01T15:58:44.023000+00:00",
+              "name": "v4.11.7-5"
+            },
+            {
+              "_links": {
+                "tag_history": {
+                  "href": "/v1/tag-history/registry/registry.access.redhat.com/repository/container-native-virtualization/hostpath-csi-driver-rhel8/tag/v4.11"
+                }
+              },
+              "added_date": "2023-11-01T15:58:44.023000+00:00",
+              "name": "v4.11"
+            },
+            {
+              "_links": {
+                "tag_history": {
+                  "href": "/v1/tag-history/registry/registry.access.redhat.com/repository/container-native-virtualization/hostpath-csi-driver-rhel8/tag/v4.11.7"
+                }
+              },
+              "added_date": "2023-11-01T15:58:44.023000+00:00",
+              "name": "v4.11.7"
+            }
+          ]
+        }
+      ],
+      "sum_layer_size_bytes": 88644481,
+      "top_layer_id": "sha256:8d12392c5998833b8f494730f312c6b2eeadc8d8b351a5f5b7d00cf0dca36b34",
+      "uncompressed_top_layer_id": "sha256:63f52252647490f0f787ea025609bee24a8bc4c2c8032f26f22fe9801ca6eb52"
+    }
+  ],
+  "page": 0,
+  "page_size": 100,
+  "total": 1
+}

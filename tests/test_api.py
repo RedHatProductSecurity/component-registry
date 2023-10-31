@@ -534,20 +534,27 @@ def test_root_components_filter(client, api_path):
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_component_detail_unscanned_filter(client, api_path):
-    ComponentFactory(name="copyright", copyright_text="test", license_concluded_raw="")
-    ComponentFactory(name="license", license_concluded_raw="test")
-    ComponentFactory(name="unscanned", license_concluded_raw="")
+    ComponentFactory(
+        name="copyright", copyright_text="test", license_concluded_raw="", license_declared_raw=""
+    )
+    ComponentFactory(
+        name="license_concluded", license_concluded_raw="test", license_declared_raw=""
+    )
+    ComponentFactory(name="unscanned", license_concluded_raw="", license_declared_raw="")
+    ComponentFactory(name="license_declared", license_declared_raw="test", license_concluded_raw="")
 
     response = client.get(f"{api_path}/components")
     assert response.status_code == 200
-    assert response.json()["count"] == 3
+    assert response.json()["count"] == 4
 
     response = client.get(f"{api_path}/components?missing_copyright=True")
     assert response.status_code == 200
     response = response.json()
-    assert response["count"] == 2
-    assert response["results"][0]["name"] == "license"
-    assert response["results"][1]["name"] == "unscanned"
+    assert response["count"] == 3
+    results = [r["name"] for r in response["results"]]
+    assert "license_concluded" in results
+    assert "unscanned" in results
+    assert "license_declared" in results
 
     response = client.get(f"{api_path}/components?missing_copyright=False")
     assert response.status_code == 200
@@ -555,18 +562,35 @@ def test_component_detail_unscanned_filter(client, api_path):
     assert response["count"] == 1
     assert response["results"][0]["name"] == "copyright"
 
-    response = client.get(f"{api_path}/components?missing_license=True")
+    response = client.get(f"{api_path}/components?missing_license_concluded=True")
     assert response.status_code == 200
     response = response.json()
-    assert response["count"] == 2
-    assert response["results"][0]["name"] == "copyright"
-    assert response["results"][1]["name"] == "unscanned"
+    assert response["count"] == 3
+    results = [r["name"] for r in response["results"]]
+    assert "unscanned" in results
+    assert "license_declared" in results
+    assert "copyright" in results
 
-    response = client.get(f"{api_path}/components?missing_license=False")
+    response = client.get(f"{api_path}/components?missing_license_concluded=False")
     assert response.status_code == 200
     response = response.json()
     assert response["count"] == 1
-    assert response["results"][0]["name"] == "license"
+    assert response["results"][0]["name"] == "license_concluded"
+
+    response = client.get(f"{api_path}/components?missing_license_declared=True")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 3
+    results = [r["name"] for r in response["results"]]
+    assert "unscanned" in results
+    assert "license_concluded" in results
+    assert "copyright" in results
+
+    response = client.get(f"{api_path}/components?missing_license_declared=False")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 1
+    assert response["results"][0]["name"] == "license_declared"
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)

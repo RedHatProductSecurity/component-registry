@@ -126,9 +126,14 @@ class ComponentFilter(FilterSet):
         label="Show only unscanned components (where copyright text is empty)",
     )
 
-    missing_license = EmptyStringFilter(
+    missing_license_concluded = EmptyStringFilter(
         field_name="license_concluded_raw",
         label="Show only unscanned components (where license concluded is empty)",
+    )
+
+    missing_license_declared = EmptyStringFilter(
+        field_name="license_declared_raw",
+        label="Show only unscanned components (where license declared is empty)",
     )
 
     missing_scan_url = EmptyStringFilter(

@@ -149,3 +149,28 @@ def test_generating_manifest() -> None:
     assert len(test_results) == 3
     median_time_taken = test_results[1]
     assert median_time_taken < 2.0
+
+
+def get_curl_by_re_name() -> dict:
+    response = requests.get(
+        f"{CORGI_API_URL}/components?re_name=curl&include_fields=purl,link&limit=1000"
+    )
+
+    # If you're running performance tests manually against a dev environment,
+    # make sure that you've loaded the right data for this test
+    # Any exceptions will be passed through to test code
+    response.raise_for_status()
+    response_json = response.json()
+    assert response_json["count"] > 7000
+    return response_json
+
+
+def test_gin_index_performance() -> None:
+    """Test simple regex and should fail if any problems with GIN index."""
+    timer = timeit.Timer(get_curl_by_re_name)
+
+    # 3 test results, each of which makes only 1 request
+    test_results = sorted(timer.repeat(repeat=3, number=1))
+    assert len(test_results) == 3
+    median_time_taken = test_results[1]
+    assert median_time_taken < 2

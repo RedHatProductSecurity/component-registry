@@ -1936,11 +1936,13 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     def license_clean(license_str: str) -> str:
         """Take an SPDX license expression, and remove spaces from all identifiers
         so that PUBLIC DOMAIN becomes PUBLIC-DOMAIN, ASL 2.0 becomes ASL-2.0, etc."""
-        license_str = license_str.replace(" ", "-")
-        # Above fixed identifiers, but also the keywords "-AND-", "-OR-" and "-WITH-"
-        license_str = license_str.replace("-AND-", " AND ")
-        license_str = license_str.replace("-OR-", " OR ")
-        license_str = license_str.replace("-WITH-", " WITH ")
+        # We use underscores to avoid turning "GPL-V2-OR-LATER" into "GPL-V2 OR LATER"
+        license_str = license_str.replace(" ", "_")
+        # Above fixed identifiers, but also the keywords "_AND_", "_OR_" and "_WITH_"
+        license_str = license_str.replace("_AND_", " AND ")
+        license_str = license_str.replace("_OR_", " OR ")
+        license_str = license_str.replace("_WITH_", " WITH ")
+        license_str = license_str.replace("_", "-")
         return license_str
 
     @property

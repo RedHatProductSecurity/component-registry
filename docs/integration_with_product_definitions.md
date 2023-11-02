@@ -27,9 +27,18 @@ with those discovered in Errata Tool. The brew tags are modified in the followin
 2. -candidate and -released are stripped from Product Definition brew_tags
 3. -container-released is stripped from Product Definitions brew_tags
 
-Once a match is found all the Variant children of the matching Errata Tool Product Version are linked as Variant
-children of the corresponding ProductStream. Component Registry does not use Variants matched in this way to add builds
-to Product Streams. 
+Once a match is found all the Variant children of the matching Errata Tool Product Version are recorded in the 
+"variants_from_brew_tags" meta_attr of the corresponding ProductStream. We also use these "variants_from_brew_tags" 
+to associate CPE information with the ProductStream. 
+
+Component Registry does not associate all builds with a ProductVersion's brew_tags to Product Streams. 
+We don't do that because it leads to extraneous builds being associated with the ProductStream. That occurs because
+brew_tags in Errata Tool are used as a gate for what *can* be attached to an Erratum for a ProductVersion (or Release), 
+not to define what builds make up the ProductVersion. The builds for what makes up the ProductVersion can be calculated
+using the builds with the brew tags in combination with the builds which were actually released to the matching variants instead.
+
+![Brew tags in Errata Tool are used as a gate for what can be attached to an erratum](brew_tag_matching_in_errata_tool.png "Brew Tag matching in Errata Tool")
+
 
 ## Adding CPEs to Product Stream SBOMs
 
@@ -39,7 +48,7 @@ variants matched using either errata_info, or brew_tags as mentioned above. We o
 matching is not possible, see `corgi/core/fixups.py`.
 
 Where a Product Stream uses brew_tags for matching we also include CPEs matching uses patterns. Product Definitions
-can include CPE values for a ps_module. We use value in combination with the versions from ps_update_streams to find
+can include CPE values for a ps_module. We use those values in combination with the versions from ps_update_streams to find
 matches, see `tests/test_products.py` for some examples. When generating an SBOM for a brew_tag stream (which doesn't 
 specify errata_info) we use both the CPEs from matching Variants and CPEs from matching patterns.
 

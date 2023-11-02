@@ -1541,3 +1541,17 @@ def test_license_properties():
     # We should end up with an empty list, and not [""]
     assert c.license_concluded_list == []
     assert c.license_declared_list == []
+
+    c.license_concluded_raw = "GPL-v2-or-later WITH Alice-and-Bobs-Exception"
+    c.license_declared_raw = "GPL-v2-or-later WITH Alice-and-Bobs-Exception"
+    c.save()
+    # Make sure tht we don't accidentally split -operator- in a license ID
+    # into a standalone SPDX operator, like "GPL-v2 OR later WITH Alice AND Bobs-exception"
+    assert " LATER " not in c.license_concluded
+    assert " ALICE " not in c.license_concluded
+    assert " LATER " not in c.license_declared
+    assert " ALICE " not in c.license_declared
+    assert "LATER" not in c.license_concluded_list
+    assert "ALICE" not in c.license_concluded_list
+    assert "LATER" not in c.license_declared_list
+    assert "ALICE" not in c.license_declared_list

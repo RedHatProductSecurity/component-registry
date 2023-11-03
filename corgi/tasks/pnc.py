@@ -1,6 +1,7 @@
 import requests
 from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
+from urllib.parse import unquote
 
 from config.celery import app
 from corgi.collectors.errata_tool import ErrataTool
@@ -130,7 +131,8 @@ def slow_handle_pnc_errata_released(erratum_id: int, erratum_status: str) -> Non
     related_purls = set()
     for ref in notes.get("manifest", {}).get("refs", []):
         if ref["type"] == "purl":
-            related_purls.add(ref["uri"])
+            # repository_urls may be percent-encoded
+            related_purls.add(unquote(ref["uri"]))
 
     if not related_purls:
         raise ValueError(f"Erratum {erratum_id} had no associated purls")
@@ -138,13 +140,6 @@ def slow_handle_pnc_errata_released(erratum_id: int, erratum_status: str) -> Non
     # Check that there's a component matching the purls
     root_components: set[Component] = set()
     for purl in related_purls:
-        # There should only be one root component of SOURCE type
-        # But the SBOMer purl_declared won't match the Corgi purls exactly
-        # SBOMer copies its purls from PNC builds, before artifacts are released
-        # (if they're ever released)
-        # so SBOMer / PNC purls won't contain any ?repository_url= qualifier
-        # Customers need this, so Corgi must always add it
-        # and purls in the two systems will always be slightly different
         components = Component.objects.filter(
             type=Component.Type.MAVEN, meta_attr__purl_declared=purl
         )

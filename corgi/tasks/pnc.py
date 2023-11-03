@@ -1,7 +1,8 @@
+from urllib.parse import unquote
+
 import requests
 from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
-from urllib.parse import unquote
 
 from config.celery import app
 from corgi.collectors.errata_tool import ErrataTool

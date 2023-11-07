@@ -9,6 +9,7 @@ from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
+from django.contrib.postgres.aggregates import ArrayAgg
 from django.db import models
 from django.db.models import Q, QuerySet
 from django.db.models.expressions import F, Func, Value
@@ -902,29 +903,25 @@ def get_product_details(variant_names: tuple[str], stream_names: list[str]) -> d
 class ComponentQuerySet(models.QuerySet):
     """Helper methods to filter QuerySets of Components"""
 
-    @staticmethod
-    def _latest_components_func(
-        components: "ComponentQuerySet", model_type: str, ofuri: str, include_inactive_streams: bool
-    ) -> Iterable[str]:
-        return (
-            components.values("type", "namespace", "name", "arch")
-            .order_by()  # required to avoid cross-join fun
-            .distinct()
-            .annotate(
-                latest_version=Func(
-                    Value(model_type),
-                    Value(ofuri),
-                    F("type"),
-                    F("namespace"),
-                    F("name"),
-                    F("arch"),
-                    Value(include_inactive_streams),
-                    function="get_latest_component",
-                    output_field=models.UUIDField(),
-                )
-            )
-            .values_list("latest_version", flat=True)
+    def _latest_components_func(self, include_inactive_streams, ofuri) -> Iterable[models.UUIDField]:
+        get_latest_components_func = Func(
+            Value("ProductStream"),
+            Value(ofuri),
+            F("type"),
+            F("namespace"),
+            F("name"),
+            F("arch"),
+            Value(include_inactive_streams),
+            function="get_latest_component",
+            output_field=models.UUIDField(),
         )
+        latest_components_uuids = (
+            self.values("type", "namespace", "name", "arch")
+            .distinct()
+            .aggregate(latest_versions=ArrayAgg(get_latest_components_func))["latest_versions"]
+        )
+        return latest_components_uuids
+
 
     def latest_components(
         self,
@@ -935,28 +932,14 @@ class ComponentQuerySet(models.QuerySet):
     ) -> "ComponentQuerySet":
         """Return components from latest builds in a single stream."""
 
-        # the concept of 'latest component' is only relevant within product boundaries
-        # we want to constrain by product type/ofuri which is why we pass in model_type and ofuri
-        # into the get_latest_component stored proc annotation
-
-        product_prefetch = f"{model_type.lower()}s"
-        components = (
-            self.root_components()
-            .select_related("software_build")
-            .prefetch_related(product_prefetch)
-            .filter(productstreams__ofuri=ofuri)
-        )
-
-        latest_components_uuids = set(
-            self._latest_components_func(components, model_type, ofuri, include_inactive_streams)
-        )
+        latest_components_uuids = self._latest_components_func(include_inactive_streams, ofuri)
 
         if latest_components_uuids:
             lookup = {"pk__in": latest_components_uuids}
             if include:
-                return components.filter(**lookup)
+                return self.filter(**lookup)
             else:
-                return components.exclude(**lookup)
+                return self.exclude(**lookup)
 
         else:
             if include:

@@ -940,15 +940,10 @@ class ComponentQuerySet(models.QuerySet):
         # into the get_latest_component stored proc annotation
 
         product_prefetch = f"{model_type.lower()}s"
-        components = (
-            self.root_components()
-            .select_related("software_build")
-            .prefetch_related(product_prefetch)
-            .filter(productstreams__ofuri=ofuri)
-        )
+        components = self.root_components().prefetch_related(product_prefetch)
 
-        latest_components_uuids = set(
-            self._latest_components_func(components, model_type, ofuri, include_inactive_streams)
+        latest_components_uuids = self._latest_components_func(
+            components, model_type, ofuri, include_inactive_streams
         )
 
         if latest_components_uuids:
@@ -974,13 +969,7 @@ class ComponentQuerySet(models.QuerySet):
         include_inactive_streams: bool = False,
     ) -> "ComponentQuerySet":
         """Return only root components from latest builds for each product stream."""
-        components = (
-            self.root_components()
-            .select_related("software_build")
-            .prefetch_related("productstreams")
-        )
-        if not include_inactive_streams:
-            components = components.filter(productstreams__active=True).order_by().distinct()
+        components = self.root_components().prefetch_related("productstreams")
         product_stream_ofuris = set(
             (
                 components.values_list("productstreams__ofuri", flat=True)
@@ -1000,20 +989,21 @@ class ComponentQuerySet(models.QuerySet):
                     include_inactive_streams,
                 )
             )
+
         lookup = {"pk__in": latest_components_uuids}
         if include:
             # Show only the latest components
             if not latest_components_uuids:
                 # no latest components, don't do any further filtering
                 return Component.objects.none()
-            return components.filter(**lookup).order_by().distinct()
+            return components.filter(**lookup)
         else:
             # Show only the older / non-latest components
             if not latest_components_uuids:
                 # No latest components to hide??
                 # So show everything / return unfiltered queryset
                 return self
-            return components.exclude(**lookup).order_by().distinct()
+            return components.exclude(**lookup)
 
     def released_components(self, include: bool = True) -> "ComponentQuerySet":
         """Show only released components by default, or unreleased components if include=False"""

@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [1.4.0] - 2023-11-08
+Note- incomplete changelog
+
 ### Changed
 * refactored latest component filter into a pgsql stored proc
 

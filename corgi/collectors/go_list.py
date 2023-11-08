@@ -26,7 +26,11 @@ class GoList:
             if not target_path.is_dir():
                 with tempfile.TemporaryDirectory() as extract_dir:
                     try:
-                        unpack_archive(target_path, extract_dir)
+                        # Added the filter argument as recommended by
+                        # https://access.redhat.com/articles/7004769#specify-when-calling
+                        unpack_archive(
+                            target_path, extract_dir=extract_dir, filter="data"
+                        )  # type: ignore[call-arg]
                     except ReadError:
                         logger.debug("Cannot unpack file: %s", target_path)
                         continue

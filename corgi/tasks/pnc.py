@@ -38,13 +38,13 @@ def slow_fetch_pnc_sbom(purl: str, product_data: dict, sbom_data: dict) -> None:
     sbom = SbomerSbom(sbom_json)
 
     # Create a build for the root component
-    root_build = SoftwareBuild.objects.create(
+    root_build, _ = SoftwareBuild.objects.get_or_create(
         build_id=sbom.components["root"]["meta_attr"]["pnc_build_id"],
         build_type=SoftwareBuild.Type.PNC,
     )
 
     # Create ProductComponentRelation
-    ProductComponentRelation.objects.create(
+    pcr, _ = ProductComponentRelation.objects.get_or_create(
         build_id=root_build.build_id,
         build_type=root_build.build_type,
         software_build=root_build,
@@ -79,41 +79,30 @@ def slow_fetch_pnc_sbom(purl: str, product_data: dict, sbom_data: dict) -> None:
 
         set_license_declared_safely(components[bomref], " OR ".join(component["licenses"]))
 
-    # Link dependencies
-    nodes = {}
+    # Create ComponentNodes
     # Create the root node from the SBOM's component
     root_component = components.pop("root")
-    nodes["root"] = ComponentNode.objects.create(
+    root_node, _ = ComponentNode.objects.get_or_create(
         type=ComponentNode.ComponentNodeType.SOURCE,
         parent=None,
         purl=root_component.purl,
-        obj=root_component,
+        defaults={
+            "obj": root_component,
+        },
     )
 
-    # Create the relationships recorded in the manifest's dependencies
-    for parent, deps in sbom.dependencies.items():
-        # Only create a new node for parent if it wasn't already
-        # created as a dependency of another component
-        if parent not in nodes:
-            nodes[parent], _ = ComponentNode.objects.get_or_create(
-                type=ComponentNode.ComponentNodeType.PROVIDES,
-                parent=nodes["root"],
-                purl=components[parent].purl,
-                defaults={
-                    "obj": components[parent],
-                },
-            )
-
-        # Deps may be children of both root and other nodes
-        for dep in deps:
-            nodes[dep], _ = ComponentNode.objects.get_or_create(
-                type=ComponentNode.ComponentNodeType.PROVIDES,
-                parent=nodes[parent],
-                purl=components[dep].purl,
-                defaults={
-                    "obj": components[dep],
-                },
-            )
+    # CORGI-880: Record all included components as direct children of
+    # the root, rather than recreating the relationships in the
+    # CycloneDX manifest
+    for component in components.values():
+        node, _ = ComponentNode.objects.get_or_create(
+            type=ComponentNode.ComponentNodeType.PROVIDES,
+            parent=root_node,
+            purl=component.purl,
+            defaults={
+                "obj": component,
+            },
+        )
 
     # Save product and component taxonomies
     slow_save_taxonomy.delay(root_build.build_id, root_build.build_type)

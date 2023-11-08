@@ -942,8 +942,8 @@ class ComponentQuerySet(models.QuerySet):
         product_prefetch = f"{model_type.lower()}s"
         components = self.root_components().prefetch_related(product_prefetch)
 
-        latest_components_uuids = self._latest_components_func(
-            components, model_type, ofuri, include_inactive_streams
+        latest_components_uuids = set(
+            self._latest_components_func(components, model_type, ofuri, include_inactive_streams)
         )
 
         if latest_components_uuids:

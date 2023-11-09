@@ -55,7 +55,7 @@ CREATE OR REPLACE FUNCTION get_latest_component( model_type text, ps_ofuri text,
             AND core_component.arch=component_arch
             AND (include_inactive_streams OR core_productstream.active)
             AND (ps_ofuri IS NOT NULL AND core_productstream.ofuri = ps_ofuri)
-            AND ((core_component.type='RPM' and core_component.arch='src') 
+            AND ((core_component.type='RPM' and core_component.arch='src' and core_component.release not like '%module%') 
                 OR ( core_component.type='RPMMOD')
                 OR (core_component.type='OCI' and core_component.arch='noarch') 
                 OR ("core_component"."arch" = 'noarch' AND "core_component"."namespace" = 'REDHAT' AND "core_component"."type" = 'GITHUB'));

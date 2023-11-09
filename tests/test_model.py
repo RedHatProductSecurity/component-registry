@@ -1372,6 +1372,23 @@ def test_latest_components_queryset(client, api_path, stored_proc):
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_modular_srpm_masking_in_latest_filter(stored_proc):
+    ps = ProductStreamFactory(name="rhel-9.1.0", active=True)
+    srpm = SrpmComponentFactory(name="apache-commons-io", version="2.8.0", release="7.el9")
+    srpm.productstreams.add(ps)
+    modular_srpm = SrpmComponentFactory(
+        name="apache-commons-io", version="2.11.0", release="2.module+el9.1.0+16330+91eb0817"
+    )
+    modular_srpm.productstreams.add(ps)
+    latest_components = ps.components.latest_components(
+        model_type="ProductStream",
+        ofuri=ps.ofuri,
+    )
+    assert latest_components.count() == 1
+    assert latest_components[0] == srpm
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_latest_filter(stored_proc):
     ps = ProductStreamFactory(name="rhel-7.9.z", active=True)
     srpm_with_el = SrpmComponentFactory(name="sdb", version="1.2.1", release="21.el7")

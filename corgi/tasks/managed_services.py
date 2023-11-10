@@ -1,3 +1,5 @@
+from subprocess import CalledProcessError
+
 from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.conf import settings
@@ -6,7 +8,7 @@ from django.utils import timezone
 
 from config.celery import app
 from corgi.collectors.app_interface import AppInterface
-from corgi.collectors.syft import Syft
+from corgi.collectors.syft import GitCloneError, Syft
 from corgi.core.models import (
     Component,
     ComponentNode,
@@ -19,6 +21,18 @@ from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 from corgi.tasks.sca import save_component
 
 logger = get_task_logger(__name__)
+
+
+class MultiplePermissionExceptions(Exception):
+    """Helper class that tracks messages for multiple exceptions
+    so that we can at least attempt to scan all images / repos
+    and raise any permission errors for private images / repos at the end
+    instead of stopping on the first failure"""
+
+    def __init__(self, error_messages: list[str]) -> None:
+        combined_message = "\n".join(message for message in error_messages)
+        combined_message = f"Multiple exceptions raised:\n\n{combined_message}"
+        super().__init__(combined_message)
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
@@ -65,6 +79,7 @@ def cpu_manifest_service(stream_name: str, service_components: list) -> None:
     based on data from product-definitions and App Interface"""
     logger.info(f"Manifesting service {stream_name}")
     service = ProductStream.objects.get(name=stream_name)
+    exceptions = []
 
     for service_component in service_components:
         logger.info(f"Processing component for service {stream_name}: {service_component}")
@@ -75,17 +90,31 @@ def cpu_manifest_service(stream_name: str, service_components: list) -> None:
         quay_repo = service_component.get("quay_repo_name")
         if quay_repo:
             logger.info(f"Scanning Quay repo {quay_repo} for service {stream_name}")
-            component_data, quay_scan_source = Syft.scan_repo_image(target_image=quay_repo)
-            component_version = quay_scan_source["target"]["imageID"]
-            analyzed_components.extend(component_data)
+            try:
+                component_data, quay_scan_source = Syft.scan_repo_image(target_image=quay_repo)
+                component_version = quay_scan_source["target"]["imageID"]
+                analyzed_components.extend(component_data)
+            except CalledProcessError as e:
+                # We want to raise other (unexpected) errors
+                # Only ignore if it's an (expected) pull failure for private images
+                # Don't continue here in case component also defines a git repo
+                # Which we still need to / haven't checked yet (below)
+                exceptions.append(f"{type(e)}: {e.args}\n")
 
         git_repo = service_component.get("git_repo_url")
         if git_repo:
             logger.info(f"Scanning Git repo {git_repo} for service {stream_name}")
-            component_data, source_ref = Syft.scan_git_repo(target_url=git_repo)
-            if not component_version:
-                component_version = source_ref
-            analyzed_components.extend(component_data)
+            try:
+                component_data, source_ref = Syft.scan_git_repo(target_url=git_repo)
+                if not component_version:
+                    component_version = source_ref
+                analyzed_components.extend(component_data)
+            except GitCloneError as e:
+                # We want to raise other (unexpected) errors
+                # Only ignore if it's an (expected) clone failure for private repos
+                # Don't continue here in case component also defined a Quay image above
+                # Which we still need to / haven't saved yet (below)
+                exceptions.append(f"{type(e)}: {e.args}\n")
 
         if not analyzed_components:
             if not quay_repo and not git_repo:
@@ -215,4 +244,11 @@ def cpu_manifest_service(stream_name: str, service_components: list) -> None:
             f"Finished processing service component {service_component['name']} "
             f"for service {stream_name}"
         )
+    if exceptions:
+        # Now we're finished processing all the components for this service
+        # including both Quay images and Git repos for each component
+        # we can safely raise errors here for private images / repos
+        # so there will be no gaps in the service's list of components
+        # and we'll still get alerted about components with missing permissions
+        raise MultiplePermissionExceptions(exceptions)
     logger.info(f"Finished manifesting service {stream_name}")

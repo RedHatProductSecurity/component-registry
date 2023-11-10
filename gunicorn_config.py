@@ -1,9 +1,5 @@
-# avoid MonkeyPatchWarning error/warnings
-from gevent import monkey
-
 from config.utils import running_dev
 
-monkey.patch_all(thread=False, select=False)
 workers = 4  # this can probably be increased
 worker_class = "gevent"
 reuse_port = True
@@ -24,12 +20,8 @@ timeout = 300
 if not running_dev():
     # Saves memory in the worker process, but breaks --reload
     preload_app = True
-    # avoid restarting gunicorn and leave it to pod restarts to handle memory leaks
-    max_requests = 0
     graceful_timeout = 800  # if a restart must happen then let it be graceful
     keepalive = 60  # specifically this should be a value larger then nginx setting
-    # ref: https://github.com/benoitc/gunicorn/issues/1978
-    max_requests_jitter = 0
 else:
     # Support hot-reloading of Gunicorn / Django when files change
     reload = True

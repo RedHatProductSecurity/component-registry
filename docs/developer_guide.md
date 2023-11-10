@@ -26,7 +26,7 @@ Next, define the database password and custom PostgreSQL port to be used:
 ```bash
 export CORGI_DB_USER=postgres  # This is the RHSCL PostgreSQL image default admin username
 export CORGI_DB_PASSWORD=test  # This is the admin password used in docker-compose.yml
-export CORGI_DB_PORT=5433  # This is the port used in docker-compose.yml
+export CORGI_DB_PORT=5433  # This is the port used in docker-compose.yml, use 5432 in the .env file
 export DJANGO_SETTINGS_MODULE=config.settings.dev
 export CORGI_COMMUNITY_MODE_ENABLED=true
 ```

@@ -1,13 +1,17 @@
 import subprocess
 from contextlib import nullcontext
+from subprocess import CalledProcessError
 from unittest.mock import call, patch
 
 import pytest
 from django.conf import settings
 
 from corgi.collectors.app_interface import AppInterface
-from corgi.collectors.syft import Syft
-from corgi.tasks.managed_services import cpu_manifest_service
+from corgi.collectors.syft import GitCloneError, Syft
+from corgi.tasks.managed_services import (
+    MultiplePermissionExceptions,
+    cpu_manifest_service,
+)
 
 from .factories import ProductStreamFactory
 
@@ -52,7 +56,7 @@ def test_metadata_fetch(requests_mock):
                     "name": "Red",
                     "quayRepos": [
                         {
-                            "org": {"name": "blue-org", "instance": {"url": "quay.io"}},
+                            "org": {"name": "red-org", "instance": {"url": "quay.io"}},
                             "items": [
                                 {
                                     "name": "hello-world",
@@ -69,7 +73,7 @@ def test_metadata_fetch(requests_mock):
                     ],
                     "codeComponents": [
                         {
-                            "name": "hello",
+                            "name": "hello-world",
                             "url": "https://github.com/red/hello",
                             "resource": "upstream",
                         }
@@ -102,9 +106,12 @@ def test_metadata_fetch(requests_mock):
         {"name": "blue-app", "git_repo_url": "https://github.com/blue/example"},
         {"name": "example", "quay_repo_name": "blue-org/example"},
         {"name": "example-ui", "quay_repo_name": "blue-org/example-ui"},
-        {"name": "hello", "git_repo_url": "https://github.com/red/hello"},
-        {"name": "hello-world", "quay_repo_name": "blue-org/hello-world"},
-        {"name": "hello-world-api", "quay_repo_name": "blue-org/hello-world-api"},
+        {
+            "name": "hello-world",
+            "quay_repo_name": "red-org/hello-world",
+            "git_repo_url": "https://github.com/red/hello",
+        },
+        {"name": "hello-world-api", "quay_repo_name": "red-org/hello-world-api"},
     ]
 
 
@@ -243,3 +250,56 @@ def test_missing_github_quay_repo_names():
     # Fails because some images do not define app_interface, Quay, or GitHub names
     with pytest.raises(ValueError):
         cpu_manifest_service(ps.name, ps.meta_attr["managed_service_components"])
+
+
+@pytest.mark.django_db
+def test_private_github_quay_repo_names():
+    """Test that private images / repos we don't have permissions for are skipped"""
+    # We should at least attempt to scan all components for a service
+    # Known permission errors should not block us from checking the remaining components
+    # but we should still raise an error at the end of the task, for tracking
+    ps = ProductStreamFactory(
+        meta_attr={
+            "managed_service_components": [
+                {"name": "blue-app", "git_repo_url": "https://github.com/blue/example"},
+                {
+                    "name": "hello-world",
+                    "quay_repo_name": "red-org/hello-world",
+                    "git_repo_url": "https://github.com/red/hello",
+                },
+                {"name": "hello-world-api", "quay_repo_name": "red-org/hello-world-api"},
+            ]
+        }
+    )
+    git_error = GitCloneError(
+        "git clone of {target_url} failed with: {result.stderr.decode('utf-8')}"
+    )
+    podman_error = CalledProcessError(
+        128,
+        (
+            "/usr/bin/syft",
+            "packages",
+            "-q",
+            "-o=syft-json",
+            "--exclude=**/vendor/**",
+            "registry:{target_host}/{target_image}",
+        ),
+    )
+    with patch("corgi.tasks.managed_services.Syft") as mock_syft:
+        mock_syft.scan_repo_image.side_effect = (podman_error, podman_error)
+        mock_syft.scan_git_repo.side_effect = (git_error, git_error)
+
+        # Fails because all images above are not accessible
+        with pytest.raises(MultiplePermissionExceptions) as raised_e:
+            cpu_manifest_service(ps.name, ps.meta_attr["managed_service_components"])
+        assert str(raised_e.value) == (
+            f"Multiple exceptions raised:\n\n"
+            f"{type(git_error)}: {git_error.args}\n\n"
+            f"{type(podman_error)}: {podman_error.args}\n\n"
+            f"{type(git_error)}: {git_error.args}\n\n"
+            f"{type(podman_error)}: {podman_error.args}\n"
+        )
+    # But only fails at the very end
+    # we still try to scan other components, instead of stopping on the first error
+    assert mock_syft.scan_repo_image.call_count == 2
+    assert mock_syft.scan_git_repo.call_count == 2

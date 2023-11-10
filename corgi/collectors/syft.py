@@ -15,6 +15,10 @@ from corgi.core.models import Component
 logger = logging.getLogger(__name__)
 
 
+class GitCloneError(Exception):
+    pass
+
+
 class Syft:
     # Syft packages types: https://github.com/anchore/syft/blob/v0.72.0/syft/pkg/type.go
     SYFT_PKG_TYPE_MAPPING = {
@@ -157,7 +161,7 @@ class Syft:
                 env=env,
             )  # nosec B603
             if result.returncode != 0:
-                raise ValueError(
+                raise GitCloneError(
                     f"git clone of {target_url} failed with: {result.stderr.decode('utf-8')}"
                 )
 

@@ -137,6 +137,8 @@ test-performance:
     - $DNF_WITH_OPTIONS install $RPM_REQUIREMENTS
     - python3.11 -m pip install tox
     - tox -e corgi -- -m performance --no-cov
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
 
 mypy:
   stage: test

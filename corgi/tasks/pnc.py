@@ -47,10 +47,12 @@ def slow_fetch_pnc_sbom(purl: str, product_data: dict, sbom_data: dict) -> None:
     pcr, _ = ProductComponentRelation.objects.get_or_create(
         build_id=root_build.build_id,
         build_type=root_build.build_type,
-        software_build=root_build,
         product_ref=sbom.product_variant,
         external_system_id=sbom_data["id"],
-        type=ProductComponentRelation.Type.SBOMER,
+        defaults={
+            "software_build": root_build,
+            "type": ProductComponentRelation.Type.SBOMER,
+        },
     )
 
     # Create components

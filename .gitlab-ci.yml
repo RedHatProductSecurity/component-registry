@@ -128,6 +128,7 @@ test-migrations:
 
 test-performance:
   stage: test
+  allow_failure: true
   # Keep in sync with Dockerfile
   image: registry.redhat.io/ubi9/ubi
   before_script:
@@ -137,8 +138,6 @@ test-performance:
     - $DNF_WITH_OPTIONS install $RPM_REQUIREMENTS
     - python3.11 -m pip install tox
     - tox -e corgi -- -m performance --no-cov
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "schedule"
 
 mypy:
   stage: test

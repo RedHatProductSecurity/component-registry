@@ -173,4 +173,4 @@ def test_gin_index_performance() -> None:
     test_results = sorted(timer.repeat(repeat=3, number=1))
     assert len(test_results) == 3
     median_time_taken = test_results[1]
-    assert median_time_taken < 2
+    assert median_time_taken < 2.0

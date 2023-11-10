@@ -1,6 +1,6 @@
 from collections import defaultdict
 from copy import deepcopy
-from unittest.mock import call, patch
+from unittest.mock import Mock, call, patch
 
 import pytest
 from django.conf import settings
@@ -23,8 +23,10 @@ from corgi.core.models import (
 )
 from corgi.tasks.common import BUILD_TYPE
 from corgi.tasks.errata_tool import (
+    _get_errata_search_criteria,
     save_errata_relation,
     slow_load_errata,
+    slow_load_stream_errata,
     slow_save_errata_product_taxonomy,
     update_variant_repos,
 )
@@ -695,3 +697,218 @@ def test_load_variants():
     variant = CollectorErrataProductVariant.objects.get(et_id=2595)
     assert variant.name == "Some other variant"
     assert product_version == variant.product_version
+
+
+def test_parse_container_errata_components(requests_mock):
+    erratum_id = 97738
+    build_id = 2177946
+    with open("tests/data/errata/errata_container_builds.json", "r") as remote_source_data:
+        requests_mock.get(
+            f"{settings.ERRATA_TOOL_URL}/api/v1/erratum/{erratum_id}/builds_list.json",
+            text=remote_source_data.read(),
+        )
+    results = ErrataTool().get_erratum_components(erratum_id)
+    assert requests_mock.call_count == 1
+    assert "8Base-RHACM-2.4" in results.keys()
+    assert build_id in results["8Base-RHACM-2.4"][0]
+
+
+def test_get_errata_search_criteria():
+    stream = ProductStreamFactory()
+    stream_variants = ["8Base-RHOSE-4.6", "7Server-RH7-RHOSE-4.6"]
+    stream.meta_attr["variants_from_brew_tags"] = stream_variants
+    stream.save()
+    result = _get_errata_search_criteria(stream.name)
+    assert result[0] == stream_variants
+    assert result[1] == []
+
+    # When variants_from_brew_tags is populated no releases are returned
+    stream_releases = [1, 2]
+    stream.meta_attr["releases_from_brew_tags"] = stream_releases
+    stream.save()
+    result = _get_errata_search_criteria(stream.name)
+    assert result[0] == stream_variants
+    assert result[1] == []
+
+    # When variants are empty return releases
+    stream.meta_attr["variants_from_brew_tags"] = []
+    stream.save()
+    result = _get_errata_search_criteria(stream.name)
+    assert result[0] == []
+    assert result[1] == stream_releases
+
+    # When child variants are present they are returned, and no releases
+    variant = ProductVariantFactory(productstreams=stream)
+    result = _get_errata_search_criteria(stream.name)
+    assert variant.name in result[0]
+    assert result[1] == []
+
+
+def test_do_errata_search(requests_mock):
+    et = ErrataTool()
+    # Test that an empty search_value raises an error
+    with pytest.raises(ValueError):
+        et._do_errata_search("", [])
+
+    # Test that a search for a product returns some errata_ids
+    search_values = f"{et.SHIPPED_LIVE_SEARCH}&product[]=79"
+    paged_search_url = f"/api/v1/erratum/search?{search_values}&page[number]="
+    with open("tests/data/errata/search_results.json", "r") as errata_search_results:
+        requests_mock.get(
+            f"{settings.ERRATA_TOOL_URL}{paged_search_url}1",
+            text=errata_search_results.read(),
+        )
+    # ErrataTool.get_paged looks for an empty data field to signal the end of paged results has been
+    # reached
+    requests_mock.get(f"{settings.ERRATA_TOOL_URL}{paged_search_url}2", text='{"data":[]}')
+    result = et._do_errata_search(search_values, [])
+    # These values are from tests/data/errata/search_results.json
+    assert 121542 in result
+    assert 122119 in result
+
+
+def test_do_errata_search_filtering_variants(requests_mock):
+    # Test that a search for a product with variants filters errata to only the ones with those
+    # variants
+    et = ErrataTool()
+    search_values = f"{et.SHIPPED_LIVE_SEARCH}&product[]=79"
+    ose_412_erratum_id = 121542
+    ose_411_erratum_id = 122119
+    paged_search_url = f"/api/v1/erratum/search?{search_values}&page[number]="
+    with open("tests/data/errata/search_results.json", "r") as errata_search_results:
+        requests_mock.get(
+            f"{settings.ERRATA_TOOL_URL}{paged_search_url}1",
+            text=errata_search_results.read(),
+        )
+    # ErrataTool.get_paged looks for an empty data field to signal the end of paged results has been
+    # reached
+    requests_mock.get(f"{settings.ERRATA_TOOL_URL}{paged_search_url}2", text='{"data":[]}')
+    # Add requests mock endpoint for:
+    # api / v1 / erratum / 121542 / builds
+    ose_412_variant = "8Base-RHOSE-4.12"
+    build_data = (
+        """{
+        "OSE-4.12-RHEL-8": {
+            "name": "OSE-4.12-RHEL-8",
+            "description": "Red Hat OpenShift Container Platform 4.12",
+            "builds": [
+                {
+                    "windows-machine-config-operator-bundle-container-v7.1.1-8.1696813827": {
+                        "variant_arch": {"%s": []}
+                    }
+                }
+            ]
+        }
+    }
+    """
+        % ose_412_variant
+    )
+    requests_mock.get(
+        f"{settings.ERRATA_TOOL_URL}/api/v1/erratum/{ose_412_erratum_id}/builds",
+        text=build_data,
+    )
+    build_data = """{
+        "OSE-4.11-RHEL-8": {
+            "name": "OSE-4.11-RHEL-8",
+            "description": "Red Hat OpenShift Container Platform 4.11",
+            "builds": [
+                {"kernel-4.18.0-372.76.1.el8_6": {"variant_arch": {"8Base-RHOSE-4.11": []}}}
+            ]
+        }
+    }"""
+    requests_mock.get(
+        f"{settings.ERRATA_TOOL_URL}/api/v1/erratum/{ose_411_erratum_id}/builds_list.json",
+        text=build_data,
+    )
+    result = et._do_errata_search(search_values, [(ose_412_variant)])
+    assert ose_412_erratum_id in result
+    assert ose_411_erratum_id not in result
+
+
+def test_get_errata_matching_variants(monkeypatch):
+    # Test that missing variants raises an Error
+    et = ErrataTool()
+    with pytest.raises(ValueError):
+        et.get_errata_matching_variants(["missing_variant"])
+
+    # Test that do_errata_search is called with the correct product and variant names
+    product = CollectorErrataProduct.objects.create(name="product", et_id=1)
+    version = CollectorErrataProductVersion.objects.create(
+        name="version", et_id=10, product=product
+    )
+    variant = CollectorErrataProductVariant.objects.create(
+        name="variant", et_id=100, product_version=version
+    )
+    mock_do_errata_search = Mock(return_value=[1])
+    monkeypatch.setattr(et, "_do_errata_search", mock_do_errata_search)
+    et.get_errata_matching_variants([variant.name])
+    assert mock_do_errata_search.call_args == call(
+        f"{et.SHIPPED_LIVE_SEARCH}&product[]={product.et_id}", [variant.name], False
+    )
+
+
+def test_get_errata_matching_disparate_variants():
+    # Test that calling et_errata_matching_variants with variants from 2 different products raises
+    # an error
+    product = CollectorErrataProduct.objects.create(name="product", short_name="p", et_id=1)
+    version = CollectorErrataProductVersion.objects.create(
+        name="version", et_id=10, product=product
+    )
+    variant = CollectorErrataProductVariant.objects.create(
+        name="variant", et_id=100, product_version=version
+    )
+
+    other_product = CollectorErrataProduct.objects.create(name="other_product", et_id=2)
+    other_version = CollectorErrataProductVersion.objects.create(
+        name="other_version", et_id=20, product=other_product
+    )
+    other_variant = CollectorErrataProductVariant.objects.create(
+        name="other_variant", et_id=200, product_version=other_version
+    )
+
+    et = ErrataTool()
+    with pytest.raises(ValueError):
+        et.get_errata_matching_variants([variant.name, other_variant.name])
+
+
+def test_get_errata_for_release(monkeypatch):
+    mock_do_errata_search = Mock(return_value=[1])
+    et = ErrataTool()
+    monkeypatch.setattr(et, "_do_errata_search", mock_do_errata_search)
+    et.get_errata_for_releases([1])
+    et.get_errata_for_releases([1], True)
+    assert mock_do_errata_search.call_args_list == [
+        call("show_state_SHIPPED_LIVE=1&release[]=1", [], False),
+        call("show_state_SHIPPED_LIVE=1&release[]=1", [], True),
+    ]
+
+
+@patch("corgi.tasks.errata_tool._get_errata_search_criteria")
+@patch("corgi.tasks.errata_tool.slow_load_errata.delay")
+@patch("corgi.tasks.errata_tool.ErrataTool")
+def test_slow_load_errata_stream(mock_et_collector, mock_load_errata, mock_search_criteria):
+    # This needs to return the correct number of arguments for the test to compile, the values are
+    # used in the 2nd test
+    # below to trigger a call to et.get_errata_matching_variants
+    mock_search_criteria.return_value = (
+        ["some_variant"],
+        [],
+    )
+
+    # Test that a stream with no variants or releases doesn't load any errata
+    stream = ProductStreamFactory()
+    result = slow_load_stream_errata(stream.name)
+    assert result == 0
+
+    # Test that a stream with variants calls load for errata matching those variants
+    mock_et_collector.return_value.get_errata_matching_variants.return_value = [1]
+    slow_load_stream_errata(stream.name)
+    assert mock_load_errata.call_args == call(1, force_process=True)
+
+    mock_search_criteria.return_value = (
+        [],
+        [100],
+    )
+    mock_et_collector.return_value.get_errata_for_releases.return_value = {100}
+    slow_load_stream_errata(stream.name, force_process=False)
+    assert mock_load_errata.call_args == call(100, force_process=False)

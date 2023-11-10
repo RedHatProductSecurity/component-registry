@@ -111,7 +111,7 @@ class Migration(migrations.Migration):
     # and will take forever, so we need to pick up where we left off after timeouts
     atomic = False
     dependencies = [
-        ("core", "0100_fix_duplicate_sbomer_components"),
+        ("core", "0101_load_missing_container_errata_builds"),
     ]
 
     operations = [

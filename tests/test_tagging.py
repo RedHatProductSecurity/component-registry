@@ -1,6 +1,7 @@
 import pytest
 
 from corgi.tasks.tagging import (
+    NO_MANIFEST_TAG,
     apply_managed_services_no_manifest_tags,
     apply_middleware_stream_no_manifest_tags,
     apply_rhel_8_9_z_stream_no_manifest_tags,
@@ -13,9 +14,9 @@ pytestmark = pytest.mark.unit
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_rhel_8_9_no_manifest_tagging():
     stream, _ = setup_product(version_name="rhel-8", stream_name="rhel-8.1.0.z")
-    apply_rhel_8_9_z_stream_no_manifest_tags("no_manifest", True)
+    apply_rhel_8_9_z_stream_no_manifest_tags(NO_MANIFEST_TAG, True)
     stream.refresh_from_db()
-    assert "no_manifest" in stream.tags.values_list("name", flat=True)
+    assert NO_MANIFEST_TAG in stream.tags.values_list("name", flat=True)
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
@@ -24,9 +25,9 @@ def test_middleware_no_manifest_tag():
     product = stream.products
     product.meta_attr["business_unit"] = "Core Middleware"
     product.save()
-    apply_middleware_stream_no_manifest_tags("no_manifest", True)
+    apply_middleware_stream_no_manifest_tags(NO_MANIFEST_TAG, True)
     stream.refresh_from_db()
-    assert "no_manifest" in stream.tags.values_list("name", flat=True)
+    assert NO_MANIFEST_TAG in stream.tags.values_list("name", flat=True)
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
@@ -34,6 +35,6 @@ def test_managed_service_no_manifest_tag():
     stream, _ = setup_product()
     stream.meta_attr["managed_service_components"] = {"name": "test"}
     stream.save()
-    apply_managed_services_no_manifest_tags("no_manifest", True)
-    stream.refresh_from_db
-    assert "no_manifest" in stream.tags.values_list("name", flat=True)
+    apply_managed_services_no_manifest_tags(NO_MANIFEST_TAG, True)
+    stream.refresh_from_db()
+    assert NO_MANIFEST_TAG in stream.tags.values_list("name", flat=True)

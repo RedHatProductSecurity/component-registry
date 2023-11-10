@@ -5,6 +5,8 @@ from config.celery import app
 from corgi.core.models import Product, ProductStream, ProductStreamTag, ProductVersion
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 
+NO_MANIFEST_TAG = "no_manifest"
+
 logger = get_task_logger(__name__)
 
 
@@ -14,11 +16,9 @@ logger = get_task_logger(__name__)
     retry_kwargs=RETRY_KWARGS,
 )
 def apply_stream_no_manifest_tags():
-    tag_name = "no_manifest"
-    tag_value = ""
-    apply_middleware_stream_no_manifest_tags(tag_name, tag_value)
-    apply_rhel_8_9_z_stream_no_manifest_tags(tag_name, tag_value)
-    apply_managed_services_no_manifest_tags(tag_name, tag_value)
+    apply_middleware_stream_no_manifest_tags(NO_MANIFEST_TAG, "")
+    apply_rhel_8_9_z_stream_no_manifest_tags(NO_MANIFEST_TAG, "")
+    apply_managed_services_no_manifest_tags(NO_MANIFEST_TAG, "")
 
 
 def apply_middleware_stream_no_manifest_tags(tag_name: str, tag_value: str) -> None:

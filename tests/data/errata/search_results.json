@@ -1,0 +1,21 @@
+{
+  "data": [
+    {
+      "id": 121542,
+      "content_types": [
+        "docker"
+      ]
+    },
+    {
+      "id": 122119,
+      "content_types": [
+        "rpm"
+      ]
+    }
+  ],
+  "page": {
+    "current_page": 1,
+    "total_pages": 1,
+    "result_count": 2
+  }
+}

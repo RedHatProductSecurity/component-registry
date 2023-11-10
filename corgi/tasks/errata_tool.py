@@ -13,6 +13,7 @@ from corgi.core.models import (
     Channel,
     ProductComponentRelation,
     ProductNode,
+    ProductStream,
     ProductVariant,
     SoftwareBuild,
 )
@@ -240,3 +241,52 @@ def slow_handle_shipped_errata(erratum_id: int, erratum_status: str) -> None:
     logger.info(f"Calling slow_load_errata for {erratum_id}")
     slow_load_errata.delay(str(erratum_id), force_process=True)
     logger.info(f"Finished refreshing tags and taxonomy for all builds on erratum {erratum_id}")
+
+
+@app.task(
+    base=Singleton,
+    autoretry_for=RETRYABLE_ERRORS,
+    retry_kwargs=RETRY_KWARGS,
+    soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
+)
+def slow_load_stream_errata(
+    stream_name: str, container_only: bool = False, force_process: bool = True
+) -> int:
+    variant_names, release_ids = _get_errata_search_criteria(stream_name)
+
+    errata_count = 0
+    et = ErrataTool()
+    errata: set[int] = set()
+    if variant_names:
+        # This is more comprehensive but slower
+        errata = set(et.get_errata_matching_variants(variant_names, container_only=container_only))
+    elif release_ids:
+        # This is not comprehensive enough for most streams like openshift-4.6.z but necessary for
+        # other streams such as rhes-3.5
+        errata = et.get_errata_for_releases(release_ids, container_only=container_only)
+    else:
+        logger.warning(f"Variant_names and release_ids not populated in {stream_name}")
+    for erratum in errata:
+        logger.info(f"Loading Errata {erratum} for stream {stream_name}")
+        slow_load_errata.delay(erratum, force_process=force_process)
+        errata_count += 1
+    return errata_count
+
+
+def _get_errata_search_criteria(stream_name) -> tuple[list[str], list[int]]:
+    stream = ProductStream.objects.get(name=stream_name)
+    if stream.productvariants.exists():
+        # This allows us to also load errata for streams with errata_info
+        return list(stream.productvariants.values_list("name", flat=True)), []
+    variant_names = stream.meta_attr.get("variants_from_brew_tags", [])
+    # This covers some streams such as rhes-3.5 which have brew tags overridden by releases so
+    # don't match any ET product versions and therefore variants.
+    if not variant_names:
+        release_ids = stream.meta_attr.get("releases_from_brew_tags", [])
+    else:
+        release_ids = []
+        # Could be a stream with no build info, composes or yum_repositories
+        logger.warning(
+            f"Tried to load errata for a stream without brew_tags or variants: {stream_name}"
+        )
+    return variant_names, release_ids

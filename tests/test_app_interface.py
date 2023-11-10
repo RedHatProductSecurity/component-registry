@@ -52,7 +52,7 @@ def test_metadata_fetch(requests_mock):
                     "name": "Red",
                     "quayRepos": [
                         {
-                            "org": {"name": "blue-org", "instance": {"url": "quay.io"}},
+                            "org": {"name": "red-org", "instance": {"url": "quay.io"}},
                             "items": [
                                 {
                                     "name": "hello-world",
@@ -69,7 +69,7 @@ def test_metadata_fetch(requests_mock):
                     ],
                     "codeComponents": [
                         {
-                            "name": "hello",
+                            "name": "hello-world",
                             "url": "https://github.com/red/hello",
                             "resource": "upstream",
                         }
@@ -102,9 +102,12 @@ def test_metadata_fetch(requests_mock):
         {"name": "blue-app", "git_repo_url": "https://github.com/blue/example"},
         {"name": "example", "quay_repo_name": "blue-org/example"},
         {"name": "example-ui", "quay_repo_name": "blue-org/example-ui"},
-        {"name": "hello", "git_repo_url": "https://github.com/red/hello"},
-        {"name": "hello-world", "quay_repo_name": "blue-org/hello-world"},
-        {"name": "hello-world-api", "quay_repo_name": "blue-org/hello-world-api"},
+        {
+            "name": "hello-world",
+            "quay_repo_name": "red-org/hello-world",
+            "git_repo_url": "https://github.com/red/hello",
+        },
+        {"name": "hello-world-api", "quay_repo_name": "red-org/hello-world-api"},
     ]
 
 

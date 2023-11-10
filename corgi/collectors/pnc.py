@@ -29,7 +29,18 @@ class SbomerSbom:
         # Components is a list of all components. Some are listed
         # more than once with different bomrefs, as they're listed
         # separately for each dependency they have or fulfill.
-        self.components = {c["bom-ref"]: c for c in data["components"]}
+        # FIXME ------
+        # Temporary workaround for component purl conflicts
+        self.components = {}
+        created_nvrs = set()
+        for component in data["components"]:
+            if (component["name"], component["version"]) in created_nvrs:
+                continue
+            else:
+                created_nvrs.add((component["name"], component["version"]))
+                self.components[component["bom-ref"]] = component
+        # self.components = {c["bom-ref"]: c for c in data["components"]}
+        # FIXME -------
         # The root component is listed separately in metadata
         self.components["root"] = data["metadata"]["component"]
         for component in self.components.values():

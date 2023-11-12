@@ -560,7 +560,7 @@ def test_slow_fetch_pnc_sbom():
 
         # The root component and all its children should have MAVEN type
         maven_components = Component.objects.filter(type=Component.Type.MAVEN)
-        assert maven_components.count() == 6
+        assert len(maven_components) == 6
 
         # One component is only available upstream, the rest are built at Red Hat / in PNC
         red_hat_maven_components = maven_components.filter(namespace=Component.Namespace.REDHAT)
@@ -621,7 +621,7 @@ def test_slow_handle_pnc_errata_released():
         "corgi.collectors.errata_tool.ErrataTool.get_erratum_notes", return_value=notes
     ) as get_notes_mock:
         # Well-formed notes data with no matching Corgi component
-        with pytest.raises(ValueError):
+        with pytest.raises(Component.DoesNotExist):
             slow_handle_pnc_errata_released(120325, "SHIPPED_LIVE")
 
         get_notes_mock.assert_called_once_with(120325)

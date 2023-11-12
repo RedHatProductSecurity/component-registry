@@ -132,21 +132,20 @@ def slow_handle_pnc_errata_released(erratum_id: int, erratum_status: str) -> Non
     # Check that there's a component matching the purls
     root_components: set[Component] = set()
     for purl in related_purls:
-        components = Component.objects.filter(
-            type=Component.Type.MAVEN, meta_attr__purl_declared=purl
+        logger.info(
+            f"Trying to match purl {purl} from erratum {erratum_id}'s Notes field to a Corgi purl"
         )
-        component_count = components.count()
-        if component_count == 0:
-            raise ValueError(
-                f"Erratum {erratum_id} refers to purl {purl} which matches no components"
-            )
-
-        if component_count > 1:
-            logger.warning(
-                f"Erratum {erratum_id} refers to purl {purl} which matches {component_count}"
-                " components; only handling the first"
-            )
-        root_components.add(components[0])
+        # There is only one root component in Corgi matching the purl from ET
+        # But the SBOMer purl_declared won't match purls in Corgi / ET's notes field
+        # SBOMer copies its purls from PNC builds, before artifacts are released
+        # (if they're ever released)
+        # so SBOMer / PNC purls won't contain any ?repository_url= qualifier
+        # Customers need this, so Corgi / the CVE-mapping generator must always add it
+        # and purls from SBOMer / PNC will always be slightly different
+        # To find purls mentioned in shipped errata, search using Corgi's purl field
+        # instead of SBOMer's meta_attr__purl_declared field
+        root_component = Component.objects.get(purl=purl)
+        root_components.add(root_component)
 
     # Update relations with this erratum
     for component in root_components:

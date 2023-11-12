@@ -2,7 +2,7 @@
   "manifest" : {
     "refs" : [ {
       "type" : "purl",
-      "uri" : "pkg:maven/com.redhat.quarkus.platform/quarkus-bom@2.13.8.SP2-redhat-00001?type=pom"
+      "uri" : "pkg:maven/com.redhat.quarkus.platform/quarkus-bom@2.13.8.SP2-redhat-00001?repository_url=https://maven.repository.redhat.com/ga/&type=pom"
     } ]
   },
   "simple-mapper" : {

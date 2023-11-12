@@ -144,7 +144,9 @@ mypy:
   image: $PYTHON_TOX_IMAGE_LATEST
   before_script:
     - *common_ci_setup
+    - *common_test_setup
   script:
+    - $DNF_WITH_OPTIONS install python3.11-devel python3-wheel
     - tox -e mypy
   except:
     refs:
@@ -155,7 +157,9 @@ schema:
   image: $PYTHON_TOX_IMAGE_LATEST
   before_script:
     - *common_ci_setup
+    - *common_test_setup
   script:
+    - $DNF_WITH_OPTIONS install python3.11-devel python3-wheel
     - tox -e schema
   except:
     refs:

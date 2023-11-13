@@ -2,13 +2,11 @@ from django.db import migrations
 from django.db.models import F, Q
 
 # Must use non-historical model which supports cnodes
-from corgi.core.models import Component
+from corgi.core.models import Component, ComponentNode
 
 
 def find_duplicate_remote_source_components(apps, schema_editor) -> None:
     """Find duplicate Maven, NPM, PyPI, etc. nodes with bad purls"""
-    ComponentNode = apps.get_model("core", "ComponentNode")
-
     # We could do this without the for loop, but checking type / arch pairs individually
     # means the query hits an index and should be faster
     for component_type in Component.REMOTE_SOURCE_COMPONENT_TYPES:

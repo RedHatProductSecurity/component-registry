@@ -3,6 +3,7 @@ from django.apps import apps
 from django.db.utils import IntegrityError, ProgrammingError
 from packageurl import PackageURL
 
+from corgi.collectors.models import CollectorErrataProductVariant
 from corgi.core.constants import CONTAINER_DIGEST_FORMATS
 from corgi.core.models import (
     Component,
@@ -107,7 +108,7 @@ def test_cpes():
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
-def test_component_cpes():
+def test_component_with_variant_cpes():
     """Test the CPEs property on the Component model finds CPEs for any Variant
     linked directly to that Component, whenever the CPE is not empty"""
     # Below Variant has an empty CPE, so we shouldn't discover it
@@ -172,6 +173,32 @@ def test_component_cpes():
         # Components should give their CPEs in sorted order, to keep manifests stable
         assert list(cpes) == [rhel_7_variant.cpe, rhel_8_variant.cpe]
         assert unused_variant.cpe not in cpes
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_component_without_variant_cpes():
+    TEST_CPE = "o:redhat:test:1"
+
+    # Test that a Component with no linked software_build returns an empty QuerySet
+    srpm = SrpmComponentFactory()
+    assert list(srpm.cpes) == []
+
+    # Test that a software_build with no errata relations return an empty cpe list
+    sb = SoftwareBuildFactory()
+    srpm = SrpmComponentFactory(software_build=sb)
+    assert list(srpm.cpes) == []
+
+    # Test that if a there are matching relations, but no matching collector model we return an
+    # empty cpe list
+    variant = ProductVariantFactory()
+    ProductComponentRelationFactory(
+        type=ProductComponentRelation.Type.ERRATA, product_ref=variant.name, software_build=sb
+    )
+    assert list(srpm.cpes) == []
+
+    # If there is a matching relation and collector model, return the cpe from the collector model
+    CollectorErrataProductVariant.objects.create(et_id=100, name=variant.name, cpe=TEST_CPE)
+    assert list(srpm.cpes) == [TEST_CPE]
 
 
 def test_nevra():

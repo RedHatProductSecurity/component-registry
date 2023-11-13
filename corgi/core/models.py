@@ -17,6 +17,7 @@ from mptt.models import MPTTModel, TreeForeignKey
 from packageurl import PackageURL
 from packageurl.contrib import purl2url
 
+from corgi.collectors.models import CollectorErrataProductVariant
 from corgi.core.constants import (
     CONTAINER_DIGEST_FORMATS,
     EL_MATCH_RE,
@@ -1777,25 +1778,30 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
     @property
     def cpes(self) -> QuerySet:
-        """Build and return a list of CPEs from all Variants this Component relates to"""
+        """Build and return a list of CPEs this Component relates to"""
         # For each Variant-type relation, get the linked Variant's CPE directly
         # Remove any duplicates, and return the CPEs in sorted order so manifests are stable
-        return (
-            self.productvariants.exclude(cpe="")
-            .values_list("cpe", flat=True)
-            .distinct()
-            .order_by("cpe")
-        )
+        if self.productvariants.exists():
+            return (
+                self.productvariants.exclude(cpe="")
+                .values_list("cpe", flat=True)
+                .distinct()
+                .order_by("cpe")
+            )
+        elif self.software_build:
+            build_variants = (
+                ProductComponentRelation.objects.filter(software_build=self.software_build)
+                .values_list("product_ref", flat=True)
+                .distinct()
+            )
+            if build_variants:
+                return (
+                    CollectorErrataProductVariant.objects.filter(name__in=build_variants)
+                    .values_list("cpe", flat=True)
+                    .order_by("cpe")
+                )
 
-        # For Stream-type relations, we no longer link any Variants
-        # since this caused data quality issues, where Components were linked to Variants
-        # that didn't actually ship those Components
-        # We could look at all the linked streams to get CPEs from all their child Variants
-        # But this would cause the same problem - we'd report too many Variants / incorrect CPEs
-
-        # TODO: We return an empty QuerySet if no Variants are linked, or none have CPEs
-        #  But do we want to raise an error / make manifesting fail,
-        #  whenever we can't find CPEs for some root component?
+        return ProductVariant.objects.none()
 
     def _build_download_url_for_type(self) -> str:
         """Get a source code or binary download URL based on a purl"""

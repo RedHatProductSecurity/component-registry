@@ -1,9 +1,11 @@
 import json
 import logging
 from json import JSONDecodeError
+from unittest.mock import patch
 
 import pytest
 
+from corgi.collectors.models import CollectorErrataProductVariant
 from corgi.core.files import ProductManifestFile
 from corgi.core.fixups import cpe_lookup
 from corgi.core.models import Component, ComponentNode, ProductComponentRelation
@@ -63,7 +65,7 @@ def test_escapejs_on_copyright():
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_manifests_exclude_source_container(stored_proc):
     """Test that container sources are excluded packages"""
-    containers, stream, _ = setup_products_and_rpm_in_containers()
+    containers, stream, _, _ = setup_products_and_rpm_in_containers()
     assert len(containers) == 3
     manifest_str = ProductManifestFile(stream).render_content()
     manifest = json.loads(manifest_str)
@@ -79,7 +81,7 @@ def test_manifests_exclude_source_container(stored_proc):
 def test_manifests_exclude_bad_golang_components(stored_proc):
     """Test that Golang components with names like ../ are excluded packages"""
     # Remove below when CORGI-428 is resolved
-    containers, stream, _ = setup_products_and_rpm_in_containers()
+    containers, stream, _, _ = setup_products_and_rpm_in_containers()
     assert len(containers) == 3
 
     bad_golang = ComponentFactory(type=Component.Type.GOLANG, name="./api-")
@@ -132,8 +134,12 @@ def test_component_manifest_backslash():
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
-def a_test_slim_rpm_in_containers_manifest(stored_proc):
-    containers, stream, rpm_in_container = setup_products_and_rpm_in_containers()
+@patch("corgi.core.files.ProductManifestFile._get_stream_cpes")
+def test_slim_rpm_in_containers_manifest(mock_stream_cpes, stored_proc):
+    containers, stream, rpm_in_container, cpe = setup_products_and_rpm_in_containers()
+    # This list of cpes for each root component is constraint to the stream's cpes, set the
+    # stream's cpe list here so we don't filter them out in the template
+    mock_stream_cpes.return_value = [cpe]
 
     # Two components linked to this product
     # plus a source container which is shown in API but not in manifests
@@ -162,6 +168,20 @@ def a_test_slim_rpm_in_containers_manifest(stored_proc):
     # One (and only one) package for each distinct provided
     # Plus one package for the stream itself
     assert len(manifest["packages"]) == num_components + num_provided + 1
+
+    # CPE for each root component attached to a product should be included in the manifest
+    container_pks = [str(c.pk) for c in containers]
+    for package in manifest["packages"]:
+        pk = package["SPDXID"][len("SPXRef-") + 1 :]
+        if pk in container_pks:
+            found_cpe = False
+            for ref in package["externalRefs"]:
+                if ref["referenceType"] == "cpe22Type":
+                    # The CPE matches the one returned by setup_products_and_rpm_in_containers()
+                    assert ref["referenceLocator"] == cpe
+                    found_cpe = True
+            # There was at least one CPE
+            assert found_cpe
 
     # For each component, one "component is package of product" relationship
     # For each provided in component, one "provided contained by component"
@@ -604,7 +624,10 @@ def setup_products_and_components_provides(released=True, internal_component=Fal
 
 
 def setup_products_and_rpm_in_containers():
-    stream, variant = setup_product()
+    stream, _ = setup_product()
+    variant = "test-variant"
+    cpe = "o:redhat:test:1"
+    CollectorErrataProductVariant.objects.create(name=variant, cpe=cpe, et_id=100)
     rpm_in_container = BinaryRpmComponentFactory()
     containers = []
     for name in ["", "", "some-container-source"]:
@@ -616,13 +639,13 @@ def setup_products_and_rpm_in_containers():
             software_build=build,
             build_id=build.build_id,
             build_type=build.build_type,
-            product_ref=variant.name,
+            product_ref=variant,
             type=ProductComponentRelation.Type.ERRATA,
         )
         # Link the components to the ProductModel instances
         build.save_product_taxonomy()
         containers.append(container)
-    return containers, stream, rpm_in_container
+    return containers, stream, rpm_in_container, cpe
 
 
 def _build_rpm_in_containers(rpm_in_container, name="", stream=None):

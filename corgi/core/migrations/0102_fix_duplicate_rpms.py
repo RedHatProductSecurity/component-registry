@@ -43,9 +43,22 @@ def find_duplicate_rpms(apps, schema_editor) -> None:
             for bad_rpm in rpms_for_arch.iterator():
                 # Fixing each RPM individually is less risky than fixing all of them at once
                 # Using .filter().update() means this is still atomic
-                Component.objects.filter(purl=bad_rpm.purl).update(
-                    arch=arch, nevra=functions.Concat(NEVRA_FIELD, NOARCH_VALUE)
-                )
+                if not Component.objects.filter(
+                    type="RPM",
+                    name=bad_rpm.name,
+                    version=bad_rpm.version,
+                    release=bad_rpm.release,
+                    arch=arch,
+                ).exists():
+                    Component.objects.filter(purl=bad_rpm.purl).update(
+                        arch=arch, nevra=functions.Concat(NEVRA_FIELD, NOARCH_VALUE)
+                    )
+                else:
+                    # An RPM with the same type + NVRA already exists
+                    # We assume the old / bad one should just be deleted
+                    # There's no way to know what should be reprocessed, if anything
+                    # See comment below for more details
+                    bad_rpm.delete()
 
         # Fix binary RPM purls which are missing an arch value
         for bad_rpm in rpms_for_arch.exclude(purl__contains="arch=").iterator():

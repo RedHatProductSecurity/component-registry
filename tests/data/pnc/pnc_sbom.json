@@ -156,6 +156,99 @@
                     ]
                 },
                 "publisher": "Red Hat",
+                "group": "com.redhat.quarkus.platform",
+                "name": "quarkus-bom",
+                "version": "2.13.8.Final-redhat-00003",
+                "description": "Red Hat Build of Quarkus - Kubernetes Native Java stack tailored for OpenJDK HotSpot and GraalVM",
+                "licenses": [
+                    {
+                        "license": {
+                            "id": "Apache-2.0"
+                        }
+                    }
+                ],
+                "purl": "pkg:maven/com.redhat.quarkus.platform/quarkus-bom@2.13.8.Final-redhat-00003?type=pom",
+                "pedigree": {
+                    "commits": [
+                        {
+                            "uid": "370253ca4fca2c2f5c4b86b3c7febd94193dc16c",
+                            "url": "https://example.com/gerrit/quarkusio/quarkus-platform.git#2.13.8.Final-redhat-00003"
+                        }
+                    ]
+                },
+                "externalReferences": [
+                    {
+                        "type": "distribution",
+                        "url": "https://maven.repository.redhat.com/ga/"
+                    },
+                    {
+                        "type": "build-system",
+                        "url": "https://example.com/v2/builds/AZL76RACCHQAA",
+                        "comment": "pnc-build-id"
+                    },
+                    {
+                        "type": "build-meta",
+                        "url": "quay.io/rh-newcastle/builder-rhel-8-j11-mvn3.8.6-gradle7.5.1-gcc-cpp-make:1.0.0",
+                        "comment": "pnc-environment-image"
+                    },
+                    {
+                        "type": "vcs",
+                        "url": "https://github.com/quarkusio/quarkus-platform.git",
+                        "comment": ""
+                    }
+                ],
+                "properties": [
+                    {
+                        "name": "product-id",
+                        "value": "quarkus-2"
+                    },
+                    {
+                        "name": "product-stream",
+                        "value": "quarkus-2.13"
+                    },
+                    {
+                        "name": "errata-tool-product-name",
+                        "value": "RHBQ"
+                    },
+                    {
+                        "name": "errata-tool-product-version",
+                        "value": "RHEL-8-RHBQ-2.13"
+                    },
+                    {
+                        "name": "errata-tool-product-variant",
+                        "value": "8Base-RHBQ-2.13"
+                    }
+                ],
+                "releaseNotes": {
+                    "type": "Patch",
+                    "title": "Red Hat Build of Quarkus 2.13.8.Final-redhat-00003",
+                    "aliases": [
+                        "RHBQ",
+                        "Quarkus",
+                        "Fireball"
+                    ],
+                    "properties": [
+                        {
+                            "name": "product-name",
+                            "value": "Red Hat Build of Quarkus"
+                        },
+                        {
+                            "name": "product-version",
+                            "value": "2.13.8.Final-redhat-00003"
+                        }
+                    ]
+                },
+                "type": "framework",
+                "bom-ref": "pkg:maven/com.redhat.quarkus.platform/quarkus-bom@2.13.8.Final-redhat-00003?type=pom"
+            },
+            {
+                "supplier": {
+                    "name": "Red Hat",
+                    "url": [
+                        "https://www.redhat.com"
+                    ]
+                },
+                "publisher": "Red Hat",
                 "group": "io.agroal",
                 "name": "agroal-narayana",
                 "version": "1.17.0.redhat-00001",

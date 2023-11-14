@@ -31,8 +31,14 @@ class SbomerSbom:
         # separately for each dependency they have or fulfill.
         # FIXME ------
         # Temporary workaround for component purl conflicts
+        root_component = data["metadata"]["component"]
         self.components = {}
-        created_nvrs = set()
+        # A set of tuples, pre-populated with the root component's name and version
+        created_nvrs = {(root_component["name"], root_component["version"])}
+        # The first entry should be a duplicate of the root component
+        # Don't create an extra node for it, otherwise quarkus-bom will provide quarkus-bom
+        # so it will appear twice in our manifeats, and IDs will not be unique
+        # this breaks parsing of SPDX manifests by clients
         for component in data["components"]:
             if (component["name"], component["version"]) in created_nvrs:
                 continue
@@ -42,7 +48,7 @@ class SbomerSbom:
         # self.components = {c["bom-ref"]: c for c in data["components"]}
         # FIXME -------
         # The root component is listed separately in metadata
-        self.components["root"] = data["metadata"]["component"]
+        self.components["root"] = root_component
         for component in self.components.values():
             meta_attr = {}
 

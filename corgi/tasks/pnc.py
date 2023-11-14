@@ -6,12 +6,12 @@ from celery_singleton import Singleton
 
 from config.celery import app
 from corgi.collectors.errata_tool import ErrataTool
-from corgi.collectors.models import CollectorErrataProductVariant
 from corgi.collectors.pnc import SbomerSbom
 from corgi.core.models import (
     Component,
     ComponentNode,
     ProductComponentRelation,
+    ProductVariant,
     SoftwareBuild,
 )
 from corgi.tasks.brew import set_license_declared_safely, slow_save_taxonomy
@@ -26,7 +26,7 @@ def slow_fetch_pnc_sbom(purl: str, product_data: dict, sbom_data: dict) -> None:
     logger.info(f"Fetching PNC SBOM {sbom_data['id']} for purl {purl} from {sbom_data['link']}")
 
     # Validate the supplied product information
-    CollectorErrataProductVariant.objects.get(name=product_data["productVariant"])
+    ProductVariant.objects.get(name=product_data["productVariant"])
 
     # Fetch and parse the SBOM
     response = requests.get(sbom_data["link"])

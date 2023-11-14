@@ -6,17 +6,13 @@ import pytest
 from packageurl import PackageURL
 
 from corgi.collectors.brew import ADVISORY_REGEX, Brew
-from corgi.collectors.models import (
-    CollectorErrataProduct,
-    CollectorErrataProductVariant,
-    CollectorErrataProductVersion,
-)
 from corgi.core.constants import RED_HAT_MAVEN_REPOSITORY
 from corgi.core.models import (
     Component,
     ComponentNode,
     ComponentTag,
     ProductComponentRelation,
+    ProductVariant,
     SoftwareBuild,
     SoftwareBuildTag,
 )
@@ -33,6 +29,10 @@ from .factories import (
     BinaryRpmComponentFactory,
     ContainerImageComponentFactory,
     ProductComponentRelationFactory,
+    ProductFactory,
+    ProductStreamFactory,
+    ProductVariantFactory,
+    ProductVersionFactory,
     SoftwareBuildFactory,
     SrpmComponentFactory,
     UpstreamComponentFactory,
@@ -509,19 +509,22 @@ def test_slow_fetch_pnc_sbom():
 
     # Ensure the product variant referenced in the UMB message exists
     # ...
-    rhbq_product = CollectorErrataProduct.objects.create(
-        et_id=153, name="Red Hat build of Quarkus", short_name="RHBQ"
-    )
-    rhbq_product_version = CollectorErrataProductVersion.objects.create(
-        et_id=1838,
+    rhbq_product = ProductFactory(name="Red Hat build of Quarkus")
+    rhbq_product_version = ProductVersionFactory(
         name="RHEL-8-RHBQ-2.13",
-        product=rhbq_product,
+        products=rhbq_product,
+    )
+    rhbq_product_stream = ProductStreamFactory(
+        name="RHEL-8-RHBQ-2.13",
+        products=rhbq_product,
+        productversions=rhbq_product_version,
         brew_tags=["quarkus-mandrel-22-rhel-8-candidate"],
     )
-    CollectorErrataProductVariant.objects.create(
-        et_id=4060,
+    ProductVariantFactory(
         name="8Base-RHBQ-2.13",
-        product_version=rhbq_product_version,
+        products=rhbq_product,
+        productversions=rhbq_product_version,
+        productstreams=rhbq_product_stream,
         cpe="cpe:/a:redhat:quarkus:2.13::el8",
     )
 
@@ -595,7 +598,7 @@ def test_slow_fetch_pnc_sbom():
             with open("tests/data/pnc/sbom_no_variant.json") as complete_file:
                 complete_data = json.load(complete_file)["msg"]
 
-            with pytest.raises(CollectorErrataProductVariant.DoesNotExist):
+            with pytest.raises(ProductVariant.DoesNotExist):
                 slow_fetch_pnc_sbom(
                     complete_data["purl"],
                     complete_data["productConfig"]["errataTool"],

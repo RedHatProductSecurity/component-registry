@@ -44,7 +44,7 @@ def slow_fetch_pnc_sbom(purl: str, product_data: dict, sbom_data: dict) -> None:
     )
 
     # Create ProductComponentRelation
-    pcr, _ = ProductComponentRelation.objects.get_or_create(
+    ProductComponentRelation.objects.update_or_create(
         build_id=root_build.build_id,
         build_type=root_build.build_type,
         product_ref=sbom.product_variant,
@@ -97,7 +97,7 @@ def slow_fetch_pnc_sbom(purl: str, product_data: dict, sbom_data: dict) -> None:
     # the root, rather than recreating the relationships in the
     # CycloneDX manifest
     for component in components.values():
-        node, _ = ComponentNode.objects.get_or_create(
+        ComponentNode.objects.get_or_create(
             type=ComponentNode.ComponentNodeType.PROVIDES,
             parent=root_node,
             purl=component.purl,

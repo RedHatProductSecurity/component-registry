@@ -60,7 +60,7 @@ SRPM_CONDITION = Q(type="RPM", arch="src")
 ROOT_COMPONENTS_CONDITION = Q(software_build_id__isnull=False)
 # If you change above, fix below to match
 # then deploy the updated GET_LATEST_COMPONENT_STOREDPROC_SQL in a new migration
-ROOT_COMPONENTS_SQL = "core_component.software_build_id IS NOT NULL"
+ROOT_COMPONENTS_SQL = "core_component.software_build_uuid IS NOT NULL"
 
 # Regex for generating el_match field
 EL_MATCH_RE = re.compile(r".*el(\d+)?[._-]?(\d+)?[._-]?(\d+)?(.*)")

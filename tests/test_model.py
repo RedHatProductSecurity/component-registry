@@ -1210,6 +1210,7 @@ def test_latest_components_queryset(client, api_path, stored_proc):
                 name=name,
                 version="9",
                 arch=arch,
+                software_build=None if arch != "src" else SoftwareBuildFactory(),
             )
             older_component.productstreams.add(stream)
             # Create newer components with the same type, namespace, name, release, and arch
@@ -1221,6 +1222,7 @@ def test_latest_components_queryset(client, api_path, stored_proc):
                 version="10",
                 release=older_component.release,
                 arch=older_component.arch,
+                software_build=None if arch != "src" else SoftwareBuildFactory(),
             )
             newer_component.productstreams.add(stream)
             components[(older_component.type, name, arch)] = (older_component, newer_component)

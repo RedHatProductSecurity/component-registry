@@ -220,9 +220,9 @@ def test_component_detail(client, api_path):
 def test_latest_components_by_streams_filter(client, api_path, stored_proc):
     # Create many components so we have robust test data
     # 2 components (1 older version, 1 newer version) for each name / arch pair in REDHAT namespace
-    # 12 REDHAT components across 6 pairs
-    # plus 2 UPSTREAM components per name for src architecture only, 4 upstreams total
-    # plus 2 non-RPMs components per name for src architecture only, 4 PyPI packages total
+    # 12 RPM components across 6 pairs (8 binary, 4 src, all REDHAT)
+    # plus 2 UPSTREAM RPM components per name for src architecture only, 4 upstreams total
+    # plus 2 non-RPM (REDHAT) components per name for src architecture only, 4 RPMMOD packages total
     # Overall 20 components, and latest filter should show 10 (newer, when on or older, when off)
     components = {}
     stream = ProductStreamFactory()
@@ -234,6 +234,7 @@ def test_latest_components_by_streams_filter(client, api_path, stored_proc):
                 name=name,
                 version="9",
                 arch=arch,
+                software_build=None if arch != "src" else SoftwareBuildFactory(),
             )
             older_component.productstreams.add(stream)
             # Create newer components with the same type, namespace, name, release, and arch
@@ -245,6 +246,7 @@ def test_latest_components_by_streams_filter(client, api_path, stored_proc):
                 version="10",
                 release=older_component.release,
                 arch=older_component.arch,
+                software_build=None if arch != "src" else SoftwareBuildFactory(),
             )
             newer_component.productstreams.add(stream)
             components[(older_component.type, name, arch)] = (older_component, newer_component)
@@ -279,27 +281,29 @@ def test_latest_components_by_streams_filter(client, api_path, stored_proc):
         # A NEVRA like "PyYAML version 1.2.3 with no release or architecture"
         # could be a PyPI package, or an upstream RPM
         # We want to see the latest version of both components
-        # Create PyPI components for src architecture only
+        # Create RPMMOD components once per loop, like src architecture components
         # with the same namespace, name and version as UPSTREAM noarch components
-        # and no release, arch, or software_build
+        # and no release, arch, or software_build. Otherwise we hide results if two
+        # components have the same name and namespace but different types or arches,
+        # for example a source RPM and its related RPM module
         older_unrelated_component = ComponentFactory(
-            type=Component.Type.PYPI,
-            namespace=older_upstream_component.namespace,
+            type=Component.Type.RPMMOD,
+            namespace=older_component.namespace,
             name=older_component.name,
             version=older_component.version,
-            release=older_upstream_component.release,
+            release=older_component.release,
             arch=older_upstream_component.arch,
-            software_build=older_upstream_component.software_build,
+            software_build=older_component.software_build,
         )
         older_unrelated_component.productstreams.add(stream)
         newer_unrelated_component = ComponentFactory(
             type=older_unrelated_component.type,
-            namespace=older_upstream_component.namespace,
+            namespace=newer_component.namespace,
             name=newer_component.name,
             version=newer_component.version,
-            release=older_upstream_component.release,
+            release=newer_component.release,
             arch=older_upstream_component.arch,
-            software_build=older_upstream_component.software_build,
+            software_build=newer_component.software_build,
         )
         newer_unrelated_component.productstreams.add(stream)
         components[(older_unrelated_component.type, name, older_unrelated_component.arch)] = (
@@ -314,7 +318,7 @@ def test_latest_components_by_streams_filter(client, api_path, stored_proc):
     response = client.get(f"{api_path}/components?latest_components_by_streams=True")
     assert response.status_code == 200
     response = response.json()
-    assert response["count"] == 2
+    assert response["count"] == 4
     for result in response["results"]:
         assert (
             result["purl"] == components[(result["type"], result["name"], result["arch"])][1].purl
@@ -323,7 +327,7 @@ def test_latest_components_by_streams_filter(client, api_path, stored_proc):
     response = client.get(f"{api_path}/components?latest_components_by_streams=False")
     assert response.status_code == 200
     response = response.json()
-    assert response["count"] == 2
+    assert response["count"] == 4
     for result in response["results"]:
         assert (
             result["purl"] == components[(result["type"], result["name"], result["arch"])][0].purl
@@ -345,8 +349,8 @@ def test_latest_components_by_streams_filter(client, api_path, stored_proc):
     )
     assert response.status_code == 200
     response = response.json()
-    assert response["count"] == 2
-    # Red and blue components with arch "src" each have 1 latest
+    assert response["count"] == 4
+    # Red and blue each have 1 latest SRPM and 1 latest RPMMOD
     for result in response["results"]:
         assert (
             result["purl"] == components[(result["type"], result["name"], result["arch"])][1].purl
@@ -357,8 +361,8 @@ def test_latest_components_by_streams_filter(client, api_path, stored_proc):
     )
     assert response.status_code == 200
     response = response.json()
-    assert response["count"] == 2
-    # Red and blue components with arch "src" each have 1 non-latest
+    assert response["count"] == 4
+    # Red and blue each have 1 non-latest SRPM and 1 non-latest RPMMOD
     for result in response["results"]:
         assert (
             result["purl"] == components[(result["type"], result["name"], result["arch"])][0].purl
@@ -372,7 +376,6 @@ def test_latest_components_by_streams_filter(client, api_path, stored_proc):
     assert response["count"] == 0
     # Red and blue components for 2 arches each have 1 latest
     # Red and blue components for upstream each have 1 latest
-    # Red and blue components for non-RPMs each have 1 latest
     # These are all non-root components, so are excluded in latest_components_by_stream filter
     for result in response["results"]:
         assert (
@@ -393,11 +396,10 @@ def test_latest_components_by_streams_filter(client, api_path, stored_proc):
     #
     # So when root_components=False,
     # latest_components_by_stream=False is a no-op and has no NEVRAs to exclude
-    # We report all 16 non-root components, regardless of latest / non-latest version
-    assert response["count"] == 16
+    # We report all 12 non-root components, regardless of latest / non-latest version
+    assert response["count"] == 12
     # Red and blue components for 2 arches each have 2 components (1 latest and 1 non-latest)
     # Red and blue components for upstream each have 2 components (1 latest and 1 non-latest)
-    # Red and blue components for non-RPMs each have 2 components (1 latest and 1 non-latest)
     for result in response["results"]:
         assert result["purl"] in tuple(
             component.purl
@@ -512,8 +514,8 @@ def test_released_components_filter(client, api_path):
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_root_components_filter(client, api_path):
-    ComponentFactory(name="srpm", type="RPM", arch="src")
-    ComponentFactory(name="binary_rpm", type="RPM", arch="x86_64")
+    SrpmComponentFactory(name="srpm")
+    BinaryRpmComponentFactory(name="binary_rpm")
 
     response = client.get(f"{api_path}/components")
     assert response.status_code == 200
@@ -1255,19 +1257,22 @@ def test_product_components_versions(client, api_path, stored_proc):
     ps2 = ProductStreamFactory(name="rhel-8", version="8")
     assert ps2.ofuri == "o:redhat:rhel:8"
 
-    openssl = ComponentFactory(
-        type=Component.Type.RPM, arch="x86_64", name="openssl", version="1.1.1k", release="5.el8_5"
+    openssl_srpm = SrpmComponentFactory(name="openssl", version="1.1.1k", release="6.el8_5")
+    openssl = BinaryRpmComponentFactory(
+        arch="x86_64",
+        name=openssl_srpm.name,
+        version=openssl_srpm.version,
+        release=openssl_srpm.release,
     )
 
     openssl.productstreams.add(ps2)
-    openssl_srpm = SrpmComponentFactory(name="openssl", version="1.1.1k", release="6.el8_5")
     openssl_srpm.productstreams.add(ps2)
 
-    curl = ComponentFactory(
-        type=Component.Type.RPM, arch="x86_64", name="curl", version="7.61.1", release="22.el8_6.3"
+    curl_srpm = SrpmComponentFactory(name="curl", version="7.61.1", release="22.el8_6.3")
+    curl = BinaryRpmComponentFactory(
+        arch="x86_64", name=curl_srpm.name, version=curl_srpm.version, release=curl_srpm.release
     )
     curl.productstreams.add(ps1)
-    curl_srpm = SrpmComponentFactory(name="curl", version="7.61.1", release="22.el8_6.3")
     curl_srpm.productstreams.add(ps1)
 
     response = client.get(f"{api_path}/components?product_streams={ps2.ofuri}")

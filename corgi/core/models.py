@@ -1319,11 +1319,6 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
                 digest = self.meta_attr["digests"].get(digest_fmt)
                 if digest:
                     break
-        # Use the last path of the repository_url if available
-        purl_name = self.name
-        name_from_label = self.meta_attr.get("name_from_label")
-        if name_from_label:
-            purl_name = name_from_label
         # Add the tag which matches version+release (check for empty release)
         release = f"-{self.release}" if self.release else ""
         qualifiers = {
@@ -1339,7 +1334,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         # Note that if no container digest format matched, the digest below is ""
         # and the constructed purl has no .version attribute
         return dict(
-            name=purl_name,
+            name=self.name,
             version=digest,
             qualifiers=qualifiers,
         )

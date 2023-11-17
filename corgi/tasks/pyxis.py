@@ -9,15 +9,22 @@ from django.utils.timezone import make_aware
 
 from config.celery import app
 from corgi.collectors.brew import Brew
-from corgi.collectors.pyxis import get_manifest_data
+from corgi.collectors.models import CollectorPyxisImage
+from corgi.collectors.pyxis import get_manifest_data, get_repo_by_nvr
+from corgi.core.constants import CONTAINER_REPOSITORY
 from corgi.core.models import (
     Component,
     ComponentNode,
     ProductComponentRelation,
     SoftwareBuild,
 )
-from corgi.tasks.brew import save_node, set_license_declared_safely, slow_save_taxonomy
-from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
+from corgi.tasks.common import (
+    RETRY_KWARGS,
+    RETRYABLE_ERRORS,
+    save_node,
+    set_license_declared_safely,
+    slow_save_taxonomy,
+)
 from corgi.tasks.sca import cpu_software_composition_analysis
 
 logger = get_task_logger(__name__)
@@ -48,6 +55,37 @@ def slow_fetch_pyxis_manifest(
     return result
 
 
+@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
+def slow_fetch_pyxis_image_by_nvr(nvr: str, force_process=False) -> str:
+    """Checks if the image exist in the cache and only fetch if not, or force_process is true"""
+    repo_names = list(
+        CollectorPyxisImage.objects.filter(nvr=nvr).values_list("repos__name", flat=True)
+    )
+    if not repo_names or force_process:
+        return get_repo_by_nvr(nvr)
+    elif len(repo_names) > 1:
+        raise ValueError(f"Found more than one repository matching nvr {nvr}")
+    return repo_names[0]
+
+
+@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
+def slow_update_name_for_container_from_pyxis(nvr: str) -> bool:
+    """Fetch a pyxis image and update the container root component with the result"""
+    repo_name = slow_fetch_pyxis_image_by_nvr(nvr)
+    if not repo_name:
+        return False
+    name = repo_name.rsplit("/", 1)[-1]
+    repository_url = f"{CONTAINER_REPOSITORY}/{repo_name}"
+    # Look it existing containers with the NVR and save them.
+    containers_to_update = Component.objects.filter(type=Component.Type.CONTAINER_IMAGE, nvr=nvr)
+    for container in containers_to_update:
+        if container.name != name or container.meta_attr["repository_url"] != repository_url:
+            container.name = name
+            container.meta_attr["repository_url"] = repository_url
+            container.save()
+    return True
+
+
 def _slow_fetch_pyxis_manifest_for_repository(
     oid: str,
     image_id: str,
@@ -57,8 +95,8 @@ def _slow_fetch_pyxis_manifest_for_repository(
     force_process: bool = False,
 ) -> bool:
 
-    # According to the PURL spec, the name part is the last fragment of the repository url
-    # TODO: This isn't right
+    # According to the PURL spec, the name part is the last slash-separated path part
+    # of the repository url
     component_name = repository["repository"].split("/")[-1]
     repository_url = f"{repository['registry']}/{repository['repository']}"
     logger.info("Processing slow fetch of %s - %s", repository_url, component_name)

@@ -262,7 +262,10 @@ def test_component_model():
 
 def test_container_purl():
     # TODO: Failed due to "assert arch not in purl"
-    container = ContainerImageComponentFactory()
+    # With the changes introduced in CORGI-678 the container name should be equal to the last part
+    # of the repository_url
+    repo_name = "node-exporter-rhel8"
+    container = ContainerImageComponentFactory(name=repo_name)
     # When a container doesn't get a digest meta_attr
     assert "@" not in container.purl
     example_digest = "sha256:blah"
@@ -272,12 +275,10 @@ def test_container_purl():
     assert "arch" not in container.purl
     assert container.name in container.purl
     example_digest = "sha256:blah"
-    repo_name = "node-exporter-rhel8"
     repository_url = f"registry.redhat.io/rhacm2/{repo_name}"
     container.meta_attr = {
         "digests": {CONTAINER_DIGEST_FORMATS[0]: example_digest},
         "repository_url": repository_url,
-        "name_from_label": repo_name,
     }
     container.arch = "x86_64"
     container.save()

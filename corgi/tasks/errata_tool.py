@@ -18,6 +18,7 @@ from corgi.core.models import (
     SoftwareBuild,
 )
 from corgi.tasks.common import BUILD_TYPE, RETRY_KWARGS, RETRYABLE_ERRORS
+from corgi.tasks.pyxis import slow_update_name_for_container_from_pyxis
 
 logger = get_task_logger(__name__)
 
@@ -51,7 +52,7 @@ def slow_save_errata_product_taxonomy(erratum_id: int) -> None:
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def slow_load_errata(erratum_name: str, force_process: bool = False) -> None:
     et = ErrataTool()
-    erratum_id, shipped_live = et.get_errata_key_details(erratum_name)
+    erratum_id, shipped_live, is_container = et.get_errata_key_details(erratum_name)
     if not shipped_live:
         raise ValueError(f"Called slow_load_errata with non-shipped errata {erratum_name}")
     relation_builds = _get_relation_builds(erratum_id)
@@ -108,6 +109,17 @@ def slow_load_errata(erratum_name: str, force_process: bool = False) -> None:
                 # processing the same Brew builds / errata repeatedly
                 kwargs={"save_product": False, "force_process": False},
             )
+            # We might have already processed the build from Brew, but when it gets pushed by ET
+            # container builds can get a new name. Make sure we check for that here and update the
+            # container name if so.
+            if is_container:
+                build = SoftwareBuild.objects.filter(
+                    build_id=build_id, build_type=SoftwareBuild.Type.BREW
+                ).first()
+                if build:
+                    # Let this propagate an error if the nvr key is missing
+                    nvr = build.meta_attr["nvr"]
+                    slow_update_name_for_container_from_pyxis.delay(nvr)
 
     if force_process:
         slow_save_errata_product_taxonomy.delay(erratum_id)

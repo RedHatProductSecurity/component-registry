@@ -20,6 +20,7 @@ from corgi.core.models import (
     ProductComponentRelation,
     ProductNode,
     ProductVariant,
+    SoftwareBuild,
 )
 from corgi.tasks.common import BUILD_TYPE
 from corgi.tasks.errata_tool import (
@@ -190,6 +191,7 @@ errata_details = [
           }
     }""",
         1,
+        False,
     ),
     (
         "77150",
@@ -250,14 +252,16 @@ errata_details = [
             }
         }""",
         3,
+        True,
     ),
 ]
 
 
+@patch("corgi.tasks.brew.slow_update_name_for_container_from_pyxis.delay")
 @patch("config.celery.app.send_task")
-@pytest.mark.parametrize("erratum_id, build_list, no_of_objs", errata_details)
+@pytest.mark.parametrize("erratum_id, build_list, no_of_objs, is_container", errata_details)
 def test_save_product_component_for_errata(
-    mock_send, erratum_id, build_list, no_of_objs, requests_mock
+    mock_send, mock_update_name, erratum_id, build_list, no_of_objs, is_container, requests_mock
 ):
     with open(f"tests/data/errata/{erratum_id}.json", "r") as remote_source_data:
         requests_mock.get(
@@ -267,6 +271,9 @@ def test_save_product_component_for_errata(
     build_list_url = f"{settings.ERRATA_TOOL_URL}/api/v1/erratum/{erratum_id}/builds_list.json"
     requests_mock.get(build_list_url, text=build_list)
     sb = SoftwareBuildFactory(build_id="1636922", build_type=BUILD_TYPE)
+    container_build = SoftwareBuildFactory(build_id="1628358", build_type=SoftwareBuild.Type.BREW)
+    container_build.meta_attr["nvr"] = "rh-dotnet31-container-3.1-18"
+    container_build.save()
     slow_load_errata(erratum_id)
     pcrs = ProductComponentRelation.objects.filter(external_system_id=erratum_id)
     assert len(pcrs) == no_of_objs
@@ -276,9 +283,13 @@ def test_save_product_component_for_errata(
         if pcr.build_id == sb.build_id:
             # assert it is linked to the build using the ForeignKey field
             assert pcr.software_build_id == sb.pk
+        elif pcr.build_id == container_build.build_id:
+            assert pcr.software_build_id == container_build.pk
         else:
             # else assert the ForeignKey is unset / other build IDs have not been fetched
             assert pcr.software_build_id is None
+    if is_container:
+        assert mock_update_name.called_with("rh-dotnet31-container-3.1-18")
 
 
 def test_update_product_component_relation():
@@ -478,17 +489,29 @@ errata_key_details = [
         "RHBA-2023:5017-2",
         120142,
         True,
+        True,
     ),
     (
         "RHBA-2023:120271",
         120271,
         False,
+        True,
+    ),
+    (
+        "RHBA-2021:3573-02",
+        77149,
+        True,
+        False,
     ),
 ]
 
 
-@pytest.mark.parametrize("advisory_name, erratum_id, shipped_live", errata_key_details)
-def test_shipped_live_advisory(advisory_name, erratum_id, shipped_live, requests_mock):
+@pytest.mark.parametrize(
+    "advisory_name, erratum_id, shipped_live, is_container", errata_key_details
+)
+def test_shipped_live_advisory(
+    advisory_name, erratum_id, shipped_live, is_container, requests_mock
+):
     # Test we can translate between advisory_name and id
     with open(f"tests/data/errata/{erratum_id}.json", "r") as remote_source_data:
         requests_mock.get(
@@ -496,11 +519,13 @@ def test_shipped_live_advisory(advisory_name, erratum_id, shipped_live, requests
             text=remote_source_data.read(),
         )
     results = ErrataTool().get_errata_key_details(advisory_name)
-    assert results == (erratum_id, shipped_live)
+    assert results == (erratum_id, shipped_live, is_container)
 
 
-@pytest.mark.parametrize("advisory_name, erratum_id, shipped_live", errata_key_details)
-def test_shipped_live_id(advisory_name, erratum_id, shipped_live, requests_mock):
+@pytest.mark.parametrize(
+    "advisory_name, erratum_id, shipped_live, is_container", errata_key_details
+)
+def test_shipped_live_id(advisory_name, erratum_id, shipped_live, is_container, requests_mock):
     # Test we can get details by id
     with open(f"tests/data/errata/{erratum_id}.json", "r") as remote_source_data:
         requests_mock.get(
@@ -508,7 +533,7 @@ def test_shipped_live_id(advisory_name, erratum_id, shipped_live, requests_mock)
             text=remote_source_data.read(),
         )
     results = ErrataTool().get_errata_key_details(erratum_id)
-    assert results == (erratum_id, shipped_live)
+    assert results == (erratum_id, shipped_live, is_container)
 
 
 def test_invalid_errtaum_details(requests_mock):

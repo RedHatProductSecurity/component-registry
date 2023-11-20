@@ -69,11 +69,21 @@ class ComponentFilter(FilterSet):
         model = Component
         # Fields that are matched to a filter using their Django model field type and default
         # __exact lookups.
-        fields = ("type", "namespace", "name", "version", "release", "arch", "nvr", "nevra")
+        fields = (
+            "type",
+            "namespace",
+            "name",
+            "version",
+            "release",
+            "arch",
+            "nvr",
+            "nevra",
+            "epoch",
+        )
 
     # Custom filters
     re_name = CharFilter(lookup_expr="iregex", field_name="name", distinct=True)
-    re_purl = CharFilter(lookup_expr="iregex", field_name="purl")
+    re_purl = CharFilter(lookup_expr="iregex", field_name="purl", distinct=True)
     description = CharFilter(lookup_expr="icontains")
     related_url = CharFilter(lookup_expr="icontains")
     tags = TagFilter()
@@ -99,15 +109,17 @@ class ComponentFilter(FilterSet):
 
     # otherwise use regex to match provides,sources or upstreams purls
     re_sources = CharFilter(field_name="sources", lookup_expr="purl__iregex", distinct=True)
-    re_sources_name = CharFilter(method="filter_re_sources_name", distinct=True)
+    re_sources_name = CharFilter(field_name="sources", lookup_expr="name__iregex", distinct=True)
     re_provides = CharFilter(field_name="provides", lookup_expr="purl__iregex", distinct=True)
-    re_provides_name = CharFilter(method="filter_re_provides_name", distinct=True)
+    re_provides_name = CharFilter(field_name="provides", lookup_expr="name__iregex", distinct=True)
+    re_downstreams = CharFilter(field_name="downstreams", lookup_expr="purl__iregex", distinct=True)
+    re_downstreams_name = CharFilter(
+        field_name="downstreams", lookup_expr="name__iregex", distinct=True
+    )
     re_upstreams = CharFilter(field_name="upstreams", lookup_expr="purl__iregex", distinct=True)
     re_upstreams_name = CharFilter(
         field_name="upstreams", lookup_expr="name__iregex", distinct=True
     )
-    re_downstreams = CharFilter(field_name="downstreams", lookup_expr="purl__iregex", distinct=True)
-
     el_match = CharFilter(label="RHEL version for layered products", lookup_expr="icontains")
     released_components = BooleanFilter(
         method="filter_released_components", label="Show only released components"
@@ -150,30 +162,6 @@ class ComponentFilter(FilterSet):
         label="Show components from active streams",
         method="filter_active_streams",
     )
-
-    @staticmethod
-    def filter_re_sources_name(
-        qs: ComponentQuerySet, _name: str, value: str
-    ) -> QuerySet[Component]:
-        """ """
-        if value in EMPTY_VALUES:
-            # User gave an empty ?param= so return the unfiltered queryset
-            return qs
-        return qs.filter(sources__name__iregex=value)
-
-    @staticmethod
-    def filter_re_provides_name(
-        qs: ComponentQuerySet, _name: str, value: str
-    ) -> QuerySet[Component]:
-        """ """
-        if value in EMPTY_VALUES:
-            # User gave an empty ?param= so return the unfiltered queryset
-            return qs
-        return (
-            qs.filter(provides__name__iregex=value)
-            .order_by()
-            .distinct("name", "type", "release", "version", "epoch")
-        )
 
     @staticmethod
     def filter_gomod_components(

@@ -14,9 +14,7 @@ include:
 
 .common_ci_setup: &common_ci_setup
   - export LANG=en_US.UTF-8
-  - cd /etc/pki/ca-trust/source/anchors/ && curl -O "${ROOT_CA_URL}"; cd -
-  - update-ca-trust
-  - export REQUESTS_CA_BUNDLE=/etc/pki/tls/certs/ca-bundle.crt
+  - export DNF_WITH_OPTIONS='dnf --disableplugin=subscription-manager --nodocs --setopt install_weak_deps=false -y'
 
 .common_test_setup: &common_test_setup
   # Define below in CI settings, then export here so subprocesses can use also
@@ -33,9 +31,12 @@ include:
   - export GOCACHE
   - export GOPATH
   - export PIP_INDEX_URL
-  - export ROOT_CA_URL
-  - export DNF_WITH_OPTIONS='dnf --disableplugin=subscription-manager --nodocs --setopt install_weak_deps=false -y'
   - export RPM_REQUIREMENTS=$(grep '^[^#]' ./requirements/rpms.txt)
+  - export PIP_TRUSTED_HOST
+  - export ROOT_CA_URL
+  - cd /etc/pki/ca-trust/source/anchors/ && curl -O "${ROOT_CA_URL}"; cd -
+  - update-ca-trust
+  - export REQUESTS_CA_BUNDLE=/etc/pki/tls/certs/ca-bundle.crt
 
 build-image:
   stage: build
@@ -88,7 +89,7 @@ test:
     - *common_test_setup
   script:
     - $DNF_WITH_OPTIONS install $RPM_REQUIREMENTS
-    - python3.11 -m pip install tox
+    - python3.11 -m pip install --trusted-host $PIP_TRUSTED_HOST tox
     - tox -e corgi -- --cov-fail-under=70 --cov-report xml --junitxml=junit.xml
   except:
     refs:
@@ -123,7 +124,7 @@ test-migrations:
     - *common_test_setup
   script:
     - $DNF_WITH_OPTIONS install $RPM_REQUIREMENTS
-    - python3.11 -m pip install tox
+    - python3.11 -m pip install --trusted-host $PIP_TRUSTED_HOST tox
     - tox -e corgi-migrations
   except:
     refs:
@@ -139,7 +140,7 @@ test-performance:
     - *common_test_setup
   script:
     - $DNF_WITH_OPTIONS install $RPM_REQUIREMENTS
-    - python3.11 -m pip install tox
+    - python3.11 -m pip install --trusted-host $PIP_TRUSTED_HOST tox
     - tox -e corgi -- -m performance --no-cov
 
 mypy:
@@ -147,7 +148,6 @@ mypy:
   image: $PYTHON_TOX_IMAGE_LATEST
   before_script:
     - *common_ci_setup
-    - *common_test_setup
   script:
     - $DNF_WITH_OPTIONS install python3.11-devel python3-wheel
     - tox -e mypy
@@ -160,7 +160,6 @@ schema:
   image: $PYTHON_TOX_IMAGE_LATEST
   before_script:
     - *common_ci_setup
-    - *common_test_setup
   script:
     - $DNF_WITH_OPTIONS install python3.11-devel python3-wheel
     - tox -e schema

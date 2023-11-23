@@ -327,6 +327,10 @@ paths:
           type: string
         description: RHEL version for layered products
       - in: query
+        name: epoch
+        schema:
+          type: integer
+      - in: query
         name: exclude_fields
         schema:
           type: array
@@ -438,6 +442,10 @@ paths:
           type: string
       - in: query
         name: re_downstreams
+        schema:
+          type: string
+      - in: query
+        name: re_downstreams_name
         schema:
           type: string
       - in: query

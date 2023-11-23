@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+* added **epoch** to component filters, ex. /api/v1/components?epoch=0
+* added **re_downstreams_name** to component filters, ex. /api/v1/components?re_downstreams_name=foo
+
 ## [1.4.1] - 2023-11-15
 
 ### Changed

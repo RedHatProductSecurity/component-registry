@@ -1374,6 +1374,24 @@ def test_latest_components_queryset(client, api_path, stored_proc):
     assert not non_latest_non_root_components.exists()
 
 
+@pytest.mark.django_db
+def test_root_components_filter():
+    sb_src = SoftwareBuildFactory()
+    # This should be filtered out
+    module_src = ComponentFactory(type="RPM", arch="src", release=".module", software_build=sb_src)
+    # This should remain
+    sb_module = SoftwareBuildFactory()
+    module = ComponentFactory(type=Component.Type.RPMMOD, arch="src", software_build=sb_module)
+
+    results = Component.objects.root_components()
+    assert module in results
+    assert module_src not in results
+
+    results = Component.objects.root_components(False)
+    assert module_src in results
+    assert module not in results
+
+
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_latest_filter(stored_proc):
     ps = ProductStreamFactory(name="rhel-7.9.z", active=True)
@@ -1446,14 +1464,30 @@ def test_released_filter():
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_latest_filter_components_modular(stored_proc):
     ps = ProductStreamFactory(name="certificate_system-10.2.z")
-    modular_rpm_1 = SrpmComponentFactory(
+    # SRPMs with '.module' in the release are filtered out by the root_components filter
+    modular_srpm_1 = SrpmComponentFactory(
         name="idm-console-framework", version="1.2.0", release="3.module+el8pki+7130+225b0dd0"
     )
-    modular_rpm_1.productstreams.add(ps)
+    modular_srpm_1.productstreams.add(ps)
+    module_1 = ComponentFactory(
+        type=Component.Type.RPMMOD,
+        name="redhat-pki",
+        version="10",
+        release="8030020200916211914.ed501447",
+    )
+    module_1.productstreams.add(ps)
+    # SRPMs with '.module' in the release are filtered out by the root_components filter
     modular_rpm_2 = SrpmComponentFactory(
         name="idm-console-framework", version="1.2.0", release="3.module+el8pki+8580+f0d97d6d"
     )
     modular_rpm_2.productstreams.add(ps)
+    module_2 = ComponentFactory(
+        type=Component.Type.RPMMOD,
+        name="redhat-pki",
+        version="10",
+        release="8040020210602044050.e217d58c",
+    )
+    module_2.productstreams.add(ps)
     latest_components = ps.components.latest_components(
         model_type="ProductStream",
         ofuri=ps.ofuri,
@@ -1461,7 +1495,7 @@ def test_latest_filter_components_modular(stored_proc):
         include_inactive_streams=True,
     )
     assert len(latest_components) == 1
-    assert latest_components[0] == modular_rpm_2
+    assert latest_components[0] == module_2
 
 
 def test_el_match():

@@ -110,8 +110,8 @@ class ComponentFilter(FilterSet):
     # otherwise use regex to match provides,sources or upstreams purls
     re_sources = CharFilter(field_name="sources", lookup_expr="purl__iregex", distinct=True)
     re_sources_name = CharFilter(field_name="sources", lookup_expr="name__iregex", distinct=True)
-    re_provides = CharFilter(field_name="provides", lookup_expr="purl__iregex", distinct=True)
-    re_provides_name = CharFilter(field_name="provides", lookup_expr="name__iregex", distinct=True)
+    re_provides = CharFilter(method="filter_re_provides_purl", distinct=True)
+    re_provides_name = CharFilter(method="filter_re_provides_name", distinct=True)
     re_downstreams = CharFilter(field_name="downstreams", lookup_expr="purl__iregex", distinct=True)
     re_downstreams_name = CharFilter(
         field_name="downstreams", lookup_expr="name__iregex", distinct=True
@@ -162,6 +162,42 @@ class ComponentFilter(FilterSet):
         label="Show components from active streams",
         method="filter_active_streams",
     )
+
+    @staticmethod
+    def filter_re_provides_purl(
+        queryset: ComponentQuerySet, _name: str, value: str
+    ) -> QuerySet["Component"]:
+        """Filter components by purl regex search on component provides."""
+        if value in EMPTY_VALUES:
+            # User gave an empty ?param= so return the unfiltered queryset
+            return queryset
+        source_uuids = set(
+            (
+                queryset.prefetch_related("sources")
+                .filter(purl__iregex=value)
+                .values_list("sources", flat=True)
+                .distinct()
+            )
+        )
+        return Component.objects.filter(uuid__in=source_uuids)
+
+    @staticmethod
+    def filter_re_provides_name(
+        queryset: ComponentQuerySet, _name: str, value: str
+    ) -> QuerySet["Component"]:
+        """Filter components by name regex search on component provides."""
+        if value in EMPTY_VALUES:
+            # User gave an empty ?param= so return the unfiltered queryset
+            return queryset
+        source_uuids = set(
+            (
+                queryset.prefetch_related("sources")
+                .filter(name__iregex=value)
+                .values_list("sources", flat=True)
+                .distinct()
+            )
+        )
+        return Component.objects.filter(uuid__in=source_uuids)
 
     @staticmethod
     def filter_gomod_components(

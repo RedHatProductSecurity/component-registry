@@ -1075,9 +1075,17 @@ class ComponentQuerySet(models.QuerySet):
         """Show only components in active product streams"""
         if include:
             # Truthy values return the filtered queryset (only components in active streams)
-            return self.filter(productstreams__active=True).distinct()
+            return (
+                self.filter(productstreams__active=True)
+                .order_by("name", "type", "arch", "version", "release")
+                .distinct()
+            )
         # Falsey values return the excluded queryset (only components in no active streams)
-        return self.exclude(productstreams__active=True).distinct()
+        return (
+            self.exclude(productstreams__active=True)
+            .order_by("name", "type", "arch", "version", "release")
+            .distinct()
+        )
 
 
 class Component(TimeStampedModel, ProductTaxonomyMixin):

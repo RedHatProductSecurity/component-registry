@@ -1,7 +1,7 @@
 import logging
 
 from django.core.validators import EMPTY_VALUES
-from django.db.models import QuerySet
+from django.db.models import QuerySet, Subquery
 from django.http import Http404
 from django_filters.rest_framework import BooleanFilter, CharFilter, Filter, FilterSet
 
@@ -102,7 +102,7 @@ class ComponentFilter(FilterSet):
     sources = CharFilter(lookup_expr="purl")
     sources_name = CharFilter(field_name="sources", lookup_expr="name", distinct=True)
     provides = CharFilter(lookup_expr="purl")
-    provides_name = CharFilter(field_name="provides", lookup_expr="name", distinct=True)
+    provides_name = CharFilter(method="filter_provides_name", distinct=True)
     upstreams = CharFilter(lookup_expr="purl")
     upstreams_name = CharFilter(field_name="upstreams", lookup_expr="name", distinct=True)
     downstreams = CharFilter(lookup_expr="purl")
@@ -167,19 +167,30 @@ class ComponentFilter(FilterSet):
     def filter_re_provides_purl(
         queryset: ComponentQuerySet, _name: str, value: str
     ) -> QuerySet["Component"]:
-        """Filter components by purl regex search on component provides."""
+        """Filter components by purl regex search on provided components."""
         if value in EMPTY_VALUES:
             # User gave an empty ?param= so return the unfiltered queryset
             return queryset
-        source_uuids = set(
-            (
-                queryset.prefetch_related("sources")
-                .filter(purl__iregex=value)
-                .values_list("sources", flat=True)
-                .distinct()
-            )
+        source_uuids = (
+            queryset.prefetch_related("sources")
+            .filter(purl__iregex=value)
+            .values_list("sources", flat=True)
+            .distinct()
         )
-        return Component.objects.filter(uuid__in=source_uuids)
+        return Component.objects.filter(uuid__in=Subquery(source_uuids))
+
+    @staticmethod
+    def filter_provides_name(
+        queryset: ComponentQuerySet, _name: str, value: str
+    ) -> QuerySet["Component"]:
+        """Filter components by name match on provided components."""
+        if value in EMPTY_VALUES:
+            # User gave an empty ?param= so return the unfiltered queryset
+            return queryset
+        source_uuids = (
+            queryset.prefetch_related("sources").filter(name=value).values("sources").distinct()
+        )
+        return Component.objects.filter(uuid__in=Subquery(source_uuids))
 
     @staticmethod
     def filter_re_provides_name(
@@ -189,15 +200,13 @@ class ComponentFilter(FilterSet):
         if value in EMPTY_VALUES:
             # User gave an empty ?param= so return the unfiltered queryset
             return queryset
-        source_uuids = set(
-            (
-                queryset.prefetch_related("sources")
-                .filter(name__iregex=value)
-                .values_list("sources", flat=True)
-                .distinct()
-            )
+        source_uuids = (
+            queryset.prefetch_related("sources")
+            .filter(name__iregex=value)
+            .values_list("sources", flat=True)
+            .distinct()
         )
-        return Component.objects.filter(uuid__in=source_uuids)
+        return Component.objects.filter(uuid__in=Subquery(source_uuids))
 
     @staticmethod
     def filter_gomod_components(

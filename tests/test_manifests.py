@@ -180,6 +180,7 @@ def test_slim_rpm_in_containers_manifest(mock_stream_cpes, stored_proc):
                     # The CPE matches the one returned by setup_products_and_rpm_in_containers()
                     assert ref["referenceLocator"] == cpe
                     found_cpe = True
+                    break
             # There was at least one CPE
             assert found_cpe
 

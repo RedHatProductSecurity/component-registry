@@ -4,15 +4,12 @@
       "copyrightText": {% if component.copyright_text %}"{{component.copyright_text|escapejs}}"{% else %}"NOASSERTION"{% endif %},
       "downloadLocation": {% if component.download_url %}"{{component.download_url|escapejs}}"{% else %}"NOASSERTION"{% endif %},
 
-      "externalRefs": [{% for cpe in component.cpes %}
-        {# Make sure any component cpe is found in the product cpe list #}
-        {% if cpe in cpes %}
+      "externalRefs": [{% for cpe in component.cpes %}{# Make sure any component cpe is found in the product cpe list #}{% if cpe in cpes %}
         {
           "referenceCategory": "SECURITY",
           "referenceLocator": "{{cpe}}",
           "referenceType": "cpe22Type"
-        },{% endif %}
-        {% endfor %}
+        },{% endif %}{% endfor %}
         {
           "referenceCategory": "PACKAGE_MANAGER",
           "referenceLocator": "{{component.purl|safe}}",

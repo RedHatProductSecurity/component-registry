@@ -1778,7 +1778,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
     @property
     def cpes(self) -> QuerySet:
-        """Build and return a list of CPEs this Component relates to"""
+        """Build and return a list of CPEs from all Variants this Component relates to"""
         # For each Variant-type relation, get the linked Variant's CPE directly
         # Remove any duplicates, and return the CPEs in sorted order so manifests are stable
         if self.productvariants.exists():
@@ -1790,7 +1790,9 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             )
         elif self.software_build:
             build_variants = (
-                ProductComponentRelation.objects.filter(software_build=self.software_build)
+                ProductComponentRelation.objects.filter(
+                    software_build=self.software_build, type=ProductComponentRelation.Type.ERRATA
+                )
                 .values_list("product_ref", flat=True)
                 .distinct()
             )

@@ -177,6 +177,8 @@ def test_component_with_variant_cpes():
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_component_without_variant_cpes():
+    """Test the CPEs property on the Component model finds CPEs even when no Variants are linked
+    directly to that Component"""
     TEST_CPE = "o:redhat:test:1"
 
     # Test that a Component with no linked software_build returns an empty QuerySet

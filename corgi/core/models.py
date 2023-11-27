@@ -21,6 +21,7 @@ from corgi.core.constants import (
     CONTAINER_DIGEST_FORMATS,
     EL_MATCH_RE,
     MODEL_NODE_LEVEL_MAPPING,
+    MODULAR_SRPM_CONDITION,
     NODE_LEVEL_ATTRIBUTE_MAPPING,
     RED_HAT_MAVEN_REPOSITORY,
     ROOT_COMPONENTS_CONDITION,
@@ -1026,9 +1027,9 @@ class ComponentQuerySet(models.QuerySet):
         """Show only root components by default, or only non-root components if include=False"""
         if include:
             # Truthy values return the filtered queryset (only root components)
-            return self.filter(ROOT_COMPONENTS_CONDITION)
+            return self.filter(ROOT_COMPONENTS_CONDITION).exclude(MODULAR_SRPM_CONDITION)
         # Falsey values return the excluded queryset (only non-root components)
-        return self.exclude(ROOT_COMPONENTS_CONDITION)
+        return self.filter(Q(software_build__isnull=True) | MODULAR_SRPM_CONDITION)
 
     # See CORGI-658 for the motivation
     def external_components(self, include: bool = True) -> "ComponentQuerySet":

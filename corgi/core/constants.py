@@ -58,9 +58,16 @@ SRPM_CONDITION = Q(type="RPM", arch="src")
 # since some Red Hat Maven components are roots (e.g. quarkus-bom)
 # but others are provided by / children of these roots (e.g. agroal-api)
 ROOT_COMPONENTS_CONDITION = Q(software_build_id__isnull=False)
+MODULAR_SRPM_CONDITION = Q(type="RPM", arch="src", release__contains=".module")
 # If you change above, fix below to match
 # then deploy the updated GET_LATEST_COMPONENT_STOREDPROC_SQL in a new migration
-ROOT_COMPONENTS_SQL = "core_component.software_build_uuid IS NOT NULL"
+ROOT_COMPONENTS_SQL = (
+    "core_component.software_build_uuid IS NOT NULL AND "
+    "NOT (core_component.arch = 'src' AND "
+    "core_component.release LIKE '%.module%' AND "
+    "core_component.type = 'RPM')"
+)
+
 
 # Regex for generating el_match field
 EL_MATCH_RE = re.compile(r".*el(\d+)?[._-]?(\d+)?[._-]?(\d+)?(.*)")

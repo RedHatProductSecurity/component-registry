@@ -10,15 +10,15 @@ Install and activate a Python virtual environment:
 > pip install pip-tools  # Install pip-tools
 > pip-sync requirements/dev.txt
 ```
-
-You will need to install at least some of the rpm dependencies from requirements/rpms.txt. On Fedora 38 Workstation for example:
-
-```bash
-> dnf install gcc krb5-devel krb5-workstation libpq-devel golang
-
 Alternatively, replace the pip-sync call with:
 ```bash
 > pip install -r requirements/dev.txt
+```
+
+You will need to install the following rpms on Fedora 39 Workstation:
+
+```bash
+> dnf install gcc krb5-devel krb5-workstation libpq-devel golang python3-devel podman-compose postgresql
 ```
 
 Next, define the database password and custom PostgreSQL port to be used:
@@ -107,6 +107,11 @@ CORGI_BREW_WEB_URL=<value>
 ```
 
 It is recommended to add all the aforementioned environment variables to a `.env` file in the project root directory.
+
+Log in to the Red Hat container repository:
+```bash
+podman login registry.redhat.io
+```
 
 Build container images:
 ```bash

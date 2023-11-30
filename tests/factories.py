@@ -3,9 +3,11 @@ from datetime import datetime
 from random import choice, randint
 
 import factory
+from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 
 from corgi.core import models
+from corgi.core.models import ProductNode
 
 
 class TagFactory(factory.django.DjangoModelFactory):
@@ -139,6 +141,57 @@ class ProductVariantFactory(factory.django.DjangoModelFactory):
     )
     # link model using reverse relationship to child models
     tag = factory.RelatedFactory(ProductVariantTagFactory, factory_related_name="tagged_model")
+
+    @factory.post_generation
+    def productstreams(self, create, extracted, **kwargs):
+        if not create or not extracted:
+            return
+
+        # Add the iterable of groups using bulk addition
+        self.productstreams.add(*extracted)
+
+
+class NodeFactory(factory.django.DjangoModelFactory):
+    object_id = factory.SelfAttribute("obj.pk")
+    content_type = factory.LazyAttribute(lambda o: ContentType.objects.get_for_model(o.obj))
+
+    class Meta:
+        exclude = ["obj"]
+        abstract = True
+
+
+class ProductModelFactory(NodeFactory):
+    parent = None
+
+    @factory.post_generation
+    def ofuri(obj, create, extracted, **kwargs):
+        print(f"ofuri called in post_generation with create: {create}")
+        if not create:
+            return
+        print(f"called {obj.obj.name} save_product_taxonomy")
+        obj.obj.save_product_taxonomy()
+
+    class Meta:
+        model = ProductNode
+
+
+class ProductNodeFactory(ProductModelFactory):
+    obj = factory.SubFactory(ProductFactory)
+
+
+class ProductVersionNodeFactory(ProductModelFactory):
+    parent = factory.SubFactory(ProductNodeFactory)
+    obj = factory.SubFactory(ProductVersionFactory)
+
+
+class ProductStreamNodeFactory(ProductModelFactory):
+    parent = factory.SubFactory(ProductVersionNodeFactory)
+    obj = factory.SubFactory(ProductStreamFactory)
+
+
+class ProductVariantNodeFactory(ProductModelFactory):
+    parent = factory.SubFactory(ProductStreamNodeFactory)
+    obj = factory.SubFactory(ProductVariantFactory)
 
 
 def random_erratum_name(n):

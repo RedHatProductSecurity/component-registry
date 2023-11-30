@@ -4,6 +4,7 @@ from typing import Any
 
 from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
+from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.db.models import Q, QuerySet
 
@@ -216,19 +217,50 @@ def parse_product_version(
         _match_and_save_stream_cpes(product_version)
 
 
-def _parse_variants_from_brew_tags(brew_tags) -> list[str]:
+def _parse_variants_from_brew_tags(brew_tags: list[str]) -> dict[str, str]:
     """We don't link core ProductVariant models to streams via brew_tags because it results in too
     many builds being linked to the stream. These variants should include all possible builds that
     could match the stream. We use them for finding which errata match this stream, so it's OK to
     find too many errata"""
-    variant_names: set[str] = set()
+    distinct_variants: dict[str, str] = {}
     for brew_tag in brew_tags:
         trimmed_brew_tag, sans_container_released = brew_tag_to_et_prefixes(brew_tag)
-        variants = CollectorErrataProductVersion.objects.filter(
+        variant_data = CollectorErrataProductVersion.objects.filter(
             brew_tags__overlap=[trimmed_brew_tag, sans_container_released]
-        ).values_list("variants__name", flat=True)
-        variant_names.update(variants)
-    return list(variant_names)
+        ).values_list("variants__name", "variants__cpe")
+        for variant_name, variant_cpe in variant_data:
+            if not variant_cpe:
+                continue
+            distinct_variants[variant_name] = variant_cpe
+
+    return distinct_variants
+
+
+def _create_inferred_variants(
+    brew_tag_names: list[str],
+    product_stream_name: str,
+    parent: ProductNode,
+) -> None:
+    variants_and_cpes = _parse_variants_from_brew_tags(brew_tag_names)
+    for variant_name, cpe in variants_and_cpes.items():
+        variant, created = ProductVariant.objects.update_or_create(
+            name=variant_name,
+            defaults={
+                "cpe": cpe,
+            },
+        )
+        if created:
+            logger.info(
+                f"Created ProductVariant {variant_name} as inferred variant of "
+                f"{product_stream_name} ProductStream"
+            )
+
+        ProductNode.objects.get_or_create(
+            object_id=variant.pk,
+            parent=parent,
+            defaults={"obj": variant, "node_type": ProductNode.ProductNodeType.INFERRED},
+        )
+        variant.save_product_taxonomy()
 
 
 def _parse_releases_from_brew_tags(brew_tags) -> list[int]:
@@ -271,10 +303,7 @@ def parse_product_stream(
     if match_version := RE_VERSION_LIKE_STRING.search(name):
         version = match_version.group()
 
-    cpes_from_brew_tags = _parse_cpes_from_brew_tags(brew_tags_dict, name, product_version.name)
     brew_tag_names = brew_tags_dict.keys()
-    # TODO move these to ProductStream attributes?
-    pd_product_stream["variants_from_brew_tags"] = _parse_variants_from_brew_tags(brew_tag_names)
     pd_product_stream["releases_from_brew_tags"] = _parse_releases_from_brew_tags(brew_tag_names)
 
     logger.debug("Creating or updating Product Stream: name=%s", name)
@@ -294,9 +323,9 @@ def parse_product_stream(
             "exclude_components": exclude_components,
             # reset by _match_and_save_stream_cpes
             "cpes_matching_patterns": [],
-            "cpes_from_brew_tags": cpes_from_brew_tags,
         },
     )
+
     product_stream_node, _ = ProductNode.objects.get_or_create(
         object_id=product_stream.pk,
         defaults={
@@ -304,6 +333,11 @@ def parse_product_stream(
             "obj": product_stream,
         },
     )
+
+    _create_inferred_variants(
+        list(brew_tag_names), product_stream.name, product_stream_node
+    )
+
     parse_errata_info(errata_info, product, product_stream, product_stream_node, product_version)
     if not stream_created:
         _clean_orphaned_relations_and_builds(
@@ -408,6 +442,7 @@ def parse_errata_info(
 
             # This is a workaround for CORGI-811 which attaches variants from errata_info only to
             # active streams
+            # TODO remove this
             if not product_stream.active:
                 continue
 
@@ -434,16 +469,13 @@ def parse_errata_info(
                         },
                     },
                 )
-                # If multiple active streams share the same errata_info,
-                # use update to relink the node to a different parent product_stream_node
-                # the last matching stream always wins / gets the link
                 node, node_created = ProductNode.objects.get_or_create(
+                    parent=product_stream_node,
                     object_id=product_variant.pk,
-                    defaults={
-                        "parent": product_stream_node,
-                        "obj": product_variant,
-                    },
+                    content_type=ContentType.objects.get_for_model(ProductVariant),
+                    defaults={"node_type": ProductNode.ProductNodeType.DIRECT},
                 )
+                # TODO, stop updating the parent as stream -> variant is now many-to-many
                 if node.parent != product_stream_node:
                     node.parent = product_stream_node
                     node.save()

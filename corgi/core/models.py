@@ -2,7 +2,7 @@ import logging
 import re
 import uuid as uuid
 from abc import abstractmethod
-from typing import Any, Iterable, Iterator, Union
+from typing import Any, Iterable, Iterator, Type, Union
 
 from django.apps import apps
 from django.conf import settings
@@ -73,6 +73,15 @@ class NodeModel(MPTTModel, TimeStampedModel):
 class ProductNode(NodeModel):
     """Product taxonomy node."""
 
+    class ProductNodeType(models.TextChoices):
+        DIRECT = "DIRECT"
+        # eg. Variants discovered by stream to ET Product Version brew_tag matching
+        INFERRED = "INFERRED"
+
+    type = models.CharField(
+        choices=ProductNodeType.choices, default=ProductNodeType.DIRECT, max_length=20
+    )
+
     class Meta(NodeModel.Meta):
         constraints = (
             # Add unique constraint + index so get_or_create behaves atomically
@@ -81,12 +90,19 @@ class ProductNode(NodeModel):
             # https://dba.stackexchange.com/a/9760
             models.UniqueConstraint(
                 name="unique_pnode_get_or_create",
-                fields=("object_id", "parent"),
+                fields=(
+                    "object_id",
+                    "parent",
+                    "type",
+                ),
                 condition=models.Q(parent__isnull=False),
             ),
             models.UniqueConstraint(
                 name="unique_pnode_get_or_create_for_null_parent",
-                fields=("object_id",),
+                fields=(
+                    "object_id",
+                    "type",
+                ),
                 condition=models.Q(parent__isnull=True),
             ),
         )
@@ -110,7 +126,7 @@ class ProductNode(NodeModel):
 
     @staticmethod
     def get_node_pks_for_type(
-        qs: QuerySet["ProductNode"], mapping_model: type, lookup: str = "__pk"
+        qs: QuerySet["ProductNode"], mapping_model: Type[object], lookup: str = "__pk"
     ) -> QuerySet["ProductNode"]:
         """For a given ProductNode queryset, find all nodes with the given type
         and return a lookup on their related objects (primary key by default)"""
@@ -124,20 +140,6 @@ class ProductNode(NodeModel):
         # No way to return "obj" / "productstream" field as a model instance here
         # ManyToManyFields can use PKs, but ForeignKeys require model instances
         return qs
-
-    @staticmethod
-    def get_node_names_for_type(product_model: "ProductModel", target_model: str) -> QuerySet:
-        """For a given ProductModel / Channel, find all related nodes with the given type
-        and return the names of their related objects"""
-        # "product_version" -> "ProductVersion"
-        mapping_model = target_model.title().replace("_", "")
-        # No .distinct() since __name on all ProductModel subclasses + Channel is always unique
-        return (
-            product_model.pnodes.get()
-            .get_family()
-            .filter(level=MODEL_NODE_LEVEL_MAPPING[mapping_model])
-            .values_list(f"{target_model}__name", flat=True)
-        )
 
     @classmethod
     def get_products(
@@ -421,17 +423,49 @@ class ProductModel(TimeStampedModel):
 
     @property
     def cpes(self) -> tuple[str, ...]:
-        """Return CPEs for all descendant variants."""
-        variant_cpes = (
+        """Return CPEs for direct descendant variants if they exist. Otherwise, return a union
+        of indirect descendant variants and descendant streams cpes_matching_patterns"""
+        if self is ProductVariant:
+            return (self.cpe,)  # type: ignore[attr-defined]
+
+        direct_variant_cpes = (
             self.pnodes.get_queryset()
             .get_descendants(include_self=True)
             .using("read_only")
             .filter(level=MODEL_NODE_LEVEL_MAPPING["ProductVariant"])
+            .exclude(type=ProductNode.ProductNodeType.INFERRED)
             .values_list("productvariant__cpe", flat=True)
             .distinct()
         )
-        # Omit CPEs like "", but GenericForeignKeys only support .filter(), not .exclude()??
-        return tuple(cpe for cpe in variant_cpes if cpe)
+        if direct_variant_cpes:
+            return self.qs_to_tuple_no_empty_strings(direct_variant_cpes)
+
+        cpes_matching_patterns = (
+            self.pnodes.get_queryset()
+            .get_descendants(include_self=True)
+            .using("read_only")
+            .filter(level=MODEL_NODE_LEVEL_MAPPING["ProductStream"])
+            .values_list("productstream__cpes_matching_patterns", flat=True)
+            .distinct()
+        )
+        indirect_variant_cpes = (
+            self.pnodes.get_queryset()
+            .get_descendants(include_self=True)
+            .using("read_only")
+            .filter(
+                level=MODEL_NODE_LEVEL_MAPPING["ProductVariant"],
+                type=ProductNode.ProductNodeType.INFERRED,
+            )
+            .values_list("productvariant__cpe", flat=True)
+            .distinct()
+        )
+        distinct_cpes_matching_patterns = set([cpe for cpe_patterns in cpes_matching_patterns for cpe in cpe_patterns])
+        distinct_cpes_matching_patterns.update(self.qs_to_tuple_no_empty_strings(indirect_variant_cpes))
+        return tuple(distinct_cpes_matching_patterns)
+
+    def qs_to_tuple_no_empty_strings(self, direct_variant_cpes: QuerySet) -> tuple[str, ...]:
+        """Omit CPEs like ''"""
+        return tuple(cpe for cpe in direct_variant_cpes if cpe)
 
     @abstractmethod
     def get_ofuri(self) -> str:
@@ -487,6 +521,23 @@ class ProductModel(TimeStampedModel):
 
         # All ProductModels have a set of descendant channels
         self.channels.set(channels)
+
+    def get_related_names_of_type(self, mapping_model: type) -> list[str]:
+        """For a given ProductModel instance find all directly related nodes with the given model type
+        and return their names"""
+        mapping_key = mapping_model.__name__
+        # No .distinct() since __name on all ProductModel subclasses + Channel is always unique
+        attribute_name = mapping_key.lower()
+        pnode = self.pnodes.exclude(type=ProductNode.ProductNodeType.INFERRED).first()
+        if pnode:
+            return list(
+                pnode.get_family()
+                .filter(level=MODEL_NODE_LEVEL_MAPPING[mapping_key])
+                .values_list(f"{attribute_name}__name", flat=True)
+                .distinct()
+            )
+        else:
+            return []
 
     def save(self, *args, **kwargs):
         self.ofuri = self.get_ofuri()
@@ -848,7 +899,9 @@ class ProductComponentRelation(TimeStampedModel):
         )
 
 
-def get_product_details(variant_names: tuple[str], stream_names: list[str]) -> dict[str, set[str]]:
+def get_product_details(
+    variant_names: tuple[str, ...], stream_names: list[str]
+) -> dict[str, set[str]]:
     """
     Given stream / variant names from the PCR table, look up all related ProductModel subclasses
 
@@ -856,10 +909,8 @@ def get_product_details(variant_names: tuple[str], stream_names: list[str]) -> d
     Components relate to builds, and products / versions relate to variants / streams
     We want to link all build components to their related products, versions, streams, and variants
     """
-    if variant_names:
-        variant_streams = ProductVariant.objects.filter(name__in=variant_names).values_list(
-            "productstreams__name", flat=True
-        )
+    for variant in ProductVariant.objects.filter(name__in=variant_names):
+        variant_streams = variant.get_related_names_of_type(ProductStream)
         stream_names.extend(variant_streams)
 
     product_details: dict[str, set[str]] = {
@@ -1786,6 +1837,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         """Build and return a list of CPEs from all Variants this Component relates to"""
         # For each Variant-type relation, get the linked Variant's CPE directly
         # Remove any duplicates, and return the CPEs in sorted order so manifests are stable
+        # TODO review this now that we have INFERRED variants
         return (
             self.productvariants.exclude(cpe="")
             .values_list("cpe", flat=True)

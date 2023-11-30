@@ -232,28 +232,35 @@ def _parse_variants_from_brew_tags(brew_tags: list[str]) -> dict[str, str]:
     return distinct_variants
 
 
-def _create_inferred_variants(variants_and_cpes: dict[str, str], product: Product, product_version: ProductVersion, product_stream: ProductStream, parent: ProductNode) -> None:
-    for variant, cpe in variants_and_cpes.items():
+def _create_inferred_variants(
+    variants_and_cpes: dict[str, str],
+    product: Product,
+    product_version: ProductVersion,
+    product_stream: ProductStream,
+    parent: ProductNode,
+) -> None:
+    for variant_name, cpe in variants_and_cpes.items():
         variant, created = ProductVariant.objects.update_or_create(
-            name=variant,
+            name=variant_name,
             defaults={
                 "cpe": cpe,
                 "products": product,
                 "productversions": product_version,
-                "productstreams": product_stream
-            }
+                "productstreams": product_stream,
+            },
         )
         if created:
-            logger.info(f"Created ProductVariant {variant} as inferred variant of {product_stream.name} ProductStream")
+            logger.info(
+                f"Created ProductVariant {variant_name} as inferred variant of "
+                f"{product_stream.name} ProductStream"
+            )
 
-        # TODO set type to INFERRED
         ProductNode.objects.get_or_create(
             object_id=variant.pk,
             parent=parent,
-            defaults={"obj": variant}
+            type=ProductNode.ProductNodeType.INFERRED,
+            defaults={"obj": variant},
         )
-
-
 
 
 def _parse_releases_from_brew_tags(brew_tags) -> list[int]:
@@ -298,8 +305,9 @@ def parse_product_stream(
 
     cpes_from_brew_tags = _parse_cpes_from_brew_tags(brew_tags_dict, name, product_version.name)
     brew_tag_names = brew_tags_dict.keys()
-    # TODO stop setting variants_from_brew_tags on meta_attr and just get the data from the linked (INFERRED) Variants
-    variants_and_cpes = _parse_variants_from_brew_tags(brew_tag_names)
+    # TODO stop setting variants_from_brew_tags on meta_attr and just get the data from the linked
+    #  (INFERRED) Variants
+    variants_and_cpes = _parse_variants_from_brew_tags(list(brew_tag_names))
     pd_product_stream["variants_from_brew_tags"] = list(variants_and_cpes.keys())
     pd_product_stream["releases_from_brew_tags"] = _parse_releases_from_brew_tags(brew_tag_names)
 
@@ -331,7 +339,9 @@ def parse_product_stream(
         },
     )
 
-    _create_inferred_variants(variants_and_cpes, product, product_version, product_stream, product_stream_node)
+    _create_inferred_variants(
+        variants_and_cpes, product, product_version, product_stream, product_stream_node
+    )
 
     parse_errata_info(errata_info, product, product_stream, product_stream_node, product_version)
     if not stream_created:
@@ -465,7 +475,8 @@ def parse_errata_info(
                     },
                 )
                 # TODO if the ProductNode exists and is of the inferred type, change it to a direct
-                # TODO move parent out of defaults and into kw args to allow linking this variant to multiple streams
+                # TODO move parent out of defaults and into kw args to allow linking this variant to
+                #  multiple streams
                 # If multiple active streams share the same errata_info,
                 # use update to relink the node to a different parent product_stream_node
                 # the last matching stream always wins / gets the link

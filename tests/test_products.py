@@ -19,6 +19,7 @@ from corgi.core.models import (
 from corgi.tasks.prod_defs import (
     _find_by_cpe,
     _match_and_save_stream_cpes,
+    _parse_variants_from_brew_tags,
     update_products,
 )
 from tests.factories import (
@@ -91,7 +92,7 @@ def test_products(requests_mock):
     assert len(openshift410z.yum_repositories) == 5
 
     rhacm24z = ProductStream.objects.get(name="rhacm-2.4.z")
-    assert et_variant.cpe not in rhacm24z.cpes
+    assert et_variant.cpe in rhacm24z.cpes
     assert et_variant.cpe in rhacm24z.cpes_from_brew_tags
 
 
@@ -238,7 +239,57 @@ def test_stream_variants_with_old_builds(mock_remove, requests_mock):
 
 
 @pytest.mark.django_db
+<<<<<<< Updated upstream
 @patch("corgi.tasks.prod_defs.slow_remove_product_from_build.delay")
+=======
+@patch("corgi.tasks.prod_defs.slow_reset_build_product_taxonomy.delay")
+def test_stream_brew_tags_with_inferred_variant_removed(mock_remove, requests_mock):
+    with open("tests/data/prod_defs/proddefs-update.json") as prod_defs:
+        text = prod_defs.read()
+        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+
+    update_products()
+    assert not mock_remove.called
+
+    stream = ProductStream.objects.get(name="stream")
+    # create an inferred variant under the stream to make sure it doesn't block the brew_tag builds
+    # stream being removed
+    stream_node = stream.pnodes.first()
+    variant_node = ProductVariantNodeFactory(
+        node_type=ProductNode.ProductNodeType.INFERRED, parent=stream_node
+    )
+    variant = variant_node.obj
+    assert stream.brew_tags == {"test_tag": False}
+
+    sb = SoftwareBuildFactory()
+
+    brew_tag_relation = ProductComponentRelation.objects.create(
+        external_system_id="test_tag",
+        product_ref="stream",
+        software_build=sb,
+        type=ProductComponentRelation.Type.BREW_TAG,
+    )
+
+    ProductComponentRelation.objects.create(
+        external_system_id="errata-id",
+        product_ref=variant.name,
+        software_build=sb,
+        type=ProductComponentRelation.Type.ERRATA,
+    )
+
+    with open("tests/data/prod_defs/proddefs-update-tag-removed.json") as prod_defs:
+        text = prod_defs.read()
+        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+
+    update_products()
+    stream.refresh_from_db()
+    assert not ProductComponentRelation.objects.filter(pk=brew_tag_relation.pk).exists()
+    assert mock_remove.called
+
+
+@pytest.mark.django_db
+@patch("corgi.tasks.prod_defs.slow_reset_build_product_taxonomy.delay")
+>>>>>>> Stashed changes
 def test_stream_yum_repos_removed(mock_remove, requests_mock):
     with open("tests/data/prod_defs/proddefs-update.json") as prod_defs:
         text = prod_defs.read()
@@ -482,7 +533,7 @@ brew_tag_streams = [
 ]
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 @pytest.mark.parametrize("variant_name,cpe,brew_tag,stream_name", brew_tag_streams)
 def test_brew_tag_matching(variant_name, cpe, brew_tag, stream_name, requests_mock):
     et_product = CollectorErrataProduct.objects.create(et_id=1, name="product")
@@ -501,8 +552,36 @@ def test_brew_tag_matching(variant_name, cpe, brew_tag, stream_name, requests_mo
     update_products()
 
     stream = ProductStream.objects.get(name=stream_name)
-    assert stream.productvariants.get_queryset().count() == 0
-    assert stream.cpes_from_brew_tags == [cpe]
+    assert stream.productvariants.get_queryset().count() == 1
+    assert list(stream.productvariants.values_list("cpe", flat=True)) == [cpe]
+
+
+@pytest.mark.django_db
+def test_parse_variants_from_brew_tags():
+    # "quay-3.8-rhel-8", , "quay-3.9-rhel-8",
+    brew_tag = "quay-3.9-rhel-8-container"
+    brew_tags = [brew_tag]
+    et_product = CollectorErrataProduct.objects.create(et_id=142, name="Red Hat Quay")
+    et_product_version = CollectorErrataProductVersion.objects.create(
+        et_id=1268, name="Quay-3-RHEL-8", product=et_product, brew_tags=brew_tags
+    )
+    variant_name = "8Base-Quay-3"
+    cpe = "cpe:/a:redhat:quay:3::el8"
+    CollectorErrataProductVariant.objects.create(
+        et_id=3042, name=variant_name, product_version=et_product_version, cpe=cpe
+    )
+
+    result = _parse_variants_from_brew_tags(brew_tags)
+    assert result == {variant_name: cpe}
+
+    # Now add another brew_tag to the ProductVersion, and verify a single variant is returned
+    other_brew_tag = "quay-3.8-rhel-8-container"
+    brew_tags.append(other_brew_tag)
+    et_product_version.brew_tags = brew_tags
+    et_product_version.save()
+
+    result = _parse_variants_from_brew_tags([other_brew_tag])
+    assert result == {variant_name: cpe}
 
 
 @pytest.mark.django_db

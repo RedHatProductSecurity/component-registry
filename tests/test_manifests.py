@@ -6,7 +6,12 @@ import pytest
 
 from corgi.core.files import ProductManifestFile
 from corgi.core.fixups import cpe_lookup
-from corgi.core.models import Component, ComponentNode, ProductComponentRelation
+from corgi.core.models import (
+    Component,
+    ComponentNode,
+    ProductComponentRelation,
+    ProductNode,
+)
 from corgi.web.templatetags.base_extras import provided_relationship
 
 from .conftest import setup_product
@@ -313,20 +318,20 @@ def test_manifest_cpes_from_cpe_lookup(stored_proc):
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_manifest_cpes_from_patterns_and_brew_tags(stored_proc):
-    stream, variant = setup_product()
+    stream, variant = setup_product(variant_node_type=ProductNode.ProductNodeType.INFERRED)
     assert not cpe_lookup(stream.name)
-    variant.delete()
     test_cpe = "cpe:/a:redhat:test:1"
-    another_test_cpe = "cpe:/a:redhat:test:2"
     stream.cpes_matching_patterns = [test_cpe]
-    stream.cpes_from_brew_tags = [another_test_cpe]
     stream.save()
-    assert not stream.cpes
+    assert stream.cpes == (
+        "cpe:/a:redhat:test:1",
+        "cpe:/o:redhat:enterprise_linux:8",
+    )
 
     manifest = json.loads(stream.manifest)
     product_data = manifest["packages"][-1]
     cpes_in_manifest = set(ref["referenceLocator"] for ref in product_data["externalRefs"])
-    assert {test_cpe, another_test_cpe} == cpes_in_manifest
+    assert {test_cpe, variant.cpe} == cpes_in_manifest
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)

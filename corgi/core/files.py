@@ -90,7 +90,7 @@ class ProductManifestFile(ManifestFile):
         hardcoded_cpes = cpe_lookup(model.name)  # type: ignore[attr-defined]
         if hardcoded_cpes:
             return hardcoded_cpes
-
+        # TODO move this logic into ProductStream.cpes property
         cpes_from_variants = model.cpes  # type: ignore[attr-defined]
         if cpes_from_variants:
             return set(cpes_from_variants)

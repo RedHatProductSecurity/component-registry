@@ -43,7 +43,11 @@ def stored_proc(django_db_setup, django_db_blocker):
             c.execute(GET_LATEST_COMPONENT_STOREDPROC_SQL)
 
 
-def setup_product(version_name: str = "", stream_name: str = ""):
+def setup_product(
+    version_name: str = "",
+    stream_name: str = "",
+    variant_node_type=ProductNode.ProductNodeType.DIRECT,
+):
     product = ProductFactory()
     if version_name:
         version = ProductVersionFactory(name=version_name, products=product)
@@ -61,7 +65,7 @@ def setup_product(version_name: str = "", stream_name: str = ""):
     pnode = ProductNode.objects.create(parent=None, obj=product)
     pvnode = ProductNode.objects.create(parent=pnode, obj=version)
     psnode = ProductNode.objects.create(parent=pvnode, obj=stream)
-    ProductNode.objects.create(parent=psnode, obj=variant)
+    ProductNode.objects.create(parent=psnode, obj=variant, type=variant_node_type)
     # This generates and saves the ProductModel properties of stream
     # AKA we link the ProductModel instances to each other
     stream.save_product_taxonomy()

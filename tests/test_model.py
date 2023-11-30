@@ -13,6 +13,7 @@ from corgi.core.models import (
     ProductStream,
     ProductVersion,
     SoftwareBuild,
+    get_product_details,
 )
 
 from .factories import (
@@ -78,6 +79,17 @@ def test_cpes():
         productversions=pv2,
         productstreams=ps3,
     )
+    pvariant3 = ProductVariantFactory(
+        cpe="cpe:/o:redhat:inferred_variant:8",
+        products=p1,
+        productversions=pv2,
+        productstreams=ps3,
+    )
+    pvariant4 = ProductVariantFactory(
+        products=p1,
+        productversions=pv2,
+        productstreams=ps2,
+    )
 
     p1node = ProductNode.objects.create(parent=None, obj=p1)
     assert p1node
@@ -95,6 +107,12 @@ def test_cpes():
     assert pvariant1node
     pvariant2node = ProductNode.objects.create(parent=ps3node, obj=pvariant2)
     assert pvariant2node
+    ProductNode.objects.create(
+        parent=ps3node, obj=pvariant3, type=ProductNode.ProductNodeType.INFERRED
+    )
+    ProductNode.objects.create(
+        parent=ps2node, obj=pvariant4, type=ProductNode.ProductNodeType.INFERRED
+    )
 
     # Version 1 for RHEL 7 has 1 child variant, so 1 CPE is reported
     assert pv1.cpes == ("cpe:/o:redhat:enterprise_linux:7",)
@@ -104,6 +122,26 @@ def test_cpes():
         "cpe:/o:redhat:Brantabernicla:8",
         "cpe:/o:redhat:enterprise_linux:7",
     ]
+    assert ps2.cpes == (pvariant4.cpes)
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_cpes_from_patterns_and_brew_tags():
+    cpe_from_pattern_matching = "cpe_from_pattern"
+    product_stream = ProductStreamFactory(cpes_matching_patterns=[cpe_from_pattern_matching])
+    pnode = ProductNode.objects.create(parent=None, obj=product_stream.products)
+    pvnode = ProductNode.objects.create(parent=pnode, obj=product_stream.productversions)
+    psnode = ProductNode.objects.create(parent=pvnode, obj=product_stream)
+    # product_stream.save()
+    assert product_stream.cpes == (cpe_from_pattern_matching,)
+
+    cpe_from_brew_tag = "cpe_from_brew_tag"
+    product_variant = ProductVariantFactory(cpe=cpe_from_brew_tag)
+    assert product_variant.cpes == (cpe_from_brew_tag,)
+    ProductNode.objects.create(
+        parent=psnode, obj=product_variant, type=ProductNode.ProductNodeType.INFERRED
+    )
+    assert sorted(product_stream.cpes) == [cpe_from_brew_tag, cpe_from_pattern_matching]
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
@@ -1592,3 +1630,79 @@ def test_license_properties():
     assert "ALICE" not in c.license_concluded_list
     assert "LATER" not in c.license_declared_list
     assert "ALICE" not in c.license_declared_list
+
+
+@pytest.mark.django_db
+def test_get_related_names_of_type():
+    variant = ProductVariantFactory()
+    create_variant_node_tree(variant, ProductNode.ProductNodeType.INFERRED)
+
+    # Since the pnode linking the product_version and the product_stream is DIRECT we expect a
+    # result
+    result = variant.productstreams.get_related_names_of_type(ProductVersion)
+    assert list(result) == [variant.productversions.name]
+
+    # Expect empty results when the pnode linking variant to it's parent is INFEFFERED
+    result = variant.get_related_names_of_type(ProductVersion)
+    assert list(result) == []
+    result = variant.get_related_names_of_type(ProductStream)
+    assert list(result) == []
+
+
+def create_variant_node_tree(variant, node_type=ProductNode.ProductNodeType.DIRECT):
+    product_node = ProductNode.objects.create(
+        parent=None, object_id=variant.products.pk, obj=variant.products
+    )
+    pversion_node = ProductNode.objects.create(
+        parent=product_node, object_id=variant.productversions.pk, obj=variant.productversions
+    )
+    pstream_node = ProductNode.objects.create(
+        parent=pversion_node, object_id=variant.productstreams.pk, obj=variant.productstreams
+    )
+    ProductNode.objects.create(
+        parent=pstream_node,
+        object_id=variant.pk,
+        obj=variant,
+        type=node_type,
+    )
+
+
+@pytest.mark.django_db
+def test_get_product_details():
+    """Make sure that DIRECT variants get their parent product models added to the results"""
+    variant = ProductVariantFactory()
+    create_variant_node_tree(variant)
+    result = get_product_details((variant,), [])
+    assert result == {
+        "products": {variant.products.pk},
+        "productversions": {variant.productversions.pk},
+        "productstreams": {variant.productstreams.pk},
+        "productvariants": {str(variant.pk)},
+    }
+
+
+@pytest.mark.django_db
+def test_get_product_details_inferred():
+    """Make sure that INFERRED variants don't get their parent product models added to the results"""
+    variant = ProductVariantFactory()
+    create_variant_node_tree(variant, ProductNode.ProductNodeType.INFERRED)
+    result = get_product_details((variant,), [])
+    assert result == {
+        "products": set(),
+        "productversions": set(),
+        "productstreams": set(),
+        "productvariants": {str(variant.pk)},
+    }
+
+
+@pytest.mark.django_db
+def test_save_product_taxonomy():
+    variant = ProductVariantFactory()
+    sb = SoftwareBuildFactory()
+    c = ComponentFactory(software_build=sb)
+    ProductComponentRelationFactory(
+        type=ProductComponentRelation.Type.ERRATA, software_build=sb, product_ref=variant.name
+    )
+    assert not c.productvariants.exists()
+    sb.save_product_taxonomy()
+    assert c.productvariants.first() == variant

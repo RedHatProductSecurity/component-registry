@@ -118,10 +118,8 @@ def cpu_remove_old_services_data(build_id: int) -> None:
             f"App-Interface build {build_id} and all its current children "
             f"will be unlinked from old services that no longer use it: {old_services}"
         )
-        old_stream_pks = ProductStream.objects.filter(name__in=old_services).values_list(
-            "pk", flat=True
-        )
-        build.disassociate_with_product("ProductStream", old_stream_pks)
+
+        build.reset_product_taxonomy()
         # Root components will be automatically deleted when their linked build is deleted
         # This also deletes all the nodes which are children of the root (the entire tree)
         build.delete()
@@ -251,10 +249,7 @@ def save_service_components(
                 f"Service component {service_component['name']} and all its current children "
                 f"will be unlinked from old services that no longer use it: {old_services}"
             )
-            old_stream_pks = ProductStream.objects.filter(name__in=old_services).values_list(
-                "pk", flat=True
-            )
-            build.disassociate_with_product("ProductStream", old_stream_pks)
+            build.reset_product_taxonomy()
 
             # We delete and recreate this build, root component, and all nodes
             # so that VM does not see stale data / file bad trackers

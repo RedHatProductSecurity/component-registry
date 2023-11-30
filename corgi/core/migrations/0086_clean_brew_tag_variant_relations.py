@@ -3,7 +3,7 @@ from django.db import migrations
 # Non-historical model, i.e. if you change save_product_taxonomy() tomorrow
 # the migration will not run the same code as before (at the time the migration was written)
 from corgi.tasks.prod_defs import (
-    slow_remove_product_from_build as current_remove_product_from_build,
+    slow_reset_build_product_taxonomy as current_remove_product_from_build,
 )
 
 

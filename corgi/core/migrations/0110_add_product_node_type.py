@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("core", "0108_save_container_taxonomy"),
+        ("core", "0109_copy_srpm_license_data_to_binary_rpms"),
     ]
 
     operations = [

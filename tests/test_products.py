@@ -12,6 +12,7 @@ from corgi.collectors.models import (
 from corgi.core.models import (
     Product,
     ProductComponentRelation,
+    ProductNode,
     ProductStream,
     ProductVariant,
     ProductVersion,
@@ -24,6 +25,7 @@ from corgi.tasks.prod_defs import (
 )
 from tests.factories import (
     ProductStreamFactory,
+    ProductVariantNodeFactory,
     ProductVersionFactory,
     SoftwareBuildFactory,
 )
@@ -97,7 +99,7 @@ def test_products(requests_mock):
 
 
 @pytest.mark.django_db
-@patch("corgi.tasks.prod_defs.slow_remove_product_from_build.delay")
+@patch("corgi.tasks.prod_defs.slow_reset_build_product_taxonomy.delay")
 def test_stream_brew_tags_removed(mock_remove, requests_mock):
     with open("tests/data/prod_defs/proddefs-update.json") as prod_defs:
         text = prod_defs.read()
@@ -123,19 +125,13 @@ def test_stream_brew_tags_removed(mock_remove, requests_mock):
         requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
 
     update_products()
-
-    assert not ProductComponentRelation.objects.filter(software_build=sb).exists()
-    assert mock_remove.called_with(
-        (
-            str(sb.pk),
-            "ProductStream",
-            stream.pk,
-        )
-    )
+    stream.refresh_from_db()
+    assert not ProductComponentRelation.objects.exists()
+    assert mock_remove.called
 
 
 @pytest.mark.django_db
-@patch("corgi.tasks.prod_defs.slow_remove_product_from_build.delay")
+@patch("corgi.tasks.prod_defs.slow_reset_build_product_taxonomy.delay")
 def test_stream_new_brew_tags_with_old_builds(mock_remove, requests_mock):
     with open("tests/data/prod_defs/proddefs-update-tag-with-old-build.json") as prod_defs:
         text = prod_defs.read()
@@ -178,7 +174,7 @@ def test_stream_new_brew_tags_with_old_builds(mock_remove, requests_mock):
 
 
 @pytest.mark.django_db
-@patch("corgi.tasks.prod_defs.slow_remove_product_from_build.delay")
+@patch("corgi.tasks.prod_defs.slow_reset_build_product_taxonomy.delay")
 def test_stream_variants_with_old_builds(mock_remove, requests_mock):
     with open("tests/data/prod_defs/proddefs-update-variant-with-old-build.json") as prod_defs:
         text = prod_defs.read()
@@ -239,6 +235,161 @@ def test_stream_variants_with_old_builds(mock_remove, requests_mock):
 
 
 @pytest.mark.django_db
+@patch("corgi.tasks.prod_defs.slow_reset_build_product_taxonomy.delay")
+def test_stream_brew_tags_with_inferred_variant_removed(mock_remove, requests_mock):
+    with open("tests/data/prod_defs/proddefs-update.json") as prod_defs:
+        text = prod_defs.read()
+        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+
+    update_products()
+    assert not mock_remove.called
+
+    stream = ProductStream.objects.get(name="stream")
+    # create an inferred variant under the stream to make sure it doesn't block the brew_tag builds
+    # stream being removed
+    stream_node = stream.pnodes.first()
+    variant_node = ProductVariantNodeFactory(
+        node_type=ProductNode.ProductNodeType.INFERRED, parent=stream_node
+    )
+    variant = variant_node.obj
+    assert stream.brew_tags == {"test_tag": False}
+
+    sb = SoftwareBuildFactory()
+
+    brew_tag_relation = ProductComponentRelation.objects.create(
+        external_system_id="test_tag",
+        product_ref="stream",
+        software_build=sb,
+        type=ProductComponentRelation.Type.BREW_TAG,
+    )
+
+    ProductComponentRelation.objects.create(
+        external_system_id="errata-id",
+        product_ref=variant.name,
+        software_build=sb,
+        type=ProductComponentRelation.Type.ERRATA,
+    )
+
+    with open("tests/data/prod_defs/proddefs-update-tag-removed.json") as prod_defs:
+        text = prod_defs.read()
+        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+
+    update_products()
+    stream.refresh_from_db()
+    assert not ProductComponentRelation.objects.filter(pk=brew_tag_relation.pk).exists()
+    assert mock_remove.called
+
+
+@pytest.mark.django_db
+def test_inferred_and_direct_variants(requests_mock):
+    with open("tests/data/prod_defs/product-definitions-inferred-and-direct.json") as prod_defs:
+        text = prod_defs.read()
+        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+
+    variant_name = "8Base-MW-RHBQ-2.13"
+    et_product = CollectorErrataProduct.objects.create(
+        et_id=153, name="Red Hat build of Quarkus", short_name="RHBQ"
+    )
+    et_product_version = CollectorErrataProductVersion.objects.create(
+        et_id=1997,
+        name="Middleware-RHBQ-2.13",
+        product=et_product,
+        # matches the brew_tag defined in product-definitions quarkus-2.13 ps_update_stream
+        brew_tags=["qrks-2.13-pnc"],
+    )
+    CollectorErrataProductVariant.objects.create(
+        et_id=4334,
+        # matches the errata_info defined in product-definitions quarkus-2.13 ps_update_stream
+        name=variant_name,
+        product_version=et_product_version,
+        cpe="cpe:/a:redhat:quarkus:2.13::el8",
+    )
+
+    update_products()
+
+    variant = ProductVariant.objects.get(name=variant_name)
+    assert variant.pnodes.count() == 1
+    assert list(variant.pnodes.values_list("node_type", flat=True)) == [
+        ProductNode.ProductNodeType.DIRECT
+    ]
+    stream = ProductStream.objects.get(name="quarkus-2.13")
+    assert stream in variant.productstreams.get_queryset()
+
+
+@pytest.mark.django_db
+@patch("corgi.tasks.prod_defs.slow_reset_build_product_taxonomy.delay")
+def test_stream_brew_tags_with_inferred_variant_to_errata_info(mock_reset, requests_mock):
+    with open("tests/data/prod_defs/proddefs-update-inferred.json") as prod_defs:
+        text = prod_defs.read()
+        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+
+    variant_name = "8Base-MW-RHBQ-2.13"
+    et_product = CollectorErrataProduct.objects.create(
+        et_id=153, name="Red Hat build of Quarkus", short_name="RHBQ"
+    )
+    et_product_version = CollectorErrataProductVersion.objects.create(
+        et_id=1997,
+        name="Middleware-RHBQ-2.13",
+        product=et_product,
+        # matches the brew_tag defined in product-definitions quarkus-2.13 ps_update_stream
+        brew_tags=["qrks-2.13-pnc"],
+    )
+    CollectorErrataProductVariant.objects.create(
+        et_id=4334,
+        # matches the errata_info defined in product-definitions quarkus-2.13 ps_update_stream
+        name=variant_name,
+        product_version=et_product_version,
+        cpe="cpe:/a:redhat:quarkus:2.13::el8",
+    )
+    stream_name = "quarkus-2.13"
+
+    sb = SoftwareBuildFactory()
+
+    brew_tag_relation = ProductComponentRelation.objects.create(
+        external_system_id="qrks-2.13-pnc-released",
+        product_ref=stream_name,
+        software_build=sb,
+        type=ProductComponentRelation.Type.BREW_TAG,
+    )
+
+    errata_relation = ProductComponentRelation.objects.create(
+        external_system_id="errata-id",
+        product_ref=variant_name,
+        software_build=sb,
+        type=ProductComponentRelation.Type.ERRATA,
+    )
+
+    update_products()
+
+    variant = ProductVariant.objects.get(name=variant_name)
+    assert variant.pnodes.count() == 1
+    assert list(variant.pnodes.values_list("node_type", flat=True)) == [
+        ProductNode.ProductNodeType.INFERRED
+    ]
+    stream = ProductStream.objects.get(name=stream_name)
+    assert stream in variant.productstreams.get_queryset()
+
+    with open("tests/data/prod_defs/proddefs-update-inferred-to-direct.json") as prod_defs:
+        text = prod_defs.read()
+        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+
+    update_products()
+
+    variant.refresh_from_db()
+    assert variant.pnodes.count() == 1
+    assert list(variant.pnodes.values_list("node_type", flat=True)) == [
+        ProductNode.ProductNodeType.DIRECT
+    ]
+    stream.refresh_from_db()
+    assert stream in variant.productstreams.get_queryset()
+
+    assert not ProductComponentRelation.objects.filter(pk=brew_tag_relation.pk).exists()
+    assert ProductComponentRelation.objects.filter(pk=errata_relation.pk).exists()
+    assert mock_reset.called_with(sb.pk)
+
+
+@pytest.mark.django_db
+@patch("corgi.tasks.prod_defs.slow_reset_build_product_taxonomy.delay")
 def test_stream_yum_repos_removed(mock_remove, requests_mock):
     with open("tests/data/prod_defs/proddefs-update.json") as prod_defs:
         text = prod_defs.read()
@@ -278,7 +429,7 @@ def test_stream_yum_repos_removed(mock_remove, requests_mock):
 
 
 @pytest.mark.django_db
-@patch("corgi.tasks.prod_defs.slow_remove_product_from_build.delay")
+@patch("corgi.tasks.prod_defs.slow_reset_build_product_taxonomy.delay")
 def test_stream_yum_repos_to_errata_info_not_removed(mock_remove, requests_mock):
     with open("tests/data/prod_defs/proddefs-update.json") as prod_defs:
         text = prod_defs.read()
@@ -534,11 +685,10 @@ def test_parse_variants_from_brew_tags():
 
 
 @pytest.mark.django_db
-@patch("corgi.tasks.prod_defs.slow_remove_product_from_build.delay")
+@patch("corgi.tasks.prod_defs.slow_reset_build_product_taxonomy.delay")
 @patch("corgi.tasks.prod_defs.slow_save_taxonomy.delay")
 def test_multi_variant_streams(mock_save, mock_remove, requests_mock):
-    """Test that errata_info variants are only attached to an active stream where that stream
-    shares errata_info with an inactive stream"""
+    """Test that errata_info variants are attached to both active stream and inactive streams"""
     with open("tests/data/prod_defs/proddefs-update-multi-stream-variant.json") as prod_defs:
         text = prod_defs.read()
         requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
@@ -575,17 +725,11 @@ def test_multi_variant_streams(mock_save, mock_remove, requests_mock):
     update_products()
 
     ga_stream.refresh_from_db()
-    assert ga_stream.productvariants.get_queryset().count() == 0
+    assert ga_stream.productvariants.get_queryset().count() == 1
     z_stream.refresh_from_db()
     assert z_stream.productvariants.get_queryset().count() == 1
     assert not ProductComponentRelation.objects.filter(product_ref="z_stream").exists()
-    assert mock_remove.called_once_with(
-        (
-            str(sb.pk),
-            "ProductStream",
-            z_stream.pk,
-        )
-    )
+    assert not mock_remove.called
     assert mock_save.called_once_with(sb.build_id, sb.build_type)
 
 
@@ -600,7 +744,7 @@ def test_multi_variant_active_streams(requests_mock):
     update_products()
 
     ga_stream = ProductStream.objects.get(name="ga_stream")
-    assert ga_stream.productvariants.get_queryset().count() == 0
+    assert ga_stream.productvariants.get_queryset().count() == 1
     z_stream = ProductStream.objects.get(name="z_stream")
     assert z_stream.productvariants.get_queryset().count() == 1
 
@@ -608,6 +752,6 @@ def test_multi_variant_active_streams(requests_mock):
     update_products()
 
     ga_stream = ProductStream.objects.get(name="ga_stream")
-    assert ga_stream.productvariants.get_queryset().count() == 0
+    assert ga_stream.productvariants.get_queryset().count() == 1
     z_stream = ProductStream.objects.get(name="z_stream")
     assert z_stream.productvariants.get_queryset().count() == 1

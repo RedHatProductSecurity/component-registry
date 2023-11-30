@@ -9,10 +9,12 @@ from corgi.api.constants import CORGI_API_VERSION
 from corgi.core.constants import GET_LATEST_COMPONENT_STOREDPROC_SQL
 from corgi.core.models import ProductNode
 from tests.factories import (
-    ProductFactory,
     ProductStreamFactory,
+    ProductStreamNodeFactory,
     ProductVariantFactory,
-    ProductVersionFactory, ProductStreamNodeFactory, ProductVariantNodeFactory,
+    ProductVariantNodeFactory,
+    ProductVersionFactory,
+    ProductVersionNodeFactory,
 )
 
 
@@ -48,19 +50,19 @@ def setup_product(
     stream_name: str = "",
     variant_node_type=ProductNode.ProductNodeType.DIRECT,
 ):
-    product = ProductFactory()
     if version_name:
-        version = ProductVersionFactory(name=version_name, products=product)
+        version = ProductVersionFactory(name=version_name)
+        pvnode = ProductVersionNodeFactory(obj=version)
     else:
-        version = ProductVersionFactory(products=product)
+        pvnode = ProductVersionNodeFactory()
+
     if stream_name:
-        stream = ProductStreamFactory(
-            name=stream_name, products=product, productversions=version, active=True
-        )
+        stream = ProductStreamFactory(name=stream_name)
+        psnode = ProductStreamNodeFactory(obj=stream, parent=pvnode)
     else:
         psnode = ProductStreamNodeFactory()
-    stream = psnode.obj
 
+    stream = psnode.obj
     pvariant = ProductVariantFactory(name="1")
     pvariant_node = ProductVariantNodeFactory(
         obj=pvariant, parent=psnode, node_type=variant_node_type

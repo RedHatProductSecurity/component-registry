@@ -14,12 +14,12 @@ from corgi.core.models import (
     ProductComponentRelation,
     ProductStream,
     ProductVariant,
-    ProductVersion,
+    ProductVersion, ProductNode,
 )
 from corgi.tasks.prod_defs import (
     _find_by_cpe,
     _match_and_save_stream_cpes,
-    update_products,
+    update_products, _parse_variants_from_brew_tags, _create_inferred_variants,
 )
 from tests.factories import (
     ProductStreamFactory,
@@ -503,6 +503,60 @@ def test_brew_tag_matching(variant_name, cpe, brew_tag, stream_name, requests_mo
     stream = ProductStream.objects.get(name=stream_name)
     assert stream.productvariants.get_queryset().count() == 0
     assert stream.cpes_from_brew_tags == [cpe]
+
+
+@pytest.mark.django_db
+def test_parse_variants_from_brew_tags():
+    # "quay-3.8-rhel-8", , "quay-3.9-rhel-8",
+    brew_tag = "quay-3.9-rhel-8-container"
+    brew_tags = [brew_tag]
+    et_product = CollectorErrataProduct.objects.create(et_id=142, name="Red Hat Quay")
+    et_product_version = CollectorErrataProductVersion.objects.create(
+        et_id=1268, name="Quay-3-RHEL-8", product=et_product, brew_tags=brew_tags
+    )
+    variant_name = "8Base-Quay-3"
+    cpe = "cpe:/a:redhat:quay:3::el8"
+    CollectorErrataProductVariant.objects.create(
+        et_id=3042, name=variant_name, product_version=et_product_version, cpe=cpe
+    )
+
+    result = _parse_variants_from_brew_tags(brew_tags)
+    assert result == {variant_name: cpe}
+
+    # Now add another brew_tag to the ProductVersion, and verify a single variant is returned
+    other_brew_tag = "quay-3.8-rhel-8-container"
+    brew_tags.append(other_brew_tag)
+    et_product_version.brew_tags = brew_tags
+    et_product_version.save()
+
+    result = _parse_variants_from_brew_tags([other_brew_tag])
+    assert result == {variant_name: cpe}
+
+@pytest.mark.django_db
+def test_create_inferred_variants():
+    variant_name = "8Base-Quay-3"
+    cpe = "cpe:/a:redhat:quay:3::el8"
+    variants_and_cpes = {variant_name: cpe}
+    product_stream = ProductStreamFactory()
+    product = product_stream.products
+    product_version = product_stream.productversions
+    stream_node = ProductNode.objects.create(parent=None, object_id=product_stream.pk, obj=product_stream)
+    _create_inferred_variants(variants_and_cpes, product, product_version, product_stream, stream_node)
+
+    new_variant = ProductVariant.objects.get(name=variant_name)
+    assert ProductNode.objects.filter(parent=stream_node, object_id=new_variant.pk).exists()
+    assert product_stream == new_variant.productstreams
+
+    # Now create a new stream and verify this is a single variant obj with multiple ProductNodes attached,
+    # one for each stream
+    other_product_stream = ProductStreamFactory(products=product, productversions=product_version)
+    other_stream_node = ProductNode.objects.create(parent=None, object_id=other_product_stream.pk, obj=other_product_stream)
+    _create_inferred_variants(variants_and_cpes, product, product_version, other_product_stream, other_stream_node)
+    assert ProductNode.objects.filter(parent=stream_node, object_id=new_variant.pk).exists()
+    assert ProductNode.objects.filter(parent=other_stream_node, object_id=new_variant.pk).exists()
+    assert product_stream == new_variant.productstreams
+    assert other_product_stream == new_variant.productstreams
+
 
 
 @pytest.mark.django_db

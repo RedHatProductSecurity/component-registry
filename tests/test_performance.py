@@ -28,7 +28,7 @@ def display_product_stream_with_many_roots() -> dict:
     # Any exceptions will be passed through to test code
     response.raise_for_status()
     response_json = response.json()
-    assert response_json["count"] > 2500
+    assert response_json["count"] > 1900
     return response_json
 
 

@@ -217,7 +217,6 @@ class ComponentNode(NodeModel):
                 fields=("tree_id", "lft", "purl", "parent_id"),
                 name="core_cn_tree_lft_purl_prnt_idx",
             ),
-            models.Index(fields=("lft", "tree_id"), name="core_cn_lft_tree_idx"),
             models.Index(fields=("lft", "rght", "tree_id"), name="core_cn_lft_rght_tree_idx"),
             *NodeModel.Meta.indexes,
         )

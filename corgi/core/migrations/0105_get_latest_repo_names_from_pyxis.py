@@ -20,7 +20,9 @@ def get_latest_repo_names_from_pyxis(apps, schema_editor) -> None:
         .iterator()
     )
     for nvr in brew_container_nvrs:
-        slow_update_name_for_container_from_pyxis.delay(nvr)
+        # Schedule these tasks at the back of the queue
+        # so bulk data loading doesn't block more important daily tasks
+        slow_update_name_for_container_from_pyxis.apply_async(args=(nvr,), priority=9)
 
         # Set this so they are not re-processed next run
         containers_to_update = Component.objects.filter(

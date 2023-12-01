@@ -30,7 +30,7 @@ from corgi.tasks.sca import cpu_software_composition_analysis
 logger = get_task_logger(__name__)
 
 
-@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
+@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS, priority=6)
 def slow_fetch_pyxis_manifest(
     oid: str,
     save_product: bool = True,
@@ -55,7 +55,7 @@ def slow_fetch_pyxis_manifest(
     return result
 
 
-@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
+@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS, priority=6)
 def slow_fetch_pyxis_image_by_nvr(nvr: str, force_process=False) -> str:
     """Checks if the image exist in the cache and only fetch if not, or force_process is true"""
     repo_names = list(
@@ -68,7 +68,7 @@ def slow_fetch_pyxis_image_by_nvr(nvr: str, force_process=False) -> str:
     return repo_names[0]
 
 
-@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
+@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS, priority=6)
 def slow_update_name_for_container_from_pyxis(nvr: str) -> bool:
     """Fetch a pyxis image and update the container root component with the result"""
     repo_name = slow_fetch_pyxis_image_by_nvr(nvr)

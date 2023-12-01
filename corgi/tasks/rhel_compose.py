@@ -67,6 +67,9 @@ def get_builds(
     processed_builds = 0
     for build_id in relations_query.values_list("build_id", flat=True).distinct().iterator():
         logger.info(f"Processing Compose relation build with id: {build_id}")
-        slow_fetch_modular_build.delay(build_id, force_process=force_process)
+        # Daily tasks / loading compose builds should happen ASAP, there aren't many
+        slow_fetch_modular_build.apply_async(
+            args=(build_id,), kwargs={"force_process": force_process}, priority=0
+        )
         processed_builds += 1
     return processed_builds

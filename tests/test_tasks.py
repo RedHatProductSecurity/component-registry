@@ -196,17 +196,19 @@ def test_slow_handle_shipped_errata(mock_et_constructor, mock_load_errata, mock_
     mock_fetch_brew_build_call = call(
         "corgi.tasks.brew.slow_fetch_brew_build",
         args=(str(missing_build_id), SoftwareBuild.Type.BREW),
+        priority=0,
     )
     mock_refresh_brew_build_tags_call = call(
         "corgi.tasks.brew.slow_refresh_brew_build_tags",
         args=(existing_build_id,),
+        priority=0,
     )
     mock_app.send_task.assert_has_calls(
         [mock_fetch_brew_build_call, mock_refresh_brew_build_tags_call]
     )
 
     # Taxonomy is always force-saved at the end
-    mock_load_errata.delay.assert_called_once_with(str(erratum_id), force_process=True)
+    mock_load_errata.apply_async.assert_called_once_with(args=(str(erratum_id), True), priority=0)
 
 
 def test_slow_handle_shipped_errata_errors():
@@ -242,8 +244,8 @@ def test_slow_refresh_brew_build_tags():
 
         mock_brew_constructor.assert_called_once_with(SoftwareBuild.Type.BREW)
         mock_brew_collector.koji_session.listTags.assert_called_once_with(build_id)
-        mock_load_errata.delay.assert_has_calls(
-            tuple(call(erratum_id) for erratum_id in CLEAN_ERRATA_TAGS)
+        mock_load_errata.apply_async.assert_has_calls(
+            tuple(call(args=(erratum_id,), priority=0) for erratum_id in CLEAN_ERRATA_TAGS)
         )
 
     build.refresh_from_db()

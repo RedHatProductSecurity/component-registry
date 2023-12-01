@@ -16,8 +16,7 @@ from corgi.core.models import (
     ProductStream,
     SoftwareBuild,
 )
-from corgi.tasks.brew import slow_save_taxonomy
-from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
+from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS, slow_save_taxonomy
 from corgi.tasks.sca import save_component
 
 logger = get_task_logger(__name__)
@@ -35,7 +34,12 @@ class MultiplePermissionExceptions(Exception):
         super().__init__(combined_message)
 
 
-@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
+@app.task(
+    base=Singleton,
+    autoretry_for=RETRYABLE_ERRORS,
+    retry_kwargs=RETRY_KWARGS,
+    soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
+)
 def refresh_service_manifests() -> None:
     """Collect data for all Red Hat managed services from product-definitions
     and App Interface, then remove and recreate all services"""
@@ -44,28 +48,48 @@ def refresh_service_manifests() -> None:
     ).distinct()
     service_metadata = AppInterface.fetch_service_metadata(services)
 
-    # Find previous builds and delete them and their components, so we can create a fresh
-    # manifest structure for each "new" build. This is done specifically because we don't
-    # have a way to tie a set of components to a specific build right now,
-    # so we construct an arbitrary build periodically even if nothing has changed since
-    # the last time we looked. Historical data is not needed as of right now.
-
     # Delete all APP_INTERFACE builds in advance, before we start creating anything.
     # Services can reuse components, so this avoids deleting a build / component for one service
     # while trying to create the same build / component for another service in another task.
     # This also cleans up any old builds / components which were removed from product-definitions.
     # We should recreate builds / components that are still present in prod-defs
     # when we process the list of components for that service below.
-    SoftwareBuild.objects.filter(build_type=SoftwareBuild.Type.APP_INTERFACE).delete()
-    ProductComponentRelation.objects.filter(
-        type=ProductComponentRelation.Type.APP_INTERFACE
-    ).delete()
-    # TODO: Deleting the build deletes the linked root component
-    #  but what about the root component's child (provided / upstream) components?
-    #  Check cleanup logic
+    remove_old_services_data()
 
     for service, components in service_metadata.items():
         cpu_manifest_service.delay(service.name, components)
+
+
+def remove_old_services_data():
+    """Find previous builds and delete them and their components,
+    so we can create a fresh manifest structure for each "new" build."""
+    # This is done specifically because we don't have a way
+    # to tie a set of components to a specific build right now,
+    # so we construct an arbitrary build periodically even if nothing has changed since
+    # the last time we looked. Historical data is not needed as of right now.
+    ProductComponentRelation.objects.filter(
+        type=ProductComponentRelation.Type.APP_INTERFACE
+    ).delete()
+
+    for build in SoftwareBuild.objects.filter(build_type=SoftwareBuild.Type.APP_INTERFACE):
+        for root_component in build.components.get_queryset():
+            child_pks_to_delete = set()
+
+            # Delete child components, if they're only provided by the root we're about to delete
+            for provided_component in root_component.provides.get_queryset():
+                if provided_component.cnodes.count() == 1:
+                    child_pks_to_delete.add(provided_component.pk)
+
+            # Delete child components, if they're only upstream of the root we're about to delete
+            for upstream_component in root_component.upstreams.get_queryset():
+                if upstream_component.cnodes.count() == 1:
+                    child_pks_to_delete.add(upstream_component.pk)
+
+            # Nodes will be automatically deleted when their linked component is deleted
+            Component.objects.filter(pk__in=child_pks_to_delete).delete()
+
+        # Root components will be automatically deleted when their linked build is deleted
+        build.delete()
 
 
 @app.task(
@@ -221,7 +245,25 @@ def cpu_manifest_service(stream_name: str, service_components: list) -> None:
                     f"Service component {service_component['name']} for service {stream_name} "
                     f"had a child component {component}"
                 )
-                obj_or_node_created = save_component(component, root_node)
+
+                try:
+                    obj_or_node_created = save_component(component, root_node)
+
+                except ValueError:
+                    # Sometimes a duplicate component already exists, but can't be found
+                    # e.g. when Syft's combined "version-release" doesn't match
+                    # a separate "version" and "release" we created using Brew data
+                    version_and_release = component["meta"]["version"].split("-", 1)
+
+                    if len(version_and_release) != 2:
+                        # We didn't have a combined version-release like we expected
+                        raise
+
+                    # Else we did have a combined version-release
+                    # Split these out into separate fields, then try again to save this component
+                    component["meta"]["version"], component["meta"]["release"] = version_and_release
+                    obj_or_node_created = save_component(component, root_node)
+
                 if obj_or_node_created:
                     created_count += 1
 
@@ -237,7 +279,8 @@ def cpu_manifest_service(stream_name: str, service_components: list) -> None:
                 type=ProductComponentRelation.Type.APP_INTERFACE,
             )
 
-        slow_save_taxonomy(build.build_id, build.build_type)
+        # Give the transaction time to commit, before looking up the build we just created
+        slow_save_taxonomy.apply_async(args=(build.build_id, build.build_type), countdown=10)
 
         logger.info(
             f"Finished processing service component {service_component['name']} "

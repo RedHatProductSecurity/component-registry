@@ -1,7 +1,7 @@
 import logging
 
 from django.core.validators import EMPTY_VALUES
-from django.db.models import QuerySet, Subquery
+from django.db.models import QuerySet
 from django.http import Http404
 from django_filters.rest_framework import BooleanFilter, CharFilter, Filter, FilterSet
 
@@ -171,13 +171,14 @@ class ComponentFilter(FilterSet):
         if value in EMPTY_VALUES:
             # User gave an empty ?param= so return the unfiltered queryset
             return queryset
-        source_uuids = (
+        sources = list(
             queryset.prefetch_related("sources")
             .filter(purl__iregex=value)
+            .order_by()
             .values_list("sources", flat=True)
             .distinct()
         )
-        return Component.objects.filter(uuid__in=Subquery(source_uuids))
+        return queryset.filter(uuid__in=sources)
 
     @staticmethod
     def filter_provides_name(
@@ -187,10 +188,14 @@ class ComponentFilter(FilterSet):
         if value in EMPTY_VALUES:
             # User gave an empty ?param= so return the unfiltered queryset
             return queryset
-        source_uuids = (
-            queryset.prefetch_related("sources").filter(name=value).values("sources").distinct()
+        sources = list(
+            queryset.prefetch_related("sources")
+            .filter(name=value)
+            .order_by()
+            .values_list("sources", flat=True)
+            .distinct()
         )
-        return Component.objects.filter(uuid__in=Subquery(source_uuids))
+        return queryset.filter(uuid__in=sources)
 
     @staticmethod
     def filter_re_provides_name(
@@ -200,13 +205,14 @@ class ComponentFilter(FilterSet):
         if value in EMPTY_VALUES:
             # User gave an empty ?param= so return the unfiltered queryset
             return queryset
-        source_uuids = (
+        sources = list(
             queryset.prefetch_related("sources")
             .filter(name__iregex=value)
+            .order_by()
             .values_list("sources", flat=True)
             .distinct()
         )
-        return Component.objects.filter(uuid__in=Subquery(source_uuids))
+        return queryset.filter(uuid__in=sources)
 
     @staticmethod
     def filter_gomod_components(

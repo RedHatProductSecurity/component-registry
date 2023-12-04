@@ -1683,7 +1683,8 @@ def test_get_product_details():
 
 @pytest.mark.django_db
 def test_get_product_details_inferred():
-    """Make sure that INFERRED variants don't get their parent product models added to the results"""
+    """Make sure that INFERRED variants don't get their parent product models added to the
+    results"""
     variant = ProductVariantFactory()
     create_variant_node_tree(variant, ProductNode.ProductNodeType.INFERRED)
     result = get_product_details((variant,), [])

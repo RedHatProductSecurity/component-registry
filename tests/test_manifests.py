@@ -6,7 +6,12 @@ import pytest
 
 from corgi.core.files import ProductManifestFile
 from corgi.core.fixups import cpe_lookup
-from corgi.core.models import Component, ComponentNode, ProductComponentRelation, ProductNode
+from corgi.core.models import (
+    Component,
+    ComponentNode,
+    ProductComponentRelation,
+    ProductNode,
+)
 from corgi.web.templatetags.base_extras import provided_relationship
 
 from .conftest import setup_product

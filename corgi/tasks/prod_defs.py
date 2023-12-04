@@ -227,18 +227,20 @@ def _parse_variants_from_brew_tags(brew_tags: list[str]) -> dict[str, str]:
             brew_tags__overlap=[trimmed_brew_tag, sans_container_released]
         ).values("variants__name", "variants__cpe")
         for variant in variant_data:
-            distinct_variants[variant["variants__name"]] = variant["variants__cpe"]
+            if variant["variants__name"]:
+                distinct_variants[variant["variants__name"]] = variant["variants__cpe"]
 
     return distinct_variants
 
 
 def _create_inferred_variants(
-    variants_and_cpes: dict[str, str],
+    brew_tag_names: list[str],
     product: Product,
     product_version: ProductVersion,
     product_stream: ProductStream,
     parent: ProductNode,
 ) -> None:
+    variants_and_cpes = _parse_variants_from_brew_tags(brew_tag_names)
     for variant_name, cpe in variants_and_cpes.items():
         variant, created = ProductVariant.objects.update_or_create(
             name=variant_name,
@@ -303,12 +305,7 @@ def parse_product_stream(
     if match_version := RE_VERSION_LIKE_STRING.search(name):
         version = match_version.group()
 
-    cpes_from_brew_tags = _parse_cpes_from_brew_tags(brew_tags_dict, name, product_version.name)
     brew_tag_names = brew_tags_dict.keys()
-    # TODO stop setting variants_from_brew_tags on meta_attr and just get the data from the linked
-    #  (INFERRED) Variants
-    variants_and_cpes = _parse_variants_from_brew_tags(list(brew_tag_names))
-    pd_product_stream["variants_from_brew_tags"] = list(variants_and_cpes.keys())
     pd_product_stream["releases_from_brew_tags"] = _parse_releases_from_brew_tags(brew_tag_names)
 
     logger.debug("Creating or updating Product Stream: name=%s", name)
@@ -328,7 +325,6 @@ def parse_product_stream(
             "exclude_components": exclude_components,
             # reset by _match_and_save_stream_cpes
             "cpes_matching_patterns": [],
-            "cpes_from_brew_tags": cpes_from_brew_tags,
         },
     )
     product_stream_node, _ = ProductNode.objects.get_or_create(
@@ -340,7 +336,7 @@ def parse_product_stream(
     )
 
     _create_inferred_variants(
-        variants_and_cpes, product, product_version, product_stream, product_stream_node
+        list(brew_tag_names), product, product_version, product_stream, product_stream_node
     )
 
     parse_errata_info(errata_info, product, product_stream, product_stream_node, product_version)
@@ -474,18 +470,14 @@ def parse_errata_info(
                         },
                     },
                 )
-                # TODO if the ProductNode exists and is of the inferred type, change it to a direct
-                # TODO move parent out of defaults and into kw args to allow linking this variant to
-                #  multiple streams
-                # If multiple active streams share the same errata_info,
-                # use update to relink the node to a different parent product_stream_node
-                # the last matching stream always wins / gets the link
+                # TODO linking this variant to multiple streams. quarkus-2.13 stream for example now
+                #  has both DIRECT and INFERRED relationships. Prefer DIRECT over INFERRED if
+                #  possible. If not possible create both
                 node, node_created = ProductNode.objects.get_or_create(
+                    parent=product_stream_node,
                     object_id=product_variant.pk,
-                    defaults={
-                        "parent": product_stream_node,
-                        "obj": product_variant,
-                    },
+                    type=ProductNode.ProductNodeType.DIRECT,
+                    defaults={"obj": product_variant},
                 )
                 # TODO, stop updating the parent as stream -> variant is now many-to-many
                 if node.parent != product_stream_node:

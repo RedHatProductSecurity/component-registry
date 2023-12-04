@@ -12,13 +12,11 @@ from corgi.collectors.models import (
 from corgi.core.models import (
     Product,
     ProductComponentRelation,
-    ProductNode,
     ProductStream,
     ProductVariant,
     ProductVersion,
 )
 from corgi.tasks.prod_defs import (
-    _create_inferred_variants,
     _find_by_cpe,
     _match_and_save_stream_cpes,
     _parse_variants_from_brew_tags,
@@ -485,7 +483,7 @@ brew_tag_streams = [
 ]
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 @pytest.mark.parametrize("variant_name,cpe,brew_tag,stream_name", brew_tag_streams)
 def test_brew_tag_matching(variant_name, cpe, brew_tag, stream_name, requests_mock):
     et_product = CollectorErrataProduct.objects.create(et_id=1, name="product")
@@ -505,7 +503,7 @@ def test_brew_tag_matching(variant_name, cpe, brew_tag, stream_name, requests_mo
 
     stream = ProductStream.objects.get(name=stream_name)
     assert stream.productvariants.get_queryset().count() == 1
-    assert stream.cpes_from_brew_tags == [cpe]
+    assert list(stream.productvariants.values_list("cpe", flat=True)) == [cpe]
 
 
 @pytest.mark.django_db

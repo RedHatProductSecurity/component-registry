@@ -299,15 +299,13 @@ def _get_errata_search_criteria(stream_name) -> tuple[list[str], list[int]]:
     if stream.productvariants.exists():
         # This allows us to also load errata for streams with errata_info
         return list(stream.productvariants.values_list("name", flat=True)), []
-    variant_names = stream.meta_attr.get("variants_from_brew_tags", [])
     # This covers some streams such as rhes-3.5 which have brew tags overridden by releases so
     # don't match any ET product versions and therefore variants.
-    if not variant_names:
-        release_ids = stream.meta_attr.get("releases_from_brew_tags", [])
-    else:
-        release_ids = []
-        # Could be a stream with no build info, composes or yum_repositories
-        logger.warning(
-            f"Tried to load errata for a stream without brew_tags or variants: {stream_name}"
-        )
-    return variant_names, release_ids
+    release_ids = stream.meta_attr.get("releases_from_brew_tags", [])
+    if release_ids:
+        return [], release_ids
+    # Could be a stream with no build info, composes or yum_repositories
+    logger.warning(
+        f"Tried to load errata for a stream without brew_tags or variants: {stream_name}"
+    )
+    return [], []

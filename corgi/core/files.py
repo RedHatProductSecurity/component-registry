@@ -90,11 +90,4 @@ class ProductManifestFile(ManifestFile):
         hardcoded_cpes = cpe_lookup(model.name)  # type: ignore[attr-defined]
         if hardcoded_cpes:
             return hardcoded_cpes
-        # TODO move this logic into ProductStream.cpes property
-        cpes_from_variants = model.cpes  # type: ignore[attr-defined]
-        if cpes_from_variants:
-            return set(cpes_from_variants)
-
-        matched_cpes = set(model.cpes_matching_patterns)  # type: ignore[attr-defined]
-        matched_cpes.update(model.cpes_from_brew_tags)  # type: ignore[attr-defined]
-        return matched_cpes
+        return set(model.cpes)  # type: ignore[attr-defined]

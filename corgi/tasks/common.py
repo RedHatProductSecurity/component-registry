@@ -102,10 +102,11 @@ def create_relations(
                 # It was done to avoid updating the collector models not to use build_id as
                 # a primary key. It's possible because the only product stream (openstack-rdo)
                 # stored in CENTOS koji doesn't use modules
+                refresh_task_kwargs = {"build_id": build_id}
                 if build_type == SoftwareBuild.Type.CENTOS:
-                    refresh_task.delay(build_id=build_id, build_type=SoftwareBuild.Type.CENTOS)
-                else:
-                    refresh_task.delay(build_id=build_id)
+                    refresh_task_kwargs["build_type"] = build_type
+                # Daily tasks to create relations should finish ASAP
+                refresh_task.apply_async(kwargs=refresh_task_kwargs, priority=0)
             no_of_relations += 1
     return no_of_relations
 
@@ -168,6 +169,7 @@ def slow_save_taxonomy(build_id: str, build_type: str) -> None:
     """Helper function to call save_product_taxonomy()
     and save_component_taxonomy() in a separate task
     to reduce the risk of timeouts in slow_fetch_brew_build"""
+    # This task has implicit priority 0 so data is linked and becomes searchable ASAP
     logger.info(f"Saving product taxonomy for {build_type} build {build_id}")
     build = SoftwareBuild.objects.get(build_id=build_id, build_type=build_type)
     build.save_product_taxonomy()

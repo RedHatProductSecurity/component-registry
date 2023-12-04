@@ -372,6 +372,19 @@ CELERY_TASK_ACKS_LATE = True
 # By default, this job is enabled and runs daily at 4am. Disable to keep UMB-triggered task results
 CELERY_RESULT_EXPIRES = None
 
+# Support setting custom priorities in our queues
+# so more important tasks can jump ahead of less important ones
+# and a large number of one-off tasks / bulk data loads
+# don't block daily tasks or Brew, Pyxis, SBOMer, UMB, etc. event handling:
+# https://docs.celeryq.dev/en/stable/userguide/routing.html#redis-message-priorities
+# Use priority 0 / no priority for e.g. taxonomy-saving tasks that must finish ASAP,
+# 3 for e.g. errata tasks that happen less than "very often" and don't fill up queues,
+# 6 for e.g. Brew / Pyxis tasks that happen very often and may cause backlogs,
+# and 9 for bulk data processing that does not need to complete immediately
+CELERY_BROKER_TRANSPORT_OPTIONS = {
+    "queue_order_strategy": "priority",
+}
+
 CELERY_TASK_ROUTES = (
     [
         ("corgi.tasks.*.slow_*", {"queue": "slow"}),  # Any module's slow_* tasks go to 'slow' queue

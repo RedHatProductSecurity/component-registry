@@ -43,7 +43,7 @@ from corgi.tasks.sca import cpu_software_composition_analysis
 logger = get_task_logger(__name__)
 
 
-@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
+@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS, priority=6)
 def slow_fetch_brew_build(
     build_id: str,
     build_type: str = BUILD_TYPE,
@@ -196,7 +196,7 @@ def update_relation_software_build_fk(
     ).update(software_build=softwarebuild)
 
 
-@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
+@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS, priority=3)
 def slow_fetch_modular_build(
     build_id: str, save_product: bool = True, force_process: bool = False
 ) -> bool:
@@ -205,6 +205,7 @@ def slow_fetch_modular_build(
     # Some compose build_ids in the relations table will be for SRPMs, skip those here
     if not rhel_module_data:
         logger.info("No module data fetched for build %s from Brew, exiting...", build_id)
+        # Non-modular Brew builds can be fetched with the default priority
         slow_fetch_brew_build.delay(build_id, force_process=force_process)
         return False
     # Note: module builds don't include arch information, only the individual RPMs that make up a
@@ -233,12 +234,20 @@ def slow_fetch_modular_build(
         # Request fetch of the SRPM build_ids here to ensure software_builds are created and linked
         # to the RPM components. We don't link the SRPM into the tree because some of it's RPMs
         # might not be included in the module
+        # Brew build fetches here should have higher than default 6 priority
+        # since they are needed for the module fetch with default 3 priority
         if "brew_build_id" in component:
-            slow_fetch_brew_build.delay(
-                component["brew_build_id"], save_product=save_product, force_process=force_process
+            slow_fetch_brew_build.apply_async(
+                args=(component["brew_build_id"],),
+                kwargs={"save_product": save_product, "force_process": force_process},
+                priority=3,
             )
         any_child_created |= save_component(component, node)
-    slow_fetch_brew_build.delay(build_id, save_product=save_product, force_process=force_process)
+    slow_fetch_brew_build.apply_async(
+        args=(build_id,),
+        kwargs={"save_product": save_product, "force_process": force_process},
+        priority=3,
+    )
     logger.info("Finished fetching modular build: %s", build_id)
     return created or node_created or any_child_created
 
@@ -610,6 +619,7 @@ def get_container_repo_from_pyxis(name_label: str, nvr: str, force_process=False
     autoretry_for=RETRYABLE_ERRORS,
     retry_kwargs=RETRY_KWARGS,
     soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
+    priority=6,
 )
 def slow_save_container_children(
     build_id: str,
@@ -813,7 +823,10 @@ def _relation_context_for_stream(stream_name: str) -> tuple[Brew, SoftwareBuild.
 
 def fetch_modular_builds(relations_query: QuerySet, force_process: bool = False) -> None:
     for build_id in relations_query:
-        slow_fetch_modular_build.delay(build_id, force_process=force_process)
+        # Daily tasks / fetching Pulp and Yum modules should finish ASAP
+        slow_fetch_modular_build.apply_async(
+            args=(build_id,), kwargs={"force_process": force_process}, priority=0
+        )
 
 
 def fetch_unprocessed_relations(
@@ -844,11 +857,19 @@ def fetch_unprocessed_relations(
             # It was done to avoid updating the collector models not to use build_id as
             # a primary key. It's possible because the only product stream (openstack-rdo)
             # stored in CENTOS koji doesn't use modules
-            slow_fetch_brew_build.delay(
-                relation.build_id, SoftwareBuild.Type.CENTOS, force_process=force_process
+            slow_fetch_brew_build.apply_async(
+                args=(relation.build_id, SoftwareBuild.Type.CENTOS),
+                kwargs={"force_process": force_process},
+                # Daily tasks to fetch unprocessed relations should finish ASAP
+                priority=0,
             )
         else:
-            slow_fetch_modular_build.delay(relation.build_id, force_process=force_process)
+            slow_fetch_modular_build.apply_async(
+                # Daily tasks to fetch unprocessed relations should finish ASAP
+                args=(relation.build_id,),
+                kwargs={"force_process": force_process},
+                priority=0,
+            )
         processed_builds += 1
     return processed_builds
 
@@ -875,7 +896,7 @@ def fetch_unprocessed_brew_tag_relations(
     )
 
 
-@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
+@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS, priority=6)
 def slow_update_brew_tags(build_id: str, tag_added: str = "", tag_removed: str = "") -> str:
     """Update a build's list of tags in Corgi when they change in Brew"""
     if not tag_added and not tag_removed:
@@ -953,7 +974,8 @@ def slow_refresh_brew_build_tags(build_id: int) -> None:
         build.save()
 
     for erratum_id in sorted(new_errata_tags):
-        slow_load_errata.delay(erratum_id)
+        # Erratum has been released, we need to create / update it ASAP
+        slow_load_errata.apply_async(args=(erratum_id,), priority=0)
     logger.info(f"Finished refreshing Brew build tags for {build_id}")
 
 
@@ -962,6 +984,7 @@ def slow_refresh_brew_build_tags(build_id: int) -> None:
     autoretry_for=RETRYABLE_ERRORS,
     retry_kwargs=RETRY_KWARGS,
     soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
+    priority=3,
 )
 def slow_delete_brew_build(build_id: int, build_state: int) -> int:
     """Delete a Brew build (and its relations) in Corgi when it's deleted in Brew"""

@@ -57,27 +57,29 @@ def test_fetch_module_data(mock_brew_rpm_lookup, mock_brew_srpm_lookup, requests
 
 
 @pytest.mark.django_db
-@patch("corgi.collectors.brew.Brew.fetch_rhel_module", return_value={})
 @patch("corgi.tasks.brew.slow_fetch_brew_build.delay")
+@patch("corgi.collectors.brew.Brew.fetch_rhel_module", return_value={})
 def test_get_builds(mock_fetch_rhel_module, mock_slow_fetch_brew_build):
     get_builds()
-    assert mock_fetch_rhel_module.call_count == 0
-    assert mock_slow_fetch_brew_build.call_count == 0
+    mock_fetch_rhel_module.assert_not_called()
+    mock_slow_fetch_brew_build.assert_not_called()
     ProductComponentRelation.objects.create(
         type=ProductComponentRelation.Type.COMPOSE, build_id=module_build_id
     )
     with patch(
-        "corgi.tasks.brew.slow_fetch_modular_build.delay",
+        "corgi.tasks.brew.slow_fetch_modular_build.apply_async",
         return_value=slow_fetch_modular_build(module_build_id),
     ) as mock_fetch_compose:
         get_builds()
-        assert mock_fetch_compose.call_count == 1
-    assert mock_fetch_rhel_module.call_count == 1
-    assert mock_slow_fetch_brew_build.call_count == 1
+        mock_fetch_compose.assert_called_once_with(
+            args=("0",), kwargs={"force_process": False}, priority=0
+        )
+    mock_fetch_rhel_module.assert_called_once_with("0")
+    mock_slow_fetch_brew_build.assert_called_once_with("0", force_process=False)
 
 
 @pytest.mark.django_db
-@patch("corgi.tasks.brew.slow_fetch_brew_build.delay")
+@patch("corgi.tasks.brew.slow_fetch_brew_build.apply_async")
 def test_fetch_compose_build(mock_fetch_brew):
     modular_rpm = _set_up_rhel_compose()
     slow_fetch_modular_build(module_build_id)
@@ -93,7 +95,7 @@ def test_fetch_compose_build(mock_fetch_brew):
 
 
 @pytest.mark.django_db
-@patch("corgi.tasks.brew.slow_fetch_brew_build.delay")
+@patch("corgi.tasks.brew.slow_fetch_brew_build.apply_async")
 def test_updated_module_node_purl_generation(mock_fetch_brew):
     """Test that purls on RPM modules, and on ComponentNodes linked to them,
     are generated and saved correctly on both whenever the component changes"""
@@ -192,14 +194,14 @@ def mock_fetch_rpm_data(compose_url, variants):
 
 
 @pytest.mark.django_db
-@patch("corgi.tasks.brew.slow_fetch_modular_build.delay")
+@patch("corgi.tasks.brew.slow_fetch_modular_build.apply_async")
 @patch("corgi.collectors.rhel_compose.RhelCompose._fetch_rpm_data", new=mock_fetch_rpm_data)
 def test_save_compose(mock_fetch_modular_build, requests_mock):
     composes = {
         f"{TEST_DOWNLOAD_URL}/rhel-8/rel-eng/RHEL-8/RHEL-8.4.0-RC-1.2/compose": ["AppStream"]
     }
     compose_url = next(iter(composes))
-    for path in ["composeinfo", "rpms", "osbs", "modules"]:
+    for path in ("composeinfo", "rpms", "osbs", "modules"):
         with open(f"tests/data/compose/RHEL-8.4.0-RC-1.2/{path}.json") as compose:
             requests_mock.get(f"{compose_url}/metadata/{path}.json", text=compose.read())
     product_version = ProductVersionFactory()
@@ -213,3 +215,5 @@ def test_save_compose(mock_fetch_modular_build, requests_mock):
     relation = ProductComponentRelation.objects.get(product_ref=product_stream)
     assert relation.type == ProductComponentRelation.Type.COMPOSE
     assert relation.external_system_id == "RHEL-8.4.0-20210503.1"
+    assert requests_mock.call_count == 3  # TODO: Request for one path isn't being made?
+    mock_fetch_modular_build.assert_called_once_with(kwargs={"build_id": "1533085"}, priority=0)

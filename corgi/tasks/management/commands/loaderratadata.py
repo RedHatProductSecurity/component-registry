@@ -45,7 +45,8 @@ class Command(BaseCommand):
                 if options["inline"]:
                     slow_load_errata(erratum_id, force_process=options["force"])
                 else:
-                    slow_load_errata.delay(erratum_id, force_process=options["force"])
+                    # Tasks users run manually with management commands should finish ASAP
+                    slow_load_errata.apply_async(args=(erratum_id, options["force"]), priority=0)
         elif options["repos"]:
             self.stdout.write(self.style.SUCCESS("Loading channels"))
             if options["inline"]:

@@ -20,23 +20,24 @@ def get_latest_repo_names_from_pyxis(apps, schema_editor) -> None:
         .iterator()
     )
     for nvr in brew_container_nvrs:
-        slow_update_name_for_container_from_pyxis.delay(nvr)
+        # Schedule these tasks at the back of the queue
+        # so bulk data loading doesn't block more important daily tasks
+        slow_update_name_for_container_from_pyxis.apply_async(args=(nvr,), priority=9)
 
         # Set this so they are not re-processed next run
         containers_to_update = Component.objects.filter(
             type=Component.Type.CONTAINER_IMAGE,
             software_build__build_type=SoftwareBuild.Type.BREW,
             nvr=nvr,
-        )
+        ).iterator()
         checked_containers = []
         for container in containers_to_update:
             container.meta_attr["name_checked"] = True
-            container.save()
             checked_containers.append(container)
         Component.objects.bulk_update(checked_containers, ["meta_attr"])
 
     checked_containers = []
-    for container in Component.objects.filter(meta_attr__name_checked=True):
+    for container in Component.objects.filter(meta_attr__name_checked=True).iterator():
         del container.meta_attr["name_checked"]
         checked_containers.append(container)
     Component.objects.bulk_update(checked_containers, ["meta_attr"])

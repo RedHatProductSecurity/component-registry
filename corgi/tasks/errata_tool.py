@@ -49,7 +49,7 @@ def slow_save_errata_product_taxonomy(erratum_id: int) -> None:
         app.send_task("corgi.tasks.brew.slow_save_taxonomy", args=(build_id, build_type))
 
 
-@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
+@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS, priority=3)
 def slow_load_errata(erratum_name: str, force_process: bool = False) -> None:
     et = ErrataTool()
     erratum_id, shipped_live, is_container = et.get_errata_key_details(erratum_name)
@@ -245,13 +245,21 @@ def slow_handle_shipped_errata(erratum_id: int, erratum_status: str) -> None:
                     app.send_task(
                         "corgi.tasks.brew.slow_fetch_brew_build",
                         args=(str(build_id), SoftwareBuild.Type.BREW),
+                        # The build has shipped, we need it created / updated ASAP
+                        priority=0,
                     )
                 else:
                     logger.info(f"Calling slow_refresh_brew_build_tags for {build_id}")
-                    app.send_task("corgi.tasks.brew.slow_refresh_brew_build_tags", args=(build_id,))
+                    app.send_task(
+                        "corgi.tasks.brew.slow_refresh_brew_build_tags",
+                        args=(build_id,),
+                        # The build has shipped, we need it created / updated ASAP
+                        priority=0,
+                    )
 
     logger.info(f"Calling slow_load_errata for {erratum_id}")
-    slow_load_errata.delay(str(erratum_id), force_process=True)
+    # The erratum has shipped, we need it created / updated ASAP
+    slow_load_errata.apply_async(args=(str(erratum_id), True), priority=0)
     logger.info(f"Finished refreshing tags and taxonomy for all builds on erratum {erratum_id}")
 
 
@@ -280,7 +288,8 @@ def slow_load_stream_errata(
         logger.warning(f"Variant_names and release_ids not populated in {stream_name}")
     for erratum in errata:
         logger.info(f"Loading Errata {erratum} for stream {stream_name}")
-        slow_load_errata.delay(erratum, force_process=force_process)
+        # Daily tasks / loading stream errata should happen ASAP, there aren't many
+        slow_load_errata.apply_async(args=(erratum, force_process), priority=0)
         errata_count += 1
     return errata_count
 

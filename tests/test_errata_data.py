@@ -909,7 +909,7 @@ def test_get_errata_for_release(monkeypatch):
 
 
 @patch("corgi.tasks.errata_tool._get_errata_search_criteria")
-@patch("corgi.tasks.errata_tool.slow_load_errata.delay")
+@patch("corgi.tasks.errata_tool.slow_load_errata.apply_async")
 @patch("corgi.tasks.errata_tool.ErrataTool")
 def test_slow_load_errata_stream(mock_et_collector, mock_load_errata, mock_search_criteria):
     # This needs to return the correct number of arguments for the test to compile, the values are
@@ -924,16 +924,31 @@ def test_slow_load_errata_stream(mock_et_collector, mock_load_errata, mock_searc
     stream = ProductStreamFactory()
     result = slow_load_stream_errata(stream.name)
     assert result == 0
+    mock_search_criteria.assert_called_once_with(stream.name)
+    mock_load_errata.assert_not_called()
+
+    mock_load_errata.reset_mock()
+    mock_search_criteria.reset_mock()
+    mock_search_criteria.return_value = (
+        ["some_variant"],
+        [],
+    )
 
     # Test that a stream with variants calls load for errata matching those variants
     mock_et_collector.return_value.get_errata_matching_variants.return_value = [1]
-    slow_load_stream_errata(stream.name)
-    assert mock_load_errata.call_args == call(1, force_process=True)
+    result = slow_load_stream_errata(stream.name)
+    assert result == 1
+    mock_load_errata.assert_called_once_with(args=(1, True), priority=0)
+    mock_search_criteria.assert_called_once_with(stream.name)
 
+    mock_load_errata.reset_mock()
+    mock_search_criteria.reset_mock()
     mock_search_criteria.return_value = (
         [],
         [100],
     )
     mock_et_collector.return_value.get_errata_for_releases.return_value = {100}
-    slow_load_stream_errata(stream.name, force_process=False)
-    assert mock_load_errata.call_args == call(100, force_process=False)
+    result = slow_load_stream_errata(stream.name, force_process=False)
+    assert result == 1
+    mock_load_errata.assert_called_once_with(args=(100, False), priority=0)
+    mock_search_criteria.assert_called_once_with(stream.name)

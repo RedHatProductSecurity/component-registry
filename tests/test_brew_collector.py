@@ -1356,7 +1356,7 @@ def test_fetch_container_build_rpms(
 
 @pytest.mark.django_db
 @patch("corgi.tasks.brew.Brew")
-@patch("corgi.tasks.brew.slow_fetch_modular_build.delay")
+@patch("corgi.tasks.brew.slow_fetch_modular_build.apply_async")
 def test_load_stream_brew_tags(mock_fetch_modular_build, mock_brew):
     stream = ProductStreamFactory(brew_tags={"rhacm-2.4-rhel-8-container-released": True})
     mock_brew.return_value.get_builds_with_tag.return_value = ["1"]
@@ -1367,12 +1367,12 @@ def test_load_stream_brew_tags(mock_fetch_modular_build, mock_brew):
         type=ProductComponentRelation.Type.BREW_TAG,
     )
     assert new_brew_tag_relation.product_ref == stream.name
-    mock_fetch_modular_build.assert_called_once()
+    mock_fetch_modular_build.assert_called_once_with(kwargs={"build_id": "1"}, priority=0)
 
 
 @pytest.mark.django_db
-@patch("corgi.tasks.brew.slow_fetch_brew_build.delay")
-@patch("corgi.tasks.brew.slow_fetch_modular_build.delay")
+@patch("corgi.tasks.brew.slow_fetch_brew_build.apply_async")
+@patch("corgi.tasks.brew.slow_fetch_modular_build.apply_async")
 def test_load_brew_tags(mock_fetch_modular_build, mock_fetch_brew_build):
     stream = ProductStreamFactory(brew_tags={"rhacm-2.4-rhel-8-container-released": True})
     software_build = SoftwareBuildFactory(build_id="1")
@@ -1404,8 +1404,8 @@ def test_new_software_build_relation(mock_save_prod_tax):
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
-@patch("corgi.tasks.brew.slow_fetch_modular_build.delay")
-@patch("corgi.tasks.brew.slow_fetch_brew_build.delay")
+@patch("corgi.tasks.brew.slow_fetch_modular_build.apply_async")
+@patch("corgi.tasks.brew.slow_fetch_brew_build.apply_async")
 def test_load_unprocessed_relations(mock_fetch_brew_task, mock_fetch_modular_task):
     # We don't attempt to fetch relations where software_build is set
     sb = SoftwareBuildFactory()
@@ -1421,18 +1421,22 @@ def test_load_unprocessed_relations(mock_fetch_brew_task, mock_fetch_modular_tas
     )
     no_processed = fetch_unprocessed_relations()
     assert no_processed == 1
-    mock_fetch_brew_task.assert_called_once()
+    mock_fetch_brew_task.assert_called_once_with(
+        args=("1", SoftwareBuild.Type.CENTOS), kwargs={"force_process": False}, priority=0
+    )
 
     # test fetch by relation_type
     ProductComponentRelationFactory(
         build_type=SoftwareBuild.Type.BREW, build_id=2, type=ProductComponentRelation.Type.COMPOSE
     )
     assert fetch_unprocessed_relations(relation_type=ProductComponentRelation.Type.COMPOSE) == 1
-    mock_fetch_modular_task.assert_called_once()
+    mock_fetch_brew_task.assert_called_once_with(
+        args=("1", SoftwareBuild.Type.CENTOS), kwargs={"force_process": False}, priority=0
+    )
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
-@patch("corgi.tasks.brew.slow_fetch_modular_build.delay")
+@patch("corgi.tasks.brew.slow_fetch_modular_build.apply_async")
 def test_load_unprocessed_relations_filters(mock_fetch_modular_task):
     ProductComponentRelationFactory(
         type=ProductComponentRelation.Type.BREW_TAG,

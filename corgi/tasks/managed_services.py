@@ -48,48 +48,39 @@ def refresh_service_manifests() -> None:
     ).distinct()
     service_metadata = AppInterface.fetch_service_metadata(services)
 
-    # Delete all APP_INTERFACE builds in advance, before we start creating anything.
+    # Delete all APP_INTERFACE relations / builds in advance, before we start creating anything.
     # Services can reuse components, so this avoids deleting a build / component for one service
     # while trying to create the same build / component for another service in another task.
     # This also cleans up any old builds / components which were removed from product-definitions.
     # We should recreate builds / components that are still present in prod-defs
     # when we process the list of components for that service below.
-    remove_old_services_data()
-
-    for service, components in service_metadata.items():
-        cpu_manifest_service.delay(service.name, components)
-
-
-def remove_old_services_data():
-    """Find previous builds and delete them and their components,
-    so we can create a fresh manifest structure for each "new" build."""
-    # This is done specifically because we don't have a way
-    # to tie a set of components to a specific build right now,
-    # so we construct an arbitrary build periodically even if nothing has changed since
-    # the last time we looked. Historical data is not needed as of right now.
     ProductComponentRelation.objects.filter(
         type=ProductComponentRelation.Type.APP_INTERFACE
     ).delete()
 
-    for build in SoftwareBuild.objects.filter(build_type=SoftwareBuild.Type.APP_INTERFACE):
-        for root_component in build.components.get_queryset():
-            child_pks_to_delete = set()
+    # This technically suffers from race conditions
+    # when the last 2 tasks to remove data run at the same time
+    # as the first task to add new data (when there are 3 workers)
+    # Processing by service names or build / component names
+    # or running deletion inside a transaction is more likely to have bugs
 
-            # Delete child components, if they're only provided by the root we're about to delete
-            for provided_component in root_component.provides.get_queryset():
-                if provided_component.cnodes.count() == 1:
-                    child_pks_to_delete.add(provided_component.pk)
+    # Preventing this would be too complex, and actual bugs should be rare
+    # since the last builds we remove are the newest, due to order_by()
+    # and the first builds / service components we recreate are the oldest
+    # So data we're deleting shouldn't normally be reused by data we're recreating
 
-            # Delete child components, if they're only upstream of the root we're about to delete
-            for upstream_component in root_component.upstreams.get_queryset():
-                if upstream_component.cnodes.count() == 1:
-                    child_pks_to_delete.add(upstream_component.pk)
+    # Bugs may happen if the last builds / components we remove (or their dependencies)
+    # start being used for the first time, by the first service we recreate
+    # This should fix itself when data is recreated the next day
+    for build_id in (
+        SoftwareBuild.objects.filter(build_type=SoftwareBuild.Type.APP_INTERFACE)
+        .values_list("build_id", flat=True)
+        .order_by("build_id")
+    ):
+        cpu_remove_old_services_data.delay(build_id)
 
-            # Nodes will be automatically deleted when their linked component is deleted
-            Component.objects.filter(pk__in=child_pks_to_delete).delete()
-
-        # Root components will be automatically deleted when their linked build is deleted
-        build.delete()
+    for service, components in service_metadata.items():
+        cpu_manifest_service.delay(service.name, components)
 
 
 @app.task(
@@ -98,7 +89,47 @@ def remove_old_services_data():
     retry_kwargs=RETRY_KWARGS,
     soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
 )
-def cpu_manifest_service(stream_name: str, service_components: list) -> None:
+def cpu_remove_old_services_data(build_id: int) -> None:
+    """Find previous builds and delete them and their components,
+    so we can create a fresh manifest structure for each "new" build."""
+    # This is done specifically because we don't have a way
+    # to tie a set of components to a specific build right now,
+    # so we construct an arbitrary build periodically even if nothing has changed since
+    # the last time we looked. Historical data is not needed as of right now.
+    build = SoftwareBuild.objects.get(
+        build_id=build_id, build_type=SoftwareBuild.Type.APP_INTERFACE
+    )
+    for root_component in build.components.get_queryset():
+        children_to_delete = set()
+
+        # Delete child components, if they're only provided by the root we're about to delete
+        for provided_component in root_component.provides.get_queryset():
+            if provided_component.cnodes.count() == 1:
+                children_to_delete.add(provided_component.pk)
+
+        # Do this in two steps to reduce size of set / overall memory requirements
+        Component.objects.filter(pk__in=children_to_delete).delete()
+        children_to_delete = set()
+
+        # Delete child components, if they're only upstream of the root we're about to delete
+        for upstream_component in root_component.upstreams.get_queryset():
+            if upstream_component.cnodes.count() == 1:
+                children_to_delete.add(upstream_component.pk)
+
+        # Nodes will be automatically deleted when their linked component is deleted
+        Component.objects.filter(pk__in=children_to_delete).delete()
+
+    # Root components will be automatically deleted when their linked build is deleted
+    build.delete()
+
+
+@app.task(
+    base=Singleton,
+    autoretry_for=RETRYABLE_ERRORS,
+    retry_kwargs=RETRY_KWARGS,
+    soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
+)
+def cpu_manifest_service(stream_name: str, service_components: list[dict[str, str]]) -> None:
     """Analyze components for some Red Hat managed service
     based on data from product-definitions and App Interface"""
     logger.info(f"Manifesting service {stream_name}")

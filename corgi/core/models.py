@@ -435,6 +435,7 @@ class ProductModel(TimeStampedModel):
             .filter(level=MODEL_NODE_LEVEL_MAPPING["ProductVariant"])
             .exclude(type=ProductNode.ProductNodeType.INFERRED)
             .values_list("productvariant__cpe", flat=True)
+            .order_by("productvariant__cpe")
             .distinct()
         )
         if direct_variant_cpes:
@@ -448,7 +449,14 @@ class ProductModel(TimeStampedModel):
             .values_list("productstream__cpes_matching_patterns", flat=True)
             .distinct()
         )
-        indirect_variant_cpes = (
+        distinct_cpes = set(
+            [cpe for cpe_patterns in cpes_matching_patterns for cpe in cpe_patterns]
+        )
+        distinct_cpes.update(self.distinct_inferred_variant_cpes())
+        return tuple(sorted(distinct_cpes))
+
+    def distinct_inferred_variant_cpes(self):
+        inferred_variant_cpes = (
             self.pnodes.get_queryset()
             .get_descendants(include_self=True)
             .using("read_only")
@@ -459,9 +467,8 @@ class ProductModel(TimeStampedModel):
             .values_list("productvariant__cpe", flat=True)
             .distinct()
         )
-        distinct_cpes_matching_patterns = set([cpe for cpe_patterns in cpes_matching_patterns for cpe in cpe_patterns])
-        distinct_cpes_matching_patterns.update(self.qs_to_tuple_no_empty_strings(indirect_variant_cpes))
-        return tuple(distinct_cpes_matching_patterns)
+        distinct_inferred_cpes = self.qs_to_tuple_no_empty_strings(inferred_variant_cpes)
+        return distinct_inferred_cpes
 
     def qs_to_tuple_no_empty_strings(self, direct_variant_cpes: QuerySet) -> tuple[str, ...]:
         """Omit CPEs like ''"""
@@ -473,7 +480,10 @@ class ProductModel(TimeStampedModel):
 
     def save_product_taxonomy(self):
         """Save links between related ProductModel subclasses"""
-        family = self.pnodes.get().get_family()
+        direct_pnode = self._get_direct_pnode_over_inferred()
+        if not direct_pnode:
+            return
+        family = direct_pnode.get_family()
         # Get obj from raw nodes - no way to return related __product obj in values_list()
         products = ProductNode.get_products(family, lookup="").first().obj
         productversions = tuple(
@@ -521,6 +531,15 @@ class ProductModel(TimeStampedModel):
 
         # All ProductModels have a set of descendant channels
         self.channels.set(channels)
+
+    def _get_direct_pnode_over_inferred(self):
+        """Always return a DIRECT pnode if it exists, otherwise return INFERRED"""
+        result = None
+        for pnode in self.pnodes.get_queryset():
+            if pnode.type == ProductNode.ProductNodeType.DIRECT:
+                return pnode
+            result = pnode
+        return result
 
     def get_related_names_of_type(self, mapping_model: type) -> list[str]:
         """For a given ProductModel instance find all directly related nodes with the given model type
@@ -645,7 +664,6 @@ class ProductStream(ProductModel):
     exclude_components = fields.ArrayField(models.CharField(max_length=200), default=list)
 
     cpes_matching_patterns = fields.ArrayField(models.CharField(max_length=1000), default=list)
-    cpes_from_brew_tags = fields.ArrayField(models.CharField(max_length=1000), default=list)
 
     products = models.ForeignKey("Product", on_delete=models.CASCADE, related_name="productstreams")
     productversions = models.ForeignKey(
@@ -720,6 +738,10 @@ class ProductStream(ProductModel):
             .iterator()
         )
         return Component.objects.filter(pk__in=unique_upstreams).using(using)
+
+    @property
+    def cpes_from_brew_tags(self):
+        return self.distinct_inferred_variant_cpes()
 
 
 class ProductStreamTag(Tag):
@@ -1837,7 +1859,6 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         """Build and return a list of CPEs from all Variants this Component relates to"""
         # For each Variant-type relation, get the linked Variant's CPE directly
         # Remove any duplicates, and return the CPEs in sorted order so manifests are stable
-        # TODO review this now that we have INFERRED variants
         return (
             self.productvariants.exclude(cpe="")
             .values_list("cpe", flat=True)

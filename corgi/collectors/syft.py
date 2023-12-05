@@ -158,7 +158,9 @@ class Syft:
                 result = subprocess.run(
                     ["/usr/bin/git", "clone", target_url, scan_dir],
                     capture_output=True,
-                    timeout=120,  # seconds
+                    # ansible-hub-ui build repo is expected to time out
+                    # because it's 785 MB and only growing...
+                    timeout=300,  # seconds
                     env=env,
                 )  # nosec B603
             except subprocess.TimeoutExpired as exc:

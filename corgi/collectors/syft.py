@@ -154,12 +154,15 @@ class Syft:
             # This may fail if we don't have access to the repository. GIT_TERMINAL_PROMPT=0
             # ensures that we don't hang the command on a prompt for a username and password.
             env = dict(os.environ, GIT_TERMINAL_PROMPT="0")
-            result = subprocess.run(
-                ["/usr/bin/git", "clone", target_url, scan_dir],
-                capture_output=True,
-                timeout=120,  # seconds
-                env=env,
-            )  # nosec B603
+            try:
+                result = subprocess.run(
+                    ["/usr/bin/git", "clone", target_url, scan_dir],
+                    capture_output=True,
+                    timeout=120,  # seconds
+                    env=env,
+                )  # nosec B603
+            except subprocess.TimeoutExpired as exc:
+                raise GitCloneError(f"git clone of {target_url} failed with: {exc}")
             if result.returncode != 0:
                 raise GitCloneError(
                     f"git clone of {target_url} failed with: {result.stderr.decode('utf-8')}"

@@ -171,13 +171,11 @@ class ComponentFilter(FilterSet):
         if value in EMPTY_VALUES:
             # User gave an empty ?param= so return the unfiltered queryset
             return queryset
-        sources = list(
+        return (
             queryset.filter(purl__iregex=value)
-            .order_by()
-            .values_list("sources", flat=True)
-            .distinct()
+            .prefetch_related("sources")
+            .filter(software_build__isnull=False)
         )
-        return queryset.filter(uuid__in=sources)
 
     @staticmethod
     def filter_provides_name(
@@ -187,10 +185,11 @@ class ComponentFilter(FilterSet):
         if value in EMPTY_VALUES:
             # User gave an empty ?param= so return the unfiltered queryset
             return queryset
-        sources = list(
-            queryset.filter(name=value).order_by().values_list("sources", flat=True).distinct()
+        return (
+            queryset.filter(name=value)
+            .prefetch_related("sources")
+            .filter(software_build__isnull=False)
         )
-        return queryset.filter(uuid__in=sources)
 
     @staticmethod
     def filter_re_provides_name(
@@ -200,13 +199,11 @@ class ComponentFilter(FilterSet):
         if value in EMPTY_VALUES:
             # User gave an empty ?param= so return the unfiltered queryset
             return queryset
-        sources = list(
+        return (
             queryset.filter(name__iregex=value)
-            .order_by()
-            .values_list("sources", flat=True)
-            .distinct()
+            .prefetch_related("sources")
+            .filter(software_build__isnull=False)
         )
-        return queryset.filter(uuid__in=sources)
 
     @staticmethod
     def filter_gomod_components(

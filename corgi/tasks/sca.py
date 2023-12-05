@@ -94,6 +94,15 @@ def find_duplicate_component(
     # TODO: check Parsley edge-case / error in monitoring email
     if same_name_different_case or dash_underscore_confusion:
         return possible_dupe
+
+    elif "-" in version and not release:
+        # Sometimes a duplicate component already exists, but can't be found
+        # e.g. when Syft's combined "version-release" doesn't match
+        # a separate "version" and "release" we created using Brew data
+        # Split these out into separate fields, then try again to save this component
+        version, release = version.split("-", 1)
+        return find_duplicate_component(component_type, name, version, release, arch)
+
     else:
         # Some other case we need to consider / handle in our code
         raise ValueError(

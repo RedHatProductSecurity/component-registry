@@ -276,25 +276,7 @@ def cpu_manifest_service(stream_name: str, service_components: list[dict[str, st
                     f"Service component {service_component['name']} for service {stream_name} "
                     f"had a child component {component}"
                 )
-
-                try:
-                    obj_or_node_created = save_component(component, root_node)
-
-                except ValueError:
-                    # Sometimes a duplicate component already exists, but can't be found
-                    # e.g. when Syft's combined "version-release" doesn't match
-                    # a separate "version" and "release" we created using Brew data
-                    version_and_release = component["meta"]["version"].split("-", 1)
-
-                    if len(version_and_release) != 2:
-                        # We didn't have a combined version-release like we expected
-                        raise
-
-                    # Else we did have a combined version-release
-                    # Split these out into separate fields, then try again to save this component
-                    component["meta"]["version"], component["meta"]["release"] = version_and_release
-                    obj_or_node_created = save_component(component, root_node)
-
+                obj_or_node_created = save_component(component, root_node)
                 if obj_or_node_created:
                     created_count += 1
 

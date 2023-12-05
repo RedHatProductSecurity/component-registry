@@ -172,8 +172,7 @@ class ComponentFilter(FilterSet):
             # User gave an empty ?param= so return the unfiltered queryset
             return queryset
         sources = list(
-            queryset.prefetch_related("sources")
-            .filter(purl__iregex=value)
+            queryset.filter(purl__iregex=value)
             .order_by()
             .values_list("sources", flat=True)
             .distinct()
@@ -189,11 +188,7 @@ class ComponentFilter(FilterSet):
             # User gave an empty ?param= so return the unfiltered queryset
             return queryset
         sources = list(
-            queryset.prefetch_related("sources")
-            .filter(name=value)
-            .order_by()
-            .values_list("sources", flat=True)
-            .distinct()
+            queryset.filter(name=value).order_by().values_list("sources", flat=True).distinct()
         )
         return queryset.filter(uuid__in=sources)
 
@@ -206,8 +201,7 @@ class ComponentFilter(FilterSet):
             # User gave an empty ?param= so return the unfiltered queryset
             return queryset
         sources = list(
-            queryset.prefetch_related("sources")
-            .filter(name__iregex=value)
+            queryset.filter(name__iregex=value)
             .order_by()
             .values_list("sources", flat=True)
             .distinct()

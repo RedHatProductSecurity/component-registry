@@ -33,7 +33,12 @@ logger = get_task_logger(__name__)
 
 
 def find_duplicate_component(
-    component_type: str, name: str, version: str, release: str, arch: str
+    component_type: str,
+    name: str,
+    version: str,
+    release: str,
+    arch: str,
+    version_release_confusion: bool = False,
 ) -> Component:
     """Find a component with matching type, version, release, and arch but different name
     Raise an error if the mismatch isn't a known edge case"""
@@ -65,7 +70,9 @@ def find_duplicate_component(
             # a separate "version" and "release" we created using Brew data
             # Split these out into separate fields, then try again to save this component
             version, release = version.split("-", 1)
-            return find_duplicate_component(component_type, name, version, release, arch)
+            return find_duplicate_component(
+                component_type, name, version, release, arch, version_release_confusion=True
+            )
 
         # Some other case we need to consider / handle in our code
         raise ValueError(
@@ -101,6 +108,8 @@ def find_duplicate_component(
 
     # TODO: check Parsley edge-case / error in monitoring email
     if same_name_different_case or dash_underscore_confusion:
+        return possible_dupe
+    elif version_release_confusion:
         return possible_dupe
     else:
         # Some other case we need to consider / handle in our code

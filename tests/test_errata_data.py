@@ -35,7 +35,9 @@ from corgi.tasks.errata_tool import (
 from .factories import (
     ProductComponentRelationFactory,
     ProductStreamFactory,
+    ProductStreamNodeFactory,
     ProductVariantFactory,
+    ProductVariantNodeFactory,
     SoftwareBuildFactory,
 )
 
@@ -92,9 +94,7 @@ def test_update_variant_repos():
         "rhel-8-for-aarch64-highavailability-rpms__8",
     ]
     ps = ProductStreamFactory(name="rhel", version="8.2.0")
-    product_node = ProductNode.objects.create(parent=None, obj=ps.products)
-    pv_node = ProductNode.objects.create(parent=product_node, obj=ps.productversions)
-    ps_node = ProductNode.objects.create(parent=pv_node, obj=ps)
+    ps_node = ProductStreamNodeFactory(obj=ps)
 
     et_id = 0
     setup_models_for_variant_repos(sap_repos, ps_node, sap_variant, et_id)
@@ -739,9 +739,14 @@ def test_parse_container_errata_components(requests_mock):
 
 
 def test_get_errata_search_criteria():
-    stream = ProductStreamFactory()
-    base7_variant = ProductVariantFactory(name="7Server-RH7-RHOSE-4.6", productstreams=stream)
-    base8_variant = ProductVariantFactory(name="8Base-RHOSE-4.6", productstreams=stream)
+    ps_node = ProductStreamNodeFactory()
+    stream = ps_node.obj
+
+    base7_variant = ProductVariantFactory(name="7Server-RH7-RHOSE-4.6")
+    ProductVariantNodeFactory(obj=base7_variant, parent=ps_node)
+    base8_variant = ProductVariantFactory(name="8Base-RHOSE-4.6")
+    ProductVariantNodeFactory(obj=base8_variant, parent=ps_node)
+    stream.refresh_from_db()
     result = _get_errata_search_criteria(stream.name)
     stream_variants = [base7_variant.name, base8_variant.name]
     assert result[0] == stream_variants

@@ -4,12 +4,11 @@ import uuid as uuid
 from abc import abstractmethod
 from typing import Any, Iterable, Iterator, Type, Union
 
-from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Q, QuerySet
 from django.db.models.expressions import F, Func, Subquery, Value
 from mptt.managers import TreeManager
@@ -98,9 +97,7 @@ class ProductNode(NodeModel):
             ),
             models.UniqueConstraint(
                 name="unique_pnode_get_or_create_for_null_parent",
-                fields=(
-                    "object_id",
-                ),
+                fields=("object_id",),
                 condition=models.Q(parent__isnull=True),
             ),
         )
@@ -310,6 +307,7 @@ class SoftwareBuild(TimeStampedModel):
         )
 
         product_details = get_product_details(variant_names, stream_names)
+
         components = set()
         for component in self.components.iterator():
             components.add(component)
@@ -324,16 +322,14 @@ class SoftwareBuild(TimeStampedModel):
 
         return None
 
-    def disassociate_with_product(self, product_model_name: str, product_pk: str) -> None:
+    def reset_product_taxonomy(self) -> None:
         """Remove the product references from all components associated with this build."""
-        product_model = apps.get_model("core", product_model_name)
-        product = product_model.objects.get(pk=product_pk)
 
         for component in self.components.iterator():
-            component.disassociate_with_product(product)
+            component.reset_product_taxonomy()
             for cnode in component.cnodes.iterator():
                 for descendant in cnode.get_descendants().iterator():
-                    descendant.obj.disassociate_with_product(product)
+                    descendant.obj.reset_product_taxonomy()
 
 
 class SoftwareBuildTag(Tag):
@@ -472,28 +468,58 @@ class ProductModel(TimeStampedModel):
         """Omit CPEs like ''"""
         return tuple(cpe for cpe in direct_variant_cpes if cpe)
 
-    @abstractmethod
     def get_ofuri(self) -> str:
-        pass
+        model_level = MODEL_NODE_LEVEL_MAPPING[type(self).__name__]
+        if model_level == 0:
+            return f"o:redhat:{self.name}"
+        else:
+            parent_level = model_level - 1
+        return self._build_ofuri(model_level, parent_level)
+
+    def _build_ofuri(self, model_level, target_level) -> str:
+        # No common parents
+        if target_level == -1:
+            return f"o::::{self.name}"
+        ancestor_query = self.pnodes.get_queryset().get_ancestors().filter(level=target_level)
+        parent_count = ancestor_query.count()
+        if parent_count == 0:
+            raise ValueError(f"ProductModel {self.name} is orphaned")
+        if parent_count > 1:
+            # try going up another level to find a common parent
+            return self._build_ofuri(model_level, target_level - 1)
+        else:
+            parent = ancestor_query.first()
+            # ProductVersion and ProductStream take their ofuri from their own name and version
+            if model_level in (
+                1,
+                2,
+            ):
+                name_without_version = re.sub(r"(-|_|)" + self.version + "$", "", self.name)
+                return f"o:redhat:{name_without_version}:{self.version}"
+            # Must be a variant with a single parent (stream)
+            return f"{parent.obj.ofuri}:{self.name}"
 
     def save_product_taxonomy(self):
         """Save links between related ProductModel subclasses"""
-        direct_pnode = self._get_direct_pnode_over_inferred()
-        if not direct_pnode:
-            return
-        family = direct_pnode.get_family()
-        # Get obj from raw nodes - no way to return related __product obj in values_list()
-        products = ProductNode.get_products(family, lookup="").first().obj
-        productversions = tuple(
-            node.obj for node in ProductNode.get_product_versions(family, lookup="")
-        )
-        productstreams = tuple(
-            node.obj for node in ProductNode.get_product_streams(family, lookup="")
-        )
-        productvariants = tuple(
-            node.obj for node in ProductNode.get_product_variants(family, lookup="")
-        )
-        channels = ProductNode.get_channels(family)
+        products = set()
+        productversions = set()
+        productstreams = set()
+        productvariants: set[ProductModel] = set()
+        channels = set()
+        for pnode in self.pnodes.get_queryset():
+            family = pnode.get_family()
+            # Get obj from raw nodes - no way to return related __product obj in values_list()
+            products = ProductNode.get_products(family, lookup="").first().obj
+            productversions.update(
+                node.obj for node in ProductNode.get_product_versions(family, lookup="")
+            )
+            productstreams.update(
+                node.obj for node in ProductNode.get_product_streams(family, lookup="")
+            )
+            productvariants.update(
+                node.obj for node in ProductNode.get_product_variants(family, lookup="")
+            )
+            channels.update(ProductNode.get_channels(family))
 
         # Avoid setting fields on models which don't have them
         # Also set fields correctly based on which side of the relationship we see
@@ -508,19 +534,16 @@ class ProductModel(TimeStampedModel):
             self.products = products  # Should be only one parent object
             self.productstreams.set(productstreams)
             self.productvariants.set(productvariants)
-            self.save()
 
         elif isinstance(self, ProductStream):
             self.products = products
-            self.productversions = productversions[0]
+            self.productversions = productversions.pop()
             self.productvariants.set(productvariants)
-            self.save()
 
         elif isinstance(self, ProductVariant):
             self.products = products
-            self.productversions = productversions[0]
-            self.productstreams = productstreams[0]
-            self.save()
+            self.productversions = productversions.pop()
+            self.productstreams.set(productstreams)
 
         else:
             raise NotImplementedError(
@@ -529,35 +552,29 @@ class ProductModel(TimeStampedModel):
 
         # All ProductModels have a set of descendant channels
         self.channels.set(channels)
-
-    def _get_direct_pnode_over_inferred(self):
-        """Always return a DIRECT pnode if it exists, otherwise return INFERRED"""
-        result = None
-        for pnode in self.pnodes.get_queryset():
-            if pnode.node_type == ProductNode.ProductNodeType.DIRECT:
-                return pnode
-            result = pnode
-        return result
+        self.ofuri = self.get_ofuri()
+        self.save()
 
     def get_related_names_of_type(self, mapping_model: type) -> list[str]:
         """For a given ProductModel instance find all directly related nodes with the given model type
         and return their names"""
         mapping_key = mapping_model.__name__
-        # No .distinct() since __name on all ProductModel subclasses + Channel is always unique
         attribute_name = mapping_key.lower()
-        pnode = self.pnodes.exclude(type=ProductNode.ProductNodeType.INFERRED).first()
-        if pnode:
-            return list(
-                pnode.get_family()
-                .filter(level=MODEL_NODE_LEVEL_MAPPING[mapping_key])
-                .values_list(f"{attribute_name}__name", flat=True)
-                .distinct()
-            )
-        else:
-            return []
+        results = []
+        direct_pnodes = self.pnodes.exclude(node_type=ProductNode.ProductNodeType.INFERRED)
+        if direct_pnodes.exists():
+            for tree in direct_pnodes.get_cached_trees():
+                query = (
+                    tree.get_family()
+                    .filter(level=MODEL_NODE_LEVEL_MAPPING[mapping_key])
+                    .exclude(node_type=ProductNode.ProductNodeType.INFERRED)
+                    .values_list(f"{attribute_name}__name", flat=True)
+                    .distinct()
+                )
+                results.extend(list(query))
+        return results
 
     def save(self, *args, **kwargs):
-        self.ofuri = self.get_ofuri()
         super().save(*args, **kwargs)
 
     class Meta:
@@ -593,13 +610,6 @@ class Product(ProductModel):
     # is created by products field on Component model
     components: "ComponentQuerySet"
 
-    def get_ofuri(self) -> str:
-        """Return product URI
-
-        Ex.: o:redhat:rhel
-        """
-        return f"o:redhat:{self.name}"
-
 
 class ProductTag(Tag):
     tagged_model = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="tags")
@@ -614,7 +624,7 @@ class ProductVersion(ProductModel):
     cpes_matching_patterns = fields.ArrayField(models.CharField(max_length=1000), default=list)
 
     products = models.ForeignKey(
-        "Product", on_delete=models.CASCADE, related_name="productversions"
+        "Product", on_delete=models.CASCADE, related_name="productversions", null=True
     )
 
     @property
@@ -637,14 +647,6 @@ class ProductVersion(ProductModel):
     # is created by productversions field on Component model
     components: "ComponentQuerySet"
 
-    def get_ofuri(self) -> str:
-        """Return product version URI.
-
-        Ex.: o:redhat:rhel:8
-        """
-        version_name = re.sub(r"(-|_|)" + self.version + "$", "", self.name)
-        return f"o:redhat:{version_name}:{self.version}"
-
 
 class ProductVersionTag(Tag):
     tagged_model = models.ForeignKey(ProductVersion, on_delete=models.CASCADE, related_name="tags")
@@ -663,11 +665,11 @@ class ProductStream(ProductModel):
 
     cpes_matching_patterns = fields.ArrayField(models.CharField(max_length=1000), default=list)
 
-    products = models.ForeignKey("Product", on_delete=models.CASCADE, related_name="productstreams")
+    products = models.ForeignKey(
+        "Product", on_delete=models.CASCADE, related_name="productstreams", null=True
+    )
     productversions = models.ForeignKey(
-        "ProductVersion",
-        on_delete=models.CASCADE,
-        related_name="productstreams",
+        "ProductVersion", on_delete=models.CASCADE, related_name="productstreams", null=True
     )
 
     @property
@@ -685,16 +687,6 @@ class ProductStream(ProductModel):
     # implicit "components" field on ProductStream model
     # is created by productstreams field on Component model
     components: "ComponentQuerySet"
-
-    def get_ofuri(self) -> str:
-        """Return product stream URI
-
-        Ex.: o:redhat:rhel:8.2.eus
-
-        TODO: name embeds more then version ... need discussion
-        """
-        stream_name = re.sub(r"(-|_|)" + self.version + "$", "", self.name)
-        return f"o:redhat:{stream_name}:{self.version}"
 
     @property
     def manifest(self) -> str:
@@ -756,15 +748,13 @@ class ProductVariant(ProductModel):
     cpe = models.CharField(max_length=1000, default="")
 
     products = models.ForeignKey(
-        "Product", on_delete=models.CASCADE, related_name="productvariants"
+        "Product", on_delete=models.CASCADE, related_name="productvariants", null=True
     )
     productversions = models.ForeignKey(
-        "ProductVersion", on_delete=models.CASCADE, related_name="productvariants"
+        "ProductVersion", on_delete=models.CASCADE, related_name="productvariants", null=True
     )
     # Below creates implicit "productvariants" field on ProductStream
-    productstreams = models.ForeignKey(
-        ProductStream, on_delete=models.CASCADE, related_name="productvariants"
-    )
+    productstreams = models.ManyToManyField(ProductStream, related_name="productvariants")
 
     @property
     def productvariants(self) -> "ProductVariant":
@@ -783,13 +773,6 @@ class ProductVariant(ProductModel):
         # Split to fix warning that linter and IDE disagree about
         cpes = (self.cpe,)
         return cpes
-
-    def get_ofuri(self) -> str:
-        """Return product variant URI
-
-        Ex.: o:redhat:rhel:8.6.0.z:baseos-8.6.0.z.main.eus
-        """
-        return f"{self.productstreams.ofuri}:{self.name.lower()}"
 
 
 class ProductVariantTag(Tag):
@@ -932,7 +915,6 @@ def get_product_details(
     for variant in ProductVariant.objects.filter(name__in=variant_names):
         variant_streams = variant.get_related_names_of_type(ProductStream)
         stream_names.extend(variant_streams)
-
     product_details: dict[str, set[str]] = {
         "products": set(),
         "productversions": set(),
@@ -2173,34 +2155,71 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         """Return only the purls from the set of all upstream nodes"""
         return self.get_upstreams_nodes(using=using).values_list("purl", flat=True).distinct()
 
-    def disassociate_with_product(self, product_ref: ProductModel) -> None:
+    def reset_component_relations(self) -> None:
+        # in a transaction:
+        # clear the product fields
+        # Find any root nodes
+        # If the root node has any relations
+        pass
+
+    def reset_product_taxonomy(self):
         """Disassociate this component with the passed in ProductModel and any child ProductModels
         in that product's hierarchy. This is the reverse of what happens in save_product_taxonomy.
         """
-        if isinstance(product_ref, Product):
-            self.productvariants.remove(*product_ref.productvariants.get_queryset())
-            self.productstreams.remove(*product_ref.productstreams.get_queryset())
-            self.productversions.remove(*product_ref.productversions.get_queryset())
-            self.products.remove(product_ref)
-        elif isinstance(product_ref, ProductVersion):
-            self.productvariants.remove(*product_ref.productvariants.get_queryset())
-            self.productstreams.remove(*product_ref.productstreams.get_queryset())
-            self.productversions.remove(product_ref)
-            self._check_and_remove_orphaned_product_refs(product_ref, "Product")
-        elif isinstance(product_ref, ProductStream):
-            self.productvariants.remove(*product_ref.productvariants.get_queryset())
-            self.productstreams.remove(product_ref)
-            self._check_and_remove_orphaned_product_refs(product_ref, "ProductVersion")
-            self._check_and_remove_orphaned_product_refs(product_ref, "Product")
-        elif isinstance(product_ref, ProductVariant):
-            self.productvariants.remove(product_ref)
-            self._check_and_remove_orphaned_product_refs(product_ref, "ProductStream")
-            self._check_and_remove_orphaned_product_refs(product_ref, "ProductVersion")
-            self._check_and_remove_orphaned_product_refs(product_ref, "Product")
-        else:
-            raise NotImplementedError(
-                f"Add class {type(product_ref)} to Component.disassociate_with_product()"
+        # Traverse up the tree ancestors to the roots
+        root_pks = set()
+        for cnode in self.cnodes.iterator():
+            for root_pk in (
+                cnode.get_ancestors(include_self=True)
+                .filter(parent=None)
+                # cant filter on component fields for generic foreign key
+                .values_list("component", flat=True)
+                .using("read_only")
+            ):
+                root_pks.add(root_pk)
+        # Get the software builds for roots which have relations
+        software_builds_with_relations = None
+        if root_pks:
+            software_builds_with_relations = (
+                Component.objects.filter(pk__in=root_pks)
+                .exclude(software_build__relations=None)
+                .values_list("software_build")
             )
+
+        # Build an updated product hierarchy for this set of software builds from the
+        # relations table
+        product_details = {}
+        if software_builds_with_relations:
+            variant_names = tuple(
+                ProductComponentRelation.objects.filter(
+                    software_build__in=software_builds_with_relations,
+                    type__in=ProductComponentRelation.VARIANT_TYPES,
+                )
+                .values_list("product_ref", flat=True)
+                .distinct()
+            )
+
+            stream_names = list(
+                ProductComponentRelation.objects.filter(
+                    software_build__in=software_builds_with_relations,
+                    type__in=ProductComponentRelation.STREAM_TYPES,
+                )
+                .values_list("product_ref", flat=True)
+                .distinct()
+            )
+            product_details = get_product_details(variant_names, stream_names)
+        if product_details:  # Update the product relations for this component atomically
+            with transaction.atomic():
+                self._clear_product_refs()
+                self.save_product_taxonomy(product_details)
+        else:  # There are no longer any product relations for this component
+            self._clear_product_refs()
+
+    def _clear_product_refs(self):
+        self.products.clear()
+        self.productversions.clear()
+        self.productstreams.clear()
+        self.productvariants.clear()
 
     def _check_and_remove_orphaned_product_refs(
         self, product_ref: ProductModel, ancestor_model_name: str

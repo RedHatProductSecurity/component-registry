@@ -34,8 +34,8 @@ RE_VERSION_LIKE_STRING = re.compile(r"\d[\dz.-]*$|$")
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
-def slow_remove_product_from_build(build_pk: str, product_model_name: str, product_pk: str) -> None:
-    SoftwareBuild.objects.get(pk=build_pk).disassociate_with_product(product_model_name, product_pk)
+def slow_reset_build_product_taxonomy(build_pk: str) -> None:
+    SoftwareBuild.objects.get(pk=build_pk).reset_product_taxonomy()
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
@@ -237,9 +237,7 @@ def _parse_variants_from_brew_tags(brew_tags: list[str]) -> dict[str, str]:
 
 def _create_inferred_variants(
     brew_tag_names: list[str],
-    product: Product,
-    product_version: ProductVersion,
-    product_stream: ProductStream,
+    product_stream_name: str,
     parent: ProductNode,
 ) -> None:
     variants_and_cpes = _parse_variants_from_brew_tags(brew_tag_names)
@@ -248,23 +246,20 @@ def _create_inferred_variants(
             name=variant_name,
             defaults={
                 "cpe": cpe,
-                "products": product,
-                "productversions": product_version,
-                "productstreams": product_stream,
             },
         )
         if created:
             logger.info(
                 f"Created ProductVariant {variant_name} as inferred variant of "
-                f"{product_stream.name} ProductStream"
+                f"{product_stream_name} ProductStream"
             )
 
         ProductNode.objects.get_or_create(
             object_id=variant.pk,
             parent=parent,
-            node_type=ProductNode.ProductNodeType.INFERRED,
-            defaults={"obj": variant},
+            defaults={"obj": variant, "node_type": ProductNode.ProductNodeType.INFERRED},
         )
+        variant.save_product_taxonomy()
 
 
 def _parse_releases_from_brew_tags(brew_tags) -> list[int]:
@@ -329,6 +324,7 @@ def parse_product_stream(
             "cpes_matching_patterns": [],
         },
     )
+
     product_stream_node, _ = ProductNode.objects.get_or_create(
         object_id=product_stream.pk,
         defaults={
@@ -337,43 +333,37 @@ def parse_product_stream(
         },
     )
 
-    _create_inferred_variants(
-        list(brew_tag_names), product, product_version, product_stream, product_stream_node
-    )
+    _create_inferred_variants(list(brew_tag_names), product_stream.name, product_stream_node)
 
-    parse_errata_info(errata_info, product, product_stream, product_stream_node, product_version)
+    parse_errata_info(errata_info, product_stream, product_stream_node)
     if not stream_created:
         _clean_orphaned_relations_and_builds(
             set(brew_tag_names),
-            name,
-            str(product_stream.pk),
+            product_stream,
             ProductComponentRelation.Type.BREW_TAG,
         )
         _clean_orphaned_relations_and_builds(
-            yum_repos, name, str(product_stream.pk), ProductComponentRelation.Type.YUM_REPO
+            yum_repos, product_stream, ProductComponentRelation.Type.YUM_REPO
         )
     product_stream.save_product_taxonomy()
 
 
 def _clean_orphaned_relations_and_builds(
     new_external_system_ids: set[str],
-    name: str,
-    product_stream_pk: str,
+    product_stream: ProductStream,
     relation_type: ProductComponentRelation.Type,
 ) -> None:
     relations_to_remove = (
-        ProductComponentRelation.objects.filter(type=relation_type, product_ref=name)
+        ProductComponentRelation.objects.filter(type=relation_type, product_ref=product_stream.name)
         .exclude(external_system_id__in=new_external_system_ids)
         .iterator()
     )
-    related_product_refs: set[str] = {name}
-    related_product_refs.update(
-        ProductStream.objects.get(pk=product_stream_pk).productvariants.values_list(
-            "name", flat=True
-        )
-    )
+
+    related_product_refs: set[str] = {product_stream.name}
+    direct_variants = product_stream.get_related_names_of_type(ProductVariant)
+    related_product_refs.update(direct_variants)
     for relation_to_remove in relations_to_remove:
-        # Make sure there is no other relation linking this build to the stream or it's child
+        # Make sure there is no other relation linking this build to the stream or it's direct child
         # variants before removing
         existing_stream_relation = (
             ProductComponentRelation.objects.filter(
@@ -385,11 +375,7 @@ def _clean_orphaned_relations_and_builds(
         # We want to remove relations even if they don't have a software_build foreign key populated
         # However we only need to clear the product_ref from the build if we've linked a build
         if relation_to_remove.software_build_id and not existing_stream_relation:
-            slow_remove_product_from_build.delay(
-                str(relation_to_remove.software_build_id),
-                "ProductStream",
-                product_stream_pk,
-            )
+            slow_reset_build_product_taxonomy.delay(str(relation_to_remove.software_build_id))
         relation_to_remove.delete()
 
 
@@ -427,13 +413,12 @@ def brew_tag_to_et_prefixes(brew_tag: str) -> tuple[str, str]:
 
 def parse_errata_info(
     errata_info: list[dict],
-    product: Product,
     product_stream: ProductStream,
     product_stream_node: ProductNode,
-    product_version: ProductVersion,
 ):
     """Parse and create ProductVariants from errata_info in product-definitions.json"""
-    # Reset the stream's et_product_versions_set so we keep it up to date with what's in prod_defs.
+    # Reset the stream's productvariants, and et_product_versions_set so we keep it up to date with
+    # what's in prod_defs.
     et_product_versions_set = set()
     for et_product in errata_info:
         et_product_name = et_product.pop("product_name")
@@ -443,12 +428,6 @@ def parse_errata_info(
             et_pv_name = et_product_version["name"]
             et_product_versions_set.add(et_pv_name)
 
-            # This is a workaround for CORGI-811 which attaches variants from errata_info only to
-            # active streams
-            # TODO remove this
-            if not product_stream.active:
-                continue
-
             for variant in et_product_version["variants"]:
                 logger.debug("Creating or updating Product Variant: name=%s", variant)
                 et_variant_cpe = (
@@ -457,15 +436,10 @@ def parse_errata_info(
                     .first()
                 )
 
-                product_variant, _ = ProductVariant.objects.update_or_create(
+                product_variant, created = ProductVariant.objects.update_or_create(
                     name=variant,
                     defaults={
-                        "version": "",
-                        "description": "",
                         "cpe": et_variant_cpe if et_variant_cpe else "",
-                        "products": product,
-                        "productversions": product_version,
-                        "productstreams": product_stream,
                         "meta_attr": {
                             "et_product": et_product_name,
                             "et_product_version": et_pv_name,
@@ -478,14 +452,10 @@ def parse_errata_info(
                     content_type=ContentType.objects.get_for_model(ProductVariant),
                     defaults={"node_type": ProductNode.ProductNodeType.DIRECT},
                 )
-                # TODO, stop updating the parent as stream -> variant is now many-to-many
-                if node.parent != product_stream_node:
-                    node.parent = product_stream_node
-                    node.save()
-                    # save the existing builds to adjust the product_stream
+                if not created and node_created:
+                    # save the existing builds to add the new product_stream relationship
                     # we don't remove the old product_stream from the builds because are related via
-                    # the same variant. This a workaround for CORGI-811 stream to variant should be
-                    # many-to-many relationship
+                    # the same variant.
                     builds_to_update = (
                         ProductComponentRelation.objects.filter(
                             type__in=ProductComponentRelation.VARIANT_TYPES, product_ref=variant
@@ -495,6 +465,8 @@ def parse_errata_info(
                     )
                     for build_id, build_type in builds_to_update:
                         slow_save_taxonomy.delay(build_id, build_type)
+                # This has the affect of adding the variant to product_stream.productvariants
+                # many-to-many field
                 product_variant.save_product_taxonomy()
     # persist et_product_versions plucked from errata_info
     product_stream.et_product_versions = sorted(et_product_versions_set)

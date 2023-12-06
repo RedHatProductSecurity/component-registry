@@ -20,7 +20,7 @@ from .factories import (
     ComponentFactory,
     ContainerImageComponentFactory,
     ProductComponentRelationFactory,
-    ProductStreamFactory,
+    ProductStreamNodeFactory,
     SoftwareBuildFactory,
     SrpmComponentFactory,
     UpstreamComponentFactory,
@@ -110,8 +110,8 @@ def test_manifests_exclude_bad_golang_components(stored_proc):
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_stream_manifest_backslash(stored_proc):
     """Test that a tailing backslash in a purl doesn't break rendering"""
-
-    stream = ProductStreamFactory()
+    stream_node = ProductStreamNodeFactory()
+    stream = stream_node.obj
     sb = SoftwareBuildFactory()
     component = SrpmComponentFactory(version="2.8.0 \\", software_build=sb)
     component.productstreams.add(stream)

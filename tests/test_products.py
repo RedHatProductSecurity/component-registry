@@ -12,6 +12,7 @@ from corgi.collectors.models import (
 from corgi.core.models import (
     Product,
     ProductComponentRelation,
+    ProductNode,
     ProductStream,
     ProductVariant,
     ProductVersion,
@@ -24,6 +25,7 @@ from corgi.tasks.prod_defs import (
 )
 from tests.factories import (
     ProductStreamFactory,
+    ProductVariantNodeFactory,
     ProductVersionFactory,
     SoftwareBuildFactory,
 )
@@ -97,7 +99,7 @@ def test_products(requests_mock):
 
 
 @pytest.mark.django_db
-@patch("corgi.tasks.prod_defs.slow_remove_product_from_build.delay")
+@patch("corgi.tasks.prod_defs.slow_reset_build_product_taxonomy.delay")
 def test_stream_brew_tags_removed(mock_remove, requests_mock):
     with open("tests/data/prod_defs/proddefs-update.json") as prod_defs:
         text = prod_defs.read()
@@ -123,19 +125,13 @@ def test_stream_brew_tags_removed(mock_remove, requests_mock):
         requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
 
     update_products()
-
-    assert not ProductComponentRelation.objects.filter(software_build=sb).exists()
-    assert mock_remove.called_with(
-        (
-            str(sb.pk),
-            "ProductStream",
-            stream.pk,
-        )
-    )
+    stream.refresh_from_db()
+    assert not ProductComponentRelation.objects.exists()
+    assert mock_remove.called
 
 
 @pytest.mark.django_db
-@patch("corgi.tasks.prod_defs.slow_remove_product_from_build.delay")
+@patch("corgi.tasks.prod_defs.slow_reset_build_product_taxonomy.delay")
 def test_stream_new_brew_tags_with_old_builds(mock_remove, requests_mock):
     with open("tests/data/prod_defs/proddefs-update-tag-with-old-build.json") as prod_defs:
         text = prod_defs.read()
@@ -178,7 +174,7 @@ def test_stream_new_brew_tags_with_old_builds(mock_remove, requests_mock):
 
 
 @pytest.mark.django_db
-@patch("corgi.tasks.prod_defs.slow_remove_product_from_build.delay")
+@patch("corgi.tasks.prod_defs.slow_reset_build_product_taxonomy.delay")
 def test_stream_variants_with_old_builds(mock_remove, requests_mock):
     with open("tests/data/prod_defs/proddefs-update-variant-with-old-build.json") as prod_defs:
         text = prod_defs.read()
@@ -239,9 +235,6 @@ def test_stream_variants_with_old_builds(mock_remove, requests_mock):
 
 
 @pytest.mark.django_db
-<<<<<<< Updated upstream
-@patch("corgi.tasks.prod_defs.slow_remove_product_from_build.delay")
-=======
 @patch("corgi.tasks.prod_defs.slow_reset_build_product_taxonomy.delay")
 def test_stream_brew_tags_with_inferred_variant_removed(mock_remove, requests_mock):
     with open("tests/data/prod_defs/proddefs-update.json") as prod_defs:
@@ -289,7 +282,6 @@ def test_stream_brew_tags_with_inferred_variant_removed(mock_remove, requests_mo
 
 @pytest.mark.django_db
 @patch("corgi.tasks.prod_defs.slow_reset_build_product_taxonomy.delay")
->>>>>>> Stashed changes
 def test_stream_yum_repos_removed(mock_remove, requests_mock):
     with open("tests/data/prod_defs/proddefs-update.json") as prod_defs:
         text = prod_defs.read()
@@ -329,7 +321,7 @@ def test_stream_yum_repos_removed(mock_remove, requests_mock):
 
 
 @pytest.mark.django_db
-@patch("corgi.tasks.prod_defs.slow_remove_product_from_build.delay")
+@patch("corgi.tasks.prod_defs.slow_reset_build_product_taxonomy.delay")
 def test_stream_yum_repos_to_errata_info_not_removed(mock_remove, requests_mock):
     with open("tests/data/prod_defs/proddefs-update.json") as prod_defs:
         text = prod_defs.read()
@@ -585,11 +577,10 @@ def test_parse_variants_from_brew_tags():
 
 
 @pytest.mark.django_db
-@patch("corgi.tasks.prod_defs.slow_remove_product_from_build.delay")
+@patch("corgi.tasks.prod_defs.slow_reset_build_product_taxonomy.delay")
 @patch("corgi.tasks.prod_defs.slow_save_taxonomy.delay")
 def test_multi_variant_streams(mock_save, mock_remove, requests_mock):
-    """Test that errata_info variants are only attached to an active stream where that stream
-    shares errata_info with an inactive stream"""
+    """Test that errata_info variants are attached to both active stream and inactive streams"""
     with open("tests/data/prod_defs/proddefs-update-multi-stream-variant.json") as prod_defs:
         text = prod_defs.read()
         requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
@@ -626,17 +617,11 @@ def test_multi_variant_streams(mock_save, mock_remove, requests_mock):
     update_products()
 
     ga_stream.refresh_from_db()
-    assert ga_stream.productvariants.get_queryset().count() == 0
+    assert ga_stream.productvariants.get_queryset().count() == 1
     z_stream.refresh_from_db()
     assert z_stream.productvariants.get_queryset().count() == 1
     assert not ProductComponentRelation.objects.filter(product_ref="z_stream").exists()
-    assert mock_remove.called_once_with(
-        (
-            str(sb.pk),
-            "ProductStream",
-            z_stream.pk,
-        )
-    )
+    assert not mock_remove.called
     assert mock_save.called_once_with(sb.build_id, sb.build_type)
 
 
@@ -651,7 +636,7 @@ def test_multi_variant_active_streams(requests_mock):
     update_products()
 
     ga_stream = ProductStream.objects.get(name="ga_stream")
-    assert ga_stream.productvariants.get_queryset().count() == 0
+    assert ga_stream.productvariants.get_queryset().count() == 1
     z_stream = ProductStream.objects.get(name="z_stream")
     assert z_stream.productvariants.get_queryset().count() == 1
 
@@ -659,6 +644,6 @@ def test_multi_variant_active_streams(requests_mock):
     update_products()
 
     ga_stream = ProductStream.objects.get(name="ga_stream")
-    assert ga_stream.productvariants.get_queryset().count() == 0
+    assert ga_stream.productvariants.get_queryset().count() == 1
     z_stream = ProductStream.objects.get(name="z_stream")
     assert z_stream.productvariants.get_queryset().count() == 1

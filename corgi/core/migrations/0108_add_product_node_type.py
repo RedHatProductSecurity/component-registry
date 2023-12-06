@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("core", "0106_exclude_module_src_from_root_components_condition"),
+        ("core", "0107_remove_componentnode_core_cn_lft_tree_idx"),
     ]
 
     operations = [

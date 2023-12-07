@@ -19,10 +19,6 @@ class GitCloneError(Exception):
     pass
 
 
-class QuayImagePullError(Exception):
-    pass
-
-
 class Syft:
     # Syft packages types: https://github.com/anchore/syft/blob/v0.72.0/syft/pkg/type.go
     SYFT_PKG_TYPE_MAPPING = {
@@ -126,12 +122,9 @@ class Syft:
 
         version = "latest"
         # Some images have no tags at all, so pulling the image will fail either way
-        tags = response.json()["tags"]
-        if not tags:
-            raise QuayImagePullError(
-                f"image pull of {target_host}/{target_image} failed because there were no tags"
-            )
-        for tag in tags:
+        # If empty, the for-loop below won't be entered, so we default version to "latest"
+        # to get a meaningful error when pulling instead of "NameError: version undefined" here
+        for tag in response.json()["tags"]:
             # The tags key is a nested dict and not a list, so we can't just grab tags[0]
             # The first key in the dict is always the newest / most recently updated tag name
             version = tag

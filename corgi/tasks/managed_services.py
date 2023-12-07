@@ -1,3 +1,5 @@
+from subprocess import CalledProcessError
+
 from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.conf import settings
@@ -7,7 +9,7 @@ from requests import HTTPError
 
 from config.celery import app
 from corgi.collectors.app_interface import AppInterface
-from corgi.collectors.syft import GitCloneError, QuayImagePullError, Syft
+from corgi.collectors.syft import GitCloneError, Syft
 from corgi.core.models import (
     Component,
     ComponentNode,
@@ -148,13 +150,11 @@ def cpu_manifest_service(stream_name: str, service_components: list[dict[str, st
                 component_data, quay_scan_source = Syft.scan_repo_image(target_image=quay_repo)
                 component_version = quay_scan_source["target"]["imageID"]
                 analyzed_components.extend(component_data)
-            except (QuayImagePullError, HTTPError) as e:
+            except (CalledProcessError, HTTPError) as e:
                 # We want to raise other (unexpected) errors
                 # Only ignore if it's an (expected) pull failure for private images
                 if isinstance(e, HTTPError) and e.response.status_code != 403:
                     raise e
-                # or an (expected) pull failure for images with no tags
-                # don't hide other network-related HTTPErrors or Subprocess exceptions
                 # Don't continue here in case component also defines a git repo
                 # Which we still need to / haven't checked yet (below)
                 exceptions.append(f"{type(e)}: {e.args}\n")

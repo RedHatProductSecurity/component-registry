@@ -102,7 +102,7 @@ class ComponentFilter(FilterSet):
     sources = CharFilter(lookup_expr="purl")
     sources_name = CharFilter(field_name="sources", lookup_expr="name", distinct=True)
     provides = CharFilter(lookup_expr="purl")
-    provides_name = CharFilter(method="filter_provides_name", distinct=True)
+    provides_name = CharFilter(field_name="provides", lookup_expr="name", distinct=True)
     upstreams = CharFilter(lookup_expr="purl")
     upstreams_name = CharFilter(field_name="upstreams", lookup_expr="name", distinct=True)
     downstreams = CharFilter(lookup_expr="purl")
@@ -110,8 +110,8 @@ class ComponentFilter(FilterSet):
     # otherwise use regex to match provides,sources or upstreams purls
     re_sources = CharFilter(field_name="sources", lookup_expr="purl__iregex", distinct=True)
     re_sources_name = CharFilter(field_name="sources", lookup_expr="name__iregex", distinct=True)
-    re_provides = CharFilter(method="filter_re_provides_purl", distinct=True)
-    re_provides_name = CharFilter(method="filter_re_provides_name", distinct=True)
+    re_provides = CharFilter(field_name="provides", lookup_expr="purl__iregex", distinct=True)
+    re_provides_name = CharFilter(field_name="provides", lookup_expr="name__iregex", distinct=True)
     re_downstreams = CharFilter(field_name="downstreams", lookup_expr="purl__iregex", distinct=True)
     re_downstreams_name = CharFilter(
         field_name="downstreams", lookup_expr="name__iregex", distinct=True
@@ -134,6 +134,8 @@ class ComponentFilter(FilterSet):
         method="filter_active_streams",
     )
 
+    # Filters are applied to querysets in the same order they're defined in
+    # so we must keep active_streams here above latest_components_by_streams below
     latest_components_by_streams = BooleanFilter(
         method="filter_latest_components_by_streams",
         label="Show only latest components across product streams",
@@ -163,36 +165,6 @@ class ComponentFilter(FilterSet):
         label="Show only gomod components, hide go-packages",
         method="filter_gomod_components",
     )
-
-    @staticmethod
-    def filter_re_provides_purl(
-        queryset: ComponentQuerySet, _name: str, value: str
-    ) -> QuerySet["Component"]:
-        """Filter components by purl regex search on provided components."""
-        if value in EMPTY_VALUES:
-            # User gave an empty ?param= so return the unfiltered queryset
-            return queryset
-        return queryset.filter(provides__purl__iregex=value).distinct()
-
-    @staticmethod
-    def filter_provides_name(
-        queryset: ComponentQuerySet, _name: str, value: str
-    ) -> QuerySet["Component"]:
-        """Filter components by name match on provided components."""
-        if value in EMPTY_VALUES:
-            # User gave an empty ?param= so return the unfiltered queryset
-            return queryset
-        return queryset.filter(provides__name=value).distinct()
-
-    @staticmethod
-    def filter_re_provides_name(
-        queryset: ComponentQuerySet, _name: str, value: str
-    ) -> QuerySet["Component"]:
-        """Filter components by name regex search on component provides."""
-        if value in EMPTY_VALUES:
-            # User gave an empty ?param= so return the unfiltered queryset
-            return queryset
-        return queryset.filter(provides__name__iregex=value).distinct()
 
     @staticmethod
     def filter_gomod_components(

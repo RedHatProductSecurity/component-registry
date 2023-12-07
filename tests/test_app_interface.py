@@ -7,7 +7,7 @@ import pytest
 from django.conf import settings
 
 from corgi.collectors.app_interface import AppInterface
-from corgi.collectors.syft import GitCloneError, Syft
+from corgi.collectors.syft import GitCloneError, QuayImagePullError, Syft
 from corgi.tasks.managed_services import (
     MultiplePermissionExceptions,
     cpu_manifest_service,
@@ -121,6 +121,7 @@ def test_metadata_fetch(requests_mock):
         (
             # Dict values aren't used and don't matter, we just need the first dict key
             # Which is always the newest / most recently updated tag name
+            # nullcontext here means "no exception raised"
             {"tags": {"t1": {"name": "t1", "date": 2}, "t2": {"name": "t2", "date": 1}}},
             "t1",
             "quay.io",
@@ -129,8 +130,8 @@ def test_metadata_fetch(requests_mock):
         ),
         # Code works with public Quay.io instance or any internal Quay server
         ({"tags": {"t1": {}}}, "t1", "internal.quay", "repo2/image2", nullcontext()),
-        # If no tags, default to latest. nullcontext here means "no exception raised"
-        ({"tags": {}}, "latest", "quay.io", "repo3/image3", nullcontext()),
+        # If no tags, raise a QuayImagePullError
+        ({"tags": {}}, "latest", "quay.io", "repo3/image3", pytest.raises(QuayImagePullError)),
         # Fails with no retry if the image to pull already had a tag given explicitly
         (
             {"tags": {}},
@@ -179,15 +180,24 @@ def test_image_pull_error_handling(
     ) as mock_scan:
         with pytest_raises:
             # pytest_raises is either a nullcontext manager, if no exception raised
-            # or a pytest.raises(CalledProcessError) context manager,
-            # if we should fail and not retry
+            # or a pytest.raises context manager, if we should fail and not retry
             result = Syft.scan_repo_image(target_image, target_host)
 
     failed_call = call(syft_args, text=True)
     if not isinstance(pytest_raises, nullcontext):
-        # One failed call, no retry or call to Quay API
+        # One failed call, no retry
         calls = (failed_call,)
-        assert requests_mock.call_count == 0
+        if pytest_raises.expected_exception == QuayImagePullError:
+            # One failed call was made to the Quay API
+            # because the image pull for an implicit "latest" tag failed
+            # and we wanted to find the other tags, but there were none
+            # We ignore this error since there are no tags / versions to analyze anyway
+            assert requests_mock.call_count == 1
+        else:
+            # No failed call was made to the Quay API
+            # because the image pull was for an explicitly-given tag
+            # so we just stop here and don't try to find the other tags
+            assert requests_mock.call_count == 0
     else:
         # One failed call, one successful retry that uses the Quay API
         syft_args[-1] = f"{syft_args[-1]}:{most_recent_tag}"
@@ -253,7 +263,7 @@ def test_missing_github_quay_repo_names():
 
 
 @pytest.mark.django_db
-def test_private_github_quay_repo_names():
+def test_private_github_quay_repo_names(requests_mock):
     """Test that private images / repos we don't have permissions for are skipped"""
     # We should at least attempt to scan all components for a service
     # Known permission errors should not block us from checking the remaining components
@@ -285,21 +295,49 @@ def test_private_github_quay_repo_names():
             "registry:{target_host}/{target_image}",
         ),
     )
-    with patch("corgi.tasks.managed_services.Syft") as mock_syft:
-        mock_syft.scan_repo_image.side_effect = (podman_error, podman_error)
-        mock_syft.scan_git_repo.side_effect = (git_error, git_error)
+    # No easy way to get the mock Response out of the mocker?
+    # So we just hardcode the error message below
+    # instead of making the request in the test, getting the response
+    # then raising and storing the error, to compare with the real error raised in code later
+    # and finally resetting the mock to do all that again in the real code
+    requests_mock.get(
+        "https://quay.io/api/v1/repository/red-org/hello-world?includeTags=true",
+        reason="FORBIDDEN",
+        status_code=403,
+    )
+    requests_mock.get(
+        "https://quay.io/api/v1/repository/red-org/hello-world-api?includeTags=true",
+        reason="FORBIDDEN",
+        status_code=403,
+    )
 
-        # Fails because all images above are not accessible
-        with pytest.raises(MultiplePermissionExceptions) as raised_e:
-            cpu_manifest_service(ps.name, ps.meta_attr["managed_service_components"])
-        assert str(raised_e.value) == (
-            f"Multiple exceptions raised:\n\n"
-            f"{type(git_error)}: {git_error.args}\n\n"
-            f"{type(podman_error)}: {podman_error.args}\n\n"
-            f"{type(git_error)}: {git_error.args}\n\n"
-            f"{type(podman_error)}: {podman_error.args}\n"
-        )
+    with patch(
+        "corgi.tasks.managed_services.Syft.scan_git_repo", side_effect=(git_error, git_error)
+    ) as mock_git:
+        with patch(
+            "corgi.collectors.syft.subprocess.check_output",
+            side_effect=(podman_error, podman_error),
+        ) as mock_subprocess:
+            # Git clone and Syft both fail because all images above are not accessible
+            # For Quay images, we call subprocess to pull the image's implicit "latest" tag
+            # #hen this fails, we call requests / use the Quay API to list the tags
+            # We should try to pull a different tag if no "latest" tag exists
+            # But we'll fail due to 403 / no permissions to access this image (or its tags)
+            with pytest.raises(MultiplePermissionExceptions) as raised_e:
+                cpu_manifest_service(ps.name, ps.meta_attr["managed_service_components"])
+            assert str(raised_e.value) == (
+                f"Multiple exceptions raised:\n\n"
+                f"{type(git_error)}: {git_error.args}\n\n"
+                "<class 'requests.exceptions.HTTPError'>: "
+                "('403 Client Error: FORBIDDEN for url: "
+                "https://quay.io/api/v1/repository/red-org/hello-world?includeTags=true',)\n\n"
+                f"{type(git_error)}: {git_error.args}\n\n"
+                "<class 'requests.exceptions.HTTPError'>: "
+                "('403 Client Error: FORBIDDEN for url: "
+                "https://quay.io/api/v1/repository/red-org/hello-world-api?includeTags=true',)\n"
+            )
     # But only fails at the very end
     # we still try to scan other components, instead of stopping on the first error
-    assert mock_syft.scan_repo_image.call_count == 2
-    assert mock_syft.scan_git_repo.call_count == 2
+    assert requests_mock.call_count == 2
+    assert mock_git.call_count == 2
+    assert mock_subprocess.call_count == 2

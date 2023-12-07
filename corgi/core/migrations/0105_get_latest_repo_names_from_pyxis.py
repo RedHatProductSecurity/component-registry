@@ -44,21 +44,21 @@ def get_latest_repo_names_from_pyxis(apps, schema_editor) -> None:
             nvr=nvr,
         ).update(meta_attr=meta_attr_func)
 
-    checked_containers = []
+    # checked_containers = []
     # Filtering on type + arch first makes below use an index
     # and excludes many unneeded results before doing expensive JSONField filtering
-    for container in Component.objects.filter(
-        type=Component.Type.CONTAINER_IMAGE, arch="noarch", meta_attr__name_checked=True
-    ).iterator():
-        del container.meta_attr["name_checked"]
-        checked_containers.append(container)
-    Component.objects.bulk_update(checked_containers, ["meta_attr"])
+    # for container in Component.objects.filter(
+    #     type=Component.Type.CONTAINER_IMAGE, arch="noarch", meta_attr__name_checked=True
+    # ).iterator():
+    #     del container.meta_attr["name_checked"]
+    #     checked_containers.append(container)
+    # Component.objects.bulk_update(checked_containers, ["meta_attr"])
+
     # The built-in Postgres jsonb_set function doesn't allow removing keys from a JSONField
     # This is possible in RawSQL, but I don't want to bother
-    # If doing bulk_update() in the migration still causes the pod to run out of memory
-    # we know that everything else is finished, and can just remove the name_checked keys ourselves
+    # Doing bulk_update() in the migration causes the DB query to time out
+    # We know that everything else is finished, so can just remove the name_checked keys ourselves
     # or maybe just leave the values in the meta_attr - they won't hurt anything
-    # I will comment out above if so, then finish off migration
 
 
 class Migration(migrations.Migration):

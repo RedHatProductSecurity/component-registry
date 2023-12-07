@@ -172,9 +172,9 @@ class ComponentFilter(FilterSet):
             # User gave an empty ?param= so return the unfiltered queryset
             return queryset
         return (
-            queryset.filter(purl__iregex=value)
-            .prefetch_related("sources")
+            queryset.filter(provides__purl__iregex=value)
             .filter(software_build__isnull=False)
+            .distinct()
         )
 
     @staticmethod
@@ -185,11 +185,7 @@ class ComponentFilter(FilterSet):
         if value in EMPTY_VALUES:
             # User gave an empty ?param= so return the unfiltered queryset
             return queryset
-        return (
-            queryset.filter(name=value)
-            .prefetch_related("sources")
-            .filter(software_build__isnull=False)
-        )
+        return queryset.filter(provides__name=value).filter(software_build__isnull=False).distinct()
 
     @staticmethod
     def filter_re_provides_name(
@@ -200,9 +196,9 @@ class ComponentFilter(FilterSet):
             # User gave an empty ?param= so return the unfiltered queryset
             return queryset
         return (
-            queryset.filter(name__iregex=value)
-            .prefetch_related("sources")
+            queryset.filter(provides__name__iregex=value)
             .filter(software_build__isnull=False)
+            .distinct()
         )
 
     @staticmethod

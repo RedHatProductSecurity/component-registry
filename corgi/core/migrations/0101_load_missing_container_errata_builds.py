@@ -11,7 +11,7 @@ def load_missing_container_errata_build(apps, schema_editor):
     ProductStream = apps.get_model("core", "ProductStream")
 
     # pre-load products to make sure variants_from_brew_tags and releases_from_brew_tags are updated
-    update_products()
+    update_products.delay()
 
     for stream_name in (
         ProductStream.objects.exclude(components__isnull=True)

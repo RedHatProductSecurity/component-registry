@@ -345,7 +345,11 @@ CELERY_RESULT_EXTENDED = True
 # @app.task(soft_time_limit=<TIME_IN_SECONDS>)
 CELERY_TASK_SOFT_TIME_LIMIT = 900
 # CELERY_SINGLETON_LOCK_EXPIRY and redis visibility timeout must never be less than the below value
-CELERY_LONGEST_SOFT_TIME_LIMIT = 2400
+# if you set below to more than 3600 seconds, you must also update the redis visibility timeout
+CELERY_LONGEST_SOFT_TIME_LIMIT = 3600
+# Expire locks after 1 hour, which is the longest task time limit.
+# https://github.com/steinitzu/celery-singleton#app-configuration
+CELERY_SINGLETON_LOCK_EXPIRY = CELERY_LONGEST_SOFT_TIME_LIMIT
 
 CELERY_WORKER_CONCURRENCY = 5  # defaults to CPU core count, which breaks in OpenShift
 

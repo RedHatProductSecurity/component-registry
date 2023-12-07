@@ -240,7 +240,7 @@ def cpu_software_composition_analysis(build_uuid, force_process: bool = False):
                 "had child components that were not found in remote-sources.json!"
             )
         app.send_task(
-            "corgi.tasks.brew.slow_save_taxonomy",
+            "corgi.tasks.common.slow_save_taxonomy",
             args=(software_build.build_id, software_build.build_type),
         )
 

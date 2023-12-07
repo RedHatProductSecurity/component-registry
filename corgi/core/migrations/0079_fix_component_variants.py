@@ -2,7 +2,7 @@
 
 from django.db import migrations, models
 
-from corgi.tasks.brew import slow_save_taxonomy
+from corgi.tasks.common import slow_save_taxonomy
 
 
 def fix_variant_component_links(apps, schema_editor):

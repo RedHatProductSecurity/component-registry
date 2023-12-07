@@ -2,7 +2,7 @@ from django.db import migrations
 
 # Non-historical model, i.e. if you change save_product_taxonomy() tomorrow
 # the migration will not run the same code as before (at the time the migration was written)
-from corgi.tasks.brew import slow_save_taxonomy as current_save_taxonomy
+from corgi.tasks.common import slow_save_taxonomy as current_save_taxonomy
 
 
 def set_build_fk_relations(apps, schema_editor):

@@ -620,7 +620,7 @@ def test_slow_software_composition_analysis(
     with patch("corgi.tasks.sca.app") as mock_app:
         cpu_software_composition_analysis(str(sb.pk))
         mock_app.send_task.assert_called_once_with(
-            "corgi.tasks.brew.slow_save_taxonomy", args=(str(sb.build_id), sb.build_type)
+            "corgi.tasks.common.slow_save_taxonomy", args=(str(sb.build_id), sb.build_type)
         )
 
     mock_clone_source.assert_called_once_with(package_name, str(sb.pk))

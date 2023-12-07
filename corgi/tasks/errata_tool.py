@@ -46,7 +46,7 @@ def slow_save_errata_product_taxonomy(erratum_id: int) -> None:
     for build_id, build_type, _ in relation_builds:
         logger.info("Saving product taxonomy for build (%s, %s)", build_id, build_type)
         # once all build's components are ingested we must save product taxonomy
-        app.send_task("corgi.tasks.brew.slow_save_taxonomy", args=(build_id, build_type))
+        app.send_task("corgi.tasks.common.slow_save_taxonomy", args=(build_id, build_type))
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS, priority=3)

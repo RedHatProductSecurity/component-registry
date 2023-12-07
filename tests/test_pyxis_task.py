@@ -24,7 +24,7 @@ pytestmark = pytest.mark.unit
 
 
 @pytest.mark.django_db
-@patch("corgi.tasks.brew.slow_save_taxonomy.delay")
+@patch("corgi.tasks.common.slow_save_taxonomy.delay")
 @patch("corgi.tasks.sca.cpu_software_composition_analysis.delay")
 @patch("corgi.collectors.pyxis.session.post")
 def test_slow_fetch_pyxis_manifest(post, sca, taxonomy):
@@ -135,7 +135,7 @@ def test_slow_fetch_pyxis_manifest(post, sca, taxonomy):
 
 
 @pytest.mark.django_db
-@patch("corgi.tasks.brew.slow_save_taxonomy.delay")
+@patch("corgi.tasks.common.slow_save_taxonomy.delay")
 @patch("corgi.tasks.sca.cpu_software_composition_analysis.delay")
 @patch("corgi.collectors.pyxis.session.post")
 def test_slow_fetch_empty_pyxis_manifest(post, sca, taxonomy):

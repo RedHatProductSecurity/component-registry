@@ -323,8 +323,8 @@ def test_slow_save_errata_product_taxonomy(mock_app):
     )
     slow_save_errata_product_taxonomy(1)
     send_task_calls = [
-        call("corgi.tasks.brew.slow_save_taxonomy", args=(sb.build_id, sb.build_type)),
-        call("corgi.tasks.brew.slow_save_taxonomy", args=(sb2.build_id, sb2.build_type)),
+        call("corgi.tasks.common.slow_save_taxonomy", args=(sb.build_id, sb.build_type)),
+        call("corgi.tasks.common.slow_save_taxonomy", args=(sb2.build_id, sb2.build_type)),
     ]
     # Calls happen based on build ID / UUID ordering, which is random
     mock_app.send_task.assert_has_calls(send_task_calls, any_order=True)

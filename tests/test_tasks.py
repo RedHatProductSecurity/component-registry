@@ -19,9 +19,9 @@ from corgi.core.models import (
 from corgi.tasks.brew import (
     slow_delete_brew_build,
     slow_refresh_brew_build_tags,
-    slow_save_taxonomy,
     slow_update_brew_tags,
 )
+from corgi.tasks.common import slow_save_taxonomy
 from corgi.tasks.errata_tool import slow_handle_shipped_errata
 from corgi.tasks.pnc import slow_fetch_pnc_sbom, slow_handle_pnc_errata_released
 
@@ -540,7 +540,7 @@ def test_slow_fetch_pnc_sbom():
     response.json.return_value = sbom_contents
 
     with patch(
-        "corgi.tasks.brew.slow_save_taxonomy.delay", wraps=slow_save_taxonomy
+        "corgi.tasks.common.slow_save_taxonomy.delay", wraps=slow_save_taxonomy
     ) as wrapped_save_taxonomy:
         with patch("requests.get", return_value=response) as get_mock:
             slow_fetch_pnc_sbom(purl, product_config, sbom)

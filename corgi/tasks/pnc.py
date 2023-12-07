@@ -14,8 +14,8 @@ from corgi.core.models import (
     ProductVariant,
     SoftwareBuild,
 )
-from corgi.tasks.brew import set_license_declared_safely, slow_save_taxonomy
-from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
+from corgi.tasks.brew import set_license_declared_safely
+from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS, slow_save_taxonomy
 
 logger = get_task_logger(__name__)
 

@@ -30,9 +30,8 @@ from corgi.tasks.brew import (
     save_component,
     slow_fetch_brew_build,
     slow_save_container_children,
-    slow_save_taxonomy,
 )
-from corgi.tasks.common import BUILD_TYPE
+from corgi.tasks.common import BUILD_TYPE, slow_save_taxonomy
 from tests.conftest import setup_product
 from tests.data.image_archive_data import (
     KOJI_LIST_RPMS,
@@ -1177,7 +1176,7 @@ def test_fetch_rpm_build(mock_load_brew_tags, mock_sca, mock_brew_constructor):
     with open("tests/data/brew/1705913/component_data.json", "r") as component_data_file:
         mock_brew_obj.get_component_data.return_value = json.load(component_data_file)
     with patch(
-        "corgi.tasks.brew.slow_save_taxonomy.delay", wraps=slow_save_taxonomy
+        "corgi.tasks.common.slow_save_taxonomy.delay", wraps=slow_save_taxonomy
     ) as wrapped_save_taxonomy:
         # Wrap the mocked object, and call its methods directly
         # So that doing task.delay(*args, **kwargs) becomes task(*args, **kwargs)
@@ -1284,7 +1283,7 @@ def test_fetch_container_build_rpms(
     stream.save()
 
     with patch(
-        "corgi.tasks.brew.slow_save_taxonomy.delay", wraps=slow_save_taxonomy
+        "corgi.tasks.common.slow_save_taxonomy.delay", wraps=slow_save_taxonomy
     ) as wrapped_save_taxonomy:
         # Wrap the mocked object, and call its methods directly
         # So that doing task.delay(*args, **kwargs) becomes task(*args, **kwargs)
@@ -1392,7 +1391,7 @@ def test_load_brew_tags(mock_fetch_modular_build, mock_fetch_brew_build):
 def test_new_software_build_relation(mock_save_prod_tax):
     sb = SoftwareBuildFactory()
     with patch(
-        "corgi.tasks.brew.slow_save_taxonomy.delay", wraps=slow_save_taxonomy
+        "corgi.tasks.common.slow_save_taxonomy.delay", wraps=slow_save_taxonomy
     ) as wrapped_save_taxonomy:
         # Wrap the mocked object, and call its methods directly
         # So that doing task.delay(*args, **kwargs) becomes task(*args, **kwargs)

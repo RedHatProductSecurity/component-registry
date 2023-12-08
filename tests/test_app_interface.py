@@ -9,7 +9,7 @@ from corgi.collectors.app_interface import AppInterface
 from corgi.collectors.syft import GitCloneError, Syft
 from corgi.tasks.managed_services import (
     MultiplePermissionExceptions,
-    cpu_manifest_service,
+    cpu_manifest_service_component,
 )
 
 from .factories import ProductStreamFactory
@@ -247,8 +247,9 @@ def test_missing_github_quay_repo_names():
     """Test that components without either GitHub or Quay repo names raise an error"""
     ps = ProductStreamFactory(meta_attr={"managed_service_components": [{"name": "Blue"}]})
     # Fails because some images do not define app_interface, Quay, or GitHub names
-    with pytest.raises(ValueError):
-        cpu_manifest_service(ps.name, ps.meta_attr["managed_service_components"])
+    for component in ps.meta_attr["managed_service_components"]:
+        with pytest.raises(ValueError):
+            cpu_manifest_service_component(ps.name, component)
 
 
 @pytest.mark.django_db
@@ -284,20 +285,25 @@ def test_private_github_quay_repo_names():
             "registry:{target_host}/{target_image}",
         ),
     )
+    exceptions = [
+        MultiplePermissionExceptions((f"{type(podman_error)}: {podman_error.args}\n",)),
+        MultiplePermissionExceptions(
+            (
+                f"{type(podman_error)}: {podman_error.args}\n",
+                f"{type(git_error)}: {git_error.args}\n",
+            )
+        ),
+        MultiplePermissionExceptions((f"{type(git_error)}: {git_error.args}\n",)),
+    ]
     with patch("corgi.tasks.managed_services.Syft") as mock_syft:
         mock_syft.scan_repo_image.side_effect = (podman_error, podman_error)
         mock_syft.scan_git_repo.side_effect = (git_error, git_error)
 
         # Fails because all images above are not accessible
-        with pytest.raises(MultiplePermissionExceptions) as raised_e:
-            cpu_manifest_service(ps.name, ps.meta_attr["managed_service_components"])
-        assert str(raised_e.value) == (
-            f"Multiple exceptions raised:\n\n"
-            f"{type(git_error)}: {git_error.args}\n\n"
-            f"{type(podman_error)}: {podman_error.args}\n\n"
-            f"{type(git_error)}: {git_error.args}\n\n"
-            f"{type(podman_error)}: {podman_error.args}\n"
-        )
+        for component in ps.meta_attr["managed_service_components"]:
+            with pytest.raises(MultiplePermissionExceptions) as raised_e:
+                cpu_manifest_service_component(ps.name, component)
+            assert str(raised_e.value) == str(exceptions.pop())
     # But only fails at the very end
     # we still try to scan other components, instead of stopping on the first error
     mock_syft.scan_repo_image.assert_has_calls(

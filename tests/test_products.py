@@ -239,7 +239,57 @@ def test_stream_variants_with_old_builds(mock_remove, requests_mock):
 
 
 @pytest.mark.django_db
+<<<<<<< Updated upstream
 @patch("corgi.tasks.prod_defs.slow_remove_product_from_build.delay")
+=======
+@patch("corgi.tasks.prod_defs.slow_reset_build_product_taxonomy.delay")
+def test_stream_brew_tags_with_inferred_variant_removed(mock_remove, requests_mock):
+    with open("tests/data/prod_defs/proddefs-update.json") as prod_defs:
+        text = prod_defs.read()
+        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+
+    update_products()
+    assert not mock_remove.called
+
+    stream = ProductStream.objects.get(name="stream")
+    # create an inferred variant under the stream to make sure it doesn't block the brew_tag builds
+    # stream being removed
+    stream_node = stream.pnodes.first()
+    variant_node = ProductVariantNodeFactory(
+        node_type=ProductNode.ProductNodeType.INFERRED, parent=stream_node
+    )
+    variant = variant_node.obj
+    assert stream.brew_tags == {"test_tag": False}
+
+    sb = SoftwareBuildFactory()
+
+    brew_tag_relation = ProductComponentRelation.objects.create(
+        external_system_id="test_tag",
+        product_ref="stream",
+        software_build=sb,
+        type=ProductComponentRelation.Type.BREW_TAG,
+    )
+
+    ProductComponentRelation.objects.create(
+        external_system_id="errata-id",
+        product_ref=variant.name,
+        software_build=sb,
+        type=ProductComponentRelation.Type.ERRATA,
+    )
+
+    with open("tests/data/prod_defs/proddefs-update-tag-removed.json") as prod_defs:
+        text = prod_defs.read()
+        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+
+    update_products()
+    stream.refresh_from_db()
+    assert not ProductComponentRelation.objects.filter(pk=brew_tag_relation.pk).exists()
+    assert mock_remove.called
+
+
+@pytest.mark.django_db
+@patch("corgi.tasks.prod_defs.slow_reset_build_product_taxonomy.delay")
+>>>>>>> Stashed changes
 def test_stream_yum_repos_removed(mock_remove, requests_mock):
     with open("tests/data/prod_defs/proddefs-update.json") as prod_defs:
         text = prod_defs.read()

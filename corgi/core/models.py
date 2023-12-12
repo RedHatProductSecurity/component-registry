@@ -78,7 +78,7 @@ class ProductNode(NodeModel):
         # eg. Variants discovered by stream to ET Product Version brew_tag matching
         INFERRED = "INFERRED"
 
-    type = models.CharField(
+    node_type = models.CharField(
         choices=ProductNodeType.choices, default=ProductNodeType.DIRECT, max_length=20
     )
 
@@ -93,7 +93,6 @@ class ProductNode(NodeModel):
                 fields=(
                     "object_id",
                     "parent",
-                    "type",
                 ),
                 condition=models.Q(parent__isnull=False),
             ),
@@ -101,7 +100,6 @@ class ProductNode(NodeModel):
                 name="unique_pnode_get_or_create_for_null_parent",
                 fields=(
                     "object_id",
-                    "type",
                 ),
                 condition=models.Q(parent__isnull=True),
             ),
@@ -536,7 +534,7 @@ class ProductModel(TimeStampedModel):
         """Always return a DIRECT pnode if it exists, otherwise return INFERRED"""
         result = None
         for pnode in self.pnodes.get_queryset():
-            if pnode.type == ProductNode.ProductNodeType.DIRECT:
+            if pnode.node_type == ProductNode.ProductNodeType.DIRECT:
                 return pnode
             result = pnode
         return result

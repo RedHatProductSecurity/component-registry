@@ -115,7 +115,7 @@ def get_manifest_data(manifest_id: str, page_size: int = 50) -> dict:
         raise ValueError("Set CORGI_PYXIS_GRAPHQL_URL to get manifests from pyxis")
 
     if not settings.PYXIS_CERT or not settings.PYXIS_KEY:
-        raise ValueError("Set CORGI_PYXIS_CERT and CORGI_PYXIS_KEY to get manifests from pyxis")
+        raise ValueError("Set CORGI_UMB_CERT and CORGI_UMB_KEY to get manifests from pyxis")
     cert = (settings.PYXIS_CERT, settings.PYXIS_KEY)
 
     logger.info(f"Retrieving manifest data for {manifest_id} from {url}")

@@ -95,7 +95,8 @@ def refresh_service_manifests() -> None:
     soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
 )
 def cpu_remove_old_services_data(build_id: int) -> None:
-    """Find previous builds and delete them and their components,
+    """Find previous managed service builds and delete them,
+    after unlinking their components from each related services stream,
     so we can create a fresh manifest structure for each "new" build."""
     # This is done specifically because we don't have a way
     # to tie a set of components to a specific build right now,
@@ -104,28 +105,21 @@ def cpu_remove_old_services_data(build_id: int) -> None:
     build = SoftwareBuild.objects.get(
         build_id=build_id, build_type=SoftwareBuild.Type.APP_INTERFACE
     )
-    for root_component in build.components.get_queryset():
-        children_to_delete = set()
-
-        # Delete child components, if they're only provided by the root we're about to delete
-        for provided_component in root_component.provides.get_queryset():
-            if provided_component.cnodes.count() == 1:
-                children_to_delete.add(provided_component.pk)
-
-        # Do this in two steps to reduce size of set / overall memory requirements
-        Component.objects.filter(pk__in=children_to_delete).delete()
-        children_to_delete = set()
-
-        # Delete child components, if they're only upstream of the root we're about to delete
-        for upstream_component in root_component.upstreams.get_queryset():
-            if upstream_component.cnodes.count() == 1:
-                children_to_delete.add(upstream_component.pk)
-
-        # Nodes will be automatically deleted when their linked component is deleted
-        Component.objects.filter(pk__in=children_to_delete).delete()
+    service_stream_pks = ProductStream.objects.filter(
+        name__in=build.meta_attr["services"]
+    ).values_list("pk", flat=True)
+    build.disassociate_with_product("ProductStream", service_stream_pks)
 
     # Root components will be automatically deleted when their linked build is deleted
+    # Root nodes will be automatically deleted when their linked root component is deleted
+    # Child nodes will be automatically deleted when their root node is deleted
     build.delete()
+
+    # Linked child components will be left behind and not deleted
+    # These may be orphaned / not needed anymore if they were only used by this service
+    # But deleting only components which aren't linked to any other services is too slow
+    # Unlinking them from the old services streams ensures we don't report stale component versions
+    # So the VM team won't report services as being "affected" by already-fixed CVEs
 
 
 @app.task(

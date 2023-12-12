@@ -1,8 +1,8 @@
 import logging
 import re
-import uuid as uuid
 from abc import abstractmethod
 from typing import Any, Iterable, Iterator, Union
+from uuid import UUID, uuid4
 
 from django.apps import apps
 from django.conf import settings
@@ -265,7 +265,7 @@ class SoftwareBuild(TimeStampedModel):
         PNC = "PNC"  # Middleware
         PYXIS = "PYXIS"  # API backing Red Hat's container catalog
 
-    uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    uuid = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     build_id = models.CharField(max_length=200, default="")
     build_type = models.CharField(choices=Type.choices, max_length=20)
     name = models.TextField()  # Arbitrary identifier for a build
@@ -325,7 +325,7 @@ class SoftwareBuild(TimeStampedModel):
         return None
 
     def disassociate_with_product(
-        self, product_model_name: str, product_pks: Iterable[str]
+        self, product_model_name: str, product_pks: Iterable[str | UUID]
     ) -> None:
         """Remove the product references from all components associated with this build.
         Assumes that all references belong to the same model."""
@@ -348,7 +348,7 @@ class SoftwareBuildTag(Tag):
 class ProductModel(TimeStampedModel):
     """Abstract model that defines common fields for all product-related models."""
 
-    uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    uuid = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     name = models.TextField(unique=True)
     description = models.TextField(default="")
     version = models.CharField(max_length=1024, default="")
@@ -756,7 +756,7 @@ class Channel(TimeStampedModel, ProductTaxonomyMixin):
         CDN_REPO = "CDN_REPO"  # Main delivery channel for RPMs
         CONTAINER_REGISTRY = "CONTAINER_REGISTRY"  # Registries, e.g.: registry.redhat.io, quay.io
 
-    uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    uuid = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     name = models.TextField(unique=True)
     relative_url = models.CharField(max_length=200, default="")
     type = models.CharField(choices=Type.choices, max_length=50)
@@ -804,7 +804,7 @@ class ProductComponentRelation(TimeStampedModel):
         Type.SBOMER,
     )
 
-    uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    uuid = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     type = models.CharField(choices=Type.choices, max_length=50)
     meta_attr = models.JSONField(default=dict)
 
@@ -1136,7 +1136,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         Type.PYPI,
     )
 
-    uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    uuid = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     name = models.TextField()
     description = models.TextField()
     meta_attr = models.JSONField(default=dict)
@@ -2269,7 +2269,7 @@ class AppStreamLifeCycle(TimeStampedModel):
 class RedHatProfile(models.Model):
     """Additional information provided by Red Hat SSO, used for access controls"""
 
-    rhat_uuid = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    rhat_uuid = models.UUIDField(primary_key=True, default=uuid4)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     rhat_roles = models.TextField(default="")
     # Storing CN instead of trying to split it into Django's given/first/family/last

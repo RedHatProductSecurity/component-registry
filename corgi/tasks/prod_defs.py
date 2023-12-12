@@ -4,6 +4,7 @@ from typing import Any
 
 from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
+from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.db.models import Q, QuerySet
 
@@ -225,10 +226,11 @@ def _parse_variants_from_brew_tags(brew_tags: list[str]) -> dict[str, str]:
         trimmed_brew_tag, sans_container_released = brew_tag_to_et_prefixes(brew_tag)
         variant_data = CollectorErrataProductVersion.objects.filter(
             brew_tags__overlap=[trimmed_brew_tag, sans_container_released]
-        ).values("variants__name", "variants__cpe")
-        for variant in variant_data:
-            if variant["variants__name"]:
-                distinct_variants[variant["variants__name"]] = variant["variants__cpe"]
+        ).values_list("variants__name", "variants__cpe")
+        for variant_name, variant_cpe in variant_data:
+            if not variant_cpe:
+                continue
+            distinct_variants[variant_name] = variant_cpe
 
     return distinct_variants
 
@@ -260,7 +262,7 @@ def _create_inferred_variants(
         ProductNode.objects.get_or_create(
             object_id=variant.pk,
             parent=parent,
-            type=ProductNode.ProductNodeType.INFERRED,
+            node_type=ProductNode.ProductNodeType.INFERRED,
             defaults={"obj": variant},
         )
 
@@ -470,14 +472,11 @@ def parse_errata_info(
                         },
                     },
                 )
-                # TODO linking this variant to multiple streams. quarkus-2.13 stream for example now
-                #  has both DIRECT and INFERRED relationships. Prefer DIRECT over INFERRED if
-                #  possible. If not possible create both
                 node, node_created = ProductNode.objects.get_or_create(
                     parent=product_stream_node,
                     object_id=product_variant.pk,
-                    type=ProductNode.ProductNodeType.DIRECT,
-                    defaults={"obj": product_variant},
+                    content_type=ContentType.objects.get_for_model(ProductVariant),
+                    defaults={"node_type": ProductNode.ProductNodeType.DIRECT},
                 )
                 # TODO, stop updating the parent as stream -> variant is now many-to-many
                 if node.parent != product_stream_node:

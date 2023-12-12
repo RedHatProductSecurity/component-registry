@@ -58,6 +58,7 @@ def setup_product(
             name=stream_name, products=product, productversions=version, active=True
         )
     else:
+<<<<<<< Updated upstream
         stream = ProductStreamFactory(products=product, productversions=version, active=True)
     variant = ProductVariantFactory(
         name="1", products=product, productversions=version, productstreams=stream
@@ -69,6 +70,22 @@ def setup_product(
     # This generates and saves the ProductModel properties of stream
     # AKA we link the ProductModel instances to each other
     stream.save_product_taxonomy()
+=======
+        psnode = ProductStreamNodeFactory()
+    stream = psnode.obj
+
+    pvariant = ProductVariantFactory(name="1")
+<<<<<<< Updated upstream
+    pvariant_node = ProductVariantNodeFactory(obj=pvariant, parent=psnode, node_type=variant_node_type)
+
+=======
+    pvariant_node = ProductVariantNodeFactory(
+        obj=pvariant, parent=psnode, node_type=variant_node_type
+    )
+>>>>>>> Stashed changes
+    variant = pvariant_node.obj
+
+>>>>>>> Stashed changes
     assert variant in stream.productvariants.get_queryset()
     return stream, variant
 

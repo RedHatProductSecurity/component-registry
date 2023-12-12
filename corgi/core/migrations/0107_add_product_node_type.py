@@ -10,37 +10,13 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveConstraint(
-            model_name="productnode",
-            name="unique_pnode_get_or_create",
-        ),
-        migrations.RemoveConstraint(
-            model_name="productnode",
-            name="unique_pnode_get_or_create_for_null_parent",
-        ),
         migrations.AddField(
             model_name="productnode",
-            name="type",
+            name="node_type",
             field=models.CharField(
                 choices=[("DIRECT", "Direct"), ("INFERRED", "Inferred")],
                 default="DIRECT",
                 max_length=20,
             ),
-        ),
-        migrations.AddConstraint(
-            model_name="productnode",
-            constraint=models.UniqueConstraint(
-                condition=models.Q(("parent__isnull", False)),
-                fields=("object_id", "parent", "type"),
-                name="unique_pnode_get_or_create",
-            ),
-        ),
-        migrations.AddConstraint(
-            model_name="productnode",
-            constraint=models.UniqueConstraint(
-                condition=models.Q(("parent__isnull", True)),
-                fields=("object_id", "type"),
-                name="unique_pnode_get_or_create_for_null_parent",
-            ),
-        ),
+        )
     ]

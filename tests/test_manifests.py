@@ -331,7 +331,7 @@ def test_manifest_cpes_from_patterns_and_brew_tags(stored_proc):
     manifest = json.loads(stream.manifest)
     product_data = manifest["packages"][-1]
     cpes_in_manifest = set(ref["referenceLocator"] for ref in product_data["externalRefs"])
-    assert set(sorted([test_cpe, variant.cpe])) == cpes_in_manifest
+    assert {test_cpe, variant.cpe} == cpes_in_manifest
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)

@@ -79,6 +79,7 @@ def test_cpes():
         productversions=pv2,
         productstreams=ps3,
     )
+<<<<<<< Updated upstream
     pvariant3 = ProductVariantFactory(
         cpe="cpe:/o:redhat:inferred_variant:8",
         products=p1,
@@ -89,6 +90,12 @@ def test_cpes():
         products=p1,
         productversions=pv2,
         productstreams=ps2,
+=======
+    ProductVariantNodeFactory(obj=pvariant2, parent=ps3_node)
+    pvariant3 = ProductVariantFactory(cpe="cpe:/o:redhat:inferred_variant:8")
+    ProductVariantNodeFactory(
+        obj=pvariant3, parent=ps3_node, node_type=ProductNode.ProductNodeType.INFERRED
+>>>>>>> Stashed changes
     )
 
     p1node = ProductNode.objects.create(parent=None, obj=p1)
@@ -138,8 +145,13 @@ def test_cpes_from_patterns_and_brew_tags():
     cpe_from_brew_tag = "cpe_from_brew_tag"
     product_variant = ProductVariantFactory(cpe=cpe_from_brew_tag)
     assert product_variant.cpes == (cpe_from_brew_tag,)
+<<<<<<< Updated upstream
     ProductNode.objects.create(
         parent=psnode, obj=product_variant, type=ProductNode.ProductNodeType.INFERRED
+=======
+    ProductVariantNodeFactory(
+        obj=product_variant, parent=psnode, node_type=ProductNode.ProductNodeType.INFERRED
+>>>>>>> Stashed changes
     )
     assert sorted(product_stream.cpes) == [cpe_from_brew_tag, cpe_from_pattern_matching]
 
@@ -1634,8 +1646,13 @@ def test_license_properties():
 
 @pytest.mark.django_db
 def test_get_related_names_of_type():
+<<<<<<< Updated upstream
     variant = ProductVariantFactory()
     create_variant_node_tree(variant, ProductNode.ProductNodeType.INFERRED)
+=======
+    pnode = ProductVariantNodeFactory(node_type=ProductNode.ProductNodeType.INFERRED)
+    variant = pnode.obj
+>>>>>>> Stashed changes
 
     # Since the pnode linking the product_version and the product_stream is DIRECT we expect a
     # result
@@ -1685,8 +1702,13 @@ def test_get_product_details():
 def test_get_product_details_inferred():
     """Make sure that INFERRED variants don't get their parent product models added to the
     results"""
+<<<<<<< Updated upstream
     variant = ProductVariantFactory()
     create_variant_node_tree(variant, ProductNode.ProductNodeType.INFERRED)
+=======
+    pnode = ProductVariantNodeFactory(node_type=ProductNode.ProductNodeType.INFERRED)
+    variant = pnode.obj
+>>>>>>> Stashed changes
     result = get_product_details((variant,), [])
     assert result == {
         "products": set(),

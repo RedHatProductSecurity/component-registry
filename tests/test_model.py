@@ -1781,3 +1781,29 @@ def test_save_product_taxonomy():
     assert not c.productvariants.exists()
     sb.save_product_taxonomy()
     assert c.productvariants.first() == variant
+
+
+@pytest.mark.django_db
+def test_save_product_taxonomy_inferred():
+    stream_node = ProductStreamNodeFactory()
+    stream = stream_node.obj
+    variant_node = ProductVariantNodeFactory(
+        parent=stream_node, node_type=ProductNode.ProductNodeType.INFERRED
+    )
+    variant = variant_node.obj
+
+    sb = SoftwareBuildFactory()
+    c = ComponentFactory(software_build=sb)
+    ProductComponentRelationFactory(
+        type=ProductComponentRelation.Type.BREW_TAG, software_build=sb, product_ref=stream.name
+    )
+    sb.save_product_taxonomy()
+    assert c.productstreams.first() == stream
+    assert not c.productvariants.exists()
+
+    ProductComponentRelationFactory(
+        type=ProductComponentRelation.Type.ERRATA, software_build=sb, product_ref=variant.name
+    )
+
+    sb.save_product_taxonomy()
+    assert c.productvariants.first() == variant

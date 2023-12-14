@@ -128,6 +128,12 @@ class ComponentFilter(FilterSet):
         method="filter_root_components",
         label="Show only root components (source RPMs, index container images)",
     )
+
+    active_streams = BooleanFilter(
+        label="Show components from active streams",
+        method="filter_active_streams",
+    )
+
     latest_components_by_streams = BooleanFilter(
         method="filter_latest_components_by_streams",
         label="Show only latest components across product streams",
@@ -158,11 +164,6 @@ class ComponentFilter(FilterSet):
         method="filter_gomod_components",
     )
 
-    active_streams = BooleanFilter(
-        label="Show components from active streams",
-        method="filter_active_streams",
-    )
-
     @staticmethod
     def filter_re_provides_purl(
         queryset: ComponentQuerySet, _name: str, value: str
@@ -171,11 +172,7 @@ class ComponentFilter(FilterSet):
         if value in EMPTY_VALUES:
             # User gave an empty ?param= so return the unfiltered queryset
             return queryset
-        return (
-            queryset.filter(provides__purl__iregex=value)
-            .filter(software_build__isnull=False)
-            .distinct()
-        )
+        return queryset.filter(provides__purl__iregex=value).distinct()
 
     @staticmethod
     def filter_provides_name(
@@ -185,7 +182,7 @@ class ComponentFilter(FilterSet):
         if value in EMPTY_VALUES:
             # User gave an empty ?param= so return the unfiltered queryset
             return queryset
-        return queryset.filter(provides__name=value).filter(software_build__isnull=False).distinct()
+        return queryset.filter(provides__name=value).distinct()
 
     @staticmethod
     def filter_re_provides_name(
@@ -195,11 +192,7 @@ class ComponentFilter(FilterSet):
         if value in EMPTY_VALUES:
             # User gave an empty ?param= so return the unfiltered queryset
             return queryset
-        return (
-            queryset.filter(provides__name__iregex=value)
-            .filter(software_build__isnull=False)
-            .distinct()
-        )
+        return queryset.filter(provides__name__iregex=value).distinct()
 
     @staticmethod
     def filter_gomod_components(

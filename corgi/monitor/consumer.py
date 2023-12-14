@@ -11,7 +11,8 @@ from corgi.collectors.pnc import is_sbomer_product
 from corgi.tasks.brew import slow_fetch_brew_build, slow_update_brew_tags
 from corgi.tasks.errata_tool import slow_handle_shipped_errata
 from corgi.tasks.pnc import slow_fetch_pnc_sbom, slow_handle_pnc_errata_released
-from corgi.tasks.pyxis import slow_fetch_pyxis_manifest
+
+# from corgi.tasks.pyxis import slow_fetch_pyxis_manifest
 
 logger = logging.getLogger(__name__)
 
@@ -205,11 +206,13 @@ class UMBReceiverHandler(MessagingHandler):
     @staticmethod
     def pyxis_manifest_create(event: Event) -> bool:
         logger.info(f"Handling UMB message for pyxis manifest {event.message.id}")
-        message = json.loads(event.message.body)
+        json.loads(event.message.body)
         try:
-            slow_fetch_pyxis_manifest.delay(
-                message["entityData"]["_id"]["$oid"],
-            )
+            pass
+            # Temporarily disabled due to slowness and lots of duplicate data
+            # slow_fetch_pyxis_manifest.delay(
+            #     message["entityData"]["_id"]["$oid"],
+            # )
         except Exception as e:
             logger.error(f"Failed to schedule pyxis manifest fetch {event.message.id}: {str(e)}")
             return False

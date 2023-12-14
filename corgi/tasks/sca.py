@@ -18,6 +18,7 @@ from config.celery import app
 from corgi.collectors.brew import Brew
 from corgi.collectors.go_list import GoList
 from corgi.collectors.syft import Syft
+from corgi.core.constants import ROOT_COMPONENTS_CONDITION
 from corgi.core.models import Component, ComponentNode, SoftwareBuild
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 
@@ -206,8 +207,12 @@ def cpu_software_composition_analysis(build_uuid, force_process: bool = False):
 
     component_qs = Component.objects.filter(software_build=software_build)
     try:
-        # Get root component for this build.
-        root_component = component_qs.root_components().exclude(type=Component.Type.RPMMOD).get()
+        # Get root component for this build, using the condition instead of the queryset
+        # because the predefined root_components() Django queryset also excludes modular SRPMs
+        # but we must still run SCA on these
+        root_component = (
+            component_qs.filter(ROOT_COMPONENTS_CONDITION).exclude(type=Component.Type.RPMMOD).get()
+        )
     except Component.DoesNotExist as exc:
         # None of the components were root components
         module_qs = component_qs.filter(type=Component.Type.RPMMOD)

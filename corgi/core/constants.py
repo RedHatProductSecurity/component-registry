@@ -52,13 +52,13 @@ MODEL_FILTER_NAME_MAPPING = {
 # Filter on "root components":
 # SRPMs, modules, index container images, or Github repos for managed services
 SRPM_CONDITION = Q(type="RPM", arch="src")
+MODULAR_SRPM_CONDITION = SRPM_CONDITION & Q(release__contains=".module")
 # Only root components should be linked to software builds
 # This lets us distinguish between Red Hat Maven components which are / are not roots
 # Using some combination of type, namespace, and arch will not work
 # since some Red Hat Maven components are roots (e.g. quarkus-bom)
 # but others are provided by / children of these roots (e.g. agroal-api)
 ROOT_COMPONENTS_CONDITION = Q(software_build_id__isnull=False)
-MODULAR_SRPM_CONDITION = Q(type="RPM", arch="src", release__contains=".module")
 # If you change above, fix below to match
 # then deploy the updated GET_LATEST_COMPONENT_STOREDPROC_SQL in a new migration
 ROOT_COMPONENTS_SQL = (

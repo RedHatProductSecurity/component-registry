@@ -481,6 +481,17 @@ def test_latest_components_by_streams_filter_with_multiple_products(client, api_
     assert response["results"][0]["nevra"] == oldest_component.nevra
     assert response["results"][1]["nevra"] == older_component.nevra
 
+    ps2.active = False
+    ps2.save()
+
+    response = client.get(f"{api_path}/components?latest_components_by_streams=True")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 1
+    # Report newer_component as the latest for the RHEL7 stream
+    # Because RHEL 8 is not active
+    assert response["results"][0]["nevra"] == newer_component.nevra
+
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_released_components_filter(client, api_path):

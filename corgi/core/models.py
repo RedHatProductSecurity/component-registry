@@ -956,8 +956,7 @@ class ComponentQuerySet(models.QuerySet):
 
     @staticmethod
     def _latest_components_func(
-        components: "ComponentQuerySet", model_type: str, ofuri: str, include_inactive_streams: bool
-    ) -> Iterable[str]:
+        components: "ComponentQuerySet", model_type: str, ofuri: str) -> Iterable[str]:
         return (
             components.values("type", "namespace", "name", "arch")
             .order_by()  # required to avoid cross-join fun
@@ -970,7 +969,6 @@ class ComponentQuerySet(models.QuerySet):
                     F("namespace"),
                     F("name"),
                     F("arch"),
-                    Value(include_inactive_streams),
                     function="get_latest_component",
                     output_field=models.UUIDField(),
                 )
@@ -982,8 +980,7 @@ class ComponentQuerySet(models.QuerySet):
         self,
         ofuri: str,
         model_type: str = "ProductStream",
-        include: bool = True,
-        include_inactive_streams: bool = False,
+        include: bool = True
     ) -> "ComponentQuerySet":
         """Return components from latest builds in a single stream."""
 
@@ -995,7 +992,7 @@ class ComponentQuerySet(models.QuerySet):
         components = self.root_components().prefetch_related(product_prefetch)
 
         latest_components_uuids = set(
-            self._latest_components_func(components, model_type, ofuri, include_inactive_streams)
+            self._latest_components_func(components, model_type, ofuri)
         )
 
         if latest_components_uuids:
@@ -1017,14 +1014,13 @@ class ComponentQuerySet(models.QuerySet):
 
     def latest_components_by_streams(
         self,
-        include: bool = True,
-        include_inactive_streams: bool = False,
-    ) -> "ComponentQuerySet":
+        include: bool = True) -> "ComponentQuerySet":
         """Return only root components from latest builds for each product stream."""
         components = self.root_components().prefetch_related("productstreams")
         product_stream_ofuris = set(
             (
-                components.values_list("productstreams__ofuri", flat=True)
+                components.filter(productstreams__active=True)
+                .values_list("productstreams__ofuri", flat=True)
                 # Clear ordering inherited from parent Queryset, if any
                 # So .distinct() works properly and doesn't have duplicates
                 .order_by().distinct()
@@ -1037,8 +1033,7 @@ class ComponentQuerySet(models.QuerySet):
                 self._latest_components_func(
                     components.filter(productstreams__ofuri=ps_ofuri),
                     "ProductStream",  # always ProductStream model type
-                    ps_ofuri,
-                    include_inactive_streams,
+                    ps_ofuri
                 )
             )
 
@@ -1106,9 +1101,7 @@ class ComponentQuerySet(models.QuerySet):
         if not quick:
             # Only filter when we're actually generating a manifest
             # not when checking if there are components to manifest, since it's slow
-            roots = roots.latest_components(
-                model_type="ProductStream", ofuri=ofuri, include_inactive_streams=True
-            )
+            roots = roots.latest_components(ofuri=ofuri)
 
         # Order by UUID to give stable results in manifests
         # Other querysets should not define an ordering

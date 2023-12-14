@@ -85,7 +85,7 @@ SBOMER_PRODUCT_MAP = {
 LATEST_FILTER_DEFINITION = (
     "get_latest_component( "
     "model_type text, ps_ofuri text, component_type text, component_ns text, "
-    "component_name text, component_arch text, include_inactive_streams boolean) "
+    "component_name text, component_arch text) "
     "RETURNS uuid AS $$"
 )
 LATEST_FILTER_FIELDS = (
@@ -97,7 +97,6 @@ LATEST_FILTER_WHERE = (
     "AND core_component.namespace=component_ns "
     "AND core_component.type=component_type "
     "AND core_component.arch=component_arch "
-    "AND (include_inactive_streams OR core_productstream.active) "
     f"AND ({ROOT_COMPONENTS_SQL})"
 )
 

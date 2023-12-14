@@ -306,11 +306,7 @@ class ComponentFilter(FilterSet):
         else:
             # No matching model instance found, or invalid ofuri
             raise Http404
-        return queryset.root_components().latest_components(
-            model_type=model_type,
-            ofuri=value,
-            include_inactive_streams=True,
-        )
+        return queryset.root_components().latest_components(model_type=model_type, ofuri=value)
 
 
 class ProductDataFilter(FilterSet):

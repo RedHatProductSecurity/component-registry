@@ -1542,29 +1542,7 @@ def test_latest_filter(stored_proc):
         ofuri=ps.ofuri,
     ).exists()
     # no results because this stream has no components, even if we include as much as possible
-    assert not ps.components.latest_components(
-        model_type="ProductStream",
-        ofuri=ps.ofuri,
-        include_inactive_streams=True,
-    ).exists()
-
-
-@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
-def test_latest_filter_with_inactive(stored_proc):
-    ps = ProductStreamFactory(name="rhel-7.9.z", active=False)
-    srpm_with_el = SrpmComponentFactory(name="sdb", version="1.2.1", release="21.el7")
-    srpm_with_el.productstreams.add(ps)
-    srpm = SrpmComponentFactory(name="sdb", version="1.2.1", release="3")
-    srpm.productstreams.add(ps)
-    latest_components = ps.components.latest_components(
-        model_type="ProductStream", ofuri=ps.ofuri, include_inactive_streams=True
-    )
-    assert len(latest_components) == 1
-    assert latest_components[0] == srpm_with_el
-
-    # include_inactive_streams defaults to False, so we expect no results here
-    latest_components = ps.components.latest_components(model_type="ProductStream", ofuri=ps.ofuri)
-    assert len(latest_components) == 0
+    assert not ps.components.latest_components(model_type="ProductStream", ofuri=ps.ofuri).exists()
 
 
 @pytest.mark.django_db
@@ -1616,12 +1594,7 @@ def test_latest_filter_components_modular(stored_proc):
         release="8040020210602044050.e217d58c",
     )
     module_2.productstreams.add(ps)
-    latest_components = ps.components.latest_components(
-        model_type="ProductStream",
-        ofuri=ps.ofuri,
-        # This test should pass whether or not the stream is active
-        include_inactive_streams=True,
-    )
+    latest_components = ps.components.latest_components(model_type="ProductStream",ofuri=ps.ofuri)
     assert len(latest_components) == 1
     assert latest_components[0] == module_2
 

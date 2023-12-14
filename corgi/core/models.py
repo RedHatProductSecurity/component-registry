@@ -11,7 +11,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
 from django.db import models
 from django.db.models import Q, QuerySet
-from django.db.models.expressions import F, Func, Value
+from django.db.models.expressions import F, Func, Subquery, Value
 from mptt.managers import TreeManager
 from mptt.models import MPTTModel, TreeForeignKey
 from packageurl import PackageURL
@@ -908,8 +908,8 @@ class ComponentQuerySet(models.QuerySet):
     ) -> Iterable[str]:
         return (
             components.values("type", "namespace", "name", "arch")
-            .order_by()  # required to avoid cross-join fun
-            .distinct()
+            .order_by("type", "namespace", "name", "arch")
+            .distinct("type", "namespace", "name", "arch")
             .annotate(
                 latest_version=Func(
                     Value(model_type),
@@ -968,16 +968,22 @@ class ComponentQuerySet(models.QuerySet):
         include: bool = True,
         include_inactive_streams: bool = False,
     ) -> "ComponentQuerySet":
-        """Return only root components from latest builds for each product stream."""
+        """Return root components of latest builds for each product stream."""
         components = self.root_components().prefetch_related("productstreams")
-        product_stream_ofuris = set(
-            (
-                components.values_list("productstreams__ofuri", flat=True)
-                # Clear ordering inherited from parent Queryset, if any
-                # So .distinct() works properly and doesn't have duplicates
-                .order_by().distinct()
+
+        # if include_inactive_streams is False we need to filter ofuris
+        productstreams = components.values_list("productstreams").distinct()
+        include_active_streams_filter = {"active": True}
+        if include_inactive_streams:
+            include_active_streams_filter = {}
+        product_stream_ofuris = (
+            ProductStream.objects.filter(
+                pk__in=Subquery(productstreams), **include_active_streams_filter
             )
+            .values_list("ofuri", flat=True)
+            .distinct()
         )
+
         # aggregate up all latest component uuids across all matched product streams
         latest_components_uuids: set[str] = set()
         for ps_ofuri in product_stream_ofuris:

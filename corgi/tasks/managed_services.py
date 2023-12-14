@@ -1,3 +1,4 @@
+from datetime import datetime
 from subprocess import CalledProcessError
 
 from celery.utils.log import get_task_logger
@@ -44,48 +45,29 @@ class MultiplePermissionExceptions(Exception):
 def refresh_service_manifests() -> None:
     """Collect data for all Red Hat managed services from product-definitions
     and App Interface, then remove and recreate all services"""
-    services = ProductStream.objects.filter(
-        meta_attr__managed_service_components__isnull=False
-    ).distinct()
+    services = tuple(
+        ProductStream.objects.filter(meta_attr__managed_service_components__isnull=False)
+        .values_list("name", "meta_attr__managed_service_components")
+        .distinct("name")
+    )
     service_metadata = AppInterface.fetch_service_metadata(services)
 
-    # Delete all APP_INTERFACE relations / builds in advance, before we start creating anything.
-    # Services can reuse components, so this avoids deleting a build / component for one service
-    # while trying to create the same build / component for another service in another task.
-    # This also cleans up any old builds / components which were removed from product-definitions.
-    # We should recreate builds / components that are still present in prod-defs
-    # when we process the list of components for that service below.
-    ProductComponentRelation.objects.filter(
-        type=ProductComponentRelation.Type.APP_INTERFACE
-    ).delete()
+    # Manifest individually to avoid errors for individual components
+    # and timeouts for large services with many components
+    # that block analyzing the remaining components for the service
+    for component in service_metadata.values():
+        service_names = component.pop("services")
+        cpu_manifest_service_component.delay(list(service_names), component)
 
-    # This technically suffers from race conditions
-    # when the last 2 tasks to remove data run at the same time
-    # as the first task to add new data (when there are 3 workers)
-    # Processing by service names or build / component names
-    # or running deletion inside a transaction is more likely to have bugs
-
-    # Preventing this would be too complex, and actual bugs should be rare
-    # since the last builds we remove are the newest, due to order_by()
-    # and the first builds / service components we recreate are the oldest
-    # So data we're deleting shouldn't normally be reused by data we're recreating
-
-    # Bugs may happen if the last builds / components we remove (or their dependencies)
-    # start being used for the first time, by the first service we recreate
-    # This should fix itself when data is recreated the next day
+    # Clean up any old builds / components which are still present in Corgi
+    # but were removed from product-definitions.
     for build_id in (
         SoftwareBuild.objects.filter(build_type=SoftwareBuild.Type.APP_INTERFACE)
+        .exclude(name__in=service_metadata.keys())
         .values_list("build_id", flat=True)
         .order_by("build_id")
     ):
         cpu_remove_old_services_data.delay(build_id)
-
-    for service, components in service_metadata.items():
-        for component in components:
-            # Manifest individually to avoid errors for individual components
-            # and timeouts for large services with many components
-            # that block analyzing the remaining components for the service
-            cpu_manifest_service_component.delay(service.name, component)
 
 
 @app.task(
@@ -97,7 +79,7 @@ def refresh_service_manifests() -> None:
 def cpu_remove_old_services_data(build_id: int) -> None:
     """Find previous managed service builds and delete them,
     after unlinking their components from each related services stream,
-    so we can create a fresh manifest structure for each "new" build."""
+    so we don't leave behind stale data / VM doesn't file trackers for already-fixed CVEs."""
     # This is done specifically because we don't have a way
     # to tie a set of components to a specific build right now,
     # so we construct an arbitrary build periodically even if nothing has changed since
@@ -105,21 +87,43 @@ def cpu_remove_old_services_data(build_id: int) -> None:
     build = SoftwareBuild.objects.get(
         build_id=build_id, build_type=SoftwareBuild.Type.APP_INTERFACE
     )
-    service_stream_pks = ProductStream.objects.filter(
-        name__in=build.meta_attr["services"]
-    ).values_list("pk", flat=True)
-    build.disassociate_with_product("ProductStream", service_stream_pks)
+    for root_component in build.components.get_queryset():
+        # TODO: Clean up deletion logic per notes
+        children_to_delete = set()
 
+        # Delete child components, if they're only provided by the root we're about to delete
+        for provided_component in root_component.provides.get_queryset():
+            if provided_component.cnodes.count() == 1:
+                children_to_delete.add(provided_component.pk)
+
+        # Do this in two steps to reduce size of set / overall memory requirements
+        Component.objects.filter(pk__in=children_to_delete).delete()
+        children_to_delete = set()
+
+        # Delete child components, if they're only upstream of the root we're about to delete
+        for upstream_component in root_component.upstreams.get_queryset():
+            if upstream_component.cnodes.count() == 1:
+                children_to_delete.add(upstream_component.pk)
+
+        # Nodes will be automatically deleted when their linked component is deleted
+        Component.objects.filter(pk__in=children_to_delete).delete()
+
+    ProductComponentRelation.objects.filter(
+        type=ProductComponentRelation.Type.APP_INTERFACE, build_id=build_id
+    ).delete()
+
+    old_services = build.meta_attr["services"]
+    logger.info(
+        f"App-Interface build {build_id} and all its current children "
+        f"will be unlinked from old services that no longer use it: {old_services}"
+    )
+    old_stream_pks = ProductStream.objects.filter(name__in=old_services).values_list(
+        "pk", flat=True
+    )
+    build.disassociate_with_product("ProductStream", old_stream_pks)
     # Root components will be automatically deleted when their linked build is deleted
-    # Root nodes will be automatically deleted when their linked root component is deleted
-    # Child nodes will be automatically deleted when their root node is deleted
+    # This also deletes all the nodes which are children of the root (the entire tree)
     build.delete()
-
-    # Linked child components will be left behind and not deleted
-    # These may be orphaned / not needed anymore if they were only used by this service
-    # But deleting only components which aren't linked to any other services is too slow
-    # Unlinking them from the old services streams ensures we don't report stale component versions
-    # So the VM team won't report services as being "affected" by already-fixed CVEs
 
 
 @app.task(
@@ -128,12 +132,15 @@ def cpu_remove_old_services_data(build_id: int) -> None:
     retry_kwargs=RETRY_KWARGS,
     soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
 )
-def cpu_manifest_service_component(stream_name: str, service_component: dict[str, str]) -> None:
-    """Analyze a single component in some Red Hat managed service
+def cpu_manifest_service_component(
+    stream_names: list[str], service_component: dict[str, str]
+) -> None:
+    """Analyze a single component used by some Red Hat managed service(s)
     based on data from product-definitions and App Interface"""
-    logger.info(f"Processing component for service {stream_name}: {service_component}")
+    logger.info(f"Processing component used by services {stream_names}: {service_component}")
     # Make sure the service exists, although we only need the name
-    ProductStream.objects.get(name=stream_name)
+    for stream_name in stream_names:
+        ProductStream.objects.get(name=stream_name)
     exceptions: list[CalledProcessError | GitCloneError | HTTPError] = []
 
     now = timezone.now()
@@ -142,7 +149,7 @@ def cpu_manifest_service_component(stream_name: str, service_component: dict[str
 
     quay_repo = service_component.get("quay_repo_name")
     if quay_repo:
-        logger.info(f"Scanning Quay repo {quay_repo} for service {stream_name}")
+        logger.info(f"Scanning Quay repo {quay_repo} used by services {stream_names}")
         try:
             component_data, quay_scan_source = Syft.scan_repo_image(target_image=quay_repo)
             component_version = quay_scan_source["target"]["imageID"]
@@ -158,7 +165,7 @@ def cpu_manifest_service_component(stream_name: str, service_component: dict[str
 
     git_repo = service_component.get("git_repo_url")
     if git_repo:
-        logger.info(f"Scanning Git repo {git_repo} for service {stream_name}")
+        logger.info(f"Scanning Git repo {git_repo} used by services {stream_names}")
         try:
             component_data, source_ref = Syft.scan_git_repo(target_url=git_repo)
             if not component_version:
@@ -174,23 +181,52 @@ def cpu_manifest_service_component(stream_name: str, service_component: dict[str
     if not analyzed_components:
         if not quay_repo and not git_repo:
             raise ValueError(
-                f"Service component {service_component['name']} for service {stream_name} "
+                f"Service component {service_component['name']} used by services {stream_names} "
                 f"didn't define either a Quay repo or Git repo URL"
             )
         logger.error(
-            f"Service component {service_component['name']} for service {stream_name} "
+            f"Service component {service_component['name']} used by services {stream_names} "
             "didn't have any child components after analyzing "
             f"its Quay ({quay_repo}) and / or Git ({git_repo}) repos"
         )
         # Raise exceptions here if we failed to analyze a repo / image
         if exceptions:
             raise_multiple_exceptions(exceptions)
-        # If no exceptions, still skip creating the build and relations below,
-        # as well as saving the taxonomy, since there are no components
-        return
+        # If no exceptions, we still create the build and relations below,
+        # as well as save the taxonomy, even if there are no components
+        # just so that this root component is properly linked to the service
 
+    save_service_components(
+        now,
+        service_component,
+        stream_names,
+        exceptions,
+        Component.Type.CONTAINER_IMAGE if quay_repo else Component.Type.GITHUB,
+        component_version,
+        analyzed_components,
+    )
+
+
+def save_service_components(
+    now: datetime,
+    service_component: dict[str, str],
+    stream_names: list[str],
+    exceptions: list[CalledProcessError | GitCloneError | HTTPError],
+    component_type: Component.Type,
+    component_version: str,
+    analyzed_components: list[dict],
+):
+    """Helper method to save the components we discovered above"""
     with transaction.atomic():
         build_id = now.strftime("%Y%m%d%H%M%S%f")
+        build_kwargs = {
+            "name": service_component["name"],
+            "build_type": SoftwareBuild.Type.APP_INTERFACE,
+            "build_id": build_id,
+            "completion_time": now,
+            "meta_attr": {"services": stream_names},
+        }
+
         try:
             # get_or_create requires all keyword arguments to appear in
             # a unique_together constraint, like build_id and build_type
@@ -199,48 +235,54 @@ def cpu_manifest_service_component(stream_name: str, service_component: dict[str
             # we try to find an APP_INTERFACE build with a matching name first
             # And update the list of services it belongs to
             # If that fails, we'll create a new build
-            # So Corgi reuses a component when services reuse the component
             build = SoftwareBuild.objects.get(
                 name=service_component["name"],
                 build_type=SoftwareBuild.Type.APP_INTERFACE,
             )
-            build.meta_attr["services"].append(stream_name)
-            build.save()
+            old_services = set(build.meta_attr["services"])
             logger.info(
-                f"Service component {service_component['name']} for service {stream_name} "
+                f"Service component {service_component['name']} "
                 f"had an existing {build.build_type} build with ID {build_id}, "
-                f"and is used by multiple services: {build.meta_attr['services']}"
+                f"was used by multiple old services: {old_services}, "
+                f"and is now used by multiple new services: {stream_names}"
             )
+
+            # We unlink this root component and all its children from all older services
+            # so that VM does not see stale data / file bad trackers
+            # after a service stops using some root component
+            logger.info(
+                f"Service component {service_component['name']} and all its current children "
+                f"will be unlinked from old services that no longer use it: {old_services}"
+            )
+            old_stream_pks = ProductStream.objects.filter(name__in=old_services).values_list(
+                "pk", flat=True
+            )
+            build.disassociate_with_product("ProductStream", old_stream_pks)
+
+            # We delete and recreate this build, root component, and all nodes
+            # so that VM does not see stale data / file bad trackers
+            # after a root component upgrades to a newer version of a child component
+            # TODO: Stale provided / upstream child components will be orphaned and not deleted
+            #  if the old service was the only stream that used them, but is no longer linked
+            #  or the current service no longer depends on that version
+            #  The orphaned components are no longer linked,
+            #  so at least no one will see bad search results - we just waste a little DB space
+            build.delete()
 
         except SoftwareBuild.DoesNotExist:
-            build = SoftwareBuild.objects.create(
-                name=service_component["name"],
-                build_type=SoftwareBuild.Type.APP_INTERFACE,
-                build_id=build_id,
-                completion_time=now,
-                meta_attr={"services": [stream_name]},
-            )
-            logger.info(
-                f"Service component {service_component['name']} for service {stream_name} "
-                f"created a new {build.build_type} build with ID {build_id}"
-            )
+            pass
 
-        # Root components can only be linked to one build
-        # if we use the same build / component for two different services,
-        # we will analyze the same component twice
-        # this should be OK and the taxonomy should be the same.
-        # Or if not, merging the data is probably what we want.
+        build = SoftwareBuild.objects.create(**build_kwargs)
+        logger.info(
+            f"Service component {service_component['name']} used by services {stream_names} "
+            f"created a new {build.build_type} build with ID {build_id}"
+        )
 
-        # We can't use namespace in Component get_or_create / update_or_create kwargs
-        # We can only use name, version, etc. fields that are part of the NEVRA
-        # We don't want to get an existing component in the UPSTREAM namespace
-        # or update an existing component to use the REDHAT namespace
-        # so we do a get with the correct namespace first
-        # then create a new component with the correct namespace only if the get fails
-        # This is expected to fail, for safety, if some GitHub repo already exists
+        # We must delete and recreate at least the build / root component to avoid stale data
+        # This is expected to fail, for safety, if some e.g. GitHub repo already exists
         # but uses the UPSTREAM namespace instead of the REDHAT namespace
         root_component_kwargs = {
-            "type": Component.Type.CONTAINER_IMAGE if quay_repo else Component.Type.GITHUB,
+            "type": component_type,
             "name": service_component["name"],
             "version": component_version,
             "release": "",
@@ -248,37 +290,25 @@ def cpu_manifest_service_component(stream_name: str, service_component: dict[str
             "namespace": Component.Namespace.REDHAT,
             "software_build": build,
         }
-        try:
-            root_component = Component.objects.get(**root_component_kwargs)
-            logger.info(
-                f"Service component {service_component['name']} for service {stream_name} "
-                f"had an existing root component with purl {root_component.purl}"
-            )
-        except Component.DoesNotExist:
-            root_component = Component.objects.create(**root_component_kwargs)
-            logger.info(
-                f"Service component {service_component['name']} for service {stream_name} "
-                f"created a new root component with purl {root_component.purl}"
-            )
-
-        # the index uses type / parent / purl for lookups
-        root_node, _ = ComponentNode.objects.get_or_create(
+        root_component = Component.objects.create(**root_component_kwargs)
+        logger.info(
+            f"Service component {service_component['name']} used by services {stream_names} "
+            f"created a new root component with purl {root_component.purl}"
+        )
+        root_node = ComponentNode.objects.create(
             type=ComponentNode.ComponentNodeType.SOURCE,
             parent=None,
-            purl=root_component.purl,
-            defaults={
-                "obj": root_component,
-            },
+            obj=root_component,
         )
 
         logger.info(
-            f"Service component {service_component['name']} for service {stream_name} "
+            f"Service component {service_component['name']} used by services {stream_names} "
             f"has {len(analyzed_components)} child components"
         )
         created_count = 0
         for component in analyzed_components:
             logger.debug(
-                f"Service component {service_component['name']} for service {stream_name} "
+                f"Service component {service_component['name']} used by services {stream_names} "
                 f"had a child component {component}"
             )
             obj_or_node_created = save_component(component, root_node)
@@ -286,23 +316,24 @@ def cpu_manifest_service_component(stream_name: str, service_component: dict[str
                 created_count += 1
 
         logger.info(
-            f"service component {service_component['name']} for service {stream_name} "
-            f"had {created_count} new child components created, now saving relation / taxonomy"
+            f"service component {service_component['name']} used by services {stream_names} "
+            f"had {created_count} new child components created, now saving relations / taxonomy"
         )
-        ProductComponentRelation.objects.create(
-            product_ref=stream_name,
-            build_id=build_id,
-            build_type=SoftwareBuild.Type.APP_INTERFACE,
-            software_build=build,
-            type=ProductComponentRelation.Type.APP_INTERFACE,
-        )
+        for stream_name in stream_names:
+            ProductComponentRelation.objects.create(
+                product_ref=stream_name,
+                build_id=build_id,
+                build_type=SoftwareBuild.Type.APP_INTERFACE,
+                software_build=build,
+                type=ProductComponentRelation.Type.APP_INTERFACE,
+            )
 
     # Give the transaction time to commit, before looking up the build we just created
     slow_save_taxonomy.apply_async(args=(build.build_id, build.build_type), countdown=10)
 
     logger.info(
         f"Finished processing service component {service_component['name']} "
-        f"for service {stream_name}"
+        f"for services {stream_names}"
     )
     if exceptions:
         # Now we're finished processing both Quay images

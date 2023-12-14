@@ -1,5 +1,6 @@
 import logging
 import re
+import sys
 import uuid as uuid
 from abc import abstractmethod
 from typing import Any, Iterable, Iterator, Type, Union
@@ -28,6 +29,12 @@ from corgi.core.constants import (
 )
 from corgi.core.files import ComponentManifestFile, ProductManifestFile
 from corgi.core.mixins import TimeStampedModel
+
+NON_VARIANT_MODEL_TYPES = (
+    "Product",
+    "ProductVersion",
+    "ProductStream",
+)
 
 logger = logging.getLogger(__name__)
 
@@ -954,17 +961,13 @@ def get_product_details(
 class ComponentQuerySet(models.QuerySet):
     """Helper methods to filter QuerySets of Components"""
 
-    @staticmethod
-    def _latest_components_func(
-        components: "ComponentQuerySet", model_type: str, ofuri: str) -> Iterable[str]:
+    def _latest_components_func(self) -> "ComponentQuerySet":
         return (
-            components.values("type", "namespace", "name", "arch")
+            self.values("type", "namespace", "name", "arch")
             .order_by()  # required to avoid cross-join fun
             .distinct()
             .annotate(
                 latest_version=Func(
-                    Value(model_type),
-                    Value(ofuri),
                     F("type"),
                     F("namespace"),
                     F("name"),
@@ -976,31 +979,40 @@ class ComponentQuerySet(models.QuerySet):
             .values_list("latest_version", flat=True)
         )
 
-    def latest_components(
-        self,
-        ofuri: str,
-        model_type: str = "ProductStream",
-        include: bool = True
-    ) -> "ComponentQuerySet":
+    def latest_components(self, include: bool = True) -> "ComponentQuerySet":
         """Return components from latest builds in a single stream."""
+
+        # TODO make sure the query is always called with .root_components() in the ComponentQuerySet
+        # we take that out here to allow pre-filtering of container-sources for example
 
         # the concept of 'latest component' is only relevant within product boundaries
         # we want to constrain by product type/ofuri which is why we pass in model_type and ofuri
         # into the get_latest_component stored proc annotation
 
-        product_prefetch = f"{model_type.lower()}s"
-        components = self.root_components().prefetch_related(product_prefetch)
+        # We also want to group all latest calculations into variants to get an accurate reflection
+        # of what's the latest in a product by variant, see CORGI-602. We need to make sure we are
+        # not including extra components found in inferred variants into the stream however.
 
-        latest_components_uuids = set(
-            self._latest_components_func(components, model_type, ofuri)
-        )
+        # if model_type == "ProductVariant":
+        #    latest_components_uuids = self.
+        # else:
+        #    latest_components_uuids = self
+        #    if model_type not in NON_VARIANT_MODEL_TYPES:
+        #        raise ValueError(f"model_type was not of expected type: {NON_VARIANT_MODEL_TYPES}")
+        #    model = getattr(sys.modules[__name__], model_type)
+        #    latest_components_uuids = self
+        #    for variant_ofuri in model.productvariants.values_list("ofuri", flat=True):
+        #        variant_latest self.get_latest_by_variant(variant_ofuri)
+        #        latest_components_uuids |= variant_latest_query
 
-        if latest_components_uuids:
-            lookup = {"pk__in": latest_components_uuids}
+        latest_component_uuids = self._latest_components_func()
+
+        if latest_component_uuids:
+            lookup = {"pk__in": latest_component_uuids}
             if include:
-                return components.filter(**lookup)
+                return self.filter(**lookup)
             else:
-                return components.exclude(**lookup)
+                return self.exclude(**lookup)
 
         else:
             if include:
@@ -1012,45 +1024,28 @@ class ComponentQuerySet(models.QuerySet):
                 # So show everything / return unfiltered queryset
                 return self
 
-    def latest_components_by_streams(
-        self,
-        include: bool = True) -> "ComponentQuerySet":
+    def latest_components_by_streams(self, include: bool = True) -> "ComponentQuerySet":
         """Return only root components from latest builds for each product stream."""
-        components = self.root_components().prefetch_related("productstreams")
-        product_stream_ofuris = set(
-            (
-                components.filter(productstreams__active=True)
-                .values_list("productstreams__ofuri", flat=True)
-                # Clear ordering inherited from parent Queryset, if any
-                # So .distinct() works properly and doesn't have duplicates
-                .order_by().distinct()
-            )
-        )
-        # aggregate up all latest component uuids across all matched product streams
-        latest_components_uuids: set[str] = set()
-        for ps_ofuri in product_stream_ofuris:
-            latest_components_uuids.update(
-                self._latest_components_func(
-                    components.filter(productstreams__ofuri=ps_ofuri),
-                    "ProductStream",  # always ProductStream model type
-                    ps_ofuri
-                )
+        active_streams = ProductStream.objects.filter(active=True)
+        latest_active_uuids = Component.objects.none()
+        for stream in active_streams:
+            latest_active_uuids |= Q(
+                pk__in=self.filter(productstreams=stream).root_components().latest_components()
             )
 
-        lookup = {"pk__in": latest_components_uuids}
         if include:
             # Show only the latest components
-            if not latest_components_uuids:
+            if not latest_active_uuids:
                 # no latest components, don't do any further filtering
                 return Component.objects.none()
-            return components.filter(**lookup)
+            return self.filter(latest_active_uuids)
         else:
             # Show only the older / non-latest components
-            if not latest_components_uuids:
+            if not latest_active_uuids:
                 # No latest components to hide??
                 # So show everything / return unfiltered queryset
                 return self
-            return components.exclude(**lookup)
+            return self.exclude(latest_active_uuids)
 
     def released_components(self, include: bool = True) -> "ComponentQuerySet":
         """Show only released components by default, or unreleased components if include=False"""
@@ -1101,7 +1096,7 @@ class ComponentQuerySet(models.QuerySet):
         if not quick:
             # Only filter when we're actually generating a manifest
             # not when checking if there are components to manifest, since it's slow
-            roots = roots.latest_components(ofuri=ofuri)
+            roots = roots.latest_components()
 
         # Order by UUID to give stable results in manifests
         # Other querysets should not define an ordering

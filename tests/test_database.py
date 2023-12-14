@@ -94,8 +94,6 @@ def test_get_latest_component_stored_proc(stored_proc):
     (Note- behaviour is tested in test_model.py and test_api.py)
 
     Parameters:
-        product_model_type: Product|ProductVersion|ProductStream|ProductVariant
-        product ofuri: str
         component_namespace: REDHAT|UPSTREAM
         component_name: str
         active_products: bool
@@ -105,7 +103,7 @@ def test_get_latest_component_stored_proc(stored_proc):
 
     with connection.cursor() as cursor:
         cursor.execute(
-            "select * from get_latest_component('ProductStream','o:redhat:openshift-enterprise:3.11.z','RPM','REDHAT','ansible-runner','src');"  # noqa: E501
+            "select * from get_latest_component('RPM','REDHAT','ansible-runner','src');"  # noqa: E501
         )
         row = cursor.fetchone()
 

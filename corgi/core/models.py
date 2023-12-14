@@ -424,28 +424,27 @@ class ProductModel(TimeStampedModel):
 
         direct_variant_cpes = (
             self.pnodes.get_queryset()
-            .get_descendants(include_self=True)
+            .get_descendants()
             .using("read_only")
             .filter(level=MODEL_NODE_LEVEL_MAPPING["ProductVariant"])
             .exclude(node_type=ProductNode.ProductNodeType.INFERRED)
             .values_list("productvariant__cpe", flat=True)
             .order_by("productvariant__cpe")
-            .distinct()
         )
         if direct_variant_cpes:
             return self.qs_to_tuple_no_empty_strings(direct_variant_cpes)
 
+        return self._get_indirect_cpes()
+
+    def _get_indirect_cpes(self):
         cpes_matching_patterns = (
             self.pnodes.get_queryset()
             .get_descendants(include_self=True)
             .using("read_only")
             .filter(level=MODEL_NODE_LEVEL_MAPPING["ProductStream"])
             .values_list("productstream__cpes_matching_patterns", flat=True)
-            .distinct()
         )
-        distinct_cpes = set(
-            [cpe for cpe_patterns in cpes_matching_patterns for cpe in cpe_patterns]
-        )
+        distinct_cpes = set(cpe for cpe_patterns in cpes_matching_patterns for cpe in cpe_patterns)
         distinct_cpes.update(self.distinct_inferred_variant_cpes())
         return tuple(sorted(distinct_cpes))
 

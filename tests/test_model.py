@@ -1571,6 +1571,21 @@ def test_latest_filter_with_inactive(stored_proc):
     assert len(latest_components) == 0
 
 
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_variant_latest_filter(stored_proc):
+    variant_node = ProductVariantNodeFactory()
+    variant = variant_node.obj
+
+    srpm_with_el = SrpmComponentFactory(name="sdb", version="1.2.1", release="21.el7")
+    srpm_with_el.productvariants.add(variant)
+    srpm = SrpmComponentFactory(name="sdb", version="1.2.1", release="3")
+    srpm.productvariants.add(variant)
+    latest_components = variant.components.latest_components(
+        model_type="ProductVariant", ofuri=variant.ofuri
+    )
+    assert len(latest_components) == 1
+
+
 @pytest.mark.django_db
 def test_released_filter():
     sb = SoftwareBuildFactory()

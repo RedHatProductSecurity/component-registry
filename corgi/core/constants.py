@@ -97,7 +97,6 @@ LATEST_FILTER_WHERE = (
     "AND core_component.namespace=component_ns "
     "AND core_component.type=component_type "
     "AND core_component.arch=component_arch "
-    "AND (include_inactive_streams OR core_productstream.active) "
     f"AND ({ROOT_COMPONENTS_SQL})"
 )
 
@@ -144,6 +143,7 @@ CREATE OR REPLACE FUNCTION {LATEST_FILTER_DEFINITION}
             INNER JOIN "core_productstream"
             ON ("core_component_productstreams"."productstream_id" = "core_productstream"."uuid")
             {LATEST_FILTER_WHERE}
+            AND (include_inactive_streams OR core_productstream.active)
             AND (ps_ofuri IS NOT NULL AND core_productstream.ofuri = ps_ofuri);
 
     product_variant_component_cursor CURSOR FOR

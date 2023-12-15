@@ -972,17 +972,13 @@ class ComponentQuerySet(models.QuerySet):
         components = self.root_components().prefetch_related("productstreams")
 
         # if include_inactive_streams is False we need to filter ofuris
-        productstreams = components.values_list("productstreams").distinct()
-        include_active_streams_filter = {"active": True}
-        if include_inactive_streams:
-            include_active_streams_filter = {}
-        product_stream_ofuris = (
-            ProductStream.objects.filter(
-                pk__in=Subquery(productstreams), **include_active_streams_filter
-            )
-            .values_list("ofuri", flat=True)
-            .distinct()
-        )
+        # Clear ordering inherited from parent Queryset, if any
+        # So .distinct() works properly and doesn't have duplicates
+        productstreams = components.values_list("productstreams").order_by().distinct()
+        product_stream_objs = ProductStream.objects.filter(pk__in=Subquery(productstreams))
+        if not include_inactive_streams:
+            product_stream_objs = product_stream_objs.filter(active=True)
+        product_stream_ofuris = product_stream_objs.values_list("ofuri", flat=True).distinct()
 
         # aggregate up all latest component uuids across all matched product streams
         latest_components_uuids: set[str] = set()

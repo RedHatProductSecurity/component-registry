@@ -984,16 +984,41 @@ class ComponentQuerySet(models.QuerySet):
     ) -> "ComponentQuerySet":
         """Return components from latest builds in a single stream."""
 
+        # Constrain both the grouping of package (type/namespace/name/arch), and the final filtered
+        # set by the root components of the ProductModel.
+        # This assumes either the Product has root components which are comparable using RPM
+        # schematics, or there is only a single package for the model, not multiple versions.
+        components = self.root_components()
+
         # the concept of 'latest component' is only relevant within product boundaries
         # we want to constrain by product type/ofuri which is why we pass in model_type and ofuri
         # into the get_latest_component stored proc annotation
+        # If a product stream has multiple variants, we want to return the latest package for each
+        # variant, see CORGI-602
 
-        product_prefetch = f"{model_type.lower()}s"
-        components = self.root_components().prefetch_related(product_prefetch)
-
-        latest_components_uuids = set(
-            self._latest_components_func(components, model_type, ofuri, include_inactive_streams)
-        )
+        latest_components_uuids: set[str] = set()
+        if model_type == "ProductStream":
+            stream = ProductStream.objects.get(ofuri=ofuri)
+            stream_variant_ofuris = stream.productvariants.values_list("ofuri", flat=True)
+            if len(stream_variant_ofuris) > 1:
+                # calculate the latest uuids for each variant
+                for variant_ofuri in stream_variant_ofuris:
+                    variant_latest_uuids = self._latest_pks_by_ofuri(
+                        components,
+                        "ProductVariant",
+                        variant_ofuri,
+                    )
+                    latest_components_uuids.update(variant_latest_uuids)
+            else:
+                latest_components_uuids = set(
+                    self._latest_pks_by_ofuri(
+                        components, model_type, ofuri, include_inactive_streams
+                    )
+                )
+        else:
+            latest_components_uuids = set(
+                self._latest_pks_by_ofuri(components, model_type, ofuri, include_inactive_streams)
+            )
 
         if latest_components_uuids:
             lookup = {"pk__in": latest_components_uuids}
@@ -1002,15 +1027,22 @@ class ComponentQuerySet(models.QuerySet):
             else:
                 return components.exclude(**lookup)
 
-        else:
-            if include:
-                # no latest components, don't do any further filtering
-                return Component.objects.none()
-            else:
-                # Show only the older / non-latest components
-                # But there are no latest components to hide??
-                # So show everything / return unfiltered queryset
-                return self
+        elif include:
+            # no latest components, don't do any further filtering
+            return Component.objects.none()
+        # No latest components found to exclude so show everything / return unfiltered queryset
+        return self
+
+    def _latest_pks_by_ofuri(
+        self,
+        components: "ComponentQuerySet",
+        model_type: str,
+        ofuri: str,
+        include_inactive_streams: bool = False,
+    ) -> Iterable[str]:
+        product_prefetch = f"{model_type.lower()}s"
+        components.prefetch_related(product_prefetch)
+        return self._latest_components_func(components, model_type, ofuri, include_inactive_streams)
 
     def latest_components_by_streams(
         self,

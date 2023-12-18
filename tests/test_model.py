@@ -1526,7 +1526,9 @@ def test_root_components_filter():
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_latest_filter(stored_proc):
-    ps = ProductStreamFactory(name="rhel-7.9.z", active=True)
+    ps = ProductStreamFactory(name="rhel-7.9.z", version="7.9.z", active=True)
+    ProductStreamNodeFactory(obj=ps)
+    ps.refresh_from_db()
     srpm_with_el = SrpmComponentFactory(name="sdb", version="1.2.1", release="21.el7")
     srpm_with_el.productstreams.add(ps)
     srpm = SrpmComponentFactory(name="sdb", version="1.2.1", release="3")
@@ -1539,7 +1541,10 @@ def test_latest_filter(stored_proc):
     assert latest_components[0] == srpm_with_el
 
     # test no result
-    ps = ProductStreamFactory(name="rhel-7.7.z")
+    ps = ProductStreamFactory(name="rhel-7.7.z", version="7.7.z")
+    ProductStreamNodeFactory(obj=ps)
+    ps.refresh_from_db()
+
     # no results because this stream has no components
     assert not ps.components.latest_components(
         model_type="ProductStream",
@@ -1584,6 +1589,88 @@ def test_variant_latest_filter(stored_proc):
         model_type="ProductVariant", ofuri=variant.ofuri
     )
     assert len(latest_components) == 1
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_latest_from_each_variant(stored_proc):
+    stream_node = ProductStreamNodeFactory()
+    stream = stream_node.obj
+    rhose_8base = ProductVariantFactory(name="8Base-RHOSE-4.12")
+    ProductVariantNodeFactory(obj=rhose_8base, parent=stream_node)
+    rhose_8base.refresh_from_db()
+    rhose_9base = ProductVariantFactory(name="9Base-RHOSE-4.12")
+    ProductVariantNodeFactory(obj=rhose_9base, parent=stream_node)
+    rhose_9base.refresh_from_db()
+
+    sb1 = SoftwareBuildFactory()
+    openshift_8base = SrpmComponentFactory(
+        software_build=sb1,
+        name="openshift",
+        version="4.12.0",
+        release="202310302145.p0.gbcb9a60.assembly.stream.el8",
+    )
+    ProductComponentRelationFactory(type="ERRATA", product_ref=rhose_8base.name, software_build=sb1)
+    sb1.save_product_taxonomy()
+
+    sb2 = SoftwareBuildFactory()
+    openshift_9base = SrpmComponentFactory(
+        software_build=sb2,
+        name="openshift",
+        version="4.12.0",
+        release="202310302145.p0.gbcb9a60.assembly.stream.el9",
+    )
+    ProductComponentRelationFactory(type="ERRATA", product_ref=rhose_9base.name, software_build=sb2)
+    sb2.save_product_taxonomy()
+
+    openshift_8base.refresh_from_db()
+    assert rhose_8base in openshift_8base.productvariants.get_queryset()
+    assert stream in openshift_8base.productstreams.get_queryset()
+
+    openshift_9base.refresh_from_db()
+    assert rhose_9base in openshift_9base.productvariants.get_queryset()
+    assert stream in openshift_9base.productstreams.get_queryset()
+
+    assert openshift_8base in rhose_8base.components.root_components()
+    assert openshift_8base in stream.components.root_components()
+    assert openshift_9base in rhose_9base.components.root_components()
+    assert openshift_9base in stream.components.root_components()
+
+    assert openshift_8base in rhose_8base.components.latest_components(
+        model_type="ProductVariant", ofuri=rhose_8base.ofuri
+    )
+    assert openshift_9base in rhose_9base.components.latest_components(
+        model_type="ProductVariant", ofuri=rhose_9base.ofuri
+    )
+
+    assert openshift_9base in stream.components.latest_components(
+        ofuri=stream.ofuri, include_inactive_streams=True
+    )
+    assert openshift_8base in stream.components.latest_components(
+        ofuri=stream.ofuri, include_inactive_streams=True
+    )
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_duplicate_component_in_multiple_stream_variants(stored_proc):
+    stream_node = ProductStreamNodeFactory()
+    stream = stream_node.obj
+    pv_node_1 = ProductVariantNodeFactory(parent=stream_node)
+    variant_1 = pv_node_1.obj
+    pv_node_2 = ProductVariantNodeFactory(parent=stream_node)
+    variant_2 = pv_node_2.obj
+
+    sb1 = SoftwareBuildFactory()
+    srpm = SrpmComponentFactory(software_build=sb1)
+    ProductComponentRelationFactory(type="ERRATA", product_ref=variant_1.name, software_build=sb1)
+    ProductComponentRelationFactory(type="ERRATA", product_ref=variant_2.name, software_build=sb1)
+    sb1.save_product_taxonomy()
+
+    stream.refresh_from_db()
+    stream_latest_components = stream.components.latest_components(
+        ofuri=stream.ofuri, include_inactive_streams=True
+    )
+    assert stream_latest_components.count() == 1
+    assert stream_latest_components.first() == srpm
 
 
 @pytest.mark.django_db

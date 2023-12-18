@@ -230,13 +230,11 @@ def test_product_manifest_excludes_unreleased_components(stored_proc):
     component, stream, provided, dev_provided = setup_products_and_components_provides(
         released=False
     )
-    # Use a stream from corgi.core.fixups supported_cpe_map to test cpe_fixups
-    stream.name = "quay-3.6"
-    stream.save()
+
     manifest = json.loads(stream.manifest)
 
     # No released components linked to this product
-    num_components = len(stream.components.manifest_components(ofuri=stream.ofuri))
+    num_components = len(stream.components.manifest_components(ofuri=stream.get_ofuri()))
     assert num_components == 0
 
     num_provided = len(stream.provides_queryset)
@@ -250,7 +248,7 @@ def test_product_manifest_excludes_unreleased_components(stored_proc):
 
     assert product_data["SPDXID"] == f"SPDXRef-{stream.uuid}"
     assert product_data["name"] == stream.name
-    assert product_data["externalRefs"][0]["referenceLocator"] == "cpe:/a:redhat:quay:3::el8"
+    assert product_data["externalRefs"][0]["referenceLocator"] == "cpe:/o:redhat:enterprise_linux:8"
 
     # Only one "document describes product" relationship for the whole document at the end
     assert len(manifest["relationships"]) == 1

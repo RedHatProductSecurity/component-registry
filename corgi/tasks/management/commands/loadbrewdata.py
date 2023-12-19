@@ -107,9 +107,15 @@ class Command(BaseCommand):
                     save_product=options["skip_taxonomy"],
                 )
             else:
-                slow_fetch_brew_build.delay(
-                    build_id,
-                    build_type,
-                    force_process=options["force"],
-                    save_product=options["skip_taxonomy"],
+                slow_fetch_brew_build.apply_async(
+                    args=(
+                        build_id,
+                        build_type,
+                    ),
+                    kwargs={
+                        "force_process": options["force"],
+                        "save_product": options["skip_taxonomy"],
+                    },
+                    # Tasks users run manually with management commands should finish ASAP
+                    priority=0,
                 )

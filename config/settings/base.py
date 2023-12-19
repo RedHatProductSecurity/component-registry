@@ -345,7 +345,11 @@ CELERY_RESULT_EXTENDED = True
 # @app.task(soft_time_limit=<TIME_IN_SECONDS>)
 CELERY_TASK_SOFT_TIME_LIMIT = 900
 # CELERY_SINGLETON_LOCK_EXPIRY and redis visibility timeout must never be less than the below value
-CELERY_LONGEST_SOFT_TIME_LIMIT = 2400
+# if you set below to more than 3600 seconds, you must also update the redis visibility timeout
+CELERY_LONGEST_SOFT_TIME_LIMIT = 3600
+# Expire locks after 1 hour, which is the longest task time limit.
+# https://github.com/steinitzu/celery-singleton#app-configuration
+CELERY_SINGLETON_LOCK_EXPIRY = CELERY_LONGEST_SOFT_TIME_LIMIT
 
 CELERY_WORKER_CONCURRENCY = 5  # defaults to CPU core count, which breaks in OpenShift
 
@@ -371,6 +375,19 @@ CELERY_TASK_ACKS_LATE = True
 # https://docs.celeryproject.org/en/latest/userguide/configuration.html#std-setting-result_expires
 # By default, this job is enabled and runs daily at 4am. Disable to keep UMB-triggered task results
 CELERY_RESULT_EXPIRES = None
+
+# Support setting custom priorities in our queues
+# so more important tasks can jump ahead of less important ones
+# and a large number of one-off tasks / bulk data loads
+# don't block daily tasks or Brew, Pyxis, SBOMer, UMB, etc. event handling:
+# https://docs.celeryq.dev/en/stable/userguide/routing.html#redis-message-priorities
+# Use priority 0 / no priority for e.g. taxonomy-saving tasks that must finish ASAP,
+# 3 for e.g. errata tasks that happen less than "very often" and don't fill up queues,
+# 6 for e.g. Brew / Pyxis tasks that happen very often and may cause backlogs,
+# and 9 for bulk data processing that does not need to complete immediately
+CELERY_BROKER_TRANSPORT_OPTIONS = {
+    "queue_order_strategy": "priority",
+}
 
 CELERY_TASK_ROUTES = (
     [
@@ -477,6 +494,9 @@ LOOKASIDE_CACHE_BASE_URL = os.getenv("CORGI_LOOKASIDE_CACHE_URL")
 PYXIS_GRAPHQL_URL = os.getenv("CORGI_PYXIS_GRAPHQL_URL", "")
 PYXIS_CERT = UMB_CERT
 PYXIS_KEY = UMB_KEY
+PYXIS_REST_API_URL = os.getenv(
+    "CORGI_PYXIS_REST_API_URL", "https://catalog.redhat.com/api/containers/"
+)
 
 # Set to False to disable software composition analysis tasks.
 SCA_ENABLED = strtobool(os.getenv("CORGI_SCA_ENABLED", "true"))

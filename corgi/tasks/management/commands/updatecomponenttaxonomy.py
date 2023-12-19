@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand, CommandParser
 
 from corgi.core.models import SoftwareBuild
-from corgi.tasks.brew import slow_save_taxonomy
+from corgi.tasks.common import slow_save_taxonomy
 
 
 class Command(BaseCommand):

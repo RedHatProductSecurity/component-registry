@@ -4,17 +4,27 @@ from unittest.mock import patch
 
 import pytest
 from django.conf import settings
+from django.utils.timezone import now
 
+from corgi.collectors.brew import Brew
+from corgi.collectors.models import CollectorPyxisImage, CollectorPyxisImageRepository
 from corgi.collectors.pyxis import query
 from corgi.core.models import Component, SoftwareBuild
-from corgi.tasks.pyxis import slow_fetch_pyxis_manifest
-from tests.factories import ProductComponentRelationFactory
+from corgi.tasks.pyxis import (
+    slow_fetch_pyxis_image_by_nvr,
+    slow_fetch_pyxis_manifest,
+    slow_update_name_for_container_from_pyxis,
+)
+from tests.factories import (
+    ContainerImageComponentFactory,
+    ProductComponentRelationFactory,
+)
 
 pytestmark = pytest.mark.unit
 
 
 @pytest.mark.django_db
-@patch("corgi.tasks.brew.slow_save_taxonomy.delay")
+@patch("corgi.tasks.common.slow_save_taxonomy.delay")
 @patch("corgi.tasks.sca.cpu_software_composition_analysis.delay")
 @patch("corgi.collectors.pyxis.session.post")
 def test_slow_fetch_pyxis_manifest(post, sca, taxonomy):
@@ -125,7 +135,7 @@ def test_slow_fetch_pyxis_manifest(post, sca, taxonomy):
 
 
 @pytest.mark.django_db
-@patch("corgi.tasks.brew.slow_save_taxonomy.delay")
+@patch("corgi.tasks.common.slow_save_taxonomy.delay")
 @patch("corgi.tasks.sca.cpu_software_composition_analysis.delay")
 @patch("corgi.collectors.pyxis.session.post")
 def test_slow_fetch_empty_pyxis_manifest(post, sca, taxonomy):
@@ -144,3 +154,42 @@ def test_slow_fetch_empty_pyxis_manifest(post, sca, taxonomy):
     assert not manifest["image"].get("source")
     sca.assert_not_called()
     taxonomy.assert_not_called()
+
+
+@pytest.mark.django_db
+@patch("corgi.tasks.pyxis.get_repo_by_nvr")
+def test_slow_fetch_pyxis_image_by_nvr(mock_get_repo_name_by_nvr):
+    # Test that if the nvr doesn't exist in the Cache, it's looked up from Pyxis
+    slow_fetch_pyxis_image_by_nvr("")
+    assert mock_get_repo_name_by_nvr.called_with("")
+
+    # Test that if the nvr already exists in the Cache, return it's repo information
+    nvr = "test-1-release"
+    repo_name = "namespace/name"
+    pyxis_image = CollectorPyxisImage.objects.create(nvr=nvr, creation_date=now(), image_id="blah")
+    pyxis_repo = CollectorPyxisImageRepository.objects.create(name=repo_name)
+    pyxis_image.repos.add(pyxis_repo)
+
+    result = slow_fetch_pyxis_image_by_nvr(nvr)
+    assert result == repo_name
+
+    # Test that if slow_fetch_pyxis_image_by_nvr is called with force_process
+    # get_repo_by_nvr is called and the result is returned from the cache
+    mock_get_repo_name_by_nvr.reset_mock()
+    mock_get_repo_name_by_nvr.return_value = "some/container"
+    result = slow_fetch_pyxis_image_by_nvr(nvr, force_process=True)
+    assert mock_get_repo_name_by_nvr.called_with(nvr)
+    assert result == "some/container"
+
+
+@pytest.mark.django_db
+@patch("corgi.tasks.pyxis.slow_fetch_pyxis_image_by_nvr", return_value="some/repo")
+def test_slow_update_name_for_container_from_pyxis(mock_fetch):
+    nvr = "package-1-release"
+    name, version, release = Brew.split_nvr(nvr)
+    ContainerImageComponentFactory(
+        type=Component.Type.CONTAINER_IMAGE, name=name, version=version, release=release
+    )
+    result = slow_update_name_for_container_from_pyxis(nvr)
+    assert result
+    assert Component.objects.filter(name="repo").exists()

@@ -2,7 +2,8 @@
   "errata": {
     "rhba": {
       "id": 77150,
-      "status": "SHIPPED_LIVE"
+      "status": "SHIPPED_LIVE",
+      "content_types": ["docker"]
     }
   }
 }

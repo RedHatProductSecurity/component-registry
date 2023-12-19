@@ -18,6 +18,7 @@ from config.celery import app
 from corgi.collectors.brew import Brew
 from corgi.collectors.go_list import GoList
 from corgi.collectors.syft import Syft
+from corgi.core.constants import ROOT_COMPONENTS_CONDITION
 from corgi.core.models import Component, ComponentNode, SoftwareBuild
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 
@@ -33,7 +34,12 @@ logger = get_task_logger(__name__)
 
 
 def find_duplicate_component(
-    component_type: str, name: str, version: str, release: str, arch: str
+    component_type: str,
+    name: str,
+    version: str,
+    release: str,
+    arch: str,
+    version_release_confusion: bool = False,
 ) -> Component:
     """Find a component with matching type, version, release, and arch but different name
     Raise an error if the mismatch isn't a known edge case"""
@@ -59,6 +65,16 @@ def find_duplicate_component(
     )
 
     if len(possible_dupes) != 1:
+        if "-" in version and not release:
+            # Sometimes a duplicate component already exists, but can't be found
+            # e.g. when Syft's combined "version-release" doesn't match
+            # a separate "version" and "release" we created using Brew data
+            # Split these out into separate fields, then try again to save this component
+            version, release = version.split("-", 1)
+            return find_duplicate_component(
+                component_type, name, version, release, arch, version_release_confusion=True
+            )
+
         # Some other case we need to consider / handle in our code
         raise ValueError(
             f"New edge case for duplicate {component_type} component: {name} "
@@ -93,6 +109,8 @@ def find_duplicate_component(
 
     # TODO: check Parsley edge-case / error in monitoring email
     if same_name_different_case or dash_underscore_confusion:
+        return possible_dupe
+    elif version_release_confusion:
         return possible_dupe
     else:
         # Some other case we need to consider / handle in our code
@@ -189,8 +207,12 @@ def cpu_software_composition_analysis(build_uuid, force_process: bool = False):
 
     component_qs = Component.objects.filter(software_build=software_build)
     try:
-        # Get root component for this build.
-        root_component = component_qs.root_components().exclude(type=Component.Type.RPMMOD).get()
+        # Get root component for this build, using the condition instead of the queryset
+        # because the predefined root_components() Django queryset also excludes modular SRPMs
+        # but we must still run SCA on these
+        root_component = (
+            component_qs.filter(ROOT_COMPONENTS_CONDITION).exclude(type=Component.Type.RPMMOD).get()
+        )
     except Component.DoesNotExist as exc:
         # None of the components were root components
         module_qs = component_qs.filter(type=Component.Type.RPMMOD)
@@ -223,7 +245,7 @@ def cpu_software_composition_analysis(build_uuid, force_process: bool = False):
                 "had child components that were not found in remote-sources.json!"
             )
         app.send_task(
-            "corgi.tasks.brew.slow_save_taxonomy",
+            "corgi.tasks.common.slow_save_taxonomy",
             args=(software_build.build_id, software_build.build_type),
         )
 

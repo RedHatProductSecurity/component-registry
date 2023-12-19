@@ -14,6 +14,9 @@
             <span class="label label-info">Queued (cpu): {{ cpu_queue_len }}</span>
             <span class="label label-info">Queued (fast): {{ fast_queue_len }}</span>
             <span class="label label-info">Queued (slow): {{ slow_queue_len }}</span>
+            <span class="label label-info">Queued (slower): {{ slower_queue_len }}</span>
+            <span class="label label-info">Queued (very slow): {{ very_slow_queue_len }}</span>
+            <span class="label label-info">Queued (slowest): {{ slowest_queue_len }}</span>
             {% endif %}
           </h1>
           <table class="table">

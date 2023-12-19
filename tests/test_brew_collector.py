@@ -6,6 +6,7 @@ from unittest.mock import ANY, call, patch
 import koji
 import pytest
 from django.conf import settings
+from requests import RequestException
 from yaml import safe_load
 
 from corgi.collectors.brew import (
@@ -23,14 +24,14 @@ from corgi.core.models import (
 from corgi.tasks import errata_tool
 from corgi.tasks.brew import (
     fetch_unprocessed_relations,
+    get_container_repo_from_pyxis,
     load_brew_tags,
     load_stream_brew_tags,
     save_component,
     slow_fetch_brew_build,
     slow_save_container_children,
-    slow_save_taxonomy,
 )
-from corgi.tasks.common import BUILD_TYPE
+from corgi.tasks.common import BUILD_TYPE, slow_save_taxonomy
 from tests.conftest import setup_product
 from tests.data.image_archive_data import (
     KOJI_LIST_RPMS,
@@ -70,6 +71,8 @@ build_corpus = [
         "grafana-container",
         "",
         "image",
+        "grafana",
+        "rhel8/grafana",
     ),
     # rh - nodejs: brew buildID=1700251
     # (
@@ -88,6 +91,8 @@ build_corpus = [
         "rubygem-bcrypt",
         "MIT",
         "rpm",
+        "",
+        "",
     ),
     # jboss-webserver-container:
     # brew buildID=1879214
@@ -140,6 +145,8 @@ build_corpus = [
         "ansible-tower-messaging-container",
         "",
         "image",
+        "",
+        "ansible-tower-messaging",
     ),
 ]
 
@@ -151,7 +158,8 @@ class MockBrewResult(object):
 @patch("koji.ClientSession")
 @patch("corgi.collectors.brew.Brew.brew_rpm_headers_lookup")
 @pytest.mark.parametrize(
-    "build_id,build_source,build_name,license_declared_raw,build_type", build_corpus
+    "build_id,build_source,build_name,license_declared_raw,build_type,component_name,name_label",
+    build_corpus,
 )
 def test_get_component_data(
     mock_headers_lookup,
@@ -161,16 +169,22 @@ def test_get_component_data(
     build_name,
     license_declared_raw,
     build_type,
+    component_name,
+    name_label,
     monkeypatch,
 ):
     mock_rpm_infos = []
-    for function in ("getBuild", "getBuildType", "listTags", "listRPMs"):
+    brew_calls = ["getBuild", "getBuildType", "listTags", "listRPMs"]
+    if build_type == "image":
+        brew_calls.append("listArchives")
+    for function in brew_calls:
         with open(f"tests/data/brew/{build_id}/{function}.yaml") as data:
             pickled_data = safe_load(data.read())
             mock_func = getattr(mock_koji, function)
             mock_func.return_value = pickled_data
             if function == "listRPMs":
                 mock_rpm_infos = pickled_data
+
     brew = Brew(BUILD_TYPE)
     monkeypatch.setattr(brew, "koji_session", mock_koji)
 
@@ -205,7 +219,7 @@ def test_get_component_data(
             "components",
             "build_meta",
         ]
-        assert set(c["meta"].keys()) == {
+        expected_image_meta_keys = {
             "parent",
             "build_parent_nvrs",
             "release",
@@ -216,7 +230,12 @@ def test_get_component_data(
             "digests",
             "source",
             "pull",
+            "description",
+            "name_from_label_raw",
         }
+        # name_from_label and repository_url are not set for 903617 because it's name label
+        # is not a valid repository path
+        assert expected_image_meta_keys.issubset(set(c["meta"].keys()))
     else:
         assert list(c.keys()) == [
             "type",
@@ -247,6 +266,12 @@ def test_get_component_data(
     # The "license_declared_raw" field on the Component model defaults to ""
     # But the Brew collector (via get_rpm_build_data) / Koji (via getRPMHeaders) may return None
     assert c["meta"].get("license", "") == license_declared_raw
+
+    if component_name:
+        assert c["meta"]["name"] == component_name
+
+    if name_label:
+        assert c["meta"]["name_from_label_raw"] == name_label
 
 
 # build_info, list_archives,remote_sources_name
@@ -1151,7 +1176,7 @@ def test_fetch_rpm_build(mock_load_brew_tags, mock_sca, mock_brew_constructor):
     with open("tests/data/brew/1705913/component_data.json", "r") as component_data_file:
         mock_brew_obj.get_component_data.return_value = json.load(component_data_file)
     with patch(
-        "corgi.tasks.brew.slow_save_taxonomy.delay", wraps=slow_save_taxonomy
+        "corgi.tasks.common.slow_save_taxonomy.delay", wraps=slow_save_taxonomy
     ) as wrapped_save_taxonomy:
         # Wrap the mocked object, and call its methods directly
         # So that doing task.delay(*args, **kwargs) becomes task(*args, **kwargs)
@@ -1243,7 +1268,13 @@ def test_fetch_rpm_build(mock_load_brew_tags, mock_sca, mock_brew_constructor):
 @patch("corgi.tasks.brew.cpu_software_composition_analysis.delay")
 @patch("corgi.tasks.brew.slow_load_errata.delay")
 @patch("corgi.tasks.brew.slow_fetch_brew_build.delay")
-def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, mock_sca, mock_brew):
+@patch(
+    "corgi.tasks.brew.get_container_repo_from_pyxis",
+    return_value="rhacm2-tech-preview/subctl-rhel8-test",
+)
+def test_fetch_container_build_rpms(
+    mock_pyxis, mock_fetch_brew_build, mock_load_errata, mock_sca, mock_brew
+):
     with open("tests/data/brew/1781353/component_data.json", "r") as component_data_file:
         mock_brew.return_value.get_component_data.return_value = json.load(component_data_file)
 
@@ -1252,7 +1283,7 @@ def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, moc
     stream.save()
 
     with patch(
-        "corgi.tasks.brew.slow_save_taxonomy.delay", wraps=slow_save_taxonomy
+        "corgi.tasks.common.slow_save_taxonomy.delay", wraps=slow_save_taxonomy
     ) as wrapped_save_taxonomy:
         # Wrap the mocked object, and call its methods directly
         # So that doing task.delay(*args, **kwargs) becomes task(*args, **kwargs)
@@ -1278,7 +1309,7 @@ def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, moc
         # and we need to save the whole taxonomy, even if children are saved / added later
         wrapped_save_taxonomy.assert_has_calls((save_taxonomy_call, save_taxonomy_call))
     image_index = Component.objects.get(
-        name="subctl-container", type=Component.Type.CONTAINER_IMAGE, arch="noarch"
+        name="subctl-rhel8-test", type=Component.Type.CONTAINER_IMAGE, arch="noarch"
     )
 
     software_build = SoftwareBuild.objects.get(
@@ -1324,7 +1355,7 @@ def test_fetch_container_build_rpms(mock_fetch_brew_build, mock_load_errata, moc
 
 @pytest.mark.django_db
 @patch("corgi.tasks.brew.Brew")
-@patch("corgi.tasks.brew.slow_fetch_modular_build.delay")
+@patch("corgi.tasks.brew.slow_fetch_modular_build.apply_async")
 def test_load_stream_brew_tags(mock_fetch_modular_build, mock_brew):
     stream = ProductStreamFactory(brew_tags={"rhacm-2.4-rhel-8-container-released": True})
     mock_brew.return_value.get_builds_with_tag.return_value = ["1"]
@@ -1335,12 +1366,12 @@ def test_load_stream_brew_tags(mock_fetch_modular_build, mock_brew):
         type=ProductComponentRelation.Type.BREW_TAG,
     )
     assert new_brew_tag_relation.product_ref == stream.name
-    mock_fetch_modular_build.assert_called_once()
+    mock_fetch_modular_build.assert_called_once_with(kwargs={"build_id": "1"}, priority=0)
 
 
 @pytest.mark.django_db
-@patch("corgi.tasks.brew.slow_fetch_brew_build.delay")
-@patch("corgi.tasks.brew.slow_fetch_modular_build.delay")
+@patch("corgi.tasks.brew.slow_fetch_brew_build.apply_async")
+@patch("corgi.tasks.brew.slow_fetch_modular_build.apply_async")
 def test_load_brew_tags(mock_fetch_modular_build, mock_fetch_brew_build):
     stream = ProductStreamFactory(brew_tags={"rhacm-2.4-rhel-8-container-released": True})
     software_build = SoftwareBuildFactory(build_id="1")
@@ -1360,7 +1391,7 @@ def test_load_brew_tags(mock_fetch_modular_build, mock_fetch_brew_build):
 def test_new_software_build_relation(mock_save_prod_tax):
     sb = SoftwareBuildFactory()
     with patch(
-        "corgi.tasks.brew.slow_save_taxonomy.delay", wraps=slow_save_taxonomy
+        "corgi.tasks.common.slow_save_taxonomy.delay", wraps=slow_save_taxonomy
     ) as wrapped_save_taxonomy:
         # Wrap the mocked object, and call its methods directly
         # So that doing task.delay(*args, **kwargs) becomes task(*args, **kwargs)
@@ -1372,8 +1403,8 @@ def test_new_software_build_relation(mock_save_prod_tax):
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
-@patch("corgi.tasks.brew.slow_fetch_modular_build.delay")
-@patch("corgi.tasks.brew.slow_fetch_brew_build.delay")
+@patch("corgi.tasks.brew.slow_fetch_modular_build.apply_async")
+@patch("corgi.tasks.brew.slow_fetch_brew_build.apply_async")
 def test_load_unprocessed_relations(mock_fetch_brew_task, mock_fetch_modular_task):
     # We don't attempt to fetch relations where software_build is set
     sb = SoftwareBuildFactory()
@@ -1389,18 +1420,22 @@ def test_load_unprocessed_relations(mock_fetch_brew_task, mock_fetch_modular_tas
     )
     no_processed = fetch_unprocessed_relations()
     assert no_processed == 1
-    mock_fetch_brew_task.assert_called_once()
+    mock_fetch_brew_task.assert_called_once_with(
+        args=("1", SoftwareBuild.Type.CENTOS), kwargs={"force_process": False}, priority=0
+    )
 
     # test fetch by relation_type
     ProductComponentRelationFactory(
         build_type=SoftwareBuild.Type.BREW, build_id=2, type=ProductComponentRelation.Type.COMPOSE
     )
     assert fetch_unprocessed_relations(relation_type=ProductComponentRelation.Type.COMPOSE) == 1
-    mock_fetch_modular_task.assert_called_once()
+    mock_fetch_brew_task.assert_called_once_with(
+        args=("1", SoftwareBuild.Type.CENTOS), kwargs={"force_process": False}, priority=0
+    )
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
-@patch("corgi.tasks.brew.slow_fetch_modular_build.delay")
+@patch("corgi.tasks.brew.slow_fetch_modular_build.apply_async")
 def test_load_unprocessed_relations_filters(mock_fetch_modular_task):
     ProductComponentRelationFactory(
         type=ProductComponentRelation.Type.BREW_TAG,
@@ -1425,6 +1460,44 @@ def test_load_unprocessed_relations_filters(mock_fetch_modular_task):
         )
         == 0
     )
+
+
+@patch("corgi.tasks.brew.slow_update_name_for_container_from_pyxis.delay")
+@patch("corgi.tasks.brew.get_repo_for_label")
+@patch("corgi.tasks.brew.slow_fetch_pyxis_image_by_nvr")
+def test_get_container_name_and_repo_from_pyxis(
+    mock_fetch_pyxis_image_by_nvr, mock_get_repo_and_name_for_label, mock_update_name_from_pyxis
+):
+    # Test that an empty name_label returns in slow_fetch_pyxis_image_by_nvr being called with
+    # the NVR
+    get_container_repo_from_pyxis("", "")
+    assert mock_fetch_pyxis_image_by_nvr.called_with("")
+
+    # Test that when name_label is set get_repo_and_name_label is called and returns data.
+    # Also and that we don't call slow_fetch_pyxis_image_by_nvr by default
+    mock_get_repo_and_name_for_label.reset_mock()
+    mock_get_repo_and_name_for_label.return_value = "some/repo"
+
+    result = get_container_repo_from_pyxis("name_label", "")
+    assert mock_get_repo_and_name_for_label.called_with("name_label")
+    assert result == "some/repo"
+
+    # Test that when name_label is set get_repo_and_name_label is called an returns data,
+    # and we do call slow_fetch_pyxis_image_by_nvr when force_process is True
+    mock_get_repo_and_name_for_label.reset_mock()
+    mock_fetch_pyxis_image_by_nvr.reset_mock()
+    get_container_repo_from_pyxis("name_label", "", force_process=True)
+    assert mock_fetch_pyxis_image_by_nvr.called_with("")
+    assert not mock_get_repo_and_name_for_label.called
+
+    # Test that when an exception is thrown from fetch_pyxis_image_by_nvr throws a RequestsException
+    # that we call slow_update_name_for_container_from_pyxis.delay
+    mock_get_repo_and_name_for_label.reset_mock()
+    mock_fetch_pyxis_image_by_nvr.reset_mock()
+    mock_fetch_pyxis_image_by_nvr.side_effect = RequestException("mocked exception")
+    result = get_container_repo_from_pyxis("", "")
+    assert result == ""
+    assert mock_update_name_from_pyxis.called_with("")
 
 
 def test_extract_advisory_ids():

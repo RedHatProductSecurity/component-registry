@@ -1,0 +1,1288 @@
+{
+  "data": [
+    {
+      "_id": "63b627e3deb37662f5bff840",
+      "_links": {
+        "artifacts": {
+          "href": "/v1/images/id/63b627e3deb37662f5bff840/artifacts"
+        },
+        "requests": {
+          "href": "/v1/images/id/63b627e3deb37662f5bff840/requests"
+        },
+        "rpm_manifest": {
+          "href": "/v1/images/id/63b627e3deb37662f5bff840/rpm-manifest"
+        },
+        "test_results": {
+          "href": "/v1/images/id/63b627e3deb37662f5bff840/test-results"
+        },
+        "vulnerabilities": {
+          "href": "/v1/images/id/63b627e3deb37662f5bff840/vulnerabilities"
+        }
+      },
+      "architecture": "arm64",
+      "brew": {
+        "build": "ose-cluster-ovirt-csi-operator-container-v4.12.0-202301042354.p0.gfeb14fb.assembly.stream",
+        "completion_date": "2023-01-05T01:24:58.097000+00:00",
+        "nvra": "ose-cluster-ovirt-csi-operator-container-v4.12.0-202301042354.p0.gfeb14fb.assembly.stream.arm64",
+        "package": "ose-cluster-ovirt-csi-operator-container"
+      },
+      "certified": false,
+      "content_sets": [
+        "rhel-8-for-aarch64-appstream-eus-rpms__8_DOT_6",
+        "rhel-8-for-aarch64-baseos-eus-rpms__8_DOT_6"
+      ],
+      "cpe_ids": [
+        "cpe:/o:redhat:rhel_aus:8.6::baseos",
+        "cpe:/o:redhat:rhel_eus:8.1::baseos",
+        "cpe:/a:redhat:rhel_e4s:8.0::appstream",
+        "cpe:/a:redhat:rhel_aus:8.6::appstream",
+        "cpe:/o:redhat:rhel_e4s:8.2::baseos",
+        "cpe:/o:redhat:rhel_eus:8.2::baseos",
+        "cpe:/a:redhat:rhel_aus:8.2::appstream",
+        "cpe:/o:redhat:rhel_tus:8.2::baseos",
+        "cpe:/o:redhat:rhel:8.3::baseos",
+        "cpe:/o:redhat:rhel_e4s:8.6::baseos",
+        "cpe:/o:redhat:rhel_tus:8.4::baseos",
+        "cpe:/o:redhat:rhel_eus:8.6::baseos",
+        "cpe:/o:redhat:rhel_e4s:8.4::baseos",
+        "cpe:/o:redhat:enterprise_linux:8::baseos",
+        "cpe:/a:redhat:rhel_eus:8.1::appstream",
+        "cpe:/o:redhat:rhel_tus:8.6::baseos",
+        "cpe:/o:redhat:rhel_eus:8.4::baseos",
+        "cpe:/a:redhat:rhel_tus:8.2::appstream",
+        "cpe:/a:redhat:rhel_tus:8.6::appstream",
+        "cpe:/a:redhat:enterprise_linux:8::appstream",
+        "cpe:/a:redhat:rhel_eus:8.6::appstream",
+        "cpe:/o:redhat:rhel_aus:8.4::baseos",
+        "cpe:/o:redhat:rhel_e4s:8.1::baseos",
+        "cpe:/a:redhat:rhel_eus:8.2::appstream",
+        "cpe:/a:redhat:rhel_eus:8.4::appstream",
+        "cpe:/a:redhat:rhel_e4s:8.2::appstream",
+        "cpe:/a:redhat:rhel_e4s:8.6::appstream",
+        "cpe:/o:redhat:rhel_aus:8.2::baseos",
+        "cpe:/a:redhat:rhel_e4s:8.4::appstream",
+        "cpe:/a:redhat:rhel_aus:8.4::appstream",
+        "cpe:/a:redhat:rhel_e4s:8.1::appstream",
+        "cpe:/o:redhat:rhel_e4s:8.0::baseos",
+        "cpe:/a:redhat:rhel_tus:8.4::appstream",
+        "cpe:/a:redhat:rhel:8.3::appstream"
+      ],
+      "creation_date": "2023-01-05T01:29:07.209000+00:00",
+      "docker_image_id": "sha256:ef265b75da8b783ee0a8140d480b54a441cf96714bd273c993b56547a5645cc8",
+      "freshness_grades": [
+        {
+          "creation_date": "2023-10-26T19:20:18.738000+00:00",
+          "end_date": "2024-02-06T00:00:00+00:00",
+          "grade": "D",
+          "start_date": "2023-10-26T19:20:18.738000+00:00"
+        },
+        {
+          "creation_date": "2023-10-26T19:20:18.738000+00:00",
+          "grade": "F",
+          "start_date": "2024-02-06T00:00:00+00:00"
+        }
+      ],
+      "image_id": "sha256:596d18e9a4be00f7c5f1ef536b0d34b3a3a5b826807650cc866bbb7976b237b4",
+      "last_update_date": "2023-10-26T19:20:20.354000+00:00",
+      "object_type": "containerImage",
+      "parsed_data": {
+        "architecture": "arm64",
+        "created": "2023-01-05T01:19:49.51482038Z",
+        "env_variables": [
+          "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+          "container=oci",
+          "GODEBUG=x509ignoreCN=0,madvdontneed=1",
+          "__doozer=merge",
+          "BUILD_RELEASE=202301042354.p0.gfeb14fb.assembly.stream",
+          "BUILD_VERSION=v4.12.0",
+          "OS_GIT_MAJOR=4",
+          "OS_GIT_MINOR=12",
+          "OS_GIT_PATCH=0",
+          "OS_GIT_TREE_STATE=clean",
+          "OS_GIT_VERSION=4.12.0-202301042354.p0.gfeb14fb.assembly.stream-feb14fb",
+          "SOURCE_GIT_TREE_STATE=clean",
+          "OS_GIT_COMMIT=feb14fb",
+          "SOURCE_DATE_EPOCH=1664870075",
+          "SOURCE_GIT_TAG=feb14fbb",
+          "SOURCE_GIT_URL=https://github.com/openshift/ovirt-csi-driver-operator"
+        ],
+        "labels": [
+          {
+            "name": "License",
+            "value": "GPLv2+"
+          },
+          {
+            "name": "architecture",
+            "value": "aarch64"
+          },
+          {
+            "name": "build-date",
+            "value": "2023-01-05T01:13:18"
+          },
+          {
+            "name": "com.redhat.component",
+            "value": "ose-cluster-ovirt-csi-operator-container"
+          },
+          {
+            "name": "com.redhat.license_terms",
+            "value": "https://www.redhat.com/agreements"
+          },
+          {
+            "name": "description",
+            "value": "The ovirt-csi-driver-operator installs and maintains the oVirt CSI Driver on a cluster."
+          },
+          {
+            "name": "distribution-scope",
+            "value": "public"
+          },
+          {
+            "name": "io.buildah.version",
+            "value": "1.27.1"
+          },
+          {
+            "name": "io.k8s.description",
+            "value": "The ovirt-csi-driver-operator installs and maintains the oVirt CSI Driver on a cluster."
+          },
+          {
+            "name": "io.k8s.display-name",
+            "value": "OpenShift ovirt-csi-driver-operator"
+          },
+          {
+            "name": "io.openshift.build.commit.url",
+            "value": "https://github.com/openshift/ovirt-csi-driver-operator/commit/feb14fbb7c7e91fd721a23b5c7307469da5c1aec"
+          },
+          {
+            "name": "io.openshift.build.source-location",
+            "value": "https://github.com/openshift/ovirt-csi-driver-operator"
+          },
+          {
+            "name": "io.openshift.expose-services",
+            "value": ""
+          },
+          {
+            "name": "io.openshift.maintainer.component",
+            "value": "Storage"
+          },
+          {
+            "name": "io.openshift.maintainer.product",
+            "value": "OpenShift Container Platform"
+          },
+          {
+            "name": "io.openshift.maintainer.subcomponent",
+            "value": "oVirt CSI Driver"
+          },
+          {
+            "name": "io.openshift.tags",
+            "value": "openshift,base"
+          },
+          {
+            "name": "maintainer",
+            "value": "Red Hat, Inc."
+          },
+          {
+            "name": "name",
+            "value": "openshift/ose-ovirt-csi-driver-operator"
+          },
+          {
+            "name": "release",
+            "value": "202301042354.p0.gfeb14fb.assembly.stream"
+          },
+          {
+            "name": "summary",
+            "value": "Provides the latest release of the Red Hat Extended Life Base Image."
+          },
+          {
+            "name": "url",
+            "value": "https://access.redhat.com/containers/#/registry.access.redhat.com/openshift/ose-ovirt-csi-driver-operator/images/v4.12.0-202301042354.p0.gfeb14fb.assembly.stream"
+          },
+          {
+            "name": "vcs-type",
+            "value": "git"
+          },
+          {
+            "name": "vendor",
+            "value": "Red Hat, Inc."
+          },
+          {
+            "name": "version",
+            "value": "v4.12.0"
+          }
+        ],
+        "layers": [
+          "sha256:57d7dc78bd3bd6123d61e9fd9182a02c7b769eab3fdc8248f21ddbaa26c856dd",
+          "sha256:7dd134b266788bca8390f18b82529351556d9b59071a18b9e193ef9f5ff9e397",
+          "sha256:9c9115ba032c96fde0a1b8efb030d660a883c2245a391173cac30d01dc67991d",
+          "sha256:5d5771e51f28e6b3e7609ebb505bfb1411539e7725ef4ffb34264b8b731088fd",
+          "sha256:f1543f27d1312786cff4cf8bd2782de3fc564724417163ae85309360062c3fb2"
+        ],
+        "os": "linux",
+        "ports": "[]",
+        "size": 0,
+        "uncompressed_layer_sizes": [
+          {
+            "layer_id": "sha256:d70a0316cbaa631991c701144a7143b59a788959903c7ab6bfe1491e5178d838",
+            "size_bytes": 93776384
+          },
+          {
+            "layer_id": "sha256:be7528a6028befa3c7c2c5559f2601d0574a4b540df0c7e9f07609b95f4b6dda",
+            "size_bytes": 43636224
+          },
+          {
+            "layer_id": "sha256:3c23fb88cb4f16ecefd136213b7a4e8c7fd73dbc9db76d416e6eb348726399db",
+            "size_bytes": 90124800
+          },
+          {
+            "layer_id": "sha256:6705994e09c5c54eea024945294febf1c44a307f88734db60e9f771575f20880",
+            "size_bytes": 20480
+          },
+          {
+            "layer_id": "sha256:43b98d37bc53eb7cc073b4262c7520903b72969c0e0dc99164ea37cf1717e3d0",
+            "size_bytes": 248453120
+          }
+        ],
+        "uncompressed_size_bytes": 476011008,
+        "user": "1001"
+      },
+      "repositories": [
+        {
+          "_links": {
+            "image_advisory": {
+              "href": "/v1/advisories/redhat/id/RHSA-2022:7399"
+            },
+            "repository": {
+              "href": "/v1/repositories/registry/registry.access.redhat.com/repository/openshift4/ovirt-csi-driver-rhel8-operator"
+            }
+          },
+          "comparison": {
+            "advisory_rpm_mapping": [],
+            "reason": "OK",
+            "reason_text": "No error",
+            "rpms": {
+              "downgrade": [
+                "curl-7.61.1-22.el8_6.4.aarch64",
+                "openssl-libs-1.1.1k-7.el8_6.aarch64",
+                "subscription-manager-1.28.29-3.el8.aarch64",
+                "platform-python-3.6.8-47.el8_6.aarch64",
+                "libksba-1.3.5-8.el8_6.aarch64",
+                "gnutls-3.6.16-5.el8_6.aarch64",
+                "libcurl-7.61.1-22.el8_6.4.aarch64",
+                "dnf-plugin-subscription-manager-1.28.29-3.el8.aarch64",
+                "systemd-pam-239-58.el8_6.9.aarch64",
+                "python3-libs-3.6.8-47.el8_6.aarch64",
+                "tzdata-2022g-1.el8.noarch",
+                "python3-subscription-manager-rhsm-1.28.29-3.el8.aarch64",
+                "subscription-manager-rhsm-certificates-1.28.29-3.el8.aarch64",
+                "python3-cloud-what-1.28.29-3.el8.aarch64",
+                "python3-syspurpose-1.28.29-3.el8.aarch64",
+                "systemd-libs-239-58.el8_6.9.aarch64",
+                "systemd-239-58.el8_6.9.aarch64"
+              ],
+              "new": [],
+              "remove": [
+                "openssl-1.1.1k-9.el8_6.aarch64",
+                "openssl-pkcs11-0.4.10-2.el8.aarch64"
+              ],
+              "upgrade": []
+            },
+            "with_nvr": "ose-cluster-ovirt-csi-operator-container-v4.11.0-202307072028.p0.g7a30e38.assembly.stream"
+          },
+          "content_advisory_ids": [],
+          "image_advisory_id": "RHSA-2022:7399",
+          "manifest_list_digest": "sha256:2b55f17547ddcbdbefddde7372bc3ddfba9b66dfe76d453e479f9efd51514656",
+          "manifest_schema2_digest": "sha256:596d18e9a4be00f7c5f1ef536b0d34b3a3a5b826807650cc866bbb7976b237b4",
+          "published": true,
+          "published_date": "2023-07-27T00:43:49+00:00",
+          "push_date": "2023-01-17T19:36:40+00:00",
+          "registry": "registry.access.redhat.com",
+          "repository": "openshift4/ovirt-csi-driver-rhel8-operator",
+          "signatures": [
+            {
+              "key_long_id": "199E2F91FD431D51",
+              "tags": [
+                "v4.12.0-202301042354.p0.gfeb14fb.assembly.stream"
+              ]
+            }
+          ],
+          "tags": [
+            {
+              "_links": {
+                "tag_history": {
+                  "href": "/v1/tag-history/registry/registry.access.redhat.com/repository/openshift4/ovirt-csi-driver-rhel8-operator/tag/v4.12.0-202301042354.p0.gfeb14fb.assembly.stream"
+                }
+              },
+              "added_date": "2023-07-27T17:45:22.206000+00:00",
+              "name": "v4.12.0-202301042354.p0.gfeb14fb.assembly.stream"
+            }
+          ]
+        }
+      ],
+      "sum_layer_size_bytes": 152452031,
+      "top_layer_id": "sha256:57d7dc78bd3bd6123d61e9fd9182a02c7b769eab3fdc8248f21ddbaa26c856dd",
+      "uncompressed_top_layer_id": "sha256:d70a0316cbaa631991c701144a7143b59a788959903c7ab6bfe1491e5178d838"
+    },
+    {
+      "_id": "63b627e5deb37662f5bff844",
+      "_links": {
+        "artifacts": {
+          "href": "/v1/images/id/63b627e5deb37662f5bff844/artifacts"
+        },
+        "requests": {
+          "href": "/v1/images/id/63b627e5deb37662f5bff844/requests"
+        },
+        "rpm_manifest": {
+          "href": "/v1/images/id/63b627e5deb37662f5bff844/rpm-manifest"
+        },
+        "test_results": {
+          "href": "/v1/images/id/63b627e5deb37662f5bff844/test-results"
+        },
+        "vulnerabilities": {
+          "href": "/v1/images/id/63b627e5deb37662f5bff844/vulnerabilities"
+        }
+      },
+      "architecture": "s390x",
+      "brew": {
+        "build": "ose-cluster-ovirt-csi-operator-container-v4.12.0-202301042354.p0.gfeb14fb.assembly.stream",
+        "completion_date": "2023-01-05T01:24:58.097000+00:00",
+        "nvra": "ose-cluster-ovirt-csi-operator-container-v4.12.0-202301042354.p0.gfeb14fb.assembly.stream.s390x",
+        "package": "ose-cluster-ovirt-csi-operator-container"
+      },
+      "certified": false,
+      "content_sets": [
+        "rhel-8-for-s390x-appstream-eus-rpms__8_DOT_6",
+        "rhel-8-for-s390x-baseos-eus-rpms__8_DOT_6"
+      ],
+      "cpe_ids": [
+        "cpe:/o:redhat:rhel_aus:8.6::baseos",
+        "cpe:/o:redhat:rhel_eus:8.1::baseos",
+        "cpe:/a:redhat:rhel_e4s:8.0::appstream",
+        "cpe:/a:redhat:rhel_aus:8.6::appstream",
+        "cpe:/o:redhat:rhel_e4s:8.2::baseos",
+        "cpe:/o:redhat:rhel_eus:8.2::baseos",
+        "cpe:/a:redhat:rhel_aus:8.2::appstream",
+        "cpe:/o:redhat:rhel_tus:8.2::baseos",
+        "cpe:/o:redhat:rhel:8.3::baseos",
+        "cpe:/o:redhat:rhel_e4s:8.6::baseos",
+        "cpe:/o:redhat:rhel_tus:8.4::baseos",
+        "cpe:/o:redhat:rhel_eus:8.6::baseos",
+        "cpe:/o:redhat:rhel_e4s:8.4::baseos",
+        "cpe:/o:redhat:enterprise_linux:8::baseos",
+        "cpe:/a:redhat:rhel_eus:8.1::appstream",
+        "cpe:/o:redhat:rhel_tus:8.6::baseos",
+        "cpe:/o:redhat:rhel_eus:8.4::baseos",
+        "cpe:/a:redhat:rhel_tus:8.2::appstream",
+        "cpe:/a:redhat:rhel_tus:8.6::appstream",
+        "cpe:/a:redhat:enterprise_linux:8::appstream",
+        "cpe:/a:redhat:rhel_eus:8.6::appstream",
+        "cpe:/o:redhat:rhel_aus:8.4::baseos",
+        "cpe:/o:redhat:rhel_e4s:8.1::baseos",
+        "cpe:/a:redhat:rhel_eus:8.2::appstream",
+        "cpe:/a:redhat:rhel_eus:8.4::appstream",
+        "cpe:/a:redhat:rhel_e4s:8.2::appstream",
+        "cpe:/a:redhat:rhel_e4s:8.6::appstream",
+        "cpe:/o:redhat:rhel_aus:8.2::baseos",
+        "cpe:/a:redhat:rhel_e4s:8.4::appstream",
+        "cpe:/a:redhat:rhel_aus:8.4::appstream",
+        "cpe:/a:redhat:rhel_e4s:8.1::appstream",
+        "cpe:/o:redhat:rhel_e4s:8.0::baseos",
+        "cpe:/a:redhat:rhel_tus:8.4::appstream",
+        "cpe:/a:redhat:rhel:8.3::appstream"
+      ],
+      "creation_date": "2023-01-05T01:29:09.171000+00:00",
+      "docker_image_id": "sha256:22220f23b9947be8c765735aa4f688c311f087d7c2ba60e38d8dc37e69575686",
+      "freshness_grades": [
+        {
+          "creation_date": "2023-10-26T19:20:20.417000+00:00",
+          "end_date": "2024-02-06T00:00:00+00:00",
+          "grade": "D",
+          "start_date": "2023-10-26T19:20:20.417000+00:00"
+        },
+        {
+          "creation_date": "2023-10-26T19:20:20.417000+00:00",
+          "grade": "F",
+          "start_date": "2024-02-06T00:00:00+00:00"
+        }
+      ],
+      "image_id": "sha256:f5639e382bf69e75f4d4f04a6dcd5ea041c41d224078d7fb5c34b77a7dfc4a8a",
+      "last_update_date": "2023-10-26T19:20:20.952000+00:00",
+      "object_type": "containerImage",
+      "parsed_data": {
+        "architecture": "s390x",
+        "created": "2023-01-05T01:20:58.978769442Z",
+        "env_variables": [
+          "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+          "container=oci",
+          "GODEBUG=x509ignoreCN=0,madvdontneed=1",
+          "__doozer=merge",
+          "BUILD_RELEASE=202301042354.p0.gfeb14fb.assembly.stream",
+          "BUILD_VERSION=v4.12.0",
+          "OS_GIT_MAJOR=4",
+          "OS_GIT_MINOR=12",
+          "OS_GIT_PATCH=0",
+          "OS_GIT_TREE_STATE=clean",
+          "OS_GIT_VERSION=4.12.0-202301042354.p0.gfeb14fb.assembly.stream-feb14fb",
+          "SOURCE_GIT_TREE_STATE=clean",
+          "OS_GIT_COMMIT=feb14fb",
+          "SOURCE_DATE_EPOCH=1664870075",
+          "SOURCE_GIT_TAG=feb14fbb",
+          "SOURCE_GIT_URL=https://github.com/openshift/ovirt-csi-driver-operator"
+        ],
+        "labels": [
+          {
+            "name": "License",
+            "value": "GPLv2+"
+          },
+          {
+            "name": "architecture",
+            "value": "s390x"
+          },
+          {
+            "name": "build-date",
+            "value": "2023-01-05T01:13:18"
+          },
+          {
+            "name": "com.redhat.component",
+            "value": "ose-cluster-ovirt-csi-operator-container"
+          },
+          {
+            "name": "com.redhat.license_terms",
+            "value": "https://www.redhat.com/agreements"
+          },
+          {
+            "name": "description",
+            "value": "The ovirt-csi-driver-operator installs and maintains the oVirt CSI Driver on a cluster."
+          },
+          {
+            "name": "distribution-scope",
+            "value": "public"
+          },
+          {
+            "name": "io.buildah.version",
+            "value": "1.27.1"
+          },
+          {
+            "name": "io.k8s.description",
+            "value": "The ovirt-csi-driver-operator installs and maintains the oVirt CSI Driver on a cluster."
+          },
+          {
+            "name": "io.k8s.display-name",
+            "value": "OpenShift ovirt-csi-driver-operator"
+          },
+          {
+            "name": "io.openshift.build.commit.url",
+            "value": "https://github.com/openshift/ovirt-csi-driver-operator/commit/feb14fbb7c7e91fd721a23b5c7307469da5c1aec"
+          },
+          {
+            "name": "io.openshift.build.source-location",
+            "value": "https://github.com/openshift/ovirt-csi-driver-operator"
+          },
+          {
+            "name": "io.openshift.expose-services",
+            "value": ""
+          },
+          {
+            "name": "io.openshift.maintainer.component",
+            "value": "Storage"
+          },
+          {
+            "name": "io.openshift.maintainer.product",
+            "value": "OpenShift Container Platform"
+          },
+          {
+            "name": "io.openshift.maintainer.subcomponent",
+            "value": "oVirt CSI Driver"
+          },
+          {
+            "name": "io.openshift.tags",
+            "value": "openshift,base"
+          },
+          {
+            "name": "maintainer",
+            "value": "Red Hat, Inc."
+          },
+          {
+            "name": "name",
+            "value": "openshift/ose-ovirt-csi-driver-operator"
+          },
+          {
+            "name": "release",
+            "value": "202301042354.p0.gfeb14fb.assembly.stream"
+          },
+          {
+            "name": "summary",
+            "value": "Provides the latest release of the Red Hat Extended Life Base Image."
+          },
+          {
+            "name": "url",
+            "value": "https://access.redhat.com/containers/#/registry.access.redhat.com/openshift/ose-ovirt-csi-driver-operator/images/v4.12.0-202301042354.p0.gfeb14fb.assembly.stream"
+          },
+          {
+            "name": "vcs-type",
+            "value": "git"
+          },
+          {
+            "name": "vendor",
+            "value": "Red Hat, Inc."
+          },
+          {
+            "name": "version",
+            "value": "v4.12.0"
+          }
+        ],
+        "layers": [
+          "sha256:996ce70d9b00cdb9e29a63d0ed3f602f1b87f4c69f492f53ca1c916e5c1242ed",
+          "sha256:2fddc44d932ac0b24efb02fde1b7b877a510adc44aa28cf128d00a4e7b5a9ae1",
+          "sha256:2c2f1af856468b5c071aaae30b7439572af7a1f382891617f9f0437fe131e727",
+          "sha256:54fd50e23884489e441ac80517d8edd91d8d1ed9e63af72a05c56c9de5300e25",
+          "sha256:9ed68b94598760816e142fcf7f8e9572af00b5567df5cc818ddb0810919627a6"
+        ],
+        "os": "linux",
+        "ports": "[]",
+        "size": 0,
+        "uncompressed_layer_sizes": [
+          {
+            "layer_id": "sha256:fc2fec31b3ace15e1f38d82ef0f0d4d3cb2ca3c007b725db5b8311d0d45badd9",
+            "size_bytes": 101101056
+          },
+          {
+            "layer_id": "sha256:7b254ca79b5a706fcb8e38656a362422a8974df8004157b6ab2f897f420021d9",
+            "size_bytes": 40267776
+          },
+          {
+            "layer_id": "sha256:4741f5881a4253d5dbc31f22bdfc505edbe043e003e9565f17d2436e2f42b16c",
+            "size_bytes": 81245184
+          },
+          {
+            "layer_id": "sha256:3144bc5bfa24071a6ba0905638e984250d6d5629a8ceca9e0ce2e86497316a6e",
+            "size_bytes": 20480
+          },
+          {
+            "layer_id": "sha256:9dbfb483692e940b931caeb9b641701d03b76f68721bc6f8a0b51a197ba979bc",
+            "size_bytes": 224870400
+          }
+        ],
+        "uncompressed_size_bytes": 447504896,
+        "user": "1001"
+      },
+      "repositories": [
+        {
+          "_links": {
+            "image_advisory": {
+              "href": "/v1/advisories/redhat/id/RHSA-2022:7399"
+            },
+            "repository": {
+              "href": "/v1/repositories/registry/registry.access.redhat.com/repository/openshift4/ovirt-csi-driver-rhel8-operator"
+            }
+          },
+          "comparison": {
+            "advisory_rpm_mapping": [],
+            "reason": "OK",
+            "reason_text": "No error",
+            "rpms": {
+              "downgrade": [
+                "curl-7.61.1-22.el8_6.4.s390x",
+                "openssl-libs-1.1.1k-7.el8_6.s390x",
+                "subscription-manager-1.28.29-3.el8.s390x",
+                "platform-python-3.6.8-47.el8_6.s390x",
+                "libksba-1.3.5-8.el8_6.s390x",
+                "gnutls-3.6.16-5.el8_6.s390x",
+                "libcurl-7.61.1-22.el8_6.4.s390x",
+                "dnf-plugin-subscription-manager-1.28.29-3.el8.s390x",
+                "systemd-pam-239-58.el8_6.9.s390x",
+                "python3-libs-3.6.8-47.el8_6.s390x",
+                "tzdata-2022g-1.el8.noarch",
+                "subscription-manager-rhsm-certificates-1.28.29-3.el8.s390x",
+                "python3-subscription-manager-rhsm-1.28.29-3.el8.s390x",
+                "python3-cloud-what-1.28.29-3.el8.s390x",
+                "python3-syspurpose-1.28.29-3.el8.s390x",
+                "systemd-libs-239-58.el8_6.9.s390x",
+                "systemd-239-58.el8_6.9.s390x"
+              ],
+              "new": [],
+              "remove": [
+                "openssl-1.1.1k-9.el8_6.s390x",
+                "openssl-pkcs11-0.4.10-2.el8.s390x"
+              ],
+              "upgrade": []
+            },
+            "with_nvr": "ose-cluster-ovirt-csi-operator-container-v4.11.0-202307072028.p0.g7a30e38.assembly.stream"
+          },
+          "content_advisory_ids": [],
+          "image_advisory_id": "RHSA-2022:7399",
+          "manifest_list_digest": "sha256:2b55f17547ddcbdbefddde7372bc3ddfba9b66dfe76d453e479f9efd51514656",
+          "manifest_schema2_digest": "sha256:f5639e382bf69e75f4d4f04a6dcd5ea041c41d224078d7fb5c34b77a7dfc4a8a",
+          "published": true,
+          "published_date": "2023-07-27T00:43:49+00:00",
+          "push_date": "2023-01-17T19:36:40+00:00",
+          "registry": "registry.access.redhat.com",
+          "repository": "openshift4/ovirt-csi-driver-rhel8-operator",
+          "signatures": [
+            {
+              "key_long_id": "199E2F91FD431D51",
+              "tags": [
+                "v4.12.0-202301042354.p0.gfeb14fb.assembly.stream"
+              ]
+            }
+          ],
+          "tags": [
+            {
+              "_links": {
+                "tag_history": {
+                  "href": "/v1/tag-history/registry/registry.access.redhat.com/repository/openshift4/ovirt-csi-driver-rhel8-operator/tag/v4.12.0-202301042354.p0.gfeb14fb.assembly.stream"
+                }
+              },
+              "added_date": "2023-07-27T17:45:31.194000+00:00",
+              "name": "v4.12.0-202301042354.p0.gfeb14fb.assembly.stream"
+            }
+          ]
+        }
+      ],
+      "sum_layer_size_bytes": 154251659,
+      "top_layer_id": "sha256:996ce70d9b00cdb9e29a63d0ed3f602f1b87f4c69f492f53ca1c916e5c1242ed",
+      "uncompressed_top_layer_id": "sha256:fc2fec31b3ace15e1f38d82ef0f0d4d3cb2ca3c007b725db5b8311d0d45badd9"
+    },
+    {
+      "_id": "63b627e6deb37662f5bff848",
+      "_links": {
+        "artifacts": {
+          "href": "/v1/images/id/63b627e6deb37662f5bff848/artifacts"
+        },
+        "requests": {
+          "href": "/v1/images/id/63b627e6deb37662f5bff848/requests"
+        },
+        "rpm_manifest": {
+          "href": "/v1/images/id/63b627e6deb37662f5bff848/rpm-manifest"
+        },
+        "test_results": {
+          "href": "/v1/images/id/63b627e6deb37662f5bff848/test-results"
+        },
+        "vulnerabilities": {
+          "href": "/v1/images/id/63b627e6deb37662f5bff848/vulnerabilities"
+        }
+      },
+      "architecture": "ppc64le",
+      "brew": {
+        "build": "ose-cluster-ovirt-csi-operator-container-v4.12.0-202301042354.p0.gfeb14fb.assembly.stream",
+        "completion_date": "2023-01-05T01:24:58.097000+00:00",
+        "nvra": "ose-cluster-ovirt-csi-operator-container-v4.12.0-202301042354.p0.gfeb14fb.assembly.stream.ppc64le",
+        "package": "ose-cluster-ovirt-csi-operator-container"
+      },
+      "certified": false,
+      "content_sets": [
+        "rhel-8-for-ppc64le-appstream-eus-rpms__8_DOT_6",
+        "rhel-8-for-ppc64le-baseos-eus-rpms__8_DOT_6"
+      ],
+      "cpe_ids": [
+        "cpe:/o:redhat:rhel_aus:8.6::baseos",
+        "cpe:/o:redhat:rhel_eus:8.1::baseos",
+        "cpe:/a:redhat:rhel_e4s:8.0::appstream",
+        "cpe:/a:redhat:rhel_aus:8.6::appstream",
+        "cpe:/o:redhat:rhel_e4s:8.2::baseos",
+        "cpe:/o:redhat:rhel_eus:8.2::baseos",
+        "cpe:/a:redhat:rhel_aus:8.2::appstream",
+        "cpe:/o:redhat:rhel_tus:8.2::baseos",
+        "cpe:/o:redhat:rhel:8.3::baseos",
+        "cpe:/o:redhat:rhel_e4s:8.6::baseos",
+        "cpe:/o:redhat:rhel_tus:8.4::baseos",
+        "cpe:/o:redhat:rhel_eus:8.6::baseos",
+        "cpe:/o:redhat:rhel_e4s:8.4::baseos",
+        "cpe:/o:redhat:enterprise_linux:8::baseos",
+        "cpe:/a:redhat:rhel_eus:8.1::appstream",
+        "cpe:/o:redhat:rhel_tus:8.6::baseos",
+        "cpe:/o:redhat:rhel_eus:8.4::baseos",
+        "cpe:/a:redhat:rhel_tus:8.2::appstream",
+        "cpe:/a:redhat:rhel_tus:8.6::appstream",
+        "cpe:/a:redhat:enterprise_linux:8::appstream",
+        "cpe:/a:redhat:rhel_eus:8.6::appstream",
+        "cpe:/o:redhat:rhel_aus:8.4::baseos",
+        "cpe:/o:redhat:rhel_e4s:8.1::baseos",
+        "cpe:/a:redhat:rhel_eus:8.2::appstream",
+        "cpe:/a:redhat:rhel_eus:8.4::appstream",
+        "cpe:/a:redhat:rhel_e4s:8.2::appstream",
+        "cpe:/a:redhat:rhel_e4s:8.6::appstream",
+        "cpe:/a:redhat:rhel_e4s:8.4::appstream",
+        "cpe:/o:redhat:rhel_aus:8.2::baseos",
+        "cpe:/a:redhat:rhel_aus:8.4::appstream",
+        "cpe:/a:redhat:rhel_e4s:8.1::appstream",
+        "cpe:/o:redhat:rhel_e4s:8.0::baseos",
+        "cpe:/a:redhat:rhel_tus:8.4::appstream",
+        "cpe:/a:redhat:rhel:8.3::appstream"
+      ],
+      "creation_date": "2023-01-05T01:29:10.981000+00:00",
+      "docker_image_id": "sha256:9bff9f681648567458b88da48e2650ab54818a65faf5641a932b04e28ef812c9",
+      "freshness_grades": [
+        {
+          "creation_date": "2023-10-26T19:20:18.897000+00:00",
+          "end_date": "2024-02-06T00:00:00+00:00",
+          "grade": "D",
+          "start_date": "2023-10-26T19:20:18.897000+00:00"
+        },
+        {
+          "creation_date": "2023-10-26T19:20:18.897000+00:00",
+          "grade": "F",
+          "start_date": "2024-02-06T00:00:00+00:00"
+        }
+      ],
+      "image_id": "sha256:78c194f9e0ceeafe9139018b3584eaadc83eaef9824e1484c0064bec9184f49a",
+      "last_update_date": "2023-10-26T19:20:19.203000+00:00",
+      "object_type": "containerImage",
+      "parsed_data": {
+        "architecture": "ppc64le",
+        "created": "2023-01-05T01:20:30.125086459Z",
+        "env_variables": [
+          "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+          "container=oci",
+          "GODEBUG=x509ignoreCN=0,madvdontneed=1",
+          "__doozer=merge",
+          "BUILD_RELEASE=202301042354.p0.gfeb14fb.assembly.stream",
+          "BUILD_VERSION=v4.12.0",
+          "OS_GIT_MAJOR=4",
+          "OS_GIT_MINOR=12",
+          "OS_GIT_PATCH=0",
+          "OS_GIT_TREE_STATE=clean",
+          "OS_GIT_VERSION=4.12.0-202301042354.p0.gfeb14fb.assembly.stream-feb14fb",
+          "SOURCE_GIT_TREE_STATE=clean",
+          "OS_GIT_COMMIT=feb14fb",
+          "SOURCE_DATE_EPOCH=1664870075",
+          "SOURCE_GIT_TAG=feb14fbb",
+          "SOURCE_GIT_URL=https://github.com/openshift/ovirt-csi-driver-operator"
+        ],
+        "labels": [
+          {
+            "name": "License",
+            "value": "GPLv2+"
+          },
+          {
+            "name": "architecture",
+            "value": "ppc64le"
+          },
+          {
+            "name": "build-date",
+            "value": "2023-01-05T01:13:18"
+          },
+          {
+            "name": "com.redhat.component",
+            "value": "ose-cluster-ovirt-csi-operator-container"
+          },
+          {
+            "name": "com.redhat.license_terms",
+            "value": "https://www.redhat.com/agreements"
+          },
+          {
+            "name": "description",
+            "value": "The ovirt-csi-driver-operator installs and maintains the oVirt CSI Driver on a cluster."
+          },
+          {
+            "name": "distribution-scope",
+            "value": "public"
+          },
+          {
+            "name": "io.buildah.version",
+            "value": "1.27.1"
+          },
+          {
+            "name": "io.k8s.description",
+            "value": "The ovirt-csi-driver-operator installs and maintains the oVirt CSI Driver on a cluster."
+          },
+          {
+            "name": "io.k8s.display-name",
+            "value": "OpenShift ovirt-csi-driver-operator"
+          },
+          {
+            "name": "io.openshift.build.commit.url",
+            "value": "https://github.com/openshift/ovirt-csi-driver-operator/commit/feb14fbb7c7e91fd721a23b5c7307469da5c1aec"
+          },
+          {
+            "name": "io.openshift.build.source-location",
+            "value": "https://github.com/openshift/ovirt-csi-driver-operator"
+          },
+          {
+            "name": "io.openshift.expose-services",
+            "value": ""
+          },
+          {
+            "name": "io.openshift.maintainer.component",
+            "value": "Storage"
+          },
+          {
+            "name": "io.openshift.maintainer.product",
+            "value": "OpenShift Container Platform"
+          },
+          {
+            "name": "io.openshift.maintainer.subcomponent",
+            "value": "oVirt CSI Driver"
+          },
+          {
+            "name": "io.openshift.tags",
+            "value": "openshift,base"
+          },
+          {
+            "name": "maintainer",
+            "value": "Red Hat, Inc."
+          },
+          {
+            "name": "name",
+            "value": "openshift/ose-ovirt-csi-driver-operator"
+          },
+          {
+            "name": "release",
+            "value": "202301042354.p0.gfeb14fb.assembly.stream"
+          },
+          {
+            "name": "summary",
+            "value": "Provides the latest release of the Red Hat Extended Life Base Image."
+          },
+          {
+            "name": "url",
+            "value": "https://access.redhat.com/containers/#/registry.access.redhat.com/openshift/ose-ovirt-csi-driver-operator/images/v4.12.0-202301042354.p0.gfeb14fb.assembly.stream"
+          },
+          {
+            "name": "vcs-type",
+            "value": "git"
+          },
+          {
+            "name": "vendor",
+            "value": "Red Hat, Inc."
+          },
+          {
+            "name": "version",
+            "value": "v4.12.0"
+          }
+        ],
+        "layers": [
+          "sha256:572a6c4c644ebc5a6af5b3304429914fa78ff3213d3381741515ac68f5c27552",
+          "sha256:c83457bd1585604d5dfe25924b9e8a23d0acb62d2687faf4c79abe193dd19b44",
+          "sha256:a49b2def3a1f7ef696af3ef68b3374337fc77ee11cd0144b386add1134e9b857",
+          "sha256:af5a3a5a8f3cc75825262e7d00c612519ced4a4003d2c1ee21e9720934fb1cbd",
+          "sha256:17e5b635b32014948d8b0ca7f0eb7e4490a834f9022b04a10ef7ee48dd895831"
+        ],
+        "os": "linux",
+        "ports": "[]",
+        "size": 0,
+        "uncompressed_layer_sizes": [
+          {
+            "layer_id": "sha256:b652ae8933a21c751a16599a33237b93b6e803694989de05101cf3885c90d42b",
+            "size_bytes": 94703104
+          },
+          {
+            "layer_id": "sha256:f5bbdbf13a3ab286bc1f95c01699ecc576ae955e3965986dc98f622b65b574a5",
+            "size_bytes": 45312000
+          },
+          {
+            "layer_id": "sha256:4120ddc2568e84c0b250cb10386a2c88d1e78524358b3c0013b11ab7b00001d0",
+            "size_bytes": 97600512
+          },
+          {
+            "layer_id": "sha256:91ae8e7ea107513f33f9eb18777cd46495b4436e74de903b276a541149cff60e",
+            "size_bytes": 20480
+          },
+          {
+            "layer_id": "sha256:f04250bb7b16999527ea465f4d39bfe21966b533e8f45dae6395fb478ed93b1e",
+            "size_bytes": 276940800
+          }
+        ],
+        "uncompressed_size_bytes": 514576896,
+        "user": "1001"
+      },
+      "repositories": [
+        {
+          "_links": {
+            "image_advisory": {
+              "href": "/v1/advisories/redhat/id/RHSA-2022:7399"
+            },
+            "repository": {
+              "href": "/v1/repositories/registry/registry.access.redhat.com/repository/openshift4/ovirt-csi-driver-rhel8-operator"
+            }
+          },
+          "comparison": {
+            "advisory_rpm_mapping": [],
+            "reason": "OK",
+            "reason_text": "No error",
+            "rpms": {
+              "downgrade": [
+                "curl-7.61.1-22.el8_6.4.ppc64le",
+                "openssl-libs-1.1.1k-7.el8_6.ppc64le",
+                "subscription-manager-1.28.29-3.el8.ppc64le",
+                "platform-python-3.6.8-47.el8_6.ppc64le",
+                "libksba-1.3.5-8.el8_6.ppc64le",
+                "gnutls-3.6.16-5.el8_6.ppc64le",
+                "libcurl-7.61.1-22.el8_6.4.ppc64le",
+                "dnf-plugin-subscription-manager-1.28.29-3.el8.ppc64le",
+                "systemd-pam-239-58.el8_6.9.ppc64le",
+                "python3-libs-3.6.8-47.el8_6.ppc64le",
+                "tzdata-2022g-1.el8.noarch",
+                "python3-subscription-manager-rhsm-1.28.29-3.el8.ppc64le",
+                "subscription-manager-rhsm-certificates-1.28.29-3.el8.ppc64le",
+                "python3-cloud-what-1.28.29-3.el8.ppc64le",
+                "python3-syspurpose-1.28.29-3.el8.ppc64le",
+                "systemd-libs-239-58.el8_6.9.ppc64le",
+                "systemd-239-58.el8_6.9.ppc64le"
+              ],
+              "new": [],
+              "remove": [
+                "openssl-1.1.1k-9.el8_6.ppc64le",
+                "openssl-pkcs11-0.4.10-2.el8.ppc64le"
+              ],
+              "upgrade": []
+            },
+            "with_nvr": "ose-cluster-ovirt-csi-operator-container-v4.11.0-202307072028.p0.g7a30e38.assembly.stream"
+          },
+          "content_advisory_ids": [],
+          "image_advisory_id": "RHSA-2022:7399",
+          "manifest_list_digest": "sha256:2b55f17547ddcbdbefddde7372bc3ddfba9b66dfe76d453e479f9efd51514656",
+          "manifest_schema2_digest": "sha256:78c194f9e0ceeafe9139018b3584eaadc83eaef9824e1484c0064bec9184f49a",
+          "published": true,
+          "published_date": "2023-07-27T00:43:49+00:00",
+          "push_date": "2023-01-17T19:36:40+00:00",
+          "registry": "registry.access.redhat.com",
+          "repository": "openshift4/ovirt-csi-driver-rhel8-operator",
+          "signatures": [
+            {
+              "key_long_id": "199E2F91FD431D51",
+              "tags": [
+                "v4.12.0-202301042354.p0.gfeb14fb.assembly.stream"
+              ]
+            }
+          ],
+          "tags": [
+            {
+              "_links": {
+                "tag_history": {
+                  "href": "/v1/tag-history/registry/registry.access.redhat.com/repository/openshift4/ovirt-csi-driver-rhel8-operator/tag/v4.12.0-202301042354.p0.gfeb14fb.assembly.stream"
+                }
+              },
+              "added_date": "2023-07-27T17:45:26.205000+00:00",
+              "name": "v4.12.0-202301042354.p0.gfeb14fb.assembly.stream"
+            }
+          ]
+        }
+      ],
+      "sum_layer_size_bytes": 163742046,
+      "top_layer_id": "sha256:572a6c4c644ebc5a6af5b3304429914fa78ff3213d3381741515ac68f5c27552",
+      "uncompressed_top_layer_id": "sha256:b652ae8933a21c751a16599a33237b93b6e803694989de05101cf3885c90d42b"
+    },
+    {
+      "_id": "63b627e8deb37662f5bff84c",
+      "_links": {
+        "artifacts": {
+          "href": "/v1/images/id/63b627e8deb37662f5bff84c/artifacts"
+        },
+        "requests": {
+          "href": "/v1/images/id/63b627e8deb37662f5bff84c/requests"
+        },
+        "rpm_manifest": {
+          "href": "/v1/images/id/63b627e8deb37662f5bff84c/rpm-manifest"
+        },
+        "test_results": {
+          "href": "/v1/images/id/63b627e8deb37662f5bff84c/test-results"
+        },
+        "vulnerabilities": {
+          "href": "/v1/images/id/63b627e8deb37662f5bff84c/vulnerabilities"
+        }
+      },
+      "architecture": "amd64",
+      "brew": {
+        "build": "ose-cluster-ovirt-csi-operator-container-v4.12.0-202301042354.p0.gfeb14fb.assembly.stream",
+        "completion_date": "2023-01-05T01:24:58.097000+00:00",
+        "nvra": "ose-cluster-ovirt-csi-operator-container-v4.12.0-202301042354.p0.gfeb14fb.assembly.stream.amd64",
+        "package": "ose-cluster-ovirt-csi-operator-container"
+      },
+      "certified": false,
+      "content_sets": [
+        "rhel-8-for-x86_64-appstream-eus-rpms__8_DOT_6",
+        "rhel-8-for-x86_64-baseos-eus-rpms__8_DOT_6"
+      ],
+      "cpe_ids": [
+        "cpe:/o:redhat:rhel_aus:8.6::baseos",
+        "cpe:/o:redhat:rhel_eus:8.1::baseos",
+        "cpe:/a:redhat:rhel_e4s:8.0::appstream",
+        "cpe:/a:redhat:rhel_aus:8.6::appstream",
+        "cpe:/o:redhat:rhel_e4s:8.2::baseos",
+        "cpe:/o:redhat:rhel_eus:8.2::baseos",
+        "cpe:/a:redhat:rhel_aus:8.2::appstream",
+        "cpe:/o:redhat:rhel_tus:8.2::baseos",
+        "cpe:/o:redhat:rhel:8.3::baseos",
+        "cpe:/o:redhat:rhel_e4s:8.6::baseos",
+        "cpe:/o:redhat:rhel_tus:8.4::baseos",
+        "cpe:/o:redhat:rhel_eus:8.6::baseos",
+        "cpe:/o:redhat:rhel_e4s:8.4::baseos",
+        "cpe:/o:redhat:enterprise_linux:8::baseos",
+        "cpe:/a:redhat:rhel_eus:8.1::appstream",
+        "cpe:/o:redhat:rhel_tus:8.6::baseos",
+        "cpe:/o:redhat:rhel_eus:8.4::baseos",
+        "cpe:/o:redhat:enterprise_linux:8::hypervisor",
+        "cpe:/a:redhat:rhel_tus:8.2::appstream",
+        "cpe:/a:redhat:rhel_tus:8.6::appstream",
+        "cpe:/a:redhat:enterprise_linux:8::appstream",
+        "cpe:/a:redhat:rhel_eus:8.6::appstream",
+        "cpe:/o:redhat:rhel_e4s:8.1::baseos",
+        "cpe:/o:redhat:rhel_aus:8.4::baseos",
+        "cpe:/a:redhat:rhel_eus:8.2::appstream",
+        "cpe:/a:redhat:rhel_eus:8.4::appstream",
+        "cpe:/a:redhat:rhel_e4s:8.2::appstream",
+        "cpe:/a:redhat:rhel_e4s:8.6::appstream",
+        "cpe:/o:redhat:rhel_aus:8.2::baseos",
+        "cpe:/a:redhat:rhel_e4s:8.4::appstream",
+        "cpe:/a:redhat:rhel_aus:8.4::appstream",
+        "cpe:/a:redhat:rhel_e4s:8.1::appstream",
+        "cpe:/o:redhat:rhel_e4s:8.0::baseos",
+        "cpe:/a:redhat:rhel_tus:8.4::appstream",
+        "cpe:/a:redhat:rhel:8.3::appstream"
+      ],
+      "creation_date": "2023-01-05T01:29:12.802000+00:00",
+      "docker_image_id": "sha256:ae1fd1144c28780feb2e81742b14ef8625d4a861c2a84ec4b9da248642b9859a",
+      "freshness_grades": [
+        {
+          "creation_date": "2023-10-26T19:20:19.194000+00:00",
+          "end_date": "2024-02-06T00:00:00+00:00",
+          "grade": "D",
+          "start_date": "2023-10-26T19:20:19.194000+00:00"
+        },
+        {
+          "creation_date": "2023-10-26T19:20:19.194000+00:00",
+          "grade": "F",
+          "start_date": "2024-02-06T00:00:00+00:00"
+        }
+      ],
+      "image_id": "sha256:925d8dc47e1602c31785a7e8c2c43f06e210c80867ceebadb052351e553c13e9",
+      "last_update_date": "2023-10-26T19:20:19.818000+00:00",
+      "object_type": "containerImage",
+      "parsed_data": {
+        "architecture": "amd64",
+        "created": "2023-01-05T01:19:11.561644782Z",
+        "env_variables": [
+          "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+          "container=oci",
+          "GODEBUG=x509ignoreCN=0,madvdontneed=1",
+          "__doozer=merge",
+          "BUILD_RELEASE=202301042354.p0.gfeb14fb.assembly.stream",
+          "BUILD_VERSION=v4.12.0",
+          "OS_GIT_MAJOR=4",
+          "OS_GIT_MINOR=12",
+          "OS_GIT_PATCH=0",
+          "OS_GIT_TREE_STATE=clean",
+          "OS_GIT_VERSION=4.12.0-202301042354.p0.gfeb14fb.assembly.stream-feb14fb",
+          "SOURCE_GIT_TREE_STATE=clean",
+          "OS_GIT_COMMIT=feb14fb",
+          "SOURCE_DATE_EPOCH=1664870075",
+          "SOURCE_GIT_TAG=feb14fbb",
+          "SOURCE_GIT_URL=https://github.com/openshift/ovirt-csi-driver-operator"
+        ],
+        "labels": [
+          {
+            "name": "License",
+            "value": "GPLv2+"
+          },
+          {
+            "name": "architecture",
+            "value": "x86_64"
+          },
+          {
+            "name": "build-date",
+            "value": "2023-01-05T01:13:18"
+          },
+          {
+            "name": "com.redhat.component",
+            "value": "ose-cluster-ovirt-csi-operator-container"
+          },
+          {
+            "name": "com.redhat.license_terms",
+            "value": "https://www.redhat.com/agreements"
+          },
+          {
+            "name": "description",
+            "value": "The ovirt-csi-driver-operator installs and maintains the oVirt CSI Driver on a cluster."
+          },
+          {
+            "name": "distribution-scope",
+            "value": "public"
+          },
+          {
+            "name": "io.buildah.version",
+            "value": "1.27.1"
+          },
+          {
+            "name": "io.k8s.description",
+            "value": "The ovirt-csi-driver-operator installs and maintains the oVirt CSI Driver on a cluster."
+          },
+          {
+            "name": "io.k8s.display-name",
+            "value": "OpenShift ovirt-csi-driver-operator"
+          },
+          {
+            "name": "io.openshift.build.commit.url",
+            "value": "https://github.com/openshift/ovirt-csi-driver-operator/commit/feb14fbb7c7e91fd721a23b5c7307469da5c1aec"
+          },
+          {
+            "name": "io.openshift.build.source-location",
+            "value": "https://github.com/openshift/ovirt-csi-driver-operator"
+          },
+          {
+            "name": "io.openshift.expose-services",
+            "value": ""
+          },
+          {
+            "name": "io.openshift.maintainer.component",
+            "value": "Storage"
+          },
+          {
+            "name": "io.openshift.maintainer.product",
+            "value": "OpenShift Container Platform"
+          },
+          {
+            "name": "io.openshift.maintainer.subcomponent",
+            "value": "oVirt CSI Driver"
+          },
+          {
+            "name": "io.openshift.tags",
+            "value": "openshift,base"
+          },
+          {
+            "name": "maintainer",
+            "value": "Red Hat, Inc."
+          },
+          {
+            "name": "name",
+            "value": "openshift/ose-ovirt-csi-driver-operator"
+          },
+          {
+            "name": "release",
+            "value": "202301042354.p0.gfeb14fb.assembly.stream"
+          },
+          {
+            "name": "summary",
+            "value": "Provides the latest release of the Red Hat Extended Life Base Image."
+          },
+          {
+            "name": "url",
+            "value": "https://access.redhat.com/containers/#/registry.access.redhat.com/openshift/ose-ovirt-csi-driver-operator/images/v4.12.0-202301042354.p0.gfeb14fb.assembly.stream"
+          },
+          {
+            "name": "vcs-type",
+            "value": "git"
+          },
+          {
+            "name": "vendor",
+            "value": "Red Hat, Inc."
+          },
+          {
+            "name": "version",
+            "value": "v4.12.0"
+          }
+        ],
+        "layers": [
+          "sha256:2ab8f5ed431c7f8fa3b3d915d6265816d26186f1f93b9ace98690c70c812f52a",
+          "sha256:833de2b0ccff7a77c31b4d2e3f96077b638aada72bfde75b5eddd5903dc11bb7",
+          "sha256:f0f4937bc70fa7bf9afc1eb58400dbc646c9fd0c9f95cfdbfcdedd55f6fa0bcd",
+          "sha256:d8190195889efb5333eeec18af9b6c82313edd4db62989bd3a357caca4f13f0e",
+          "sha256:97da74cc6d8fa5d1634eb1760fd1da5c6048619c264c23e62d75f3bf6b8ef5c4"
+        ],
+        "os": "linux",
+        "ports": "[]",
+        "size": 0,
+        "uncompressed_layer_sizes": [
+          {
+            "layer_id": "sha256:96524b30bcbc5b02c101c817fb3c67f6d4a5912cbadd0d7528a28cc01a3fd34c",
+            "size_bytes": 97157120
+          },
+          {
+            "layer_id": "sha256:50c36aad8a28245871d2cace944a4260d9de58b679a0e4ab285b481e123734eb",
+            "size_bytes": 40146432
+          },
+          {
+            "layer_id": "sha256:10f5b8a5bcc334c27cb0c778c545ce6c3c77c79c9300e3bd5574dc7b12ef1e44",
+            "size_bytes": 80845312
+          },
+          {
+            "layer_id": "sha256:d3fbfed1573def1cd078186e307411a8929138baf65bdd0a02bcbdb451707f67",
+            "size_bytes": 20480
+          },
+          {
+            "layer_id": "sha256:e2e51ecd22dcbc318fb317f20dff685c6d54755d60a80b12ed290658864d45fd",
+            "size_bytes": 227153920
+          }
+        ],
+        "uncompressed_size_bytes": 445323264,
+        "user": "1001"
+      },
+      "repositories": [
+        {
+          "_links": {
+            "image_advisory": {
+              "href": "/v1/advisories/redhat/id/RHSA-2022:7399"
+            },
+            "repository": {
+              "href": "/v1/repositories/registry/registry.access.redhat.com/repository/openshift4/ovirt-csi-driver-rhel8-operator"
+            }
+          },
+          "comparison": {
+            "advisory_rpm_mapping": [],
+            "reason": "OK",
+            "reason_text": "No error",
+            "rpms": {
+              "downgrade": [
+                "curl-7.61.1-22.el8_6.4.x86_64",
+                "openssl-libs-1.1.1k-7.el8_6.x86_64",
+                "subscription-manager-1.28.29-3.el8.x86_64",
+                "platform-python-3.6.8-47.el8_6.x86_64",
+                "libksba-1.3.5-8.el8_6.x86_64",
+                "gnutls-3.6.16-5.el8_6.x86_64",
+                "libcurl-7.61.1-22.el8_6.4.x86_64",
+                "dnf-plugin-subscription-manager-1.28.29-3.el8.x86_64",
+                "systemd-pam-239-58.el8_6.9.x86_64",
+                "python3-libs-3.6.8-47.el8_6.x86_64",
+                "tzdata-2022g-1.el8.noarch",
+                "python3-subscription-manager-rhsm-1.28.29-3.el8.x86_64",
+                "subscription-manager-rhsm-certificates-1.28.29-3.el8.x86_64",
+                "python3-cloud-what-1.28.29-3.el8.x86_64",
+                "python3-syspurpose-1.28.29-3.el8.x86_64",
+                "systemd-libs-239-58.el8_6.9.x86_64",
+                "systemd-239-58.el8_6.9.x86_64"
+              ],
+              "new": [],
+              "remove": [
+                "openssl-1.1.1k-9.el8_6.x86_64",
+                "openssl-pkcs11-0.4.10-2.el8.x86_64"
+              ],
+              "upgrade": []
+            },
+            "with_nvr": "ose-cluster-ovirt-csi-operator-container-v4.11.0-202307072028.p0.g7a30e38.assembly.stream"
+          },
+          "content_advisory_ids": [],
+          "image_advisory_id": "RHSA-2022:7399",
+          "manifest_list_digest": "sha256:2b55f17547ddcbdbefddde7372bc3ddfba9b66dfe76d453e479f9efd51514656",
+          "manifest_schema2_digest": "sha256:925d8dc47e1602c31785a7e8c2c43f06e210c80867ceebadb052351e553c13e9",
+          "published": true,
+          "published_date": "2023-07-27T00:43:49+00:00",
+          "push_date": "2023-01-17T19:36:40+00:00",
+          "registry": "registry.access.redhat.com",
+          "repository": "openshift4/ovirt-csi-driver-rhel8-operator",
+          "signatures": [
+            {
+              "key_long_id": "199E2F91FD431D51",
+              "tags": [
+                "v4.12.0-202301042354.p0.gfeb14fb.assembly.stream"
+              ]
+            }
+          ],
+          "tags": [
+            {
+              "_links": {
+                "tag_history": {
+                  "href": "/v1/tag-history/registry/registry.access.redhat.com/repository/openshift4/ovirt-csi-driver-rhel8-operator/tag/v4.12.0-202301042354.p0.gfeb14fb.assembly.stream"
+                }
+              },
+              "added_date": "2023-07-27T17:45:18.184000+00:00",
+              "name": "v4.12.0-202301042354.p0.gfeb14fb.assembly.stream"
+            }
+          ]
+        }
+      ],
+      "sum_layer_size_bytes": 157914117,
+      "top_layer_id": "sha256:2ab8f5ed431c7f8fa3b3d915d6265816d26186f1f93b9ace98690c70c812f52a",
+      "uncompressed_top_layer_id": "sha256:96524b30bcbc5b02c101c817fb3c67f6d4a5912cbadd0d7528a28cc01a3fd34c"
+    }
+  ],
+  "page": 0,
+  "page_size": 100,
+  "total": 4
+}

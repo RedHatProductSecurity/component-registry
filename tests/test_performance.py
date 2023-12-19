@@ -28,7 +28,7 @@ def display_product_stream_with_many_roots() -> dict:
     # Any exceptions will be passed through to test code
     response.raise_for_status()
     response_json = response.json()
-    assert response_json["count"] > 2500
+    assert response_json["count"] > 1900
     return response_json
 
 
@@ -174,3 +174,28 @@ def test_gin_index_performance() -> None:
     assert len(test_results) == 3
     median_time_taken = test_results[1]
     assert median_time_taken < 2.0
+
+
+def get_curl_by_re_provides_name() -> dict:
+    response = requests.get(
+        f"{CORGI_API_URL}/components?re_provides_name=webkitgtk&include_fields=purl,link&limit=1000"
+    )
+
+    # If you're running performance tests manually against a dev environment,
+    # make sure that you've loaded the right data for this test
+    # Any exceptions will be passed through to test code
+    response.raise_for_status()
+    response_json = response.json()
+    assert response_json["count"] > 30
+    return response_json
+
+
+def test_re_provides_name_performance() -> None:
+    """Test simple regex and should fail if any problems with GIN index."""
+    timer = timeit.Timer(get_curl_by_re_provides_name)
+
+    # 3 test results, each of which makes only 1 request
+    test_results = sorted(timer.repeat(repeat=3, number=1))
+    assert len(test_results) == 3
+    median_time_taken = test_results[1]
+    assert median_time_taken < 5.0

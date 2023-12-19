@@ -24,8 +24,7 @@ from corgi.core.models import (
     ProductVersion,
     SoftwareBuild,
 )
-from corgi.tasks.brew import slow_save_taxonomy
-from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
+from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS, slow_save_taxonomy
 
 logger = get_task_logger(__name__)
 # Find a substring that looks like a version (e.g. "3", "3.5", "3-5", "1.2.z") at the end of a

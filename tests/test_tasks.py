@@ -19,9 +19,9 @@ from corgi.core.models import (
 from corgi.tasks.brew import (
     slow_delete_brew_build,
     slow_refresh_brew_build_tags,
-    slow_save_taxonomy,
     slow_update_brew_tags,
 )
+from corgi.tasks.common import slow_save_taxonomy
 from corgi.tasks.errata_tool import slow_handle_shipped_errata
 from corgi.tasks.pnc import slow_fetch_pnc_sbom, slow_handle_pnc_errata_released
 
@@ -196,17 +196,19 @@ def test_slow_handle_shipped_errata(mock_et_constructor, mock_load_errata, mock_
     mock_fetch_brew_build_call = call(
         "corgi.tasks.brew.slow_fetch_brew_build",
         args=(str(missing_build_id), SoftwareBuild.Type.BREW),
+        priority=0,
     )
     mock_refresh_brew_build_tags_call = call(
         "corgi.tasks.brew.slow_refresh_brew_build_tags",
         args=(existing_build_id,),
+        priority=0,
     )
     mock_app.send_task.assert_has_calls(
         [mock_fetch_brew_build_call, mock_refresh_brew_build_tags_call]
     )
 
     # Taxonomy is always force-saved at the end
-    mock_load_errata.delay.assert_called_once_with(str(erratum_id), force_process=True)
+    mock_load_errata.apply_async.assert_called_once_with(args=(str(erratum_id), True), priority=0)
 
 
 def test_slow_handle_shipped_errata_errors():
@@ -242,8 +244,8 @@ def test_slow_refresh_brew_build_tags():
 
         mock_brew_constructor.assert_called_once_with(SoftwareBuild.Type.BREW)
         mock_brew_collector.koji_session.listTags.assert_called_once_with(build_id)
-        mock_load_errata.delay.assert_has_calls(
-            tuple(call(erratum_id) for erratum_id in CLEAN_ERRATA_TAGS)
+        mock_load_errata.apply_async.assert_has_calls(
+            tuple(call(args=(erratum_id,), priority=0) for erratum_id in CLEAN_ERRATA_TAGS)
         )
 
     build.refresh_from_db()
@@ -538,7 +540,7 @@ def test_slow_fetch_pnc_sbom():
     response.json.return_value = sbom_contents
 
     with patch(
-        "corgi.tasks.brew.slow_save_taxonomy.delay", wraps=slow_save_taxonomy
+        "corgi.tasks.common.slow_save_taxonomy.delay", wraps=slow_save_taxonomy
     ) as wrapped_save_taxonomy:
         with patch("requests.get", return_value=response) as get_mock:
             slow_fetch_pnc_sbom(purl, product_config, sbom)

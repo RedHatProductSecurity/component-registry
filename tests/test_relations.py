@@ -16,8 +16,8 @@ pytestmark = [
 ]
 
 
-@patch("corgi.tasks.brew.slow_fetch_brew_build.delay")
-@patch("corgi.tasks.brew.slow_fetch_modular_build.delay")
+@patch("corgi.tasks.brew.slow_fetch_brew_build.apply_async")
+@patch("corgi.tasks.brew.slow_fetch_modular_build.apply_async")
 def test_update_products_after_relation_creation(fetch_modular_build_task, fetch_brew_build_task):
     """This tests that we always call slow_fetch_*_build task after creating a relation which
     calls save_product_taxonomy on the SoftwareBuild and it's child components to update the
@@ -34,7 +34,7 @@ def test_update_products_after_relation_creation(fetch_modular_build_task, fetch
         slow_fetch_modular_build,
     )
 
-    fetch_modular_build_task.assert_called_once()
+    fetch_modular_build_task.assert_called_once_with(kwargs={"build_id": sb.build_id}, priority=0)
 
     # For CENTOS builds we don't call fetch_modular_build, but slow_fetch_brew build directly
     # because the openstack-rdo product stream doesn't use modular builds and the collector models
@@ -50,4 +50,6 @@ def test_update_products_after_relation_creation(fetch_modular_build_task, fetch
         slow_fetch_brew_build,
     )
 
-    fetch_brew_build_task.assert_called_once()
+    fetch_brew_build_task.assert_called_once_with(
+        kwargs={"build_id": sb.build_id, "build_type": SoftwareBuild.Type.CENTOS}, priority=0
+    )

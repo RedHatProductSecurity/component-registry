@@ -11,7 +11,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
 from django.db import models
 from django.db.models import Q, QuerySet
-from django.db.models.expressions import F, Func, Value
+from django.db.models.expressions import F, Func, Subquery, Value
 from mptt.managers import TreeManager
 from mptt.models import MPTTModel, TreeForeignKey
 from packageurl import PackageURL
@@ -21,6 +21,7 @@ from corgi.core.constants import (
     CONTAINER_DIGEST_FORMATS,
     EL_MATCH_RE,
     MODEL_NODE_LEVEL_MAPPING,
+    MODULAR_SRPM_CONDITION,
     NODE_LEVEL_ATTRIBUTE_MAPPING,
     RED_HAT_MAVEN_REPOSITORY,
     ROOT_COMPONENTS_CONDITION,
@@ -216,7 +217,6 @@ class ComponentNode(NodeModel):
                 fields=("tree_id", "lft", "purl", "parent_id"),
                 name="core_cn_tree_lft_purl_prnt_idx",
             ),
-            models.Index(fields=("lft", "tree_id"), name="core_cn_lft_tree_idx"),
             models.Index(fields=("lft", "rght", "tree_id"), name="core_cn_lft_rght_tree_idx"),
             *NodeModel.Meta.indexes,
         )
@@ -908,8 +908,8 @@ class ComponentQuerySet(models.QuerySet):
     ) -> Iterable[str]:
         return (
             components.values("type", "namespace", "name", "arch")
-            .order_by()  # required to avoid cross-join fun
-            .distinct()
+            .order_by("type", "namespace", "name", "arch")
+            .distinct("type", "namespace", "name", "arch")
             .annotate(
                 latest_version=Func(
                     Value(model_type),
@@ -968,16 +968,18 @@ class ComponentQuerySet(models.QuerySet):
         include: bool = True,
         include_inactive_streams: bool = False,
     ) -> "ComponentQuerySet":
-        """Return only root components from latest builds for each product stream."""
+        """Return root components of latest builds for each product stream."""
         components = self.root_components().prefetch_related("productstreams")
-        product_stream_ofuris = set(
-            (
-                components.values_list("productstreams__ofuri", flat=True)
-                # Clear ordering inherited from parent Queryset, if any
-                # So .distinct() works properly and doesn't have duplicates
-                .order_by().distinct()
-            )
-        )
+
+        # if include_inactive_streams is False we need to filter ofuris
+        # Clear ordering inherited from parent Queryset, if any
+        # So .distinct() works properly and doesn't have duplicates
+        productstreams = components.values_list("productstreams").order_by().distinct()
+        product_stream_objs = ProductStream.objects.filter(pk__in=Subquery(productstreams))
+        if not include_inactive_streams:
+            product_stream_objs = product_stream_objs.filter(active=True)
+        product_stream_ofuris = product_stream_objs.values_list("ofuri", flat=True).distinct()
+
         # aggregate up all latest component uuids across all matched product streams
         latest_components_uuids: set[str] = set()
         for ps_ofuri in product_stream_ofuris:
@@ -1026,9 +1028,9 @@ class ComponentQuerySet(models.QuerySet):
         """Show only root components by default, or only non-root components if include=False"""
         if include:
             # Truthy values return the filtered queryset (only root components)
-            return self.filter(ROOT_COMPONENTS_CONDITION)
+            return self.filter(ROOT_COMPONENTS_CONDITION).exclude(MODULAR_SRPM_CONDITION)
         # Falsey values return the excluded queryset (only non-root components)
-        return self.exclude(ROOT_COMPONENTS_CONDITION)
+        return self.filter(Q(software_build__isnull=True) | MODULAR_SRPM_CONDITION)
 
     # See CORGI-658 for the motivation
     def external_components(self, include: bool = True) -> "ComponentQuerySet":
@@ -1075,9 +1077,17 @@ class ComponentQuerySet(models.QuerySet):
         """Show only components in active product streams"""
         if include:
             # Truthy values return the filtered queryset (only components in active streams)
-            return self.filter(productstreams__active=True).distinct()
+            return (
+                self.filter(productstreams__active=True)
+                .order_by("name", "type", "arch", "version", "release")
+                .distinct()
+            )
         # Falsey values return the excluded queryset (only components in no active streams)
-        return self.exclude(productstreams__active=True).distinct()
+        return (
+            self.exclude(productstreams__active=True)
+            .order_by("name", "type", "arch", "version", "release")
+            .distinct()
+        )
 
 
 class Component(TimeStampedModel, ProductTaxonomyMixin):
@@ -1319,11 +1329,6 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
                 digest = self.meta_attr["digests"].get(digest_fmt)
                 if digest:
                     break
-        # Use the last path of the repository_url if available
-        purl_name = self.name
-        name_from_label = self.meta_attr.get("name_from_label")
-        if name_from_label:
-            purl_name = name_from_label
         # Add the tag which matches version+release (check for empty release)
         release = f"-{self.release}" if self.release else ""
         qualifiers = {
@@ -1339,7 +1344,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         # Note that if no container digest format matched, the digest below is ""
         # and the constructed purl has no .version attribute
         return dict(
-            name=purl_name,
+            name=self.name,
             version=digest,
             qualifiers=qualifiers,
         )

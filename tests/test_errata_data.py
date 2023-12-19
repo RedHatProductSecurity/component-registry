@@ -20,6 +20,7 @@ from corgi.core.models import (
     ProductComponentRelation,
     ProductNode,
     ProductVariant,
+    SoftwareBuild,
 )
 from corgi.tasks.common import BUILD_TYPE
 from corgi.tasks.errata_tool import (
@@ -190,6 +191,7 @@ errata_details = [
           }
     }""",
         1,
+        False,
     ),
     (
         "77150",
@@ -250,14 +252,16 @@ errata_details = [
             }
         }""",
         3,
+        True,
     ),
 ]
 
 
+@patch("corgi.tasks.brew.slow_update_name_for_container_from_pyxis.delay")
 @patch("config.celery.app.send_task")
-@pytest.mark.parametrize("erratum_id, build_list, no_of_objs", errata_details)
+@pytest.mark.parametrize("erratum_id, build_list, no_of_objs, is_container", errata_details)
 def test_save_product_component_for_errata(
-    mock_send, erratum_id, build_list, no_of_objs, requests_mock
+    mock_send, mock_update_name, erratum_id, build_list, no_of_objs, is_container, requests_mock
 ):
     with open(f"tests/data/errata/{erratum_id}.json", "r") as remote_source_data:
         requests_mock.get(
@@ -267,6 +271,9 @@ def test_save_product_component_for_errata(
     build_list_url = f"{settings.ERRATA_TOOL_URL}/api/v1/erratum/{erratum_id}/builds_list.json"
     requests_mock.get(build_list_url, text=build_list)
     sb = SoftwareBuildFactory(build_id="1636922", build_type=BUILD_TYPE)
+    container_build = SoftwareBuildFactory(build_id="1628358", build_type=SoftwareBuild.Type.BREW)
+    container_build.meta_attr["nvr"] = "rh-dotnet31-container-3.1-18"
+    container_build.save()
     slow_load_errata(erratum_id)
     pcrs = ProductComponentRelation.objects.filter(external_system_id=erratum_id)
     assert len(pcrs) == no_of_objs
@@ -276,9 +283,13 @@ def test_save_product_component_for_errata(
         if pcr.build_id == sb.build_id:
             # assert it is linked to the build using the ForeignKey field
             assert pcr.software_build_id == sb.pk
+        elif pcr.build_id == container_build.build_id:
+            assert pcr.software_build_id == container_build.pk
         else:
             # else assert the ForeignKey is unset / other build IDs have not been fetched
             assert pcr.software_build_id is None
+    if is_container:
+        assert mock_update_name.called_with("rh-dotnet31-container-3.1-18")
 
 
 def test_update_product_component_relation():
@@ -312,8 +323,8 @@ def test_slow_save_errata_product_taxonomy(mock_app):
     )
     slow_save_errata_product_taxonomy(1)
     send_task_calls = [
-        call("corgi.tasks.brew.slow_save_taxonomy", args=(sb.build_id, sb.build_type)),
-        call("corgi.tasks.brew.slow_save_taxonomy", args=(sb2.build_id, sb2.build_type)),
+        call("corgi.tasks.common.slow_save_taxonomy", args=(sb.build_id, sb.build_type)),
+        call("corgi.tasks.common.slow_save_taxonomy", args=(sb2.build_id, sb2.build_type)),
     ]
     # Calls happen based on build ID / UUID ordering, which is random
     mock_app.send_task.assert_has_calls(send_task_calls, any_order=True)
@@ -478,17 +489,29 @@ errata_key_details = [
         "RHBA-2023:5017-2",
         120142,
         True,
+        True,
     ),
     (
         "RHBA-2023:120271",
         120271,
         False,
+        True,
+    ),
+    (
+        "RHBA-2021:3573-02",
+        77149,
+        True,
+        False,
     ),
 ]
 
 
-@pytest.mark.parametrize("advisory_name, erratum_id, shipped_live", errata_key_details)
-def test_shipped_live_advisory(advisory_name, erratum_id, shipped_live, requests_mock):
+@pytest.mark.parametrize(
+    "advisory_name, erratum_id, shipped_live, is_container", errata_key_details
+)
+def test_shipped_live_advisory(
+    advisory_name, erratum_id, shipped_live, is_container, requests_mock
+):
     # Test we can translate between advisory_name and id
     with open(f"tests/data/errata/{erratum_id}.json", "r") as remote_source_data:
         requests_mock.get(
@@ -496,11 +519,13 @@ def test_shipped_live_advisory(advisory_name, erratum_id, shipped_live, requests
             text=remote_source_data.read(),
         )
     results = ErrataTool().get_errata_key_details(advisory_name)
-    assert results == (erratum_id, shipped_live)
+    assert results == (erratum_id, shipped_live, is_container)
 
 
-@pytest.mark.parametrize("advisory_name, erratum_id, shipped_live", errata_key_details)
-def test_shipped_live_id(advisory_name, erratum_id, shipped_live, requests_mock):
+@pytest.mark.parametrize(
+    "advisory_name, erratum_id, shipped_live, is_container", errata_key_details
+)
+def test_shipped_live_id(advisory_name, erratum_id, shipped_live, is_container, requests_mock):
     # Test we can get details by id
     with open(f"tests/data/errata/{erratum_id}.json", "r") as remote_source_data:
         requests_mock.get(
@@ -508,7 +533,7 @@ def test_shipped_live_id(advisory_name, erratum_id, shipped_live, requests_mock)
             text=remote_source_data.read(),
         )
     results = ErrataTool().get_errata_key_details(erratum_id)
-    assert results == (erratum_id, shipped_live)
+    assert results == (erratum_id, shipped_live, is_container)
 
 
 def test_invalid_errtaum_details(requests_mock):
@@ -884,7 +909,7 @@ def test_get_errata_for_release(monkeypatch):
 
 
 @patch("corgi.tasks.errata_tool._get_errata_search_criteria")
-@patch("corgi.tasks.errata_tool.slow_load_errata.delay")
+@patch("corgi.tasks.errata_tool.slow_load_errata.apply_async")
 @patch("corgi.tasks.errata_tool.ErrataTool")
 def test_slow_load_errata_stream(mock_et_collector, mock_load_errata, mock_search_criteria):
     # This needs to return the correct number of arguments for the test to compile, the values are
@@ -899,16 +924,31 @@ def test_slow_load_errata_stream(mock_et_collector, mock_load_errata, mock_searc
     stream = ProductStreamFactory()
     result = slow_load_stream_errata(stream.name)
     assert result == 0
+    mock_search_criteria.assert_called_once_with(stream.name)
+    mock_load_errata.assert_not_called()
+
+    mock_load_errata.reset_mock()
+    mock_search_criteria.reset_mock()
+    mock_search_criteria.return_value = (
+        ["some_variant"],
+        [],
+    )
 
     # Test that a stream with variants calls load for errata matching those variants
     mock_et_collector.return_value.get_errata_matching_variants.return_value = [1]
-    slow_load_stream_errata(stream.name)
-    assert mock_load_errata.call_args == call(1, force_process=True)
+    result = slow_load_stream_errata(stream.name)
+    assert result == 1
+    mock_load_errata.assert_called_once_with(args=(1, True), priority=0)
+    mock_search_criteria.assert_called_once_with(stream.name)
 
+    mock_load_errata.reset_mock()
+    mock_search_criteria.reset_mock()
     mock_search_criteria.return_value = (
         [],
         [100],
     )
     mock_et_collector.return_value.get_errata_for_releases.return_value = {100}
-    slow_load_stream_errata(stream.name, force_process=False)
-    assert mock_load_errata.call_args == call(100, force_process=False)
+    result = slow_load_stream_errata(stream.name, force_process=False)
+    assert result == 1
+    mock_load_errata.assert_called_once_with(args=(100, False), priority=0)
+    mock_search_criteria.assert_called_once_with(stream.name)

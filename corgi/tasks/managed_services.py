@@ -5,6 +5,7 @@ from celery_singleton import Singleton
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
+from requests import HTTPError
 
 from config.celery import app
 from corgi.collectors.app_interface import AppInterface
@@ -16,8 +17,7 @@ from corgi.core.models import (
     ProductStream,
     SoftwareBuild,
 )
-from corgi.tasks.brew import slow_save_taxonomy
-from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
+from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS, slow_save_taxonomy
 from corgi.tasks.sca import save_component
 
 logger = get_task_logger(__name__)
@@ -35,7 +35,12 @@ class MultiplePermissionExceptions(Exception):
         super().__init__(combined_message)
 
 
-@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
+@app.task(
+    base=Singleton,
+    autoretry_for=RETRYABLE_ERRORS,
+    retry_kwargs=RETRY_KWARGS,
+    soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
+)
 def refresh_service_manifests() -> None:
     """Collect data for all Red Hat managed services from product-definitions
     and App Interface, then remove and recreate all services"""
@@ -44,25 +49,36 @@ def refresh_service_manifests() -> None:
     ).distinct()
     service_metadata = AppInterface.fetch_service_metadata(services)
 
-    # Find previous builds and delete them and their components, so we can create a fresh
-    # manifest structure for each "new" build. This is done specifically because we don't
-    # have a way to tie a set of components to a specific build right now,
-    # so we construct an arbitrary build periodically even if nothing has changed since
-    # the last time we looked. Historical data is not needed as of right now.
-
-    # Delete all APP_INTERFACE builds in advance, before we start creating anything.
+    # Delete all APP_INTERFACE relations / builds in advance, before we start creating anything.
     # Services can reuse components, so this avoids deleting a build / component for one service
     # while trying to create the same build / component for another service in another task.
     # This also cleans up any old builds / components which were removed from product-definitions.
     # We should recreate builds / components that are still present in prod-defs
     # when we process the list of components for that service below.
-    SoftwareBuild.objects.filter(build_type=SoftwareBuild.Type.APP_INTERFACE).delete()
     ProductComponentRelation.objects.filter(
         type=ProductComponentRelation.Type.APP_INTERFACE
     ).delete()
-    # TODO: Deleting the build deletes the linked root component
-    #  but what about the root component's child (provided / upstream) components?
-    #  Check cleanup logic
+
+    # This technically suffers from race conditions
+    # when the last 2 tasks to remove data run at the same time
+    # as the first task to add new data (when there are 3 workers)
+    # Processing by service names or build / component names
+    # or running deletion inside a transaction is more likely to have bugs
+
+    # Preventing this would be too complex, and actual bugs should be rare
+    # since the last builds we remove are the newest, due to order_by()
+    # and the first builds / service components we recreate are the oldest
+    # So data we're deleting shouldn't normally be reused by data we're recreating
+
+    # Bugs may happen if the last builds / components we remove (or their dependencies)
+    # start being used for the first time, by the first service we recreate
+    # This should fix itself when data is recreated the next day
+    for build_id in (
+        SoftwareBuild.objects.filter(build_type=SoftwareBuild.Type.APP_INTERFACE)
+        .values_list("build_id", flat=True)
+        .order_by("build_id")
+    ):
+        cpu_remove_old_services_data.delay(build_id)
 
     for service, components in service_metadata.items():
         cpu_manifest_service.delay(service.name, components)
@@ -74,7 +90,47 @@ def refresh_service_manifests() -> None:
     retry_kwargs=RETRY_KWARGS,
     soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
 )
-def cpu_manifest_service(stream_name: str, service_components: list) -> None:
+def cpu_remove_old_services_data(build_id: int) -> None:
+    """Find previous builds and delete them and their components,
+    so we can create a fresh manifest structure for each "new" build."""
+    # This is done specifically because we don't have a way
+    # to tie a set of components to a specific build right now,
+    # so we construct an arbitrary build periodically even if nothing has changed since
+    # the last time we looked. Historical data is not needed as of right now.
+    build = SoftwareBuild.objects.get(
+        build_id=build_id, build_type=SoftwareBuild.Type.APP_INTERFACE
+    )
+    for root_component in build.components.get_queryset():
+        children_to_delete = set()
+
+        # Delete child components, if they're only provided by the root we're about to delete
+        for provided_component in root_component.provides.get_queryset():
+            if provided_component.cnodes.count() == 1:
+                children_to_delete.add(provided_component.pk)
+
+        # Do this in two steps to reduce size of set / overall memory requirements
+        Component.objects.filter(pk__in=children_to_delete).delete()
+        children_to_delete = set()
+
+        # Delete child components, if they're only upstream of the root we're about to delete
+        for upstream_component in root_component.upstreams.get_queryset():
+            if upstream_component.cnodes.count() == 1:
+                children_to_delete.add(upstream_component.pk)
+
+        # Nodes will be automatically deleted when their linked component is deleted
+        Component.objects.filter(pk__in=children_to_delete).delete()
+
+    # Root components will be automatically deleted when their linked build is deleted
+    build.delete()
+
+
+@app.task(
+    base=Singleton,
+    autoretry_for=RETRYABLE_ERRORS,
+    retry_kwargs=RETRY_KWARGS,
+    soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
+)
+def cpu_manifest_service(stream_name: str, service_components: list[dict[str, str]]) -> None:
     """Analyze components for some Red Hat managed service
     based on data from product-definitions and App Interface"""
     logger.info(f"Manifesting service {stream_name}")
@@ -94,9 +150,11 @@ def cpu_manifest_service(stream_name: str, service_components: list) -> None:
                 component_data, quay_scan_source = Syft.scan_repo_image(target_image=quay_repo)
                 component_version = quay_scan_source["target"]["imageID"]
                 analyzed_components.extend(component_data)
-            except CalledProcessError as e:
+            except (CalledProcessError, HTTPError) as e:
                 # We want to raise other (unexpected) errors
                 # Only ignore if it's an (expected) pull failure for private images
+                if isinstance(e, HTTPError) and e.response.status_code != 403:
+                    raise e
                 # Don't continue here in case component also defines a git repo
                 # Which we still need to / haven't checked yet (below)
                 exceptions.append(f"{type(e)}: {e.args}\n")

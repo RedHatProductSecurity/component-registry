@@ -1,4 +1,3 @@
-import subprocess
 from contextlib import nullcontext
 from subprocess import CalledProcessError
 from unittest.mock import call, patch
@@ -137,21 +136,21 @@ def test_metadata_fetch(requests_mock):
             "latest",
             "internal.quay",
             "repo4/image4:latest",
-            pytest.raises(subprocess.CalledProcessError),
+            pytest.raises(CalledProcessError),
         ),
         (
             {"tags": {}},
             "latest",
             "internal.quay",
             "repo5/image5:version",
-            pytest.raises(subprocess.CalledProcessError),
+            pytest.raises(CalledProcessError),
         ),
         (
             {"tags": {}},
             "latest",
             "internal.quay",
             "repo6/image6@sha256:digest",
-            pytest.raises(subprocess.CalledProcessError),
+            pytest.raises(CalledProcessError),
         ),
     ),
 )
@@ -172,7 +171,7 @@ def test_image_pull_error_handling(
         f"registry:{target_host}/{target_image}",
     ]
     syft_json = '{"source": "source_not_used"}'
-    side_effects = (subprocess.CalledProcessError(1, syft_args), syft_json)
+    side_effects = (CalledProcessError(1, syft_args), syft_json)
 
     with patch(
         "corgi.collectors.syft.subprocess.check_output", side_effect=side_effects
@@ -301,5 +300,15 @@ def test_private_github_quay_repo_names():
         )
     # But only fails at the very end
     # we still try to scan other components, instead of stopping on the first error
-    assert mock_syft.scan_repo_image.call_count == 2
-    assert mock_syft.scan_git_repo.call_count == 2
+    mock_syft.scan_repo_image.assert_has_calls(
+        calls=(
+            call(target_image="red-org/hello-world"),
+            call(target_image="red-org/hello-world-api"),
+        )
+    )
+    mock_syft.scan_git_repo.assert_has_calls(
+        calls=(
+            call(target_url="https://github.com/blue/example"),
+            call(target_url="https://github.com/red/hello"),
+        )
+    )

@@ -9,9 +9,12 @@ from django.db import IntegrityError, transaction
 from django.db.models import Count, Q, QuerySet
 from django.utils import dateformat, dateparse, timezone
 from django.utils.timezone import make_aware
+from requests import RequestException
 
 from config.celery import app
 from corgi.collectors.brew import ADVISORY_REGEX, Brew, BrewBuildTypeNotSupported
+from corgi.collectors.pyxis import get_repo_for_label
+from corgi.core.constants import CONTAINER_REPOSITORY
 from corgi.core.models import (
     Component,
     ComponentNode,
@@ -26,14 +29,21 @@ from corgi.tasks.common import (
     RETRYABLE_ERRORS,
     create_relations,
     get_last_success_for_task,
+    save_node,
+    set_license_declared_safely,
+    slow_save_taxonomy,
 )
 from corgi.tasks.errata_tool import slow_load_errata
+from corgi.tasks.pyxis import (
+    slow_fetch_pyxis_image_by_nvr,
+    slow_update_name_for_container_from_pyxis,
+)
 from corgi.tasks.sca import cpu_software_composition_analysis
 
 logger = get_task_logger(__name__)
 
 
-@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
+@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS, priority=6)
 def slow_fetch_brew_build(
     build_id: str,
     build_type: str = BUILD_TYPE,
@@ -186,7 +196,7 @@ def update_relation_software_build_fk(
     ).update(software_build=softwarebuild)
 
 
-@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
+@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS, priority=3)
 def slow_fetch_modular_build(
     build_id: str, save_product: bool = True, force_process: bool = False
 ) -> bool:
@@ -195,6 +205,7 @@ def slow_fetch_modular_build(
     # Some compose build_ids in the relations table will be for SRPMs, skip those here
     if not rhel_module_data:
         logger.info("No module data fetched for build %s from Brew, exiting...", build_id)
+        # Non-modular Brew builds can be fetched with the default priority
         slow_fetch_brew_build.delay(build_id, force_process=force_process)
         return False
     # Note: module builds don't include arch information, only the individual RPMs that make up a
@@ -223,40 +234,22 @@ def slow_fetch_modular_build(
         # Request fetch of the SRPM build_ids here to ensure software_builds are created and linked
         # to the RPM components. We don't link the SRPM into the tree because some of it's RPMs
         # might not be included in the module
+        # Brew build fetches here should have higher than default 6 priority
+        # since they are needed for the module fetch with default 3 priority
         if "brew_build_id" in component:
-            slow_fetch_brew_build.delay(
-                component["brew_build_id"], save_product=save_product, force_process=force_process
+            slow_fetch_brew_build.apply_async(
+                args=(component["brew_build_id"],),
+                kwargs={"save_product": save_product, "force_process": force_process},
+                priority=3,
             )
         any_child_created |= save_component(component, node)
-    slow_fetch_brew_build.delay(build_id, save_product=save_product, force_process=force_process)
+    slow_fetch_brew_build.apply_async(
+        args=(build_id,),
+        kwargs={"save_product": save_product, "force_process": force_process},
+        priority=3,
+    )
     logger.info("Finished fetching modular build: %s", build_id)
     return created or node_created or any_child_created
-
-
-@app.task(
-    base=Singleton,
-    autoretry_for=RETRYABLE_ERRORS,
-    retry_kwargs=RETRY_KWARGS,
-    soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
-)
-def slow_save_taxonomy(build_id: str, build_type: str) -> None:
-    """Helper function to call save_product_taxonomy()
-    and save_component_taxonomy() in a separate task
-    to reduce the risk of timeouts in slow_fetch_brew_build"""
-    logger.info(f"Saving product taxonomy for {build_type} build {build_id}")
-    build = SoftwareBuild.objects.get(build_id=build_id, build_type=build_type)
-    build.save_product_taxonomy()
-
-    # Below only saves the component taxonomy for the root component
-    # There should only be one root component / node per build
-    # but there are some historical data issues
-    # TODO: Save the taxonomy for all components in the tree, CORGI-739
-    #  We tried to do this in CORGI-730 but it caused SoftTimeLimitExceeded errors
-    #  We may need to switch from GenericForeignKey to regular ForeignKey first
-    logger.info(f"Saving component taxonomy for {build_type} build {build_id}")
-    for root_component in build.components.get_queryset():
-        root_component.save_component_taxonomy()
-    logger.info(f"Finished saving taxonomies for {build_type} build {build_id}")
 
 
 def save_component(component: dict, parent: ComponentNode) -> bool:
@@ -512,37 +505,23 @@ def process_image_components(image):
     return builds_to_fetch
 
 
-def set_license_declared_safely(obj: Component, license_declared_raw: str) -> None:
-    """Save a declared license onto a Component, without erasing any existing value"""
-    if license_declared_raw:
-        # Any non-empty license here should be reported
-        # We only rely on OpenLCS if we don't know the license_declared
-        # But we can't set license_declared in update_or_create
-        # If the license in the metadata is an empty string and we are reprocessing,
-        # we might erase the license that OpenLCS provided
-        # They cannot erase any licenses we set ourselves (when the field is not empty)
-        # API endpoint blocks this (400 Bad Request)
-        # Use .update() to avoid possible race conditions
-        # We only update if the current license in the DB doesn't match the new value
-        Component.objects.filter(pk=obj.pk).exclude(
-            license_declared_raw=license_declared_raw
-        ).update(license_declared_raw=license_declared_raw)
-    # else the value from Brew is an empty string
-    # so don't overwrite any value OpenLCS may have submitted
-
-
 def save_container(
-    softwarebuild: SoftwareBuild, build_data: dict, save_product: bool
+    softwarebuild: SoftwareBuild, build_data: dict, save_product: bool, force_process=False
 ) -> tuple[ComponentNode, bool]:
+    name = build_data["meta"].pop("name")
+    name_label = build_data["meta"].get("name_label_raw", "")
+    nvr = softwarebuild.meta_attr["nvr"]
+    repo_name = get_container_repo_from_pyxis(name_label, nvr, force_process)
+    related_url = CONTAINER_REPOSITORY
+    if repo_name:
+        name = repo_name.rsplit("/", 1)[-1]
+        related_url = f"{related_url}/{repo_name}"
+
     license_declared_raw = build_data["meta"].pop("license", "")
-    related_url = build_data["meta"].get("repository_url", "")
-    if not related_url:
-        # Handle case when key is present but value is None
-        related_url = ""
 
     obj, root_created = Component.objects.update_or_create(
         type=build_data["type"],
-        name=build_data["meta"].pop("name"),
+        name=name,
         version=build_data["meta"].pop("version"),
         release=build_data["meta"].pop("release"),
         arch="noarch",
@@ -613,11 +592,34 @@ def save_container(
     )
 
 
+def get_container_repo_from_pyxis(name_label: str, nvr: str, force_process=False) -> str:
+    result = ""
+    try:
+        if not name_label or force_process:
+            result = slow_fetch_pyxis_image_by_nvr(nvr)
+        else:
+            # Try to match the name_label from the Dockerfile labels to a Pyxis image we've already
+            # looked up from Pyxis. This should return a result if we've processed the Brew package
+            # before
+            result = get_repo_for_label(name_label)
+    except RequestException as e:
+        # Call slow_update_name_for_container_from_pyxis task which calls
+        # slow_fetch_pyxis_image_by_nvr and updates the Container component with the result.
+        # This will hopefully execute after some delay to allow Pyxis to recover. I didn't use ETA,
+        # or Countdown Celery features as we often have large slow queue backlogs which could clogg
+        # the worker memory If the slow_update_name_for_container_form_pyxis task fails it should be
+        # retried with a delay
+        logger.warning(f"Got RequestException from slow_fetch_pyxis_image_by_nvr for {nvr}, {e}")
+        slow_update_name_for_container_from_pyxis.delay(nvr)
+    return result
+
+
 @app.task(
     base=Singleton,
     autoretry_for=RETRYABLE_ERRORS,
     retry_kwargs=RETRY_KWARGS,
     soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
+    priority=6,
 )
 def slow_save_container_children(
     build_id: str,
@@ -756,19 +758,6 @@ def save_upstream(
     return upstream_component, upstream_node, created or node_created
 
 
-def save_node(
-    node_type: str, parent: Optional[ComponentNode], related_component: Component
-) -> tuple[ComponentNode, bool]:
-    """Helper function that wraps ComponentNode creation"""
-    node, created = ComponentNode.objects.get_or_create(
-        type=node_type,
-        parent=parent,
-        purl=related_component.purl,
-        defaults={"obj": related_component},
-    )
-    return node, created
-
-
 @app.task(
     base=Singleton,
     autoretry_for=RETRYABLE_ERRORS,
@@ -834,7 +823,10 @@ def _relation_context_for_stream(stream_name: str) -> tuple[Brew, SoftwareBuild.
 
 def fetch_modular_builds(relations_query: QuerySet, force_process: bool = False) -> None:
     for build_id in relations_query:
-        slow_fetch_modular_build.delay(build_id, force_process=force_process)
+        # Daily tasks / fetching Pulp and Yum modules should finish ASAP
+        slow_fetch_modular_build.apply_async(
+            args=(build_id,), kwargs={"force_process": force_process}, priority=0
+        )
 
 
 def fetch_unprocessed_relations(
@@ -865,11 +857,19 @@ def fetch_unprocessed_relations(
             # It was done to avoid updating the collector models not to use build_id as
             # a primary key. It's possible because the only product stream (openstack-rdo)
             # stored in CENTOS koji doesn't use modules
-            slow_fetch_brew_build.delay(
-                relation.build_id, SoftwareBuild.Type.CENTOS, force_process=force_process
+            slow_fetch_brew_build.apply_async(
+                args=(relation.build_id, SoftwareBuild.Type.CENTOS),
+                kwargs={"force_process": force_process},
+                # Daily tasks to fetch unprocessed relations should finish ASAP
+                priority=0,
             )
         else:
-            slow_fetch_modular_build.delay(relation.build_id, force_process=force_process)
+            slow_fetch_modular_build.apply_async(
+                # Daily tasks to fetch unprocessed relations should finish ASAP
+                args=(relation.build_id,),
+                kwargs={"force_process": force_process},
+                priority=0,
+            )
         processed_builds += 1
     return processed_builds
 
@@ -896,7 +896,7 @@ def fetch_unprocessed_brew_tag_relations(
     )
 
 
-@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
+@app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS, priority=6)
 def slow_update_brew_tags(build_id: str, tag_added: str = "", tag_removed: str = "") -> str:
     """Update a build's list of tags in Corgi when they change in Brew"""
     if not tag_added and not tag_removed:
@@ -974,7 +974,8 @@ def slow_refresh_brew_build_tags(build_id: int) -> None:
         build.save()
 
     for erratum_id in sorted(new_errata_tags):
-        slow_load_errata.delay(erratum_id)
+        # Erratum has been released, we need to create / update it ASAP
+        slow_load_errata.apply_async(args=(erratum_id,), priority=0)
     logger.info(f"Finished refreshing Brew build tags for {build_id}")
 
 
@@ -983,6 +984,7 @@ def slow_refresh_brew_build_tags(build_id: int) -> None:
     autoretry_for=RETRYABLE_ERRORS,
     retry_kwargs=RETRY_KWARGS,
     soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
+    priority=3,
 )
 def slow_delete_brew_build(build_id: int, build_state: int) -> int:
     """Delete a Brew build (and its relations) in Corgi when it's deleted in Brew"""

@@ -6,6 +6,7 @@ from django.db import connection
 from rest_framework.test import APIClient
 
 from corgi.api.constants import CORGI_API_VERSION
+from corgi.core.constants import GET_LATEST_COMPONENT_STOREDPROC_SQL
 from corgi.core.models import ProductNode
 from tests.factories import (
     ProductFactory,
@@ -35,14 +36,11 @@ def stored_proc(django_db_setup, django_db_blocker):
     """setup stored procedure"""
     # depends on corgi/core/migration/0092_install_stored_proc.py data migration
     stored_proc = importlib.import_module("corgi.core.migrations.0092_install_stored_proc")
-    updated_stored_proc = importlib.import_module(
-        "corgi.core.migrations.0099_add_type_arch_stored_proc_filter"
-    )
     with django_db_blocker.unblock():
         with connection.cursor() as c:
             c.execute(stored_proc.RPMVERCMP_STOREDPROC_SQL)
             c.execute(stored_proc.RPMVERCMP_EPOCH_STOREDPROC_SQL),
-            c.execute(updated_stored_proc.GET_LATEST_COMPONENT_STOREDPROC_SQL)
+            c.execute(GET_LATEST_COMPONENT_STOREDPROC_SQL)
 
 
 def setup_product(version_name: str = "", stream_name: str = ""):

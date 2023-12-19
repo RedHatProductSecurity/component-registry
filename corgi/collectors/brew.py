@@ -451,10 +451,13 @@ class Brew:
             },
         }
         if name_label:
-            image_component["meta"]["repository_url"] = f"{CONTAINER_REPOSITORY}/{name_label}"
+            image_component["meta"]["name_from_label_raw"] = name_label
             name_label_parts = name_label.rsplit("/", 1)
             if len(name_label_parts) == 2:
                 image_component["meta"]["name_from_label"] = name_label_parts[1]
+                image_component["meta"]["repository_url"] = f"{CONTAINER_REPOSITORY}/{name_label}"
+                image_component["meta"]["name"] = name_label_parts[1]
+
         return image_component
 
     @staticmethod
@@ -586,10 +589,17 @@ class Brew:
         component["image_components"] = child_image_components
         component["components"] = list(noarch_rpms_by_id.values())
 
-        # During collection we are only able to inspect docker config labels on
-        # attached arch specific archives. We do this loop here to save the description, license,
-        # name label, and repository url also on the index container object at the root of the tree.
-        for attr in ("description", "license", "name_from_label", "repository_url"):
+        # During Brew collection we are only able to inspect docker config labels on attached arch
+        # specific archives. We do this loop here to save values from those labels onto the root
+        # image container.
+        for attr in (
+            "name",
+            "description",
+            "license",
+            "name_from_label",
+            "repository_url",
+            "name_from_label_raw",
+        ):
             self._get_child_meta(component, attr)
 
         return component

@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+* added **epoch** to component filters, ex. /api/v1/components?epoch=0
+* added **re_downstreams_name** to component filters, ex. /api/v1/components?re_downstreams_name=foo
+
+### Changed
+* Exclude modular source RPMs (type="RPM", arch="src", release__contains=".module") from manifests,
+and from the API when using the root_components=True filter
+
+## [1.4.2] - 2023-12-19
+
+### Changed
+* Fix authentication to Errata Tool after they migrated to a new environment
+
 ## [1.4.1] - 2023-11-15
 
 ### Changed

@@ -15,7 +15,13 @@ def save_container_taxonomy(apps, schema_editor) -> None:
         if first_cnode:
             if first_cnode.get_descendants().filter(type="SOURCE").exists():
                 sb = root_container.software_build
-                current_slow_save_taxonony.delay(sb.build_id, sb.build_type)
+                current_slow_save_taxonony.apply_async(
+                    args=(
+                        sb.build_id,
+                        sb.build_type,
+                    ),
+                    priority=9,
+                )
 
 
 class Migration(migrations.Migration):

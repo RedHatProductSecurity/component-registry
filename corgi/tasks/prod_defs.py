@@ -34,7 +34,9 @@ RE_VERSION_LIKE_STRING = re.compile(r"\d[\dz.-]*$|$")
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)
 def slow_remove_product_from_build(build_pk: str, product_model_name: str, product_pk: str) -> None:
-    SoftwareBuild.objects.get(pk=build_pk).disassociate_with_product(product_model_name, product_pk)
+    SoftwareBuild.objects.get(pk=build_pk).disassociate_with_product(
+        product_model_name, (product_pk,)
+    )
 
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS)

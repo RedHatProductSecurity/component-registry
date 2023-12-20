@@ -1016,6 +1016,7 @@ class ComponentQuerySet(models.QuerySet):
             software_build__relations__type__in=(
                 ProductComponentRelation.Type.ERRATA,
                 ProductComponentRelation.Type.COMPOSE,
+                ProductComponentRelation.Type.APP_INTERFACE,
             )
         )
         if include:

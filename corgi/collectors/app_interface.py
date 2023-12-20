@@ -125,15 +125,27 @@ class AppInterface:
                         f"Prod-defs component {component} for service {service_name} is reused "
                         f"by other services: {service_names}"
                     )
-                    if (
-                        "git_repo_url" in component and "git_repo_url" not in existing_component
-                    ) or (
-                        "quay_repo_name" in component and "quay_repo_name" not in existing_component
-                    ):
+
+                    existing_git_repo = existing_component.get("git_repo_url", "")
+                    new_git_repo = component.get("git_repo_url", "")
+                    if new_git_repo and new_git_repo != existing_git_repo:
                         logger.error(
                             f"Prod-defs component {component} for service {service_name} "
-                            f"includes extra data that will be ignored!"
+                            f"includes a different Git repo "
+                            f"than the existing component: {existing_component}"
                         )
+                        existing_component["git_repo_url"] = new_git_repo
+
+                    existing_quay_repo = existing_component.get("quay_repo_name", "")
+                    new_quay_repo = component.get("quay_repo_name", "")
+                    if new_quay_repo and new_quay_repo != existing_quay_repo:
+                        logger.error(
+                            f"Prod-defs component {component} for service {service_name} "
+                            f"includes a different Quay repo "
+                            f"than the existing component: {existing_component}"
+                        )
+                        existing_component["quay_repo_name"] = new_quay_repo
+
                     service_names.add(service_name)
                     continue
 
@@ -179,20 +191,30 @@ class AppInterface:
             if existing_component:
                 service_names: set[str] = existing_component["services"]  # type: ignore[assignment]
                 logger.info(
-                    f"Prod-defs component {app_interface_component} for service {service_name} "
+                    f"App-Interface component {app_interface_component} for service {service_name} "
                     f"is reused by other services: {service_names}"
                 )
-                if (
-                    "git_repo_url" in app_interface_component
-                    and "git_repo_url" not in existing_component
-                ) or (
-                    "quay_repo_name" in app_interface_component
-                    and "quay_repo_name" not in existing_component
-                ):
+
+                existing_git_repo = existing_component.get("git_repo_url", "")
+                new_git_repo = app_interface_component.get("git_repo_url", "")
+                if new_git_repo and new_git_repo != existing_git_repo:
                     logger.error(
-                        f"Prod-defs component {app_interface_component} for service {service_name} "
-                        f"includes extra data that will be ignored!"
+                        f"App-Interface component {app_interface_component} for service "
+                        f"{service_name} includes a different Git repo "
+                        f"than the existing component: {existing_component}"
                     )
+                    existing_component["git_repo_url"] = new_git_repo
+
+                existing_quay_repo = existing_component.get("quay_repo_name", "")
+                new_quay_repo = app_interface_component.get("quay_repo_name", "")
+                if new_quay_repo and new_quay_repo != existing_quay_repo:
+                    logger.error(
+                        f"App-Interface component {app_interface_component} for service "
+                        f"{service_name} includes a different Quay repo "
+                        f"than the existing component: {existing_component}"
+                    )
+                    existing_component["quay_repo_name"] = new_quay_repo
+
                 service_names.add(service_name)
                 continue
 

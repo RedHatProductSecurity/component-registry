@@ -8,7 +8,11 @@ from proton.handlers import MessagingHandler
 from proton.reactor import Container, Selector
 
 from corgi.collectors.pnc import is_sbomer_product
-from corgi.tasks.brew import slow_fetch_brew_build, slow_update_brew_tags
+from corgi.tasks.brew import (
+    slow_delete_brew_build,
+    slow_fetch_brew_build,
+    slow_update_brew_tags,
+)
 from corgi.tasks.errata_tool import slow_handle_shipped_errata
 from corgi.tasks.pnc import slow_fetch_pnc_sbom, slow_handle_pnc_errata_released
 
@@ -145,6 +149,26 @@ class UMBReceiverHandler(MessagingHandler):
         else:
             return True
 
+    @staticmethod
+    def deleted_builds(event: Event) -> bool:
+        """Handle messages about Brew builds that were deleted"""
+        logger.info("Handling UMB event for deleted builds: %s", event.message.id)
+        message = json.loads(event.message.body)
+        build_id = message["info"]["build_id"]
+        state = message["info"]["state"]
+
+        try:
+            slow_delete_brew_build.apply_async(args=(build_id, state))
+        except Exception as exc:
+            logger.error(
+                "Failed to schedule slow_delete_brew_build task for build ID %s: %s",
+                build_id,
+                str(exc),
+            )
+            return False
+        else:
+            return True
+
     ########################
     # Message Handlers: ET #
     ########################
@@ -227,6 +251,7 @@ class UMBListener:
     virtual_topic_addresses = {
         # Brew Addresses
         f"{VIRTUAL_TOPIC_PREFIX}.brew.build.complete": UMBReceiverHandler.brew_builds,
+        f"{VIRTUAL_TOPIC_PREFIX}.brew.build.deleted": UMBReceiverHandler.deleted_builds,
         f"{VIRTUAL_TOPIC_PREFIX}.brew.build.tag": UMBReceiverHandler.brew_tags,
         f"{VIRTUAL_TOPIC_PREFIX}.brew.build.untag": UMBReceiverHandler.brew_tags,
         # ET Addresses

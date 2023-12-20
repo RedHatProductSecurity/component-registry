@@ -6,7 +6,7 @@ from celery.utils.log import get_task_logger
 from celery_singleton import Singleton
 from django.conf import settings
 from django.db import IntegrityError, transaction
-from django.db.models import Count, Q, QuerySet
+from django.db.models import Q, QuerySet
 from django.utils import dateformat, dateparse, timezone
 from django.utils.timezone import make_aware
 from requests import RequestException
@@ -988,10 +988,6 @@ def slow_refresh_brew_build_tags(build_id: int) -> None:
 )
 def slow_delete_brew_build(build_id: int, build_state: int) -> int:
     """Delete a Brew build (and its relations) in Corgi when it's deleted in Brew"""
-    # TODO: Make this faster, then reenable running this task automatically
-    #  Right now this query uses up all temporary storage in our DB, which causes many issues
-    #  Code left in place so we can still run manually, but we no longer trigger from UMB
-    #  or when trying to reload a deleted build
     # Shipped builds (which have a Brew tag for any product) are never deleted
     # Only unshipped builds not part of any product are deleted
     # For example, builds that failed QE will not become part of a product
@@ -1007,61 +1003,53 @@ def slow_delete_brew_build(build_id: int, build_state: int) -> int:
 
     deleted_count = 0
     with transaction.atomic():
-        # Get a root component's PK, if possible
+        # Delete child components used by only this build, if possible
         # Build might not exist, or might exist but have no root components (?)
-        # Should only be 1 result if any
-        root_component_qs = (
-            SoftwareBuild.objects.filter(build_id=build_id, build_type=SoftwareBuild.Type.BREW)
-            .exclude(components__isnull=True)
-            .values_list("components", "pk")
-        )
-        if len(root_component_qs) > 1:
-            raise ValueError(
-                f"Brew build {build_id} had multiple root components: {root_component_qs}"
-            )
+        build = SoftwareBuild.objects.filter(
+            build_id=build_id, build_type=SoftwareBuild.Type.BREW
+        ).first()
+        root_components = build.components.get_queryset() if build else ()
 
-        root_component_and_build_pks = root_component_qs.first()
-        # Skip deleting child components when build doesn't exist
-        if root_component_and_build_pks:
-            root_component_pk, build_pk = root_component_and_build_pks
+        # This will skip deleting child components when the build doesn't exist
+        for root_component in root_components:
             # The build has a root component, so delete the child components that are
             # provided by / upstreams of only this build's root, and not any other builds
             # Deleting the Component will automatically delete the ComponentNodes
-            # TODO: The logic is correct but very inefficient, so only run the task manually
-            #  Component.objects.filter(sources__isnull=True, downstreams__isnull=True).delete()
-            #  may be slightly better, but this will delete other components
-            #  which were accidentally created without a root component (CORGI-617)
-            #  We should fix that bug first before making changes here
-            provided_components = Component.objects.annotate(
-                build_count=Count("sources__software_build_id")
-            ).filter(sources=root_component_pk, build_count=1)
-            deleted_count += _delete_queryset(provided_components, "provided component")
+            children_to_delete = set()
 
-            # Doing .filter(downstreams=root_component_pk)
-            # before .annotate(downstreams_count=Count("downstreams"))
-            # makes Django return the wrong results
-            # https://docs.djangoproject.com/en/3.2/topics/db/aggregation/
-            # #order-of-annotate-and-filter-clauses
-            # TODO: The logic is correct but very inefficient, so only run the task manually
-            #  Component.objects.filter(sources__isnull=True, downstreams__isnull=True).delete()
-            #  may be slightly better, but this will delete other components
-            #  which were accidentally created without a root component (CORGI-617)
-            #  We should fix that bug first before making changes here
-            upstream_components = Component.objects.annotate(
-                build_count=Count("downstreams__software_build_id")
-            ).filter(downstreams=root_component_pk, build_count=1)
+            # Delete child components, if they're only provided by the root we're about to delete
+            for provided_component in root_component.provides.get_queryset():
+                if provided_component.cnodes.count() == 1:
+                    children_to_delete.add(provided_component.pk)
+
+            # Do this in two steps to reduce size of set / overall memory requirements
+            provided_components = Component.objects.filter(pk__in=children_to_delete)
+            deleted_count += _delete_queryset(provided_components, "provided component")
+            children_to_delete = set()
+
+            # Delete child components, if they're only upstream of the root we're about to delete
+            for upstream_component in root_component.upstreams.get_queryset():
+                if upstream_component.cnodes.count() == 1:
+                    children_to_delete.add(upstream_component.pk)
+
+            # Nodes will be automatically deleted when their linked component is deleted
+            upstream_components = Component.objects.filter(pk__in=children_to_delete).delete()
             deleted_count += _delete_queryset(upstream_components, "upstream component")
 
         # Relations without a linked (NULL) build are "unprocessed"
         # We process these relations each day by loading their build ID
         # Deleting the relation avoids reloading the build we are deleting
+        # There shouldn't be any relations since Brew only deletes builds
+        # when they don't get shipped in any product for over 6 months
         relations = ProductComponentRelation.objects.filter(
             build_id=build_id, build_type=SoftwareBuild.Type.BREW
         )
         deleted_count += _delete_queryset(relations, "relation")
 
-        # Deleting the build automatically deletes the linked root component
+        # Deleting the build automatically deletes the linked root component(s)
+        # Deleting the root components deletes all the nodes in that root's tree
         # But not the child components, so we handled those separately above
+        # Child components used by other builds will be kept
         builds = SoftwareBuild.objects.filter(build_id=build_id, build_type=SoftwareBuild.Type.BREW)
         deleted_count += _delete_queryset(builds, "build")
 

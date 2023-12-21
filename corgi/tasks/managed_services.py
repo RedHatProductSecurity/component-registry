@@ -190,12 +190,8 @@ def cpu_manifest_service_component(
             "didn't have any child components after analyzing "
             f"its Quay ({quay_repo}) and / or Git ({git_repo}) repos"
         )
-        # Raise exceptions here if we failed to analyze a repo / image
-        if exceptions:
-            raise_multiple_exceptions(exceptions)
-        # If no exceptions, we still create the build and relations below,
-        # as well as save the taxonomy, even if there are no components
-        # just so that this root component is properly linked to the service
+        # Raise exceptions at the very end if we failed to analyze a repo / image
+        # so the root component still exists and gets linked to the service
 
     save_service_components(
         now,

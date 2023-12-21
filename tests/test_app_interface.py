@@ -297,7 +297,7 @@ def test_private_github_quay_repo_names():
             ]
         }
     )
-    stream_names = {ps.name}
+    stream_names = [ps.name]
     git_error = GitCloneError(
         "git clone of {target_url} failed with: {result.stderr.decode('utf-8')}"
     )
@@ -326,11 +326,12 @@ def test_private_github_quay_repo_names():
         mock_syft.scan_repo_image.side_effect = (podman_error, podman_error)
         mock_syft.scan_git_repo.side_effect = (git_error, git_error)
 
-        # Fails because all images above are not accessible
-        for component in ps.meta_attr["managed_service_components"]:
-            with pytest.raises(MultiplePermissionExceptions) as raised_e:
-                cpu_manifest_service_component(stream_names, component)
-            assert str(raised_e.value) == str(exceptions.pop())
+        with patch("corgi.tasks.managed_services.slow_save_taxonomy") as mock_save_taxonomy:
+            # Fails because all images above are not accessible
+            for component in ps.meta_attr["managed_service_components"]:
+                with pytest.raises(MultiplePermissionExceptions) as raised_e:
+                    cpu_manifest_service_component(stream_names, component)
+                assert str(raised_e.value) == str(exceptions.pop())
     # But only fails at the very end
     # we still try to scan other components, instead of stopping on the first error
     mock_syft.scan_repo_image.assert_has_calls(
@@ -345,3 +346,4 @@ def test_private_github_quay_repo_names():
             call(target_url="https://github.com/red/hello"),
         )
     )
+    assert mock_save_taxonomy.apply_async.call_count == 3

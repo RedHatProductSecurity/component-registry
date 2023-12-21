@@ -9,10 +9,12 @@ from corgi.api.constants import CORGI_API_VERSION
 from corgi.core.constants import GET_LATEST_COMPONENT_STOREDPROC_SQL
 from corgi.core.models import ProductNode
 from tests.factories import (
-    ProductFactory,
     ProductStreamFactory,
+    ProductStreamNodeFactory,
     ProductVariantFactory,
+    ProductVariantNodeFactory,
     ProductVersionFactory,
+    ProductVersionNodeFactory,
 )
 
 
@@ -43,28 +45,30 @@ def stored_proc(django_db_setup, django_db_blocker):
             c.execute(GET_LATEST_COMPONENT_STOREDPROC_SQL)
 
 
-def setup_product(version_name: str = "", stream_name: str = ""):
-    product = ProductFactory()
+def setup_product(
+    version_name: str = "",
+    stream_name: str = "",
+    variant_node_type=ProductNode.ProductNodeType.DIRECT,
+):
     if version_name:
-        version = ProductVersionFactory(name=version_name, products=product)
+        version = ProductVersionFactory(name=version_name)
+        pvnode = ProductVersionNodeFactory(obj=version)
     else:
-        version = ProductVersionFactory(products=product)
+        pvnode = ProductVersionNodeFactory()
+
     if stream_name:
-        stream = ProductStreamFactory(
-            name=stream_name, products=product, productversions=version, active=True
-        )
+        stream = ProductStreamFactory(name=stream_name)
+        psnode = ProductStreamNodeFactory(obj=stream, parent=pvnode)
     else:
-        stream = ProductStreamFactory(products=product, productversions=version, active=True)
-    variant = ProductVariantFactory(
-        name="1", products=product, productversions=version, productstreams=stream
+        psnode = ProductStreamNodeFactory()
+
+    stream = psnode.obj
+    pvariant = ProductVariantFactory(name="1")
+    pvariant_node = ProductVariantNodeFactory(
+        obj=pvariant, parent=psnode, node_type=variant_node_type
     )
-    pnode = ProductNode.objects.create(parent=None, obj=product)
-    pvnode = ProductNode.objects.create(parent=pnode, obj=version)
-    psnode = ProductNode.objects.create(parent=pvnode, obj=stream)
-    ProductNode.objects.create(parent=psnode, obj=variant)
-    # This generates and saves the ProductModel properties of stream
-    # AKA we link the ProductModel instances to each other
-    stream.save_product_taxonomy()
+    variant = pvariant_node.obj
+
     assert variant in stream.productvariants.get_queryset()
     return stream, variant
 

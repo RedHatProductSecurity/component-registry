@@ -1,0 +1,59 @@
+{
+  "contacts": {},
+  "cc_groups": {},
+  "ps_update_streams": {
+    "quarkus-2.13": {
+      "pp_label": "rh_quarkus-2-fireball",
+      "version": "2.13.8.SP3.GA",
+      "brew_tags": [
+        {
+          "tag": "qrks-2.13-pnc-released",
+          "inherit": false
+        }
+      ],
+      "errata_info": [
+        {
+          "product_name": "RHBQ",
+          "product_versions": [
+            {
+              "name": "Middleware-RHBQ-2.13",
+              "variants": [
+                "8Base-MW-RHBQ-2.13"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "ps_modules": {
+    "quarkus-2": {
+      "public_description": "Red Hat build of Quarkus",
+      "ps_update_streams": [
+        "quarkus-2.13"
+      ],
+      "active_ps_update_streams": [
+        "quarkus-2.13"
+      ],
+      "default_ps_update_streams": [
+        "quarkus-2.13"
+      ],
+      "cpe": [
+        "cpe:/a:redhat:quarkus:2"
+      ]
+    }
+  },
+  "ps_products": {
+    "quarkus": {
+      "name": "Red Hat Build of Quarkus",
+      "team": "middleware",
+      "ps_modules": [
+        "quarkus-2"
+      ],
+      "business_unit": "Core Middleware",
+      "errata_product_tags": [
+        "RHBQ"
+      ]
+    }
+  }
+}

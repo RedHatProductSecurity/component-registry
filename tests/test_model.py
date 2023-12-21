@@ -11,8 +11,10 @@ from corgi.core.models import (
     ProductComponentRelation,
     ProductNode,
     ProductStream,
+    ProductVariant,
     ProductVersion,
     SoftwareBuild,
+    get_product_details,
 )
 
 from .factories import (
@@ -22,9 +24,13 @@ from .factories import (
     ContainerImageComponentFactory,
     ProductComponentRelationFactory,
     ProductFactory,
+    ProductNodeFactory,
     ProductStreamFactory,
+    ProductStreamNodeFactory,
     ProductVariantFactory,
+    ProductVariantNodeFactory,
     ProductVersionFactory,
+    ProductVersionNodeFactory,
     SoftwareBuildFactory,
     SrpmComponentFactory,
     UpstreamComponentFactory,
@@ -34,76 +40,105 @@ pytestmark = [pytest.mark.unit, pytest.mark.django_db]
 
 
 def test_product_model():
-    p1 = ProductFactory(name="RHEL")
-    assert Product.objects.get(name="RHEL") == p1
-    assert p1.ofuri == "o:redhat:RHEL"
+    pnode = ProductNodeFactory()
+    p1 = pnode.obj
+    assert p1.ofuri == "o:redhat:" + p1.name
 
 
 def test_productversion_model():
-    p1 = ProductVersionFactory(name="RHEL")
-    assert ProductVersion.objects.get(name="RHEL") == p1
-    assert p1.ofuri == "o:redhat:RHEL:8"
+    pnode = ProductVersionNodeFactory()
+    p1 = pnode.obj
+    assert p1.version
+    assert p1.description
+    assert p1.name == f"{p1.description}-{p1.version}"
+    assert p1.ofuri == f"o:redhat:{p1.description}:{p1.version}"
 
 
 def test_productstream_model():
-    p1 = ProductStreamFactory(name="RHEL")
-    assert ProductStream.objects.get(name="RHEL") == p1
-    assert p1.ofuri == "o:redhat:RHEL:8.2.0.z"
+    pnode = ProductStreamNodeFactory()
+    p1 = pnode.obj
+    assert p1.version
+    assert p1.description
+    assert p1.name == f"{p1.description}-{p1.version}"
+    assert p1.ofuri == f"o:redhat:{p1.description}:{p1.version}"
+
+
+def test_productvariant_model():
+    pnode = ProductVariantNodeFactory()
+    p1 = pnode.obj
+    assert p1.name
+    parent_ofuri = pnode.parent.obj.ofuri
+    assert parent_ofuri
+    assert p1.ofuri == f"{parent_ofuri}:{p1.name}"
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_cpes():
     p1 = ProductFactory(name="RHEL")
-    pv1 = ProductVersionFactory(name="RHEL-7", version="7", products=p1)
-    pv2 = ProductVersionFactory(name="RHEL-8", version="8", products=p1)
-    ps1 = ProductStreamFactory(name="Ansercanagicus", products=p1, productversions=pv1)
-    ps2 = ProductStreamFactory(name="Ansercaerulescens", products=p1, productversions=pv2)
+    p1_node = ProductNodeFactory(obj=p1)
+    pv1 = ProductVersionFactory(name="RHEL-7", version="7")
+    pv1_node = ProductVersionNodeFactory(obj=pv1, parent=p1_node)
+    pv2 = ProductVersionFactory(name="RHEL-8", version="8")
+    pv2_node = ProductVersionNodeFactory(obj=pv2, parent=p1_node)
+    ps1 = ProductStreamFactory(name="Ansercanagicus")
+    ps1_node = ProductStreamNodeFactory(obj=ps1, parent=pv1_node)
+    ps2 = ProductStreamFactory(name="Ansercaerulescens")
+    ps2_node = ProductStreamNodeFactory(obj=ps2, parent=pv2_node)
     ps3 = ProductStreamFactory(
         name="Brantabernicla",
         description="The brant or brent goose is a small goose of the genus Branta.",
-        products=p1,
-        productversions=pv2,
     )
-    pvariant1 = ProductVariantFactory(
-        name=ps1.name,
-        cpe="cpe:/o:redhat:enterprise_linux:7",
-        products=p1,
-        productversions=pv1,
-        productstreams=ps1,
-    )
+    ps3_node = ProductStreamNodeFactory(obj=ps3, parent=pv2_node)
+    pvariant1 = ProductVariantFactory(name=ps1.name, cpe="cpe:/o:redhat:enterprise_linux:7")
+    # found is p1
+    ProductVariantNodeFactory(obj=pvariant1, parent=ps1_node)
     pvariant2 = ProductVariantFactory(
         name=ps3.name,
         cpe="cpe:/o:redhat:Brantabernicla:8",
-        products=p1,
-        productversions=pv2,
-        productstreams=ps3,
     )
 
-    p1node = ProductNode.objects.create(parent=None, obj=p1)
-    assert p1node
-    pv1node = ProductNode.objects.create(parent=p1node, obj=pv1)
-    assert pv1node
-    pv2node = ProductNode.objects.create(parent=p1node, obj=pv2)
-    assert pv2node
-    ps1node = ProductNode.objects.create(parent=pv1node, obj=ps1)
-    assert ps1node
-    ps2node = ProductNode.objects.create(parent=pv2node, obj=ps2)
-    assert ps2node
-    ps3node = ProductNode.objects.create(parent=pv2node, obj=ps3)
-    assert ps3node
-    pvariant1node = ProductNode.objects.create(parent=ps1node, obj=pvariant1)
-    assert pvariant1node
-    pvariant2node = ProductNode.objects.create(parent=ps3node, obj=pvariant2)
-    assert pvariant2node
+    ProductVariantNodeFactory(obj=pvariant2, parent=ps3_node)
+    pvariant3 = ProductVariantFactory(cpe="cpe:/o:redhat:inferred_variant:8")
+    ProductVariantNodeFactory(
+        obj=pvariant3, parent=ps3_node, node_type=ProductNode.ProductNodeType.INFERRED
+    )
+    psvariant4_node = ProductVariantNodeFactory(parent=ps2_node)
+    pvariant4 = psvariant4_node.obj
+
+    pv1.refresh_from_db()
+    p1.refresh_from_db()
+    ps2.refresh_from_db()
+    pvariant4.refresh_from_db()
 
     # Version 1 for RHEL 7 has 1 child variant, so 1 CPE is reported
     assert pv1.cpes == ("cpe:/o:redhat:enterprise_linux:7",)
-    # Product 1 for RHEL has 2 child variants, one for each RHEL version
-    # So 1 CPE for RHEL 7 and 1 CPE for RHEL 8 is reported
+    # Product 1 for RHEL has 3 child variants, one for RHEL 7, and 2 for RHEL 8
+    # It doesn't report it's inferred variant CPE, because it has direct variants.
     assert sorted(p1.cpes) == [
         "cpe:/o:redhat:Brantabernicla:8",
         "cpe:/o:redhat:enterprise_linux:7",
+        pvariant4.cpe,
     ]
+    # This product stream reports it's only child variant cpe
+    assert ps2.cpes == pvariant4.cpes
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_cpes_from_patterns_and_brew_tags():
+    cpe_from_pattern_matching = "cpe_from_pattern"
+    product_stream = ProductStreamFactory(cpes_matching_patterns=[cpe_from_pattern_matching])
+    psnode = ProductStreamNodeFactory(obj=product_stream)
+    product_stream.refresh_from_db()
+    assert product_stream.cpes == (cpe_from_pattern_matching,)
+
+    cpe_from_brew_tag = "cpe_from_brew_tag"
+    product_variant = ProductVariantFactory(cpe=cpe_from_brew_tag)
+    assert product_variant.cpes == (cpe_from_brew_tag,)
+
+    ProductVariantNodeFactory(
+        obj=product_variant, parent=psnode, node_type=ProductNode.ProductNodeType.INFERRED
+    )
+    assert sorted(product_stream.cpes) == [cpe_from_brew_tag, cpe_from_pattern_matching]
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
@@ -174,6 +209,61 @@ def test_component_cpes():
         assert unused_variant.cpe not in cpes
 
 
+def test_variant_in_many_streams():
+    product = Product.objects.create(name="product")
+    product_node = ProductNode.objects.create(parent=None, object_id=product.pk, obj=product)
+    product.save_product_taxonomy()
+
+    version = ProductVersion.objects.create(
+        name="certificate_system_10", products=product, version="10"
+    )
+    version_node = ProductNode.objects.create(
+        parent=product_node, object_id=version.pk, obj=version
+    )
+    version.save_product_taxonomy()
+
+    stream = ProductStream.objects.create(
+        name="certificate_system_10.4", products=product, productversions=version, version="10.4"
+    )
+    stream_node = ProductNode.objects.create(parent=version_node, object_id=stream.pk, obj=stream)
+    stream.save_product_taxonomy()
+
+    other_stream = ProductStream.objects.create(
+        name="certificate_system_10.4.z",
+        products=product,
+        productversions=version,
+        version="10.4.z",
+    )
+    other_stream_node = ProductNode.objects.create(
+        parent=version_node, object_id=other_stream.pk, obj=other_stream
+    )
+    other_stream.save_product_taxonomy()
+
+    variant = ProductVariant.objects.create(
+        name="8Base-CertSys-10.4", products=product, productversions=version
+    )
+    ProductNode.objects.create(parent=stream_node, object_id=variant.pk, obj=variant)
+    ProductNode.objects.create(parent=other_stream_node, object_id=variant.pk, obj=variant)
+
+    variant.save_product_taxonomy()
+    variant_streams = list(variant.productstreams.values_list("name", flat=True))
+    assert sorted(variant_streams) == [stream.name, other_stream.name]
+
+    assert product.ofuri == "o:redhat:product"
+    assert version.ofuri == "o:redhat:certificate_system:10"
+    assert stream.ofuri == "o:redhat:certificate_system:10.4"
+    assert other_stream.ofuri == "o:redhat:certificate_system:10.4.z"
+    assert variant.ofuri == "o:redhat:certificate_system:10:8Base-CertSys-10.4"
+
+
+def test_variant_in_many_versions():
+    pass
+
+
+def test_variant_in_many_products():
+    pass
+
+
 def test_nevra():
     """Test that NEVRAs are formatted properly for certain known edge-cases"""
     for component_type in Component.Type.values:
@@ -227,30 +317,34 @@ def test_product_taxonomic_queries():
 
 
 def create_product_hierarchy():
-    # TODO: Factory should probably create nodes for model
-    #  Move these somewhere for reuse - common.py helper method, or fixtures??
     rhel = ProductFactory(name="RHEL")
-    rhel_node = ProductNode.objects.create(parent=None, obj=rhel)
+    rhel_node = ProductNodeFactory(obj=rhel)
 
-    rhel_7 = ProductVersionFactory(name="rhel-7", version="7", products=rhel)
-    rhel_7_node = ProductNode.objects.create(parent=rhel_node, obj=rhel_7)
+    rhel_7 = ProductVersionFactory(name="rhel-7", version="7")
+    rhel_7_node = ProductVersionNodeFactory(parent=rhel_node, obj=rhel_7)
 
-    rhel_7_1 = ProductStreamFactory(name="rhel-7.1", products=rhel, productversions=rhel_7)
-    ProductNode.objects.create(parent=rhel_7_node, obj=rhel_7_1)
+    rhel_7_1 = ProductStreamFactory(name="rhel-7.1")
+    ProductStreamNodeFactory(parent=rhel_7_node, obj=rhel_7_1)
 
-    rhel_8 = ProductVersionFactory(name="rhel-8", version="8", products=rhel)
-    rhel_8_node = ProductNode.objects.create(parent=rhel_node, obj=rhel_8)
+    rhel_8 = ProductVersionFactory(name="rhel-8", version="8")
+    rhel_8_node = ProductVersionNodeFactory(parent=rhel_node, obj=rhel_8)
 
-    rhel_8_1 = ProductStreamFactory(name="rhel-8.1", products=rhel, productversions=rhel_8)
-    ProductNode.objects.create(parent=rhel_8_node, obj=rhel_8_1)
+    rhel_8_1 = ProductStreamFactory(name="rhel-8.1")
+    ProductStreamNodeFactory(parent=rhel_8_node, obj=rhel_8_1)
 
-    rhel_8_2 = ProductStreamFactory(name="rhel-8.2", products=rhel, productversions=rhel_8)
-    rhel_8_2_node = ProductNode.objects.create(parent=rhel_8_node, obj=rhel_8_2)
+    rhel_8_2 = ProductStreamFactory(name="rhel-8.2")
+    rhel_8_2_node = ProductStreamNodeFactory(parent=rhel_8_node, obj=rhel_8_2)
 
-    rhel_8_2_base = ProductVariantFactory(
-        name="Base8-test", products=rhel, productversions=rhel_8, productstreams=rhel_8_2
-    )
-    ProductNode.objects.create(parent=rhel_8_2_node, obj=rhel_8_2_base)
+    rhel_8_2_base = ProductVariantFactory(name="Base8-test")
+    ProductVariantNodeFactory(parent=rhel_8_2_node, obj=rhel_8_2_base)
+
+    rhel.refresh_from_db()
+    rhel_7.refresh_from_db()
+    rhel_7_1.refresh_from_db()
+    rhel_8.refresh_from_db()
+    rhel_8_1.refresh_from_db()
+    rhel_8_2.refresh_from_db()
+    rhel_8_2_base.refresh_from_db()
 
     return rhel, rhel_7, rhel_7_1, rhel_8, rhel_8_1, rhel_8_2, rhel_8_2_base
 
@@ -482,11 +576,11 @@ def test_product_stream_builds():
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_disassociate_component():
     """Tests that a component only participating in one product hierarchy has all of it's product
-    many-to-many relationships removed if it's variant is removed"""
+    relationships removed if it's variant is removed"""
     product, _, _, product_version, _, product_stream, product_variant = create_product_hierarchy()
     sb = SoftwareBuildFactory()
     component = ComponentFactory(software_build=sb)
-    ProductComponentRelation.objects.create(
+    relation = ProductComponentRelation.objects.create(
         type=ProductComponentRelation.Type.ERRATA,
         product_ref=product_variant.name,
         software_build=sb,
@@ -497,7 +591,8 @@ def test_disassociate_component():
     assert component.productstreams.filter(pk=product_stream.pk).exists()
     assert component.productvariants.filter(pk=product_variant.pk).exists()
 
-    component.disassociate_with_product((product_variant,))
+    relation.delete()
+    component.reset_product_taxonomy()
     assert not component.products.filter(pk=product_variant.pk).exists()
     assert not component.productversions.filter(pk=product_version.pk).exists()
     assert not component.productstreams.filter(pk=product_stream.pk).exists()
@@ -507,15 +602,15 @@ def test_disassociate_component():
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_disassociate_build_with_stream():
     """Tests that a software build with multiple components only participating in one product
-    hierarchy has all of it's child component product many-to-many relationships removed if it's
-    stream is removed"""
+    hierarchy has all of it's child component product relationships removed if it's stream is
+    removed"""
     product, _, _, product_version, _, product_stream, _ = create_product_hierarchy()
     sb = SoftwareBuildFactory()
     component = ComponentFactory(software_build=sb)
     cnode = ComponentNode.objects.create(parent=None, obj=component)
     sub_component = ComponentFactory()
     ComponentNode.objects.create(parent=cnode, obj=sub_component)
-    ProductComponentRelation.objects.create(
+    relation = ProductComponentRelation.objects.create(
         type=ProductComponentRelation.Type.BREW_TAG,
         product_ref=product_stream.name,
         software_build=sb,
@@ -523,7 +618,9 @@ def test_disassociate_build_with_stream():
     sb.save_product_taxonomy()
     assert component.productstreams.filter(pk=product_stream.pk).exists()
     assert sub_component.productstreams.filter(pk=product_stream.pk).exists()
-    sb.disassociate_with_product(type(product_stream).__name__, (product_stream.pk,))
+
+    relation.delete()
+    sb.reset_product_taxonomy()
     assert not component.products.filter(pk=product.pk).exists()
     assert not component.productversions.filter(pk=product_version.pk).exists()
     assert not component.productstreams.filter(pk=product_stream.pk).exists()
@@ -536,15 +633,15 @@ def test_disassociate_build_with_stream():
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_disassociate_build_with_variant():
     """Tests that a software build with multiple components only participating in one product
-    hierarchy has all of it's child component product many-to-many relationships removed if it's
-    variant is removed"""
+    hierarchy has all of it's child component product relationships removed if it's variant is
+    removed"""
     product, _, _, product_version, _, product_stream, product_variant = create_product_hierarchy()
     sb = SoftwareBuildFactory()
     component = ComponentFactory(software_build=sb)
     cnode = ComponentNode.objects.create(parent=None, obj=component)
     sub_component = ComponentFactory()
     ComponentNode.objects.create(parent=cnode, obj=sub_component)
-    ProductComponentRelation.objects.create(
+    relation = ProductComponentRelation.objects.create(
         type=ProductComponentRelation.Type.ERRATA,
         product_ref=product_variant.name,
         software_build=sb,
@@ -552,7 +649,9 @@ def test_disassociate_build_with_variant():
     sb.save_product_taxonomy()
     assert component.productvariants.filter(pk=product_variant.pk).exists()
     assert sub_component.productvariants.filter(pk=product_variant.pk).exists()
-    sb.disassociate_with_product(type(product_variant).__name__, (product_variant.pk,))
+
+    relation.delete()
+    sb.reset_product_taxonomy()
     assert not component.products.filter(pk=product.pk).exists()
     assert not component.productversions.filter(pk=product_version.pk).exists()
     assert not component.productvariants.filter(pk=product_variant.pk).exists()
@@ -565,93 +664,126 @@ def test_disassociate_build_with_variant():
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
-def test_disassociate_build_with_shared_product():
-    """Tests that a software build with one component participating in multiple product
-    hierarchies has child variant and no other product streams removed when one product's version is
-    removed"""
-    rhel, rhel_7, rhel_7_1, rhel_8, rhel_8_2, _, rhel_8_2_base = create_product_hierarchy()
-    sb = SoftwareBuildFactory()
-    component = ComponentFactory(software_build=sb)
-    ProductComponentRelation.objects.create(
-        type=ProductComponentRelation.Type.YUM_REPO,
-        product_ref=rhel_7_1.name,
-        software_build=sb,
-    )
-    ProductComponentRelation.objects.create(
-        type=ProductComponentRelation.Type.ERRATA,
-        product_ref=rhel_8_2_base.name,
-        software_build=sb,
-    )
-    sb.save_product_taxonomy()
-    assert component.products.filter(pk=rhel.pk).exists()
-    assert component.productstreams.filter(pk=rhel_7_1.pk).exists()
-    assert component.productvariants.filter(pk=rhel_8_2_base.pk).exists()
-    sb.disassociate_with_product(type(rhel_7).__name__, (rhel_7.pk,))
-    assert component.products.filter(pk=rhel.pk).exists()
-    assert not component.productstreams.filter(pk=rhel_7_1.pk).exists()
-    assert component.productvariants.filter(pk=rhel_8_2_base.pk).exists()
-
-
-@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
-def test_disassociate_build_with_shared_product_version():
-    """Tests that a software build with one component participating in multiple product
-    hierarchies has child streams and no other product variants removed when one product's
-    version is removed"""
-    rhel, rhel_7, rhel_7_1, rhel_8, rhel_8_2, _, rhel_8_2_base = create_product_hierarchy()
-    sb = SoftwareBuildFactory()
-    component = ComponentFactory(software_build=sb)
-    ProductComponentRelation.objects.create(
-        type=ProductComponentRelation.Type.YUM_REPO,
-        product_ref=rhel_7_1.name,
-        software_build=sb,
-    )
-    ProductComponentRelation.objects.create(
-        type=ProductComponentRelation.Type.ERRATA,
-        product_ref=rhel_8_2_base.name,
-        software_build=sb,
-    )
-    sb.save_product_taxonomy()
-    assert component.products.filter(pk=rhel.pk).exists()
-    assert component.productstreams.filter(pk=rhel_7_1.pk).exists()
-    assert component.productvariants.filter(pk=rhel_8_2_base.pk).exists()
-    sb.disassociate_with_product(type(rhel_7_1).__name__, (rhel_7_1.pk,))
-    assert component.products.filter(pk=rhel.pk).exists()
-    assert not component.productstreams.filter(pk=rhel_7_1.pk).exists()
-    assert component.productvariants.filter(pk=rhel_8_2_base.pk).exists()
-
-
-@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_disassociate_build_with_shared_product_streams():
     """Tests that a software build with one component participating in multiple product
-    hierarchies other product, or versions removed when one product's variant is removed"""
-    rhel, rhel_7, rhel_7_1, rhel_8, _, rhel_8_2, rhel_8_2_base = create_product_hierarchy()
+    hierarchies has all parent product references removed when one product's variant is removed.
+    Ensure that the other streams, and shared parents are untouched
+    """
+    rhel, rhel_7, rhel_7_1, rhel_8, rhel_8_1, rhel_8_2, rhel_8_2_base = create_product_hierarchy()
+
     sb = SoftwareBuildFactory()
     component = ComponentFactory(software_build=sb)
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        obj=component,
+    )
     ProductComponentRelation.objects.create(
         type=ProductComponentRelation.Type.YUM_REPO,
         product_ref=rhel_7_1.name,
         software_build=sb,
     )
-    ProductComponentRelation.objects.create(
+    errata_relation = ProductComponentRelation.objects.create(
         type=ProductComponentRelation.Type.ERRATA,
         product_ref=rhel_8_2_base.name,
         software_build=sb,
     )
     sb.save_product_taxonomy()
-    assert component.products.filter(pk=rhel.pk).exists()
     assert component.productversions.filter(pk=rhel_7.pk).exists()
+    assert component.products.filter(pk=rhel.pk).exists()
     assert component.productstreams.filter(pk=rhel_8_2.pk).exists()
     assert component.productvariants.filter(pk=rhel_8_2_base.pk).exists()
-    sb.disassociate_with_product(type(rhel_8_2_base).__name__, (rhel_8_2_base.pk,))
+
+    errata_relation.delete()
+    sb.reset_product_taxonomy()
+    component.refresh_from_db()
     assert component.products.filter(pk=rhel.pk).exists()
     assert component.productversions.filter(pk=rhel_7.pk).exists()
+    assert not component.productstreams.filter(pk=rhel_8_1.pk).exists()
     assert not component.productstreams.filter(pk=rhel_8_2.pk).exists()
     assert not component.productvariants.filter(pk=rhel_8_2_base.pk).exists()
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_disassociate_variant_with_multiple_streams():
+    stream_node = ProductStreamNodeFactory()
+    product_stream = stream_node.obj
+    variant_node = ProductVariantNodeFactory(parent=stream_node)
+    variant = variant_node.obj
+    other_stream_node = ProductStreamNodeFactory()
+    other_stream = other_stream_node.obj
+    ProductVariantNodeFactory(obj=variant, parent=other_stream_node)
+
+    sb = SoftwareBuildFactory()
+    c = ComponentFactory(software_build=sb)
+    relation = ProductComponentRelation.objects.create(
+        type=ProductComponentRelation.Type.ERRATA,
+        product_ref=variant.name,
+        software_build=sb,
+    )
+    sb.save_product_taxonomy()
+    c.refresh_from_db()
+
+    assert c.productstreams.filter(pk=product_stream.pk).exists()
+    assert c.productstreams.filter(pk=other_stream.pk).exists()
+    assert c.productvariants.filter(pk=variant.pk).exists()
+
+    relation.delete()
+    sb.reset_product_taxonomy()
+    assert not c.productstreams.filter(pk=product_stream.pk).exists()
+    assert not c.productstreams.filter(pk=other_stream.pk).exists()
+    assert not c.productvariants.filter(pk=variant.pk).exists()
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_disassociate_variant_with_promiscuious_stream():
+    # Create a variant with multiple stream parents
+    stream_node = ProductStreamNodeFactory()
+    product_stream = stream_node.obj
+    variant_node = ProductVariantNodeFactory(parent=stream_node)
+    variant = variant_node.obj
+    other_stream_node = ProductStreamNodeFactory()
+    other_stream = other_stream_node.obj
+    # Same as last test, but this time create another variant so that there is a reason to keep
+    # other_stream related to the component
+    ProductVariantNodeFactory(obj=variant, parent=other_stream_node)
+    variant_node = ProductVariantNodeFactory(parent=other_stream_node)
+    other_variant_node = ProductVariantNodeFactory(parent=other_stream_node)
+    other_variant = other_variant_node.obj
+
+    sb = SoftwareBuildFactory()
+    c = ComponentFactory(software_build=sb)
+    ComponentNode.objects.create(parent=None, obj=c)
+
+    errata_relation = ProductComponentRelation.objects.create(
+        type=ProductComponentRelation.Type.ERRATA,
+        product_ref=variant.name,
+        software_build=sb,
+    )
+    ProductComponentRelation.objects.create(
+        type=ProductComponentRelation.Type.ERRATA,
+        product_ref=other_variant.name,
+        software_build=sb,
+    )
+    sb.save_product_taxonomy()
+
+    assert c.productstreams.filter(pk=product_stream.pk).exists()
+    assert c.productstreams.filter(pk=other_stream.pk).exists()
+    assert c.productvariants.filter(pk=variant.pk).exists()
+    assert c.productvariants.filter(pk=other_variant.pk).exists()
+
+    errata_relation.delete()
+    sb.reset_product_taxonomy()
+    assert not c.productstreams.filter(pk=product_stream.pk).exists()
+    assert not c.productvariants.filter(pk=variant.pk).exists()
+    assert c.productstreams.filter(pk=other_stream.pk).exists()
+    assert c.productvariants.filter(pk=other_variant.pk).exists()
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_brew_tag_variant_linking():
     _, _, _, _, _, product_stream, product_variant = create_product_hierarchy()
+
     sb = SoftwareBuildFactory()
     c = ComponentFactory(software_build=sb)
     ProductComponentRelation.objects.create(
@@ -1592,3 +1724,90 @@ def test_license_properties():
     assert "ALICE" not in c.license_concluded_list
     assert "LATER" not in c.license_declared_list
     assert "ALICE" not in c.license_declared_list
+
+
+@pytest.mark.django_db
+def test_get_related_names_of_type():
+    pnode = ProductVariantNodeFactory(node_type=ProductNode.ProductNodeType.INFERRED)
+    variant = pnode.obj
+
+    # Since the pnode linking the product_version and the product_stream is DIRECT we expect a
+    # result
+    result = variant.productstreams.first().get_related_names_of_type(ProductVersion)
+    assert list(result) == [variant.productversions.name]
+
+    # Expect empty results when the pnode linking variant to it's parent is INFEFFERED
+    result = variant.get_related_names_of_type(ProductVersion)
+    assert list(result) == []
+    result = variant.get_related_names_of_type(ProductStream)
+    assert list(result) == []
+
+
+@pytest.mark.django_db
+def test_get_product_details():
+    """Make sure that DIRECT variants get their parent product models added to the results"""
+    pnode = ProductVariantNodeFactory()
+    variant = pnode.obj
+    result = get_product_details((variant,), [])
+    assert result == {
+        "products": {variant.products.pk},
+        "productversions": {variant.productversions.pk},
+        "productstreams": {variant.productstreams.first().pk},
+        "productvariants": {str(variant.pk)},
+    }
+
+
+@pytest.mark.django_db
+def test_get_product_details_inferred():
+    """Make sure that INFERRED variants don't get their parent product models added to the
+    results"""
+
+    pnode = ProductVariantNodeFactory(node_type=ProductNode.ProductNodeType.INFERRED)
+    variant = pnode.obj
+
+    result = get_product_details((variant,), [])
+    assert result == {
+        "products": set(),
+        "productversions": set(),
+        "productstreams": set(),
+        "productvariants": {str(variant.pk)},
+    }
+
+
+@pytest.mark.django_db
+def test_save_product_taxonomy():
+    variant = ProductVariantFactory()
+    sb = SoftwareBuildFactory()
+    c = ComponentFactory(software_build=sb)
+    ProductComponentRelationFactory(
+        type=ProductComponentRelation.Type.ERRATA, software_build=sb, product_ref=variant.name
+    )
+    assert not c.productvariants.exists()
+    sb.save_product_taxonomy()
+    assert c.productvariants.first() == variant
+
+
+@pytest.mark.django_db
+def test_save_product_taxonomy_inferred():
+    stream_node = ProductStreamNodeFactory()
+    stream = stream_node.obj
+    variant_node = ProductVariantNodeFactory(
+        parent=stream_node, node_type=ProductNode.ProductNodeType.INFERRED
+    )
+    variant = variant_node.obj
+
+    sb = SoftwareBuildFactory()
+    c = ComponentFactory(software_build=sb)
+    ProductComponentRelationFactory(
+        type=ProductComponentRelation.Type.BREW_TAG, software_build=sb, product_ref=stream.name
+    )
+    sb.save_product_taxonomy()
+    assert c.productstreams.first() == stream
+    assert not c.productvariants.exists()
+
+    ProductComponentRelationFactory(
+        type=ProductComponentRelation.Type.ERRATA, software_build=sb, product_ref=variant.name
+    )
+
+    sb.save_product_taxonomy()
+    assert c.productvariants.first() == variant

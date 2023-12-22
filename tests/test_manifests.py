@@ -137,8 +137,14 @@ def test_component_manifest_backslash():
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
-def a_test_slim_rpm_in_containers_manifest(stored_proc):
+def test_slim_rpm_in_containers_manifest(stored_proc):
     containers, stream, rpm_in_container = setup_products_and_rpm_in_containers()
+
+    test_cpe = "cpe:/a:redhat:test:1"
+    variant = stream.productvariants.get()
+    variant.cpe = test_cpe
+    variant.save()
+    assert test_cpe in stream.cpes
 
     # Two components linked to this product
     # plus a source container which is shown in API but not in manifests
@@ -167,6 +173,21 @@ def a_test_slim_rpm_in_containers_manifest(stored_proc):
     # One (and only one) package for each distinct provided
     # Plus one package for the stream itself
     assert len(manifest["packages"]) == num_components + num_provided + 1
+
+    # CPE for each root component attached to a product should be included in the manifest
+    container_pks = [str(c.pk) for c in containers]
+    for package in manifest["packages"]:
+        pk = package["SPDXID"][len("SPXRef-") + 1 :]
+        if pk in container_pks:
+            found_cpe = False
+            for ref in package["externalRefs"]:
+                if ref["referenceType"] == "cpe22Type":
+                    # The CPE matches the one returned by setup_products_and_rpm_in_containers()
+                    assert ref["referenceLocator"] == test_cpe
+                    found_cpe = True
+                    break
+            # There was at least one CPE
+            assert found_cpe
 
     # For each component, one "component is package of product" relationship
     # For each provided in component, one "provided contained by component"

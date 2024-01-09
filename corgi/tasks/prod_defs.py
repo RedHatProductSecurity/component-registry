@@ -25,6 +25,7 @@ from corgi.core.models import (
     SoftwareBuild,
 )
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS, slow_save_taxonomy
+from corgi.tasks.tagging import apply_stream_no_manifest_tags
 
 logger = get_task_logger(__name__)
 # Find a substring that looks like a version (e.g. "3", "3.5", "3-5", "1.2.z") at the end of a
@@ -77,6 +78,12 @@ def update_products() -> None:
             for pd_product_version in pd_product_versions:
                 parse_product_version(pd_product_version, product, product_node)
             product.save_product_taxonomy()
+
+        # Tag all the streams we don't want to publish manifests for
+        # inline, before the transaction is committed
+        # This way there's never any window of time when the stream exists
+        # but isn't tagged and could have its manifest published by mistake
+        apply_stream_no_manifest_tags()
 
 
 def _find_by_cpe(cpe_patterns: list[str]) -> list[str]:

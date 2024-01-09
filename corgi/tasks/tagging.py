@@ -1,20 +1,12 @@
 from celery.utils.log import get_task_logger
-from celery_singleton import Singleton
 
-from config.celery import app
 from corgi.core.models import Product, ProductStream, ProductStreamTag, ProductVersion
-from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 
 NO_MANIFEST_TAG = "no_manifest"
 
 logger = get_task_logger(__name__)
 
 
-@app.task(
-    base=Singleton,
-    autoretry_for=RETRYABLE_ERRORS,
-    retry_kwargs=RETRY_KWARGS,
-)
 def apply_stream_no_manifest_tags():
     apply_middleware_stream_no_manifest_tags(NO_MANIFEST_TAG, "")
     apply_rhel_8_9_z_stream_no_manifest_tags(NO_MANIFEST_TAG, "")

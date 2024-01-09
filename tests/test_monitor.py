@@ -389,7 +389,6 @@ def test_sbomer_handles_sbom_available():
             mock_release.assert_called_once_with(mock_event.delivery, delivered=True)
 
 
-@pytest.mark.xfail(AssertionError, reason="Temporarily disabled due to slowness")
 def test_handle_pyxis_available():
     """Test that the UMB receiver correctly handles manifest messages from pyxis"""
     listener = UMBListener()
@@ -400,7 +399,7 @@ def test_handle_pyxis_available():
 
     mock_event = MagicMock()
 
-    with open("tests/data/pyxis/umb/manifest_create.json") as test_file:
+    with open("tests/data/pyxis/umb/rhtap_manifest_create.json") as test_file:
         test_data = json.load(test_file)
     mock_event.message.address = test_data["topic"].replace("/topic/", VIRTUAL_TOPIC_ADDRESS_PREFIX)
     mock_event.message.body = json.dumps(test_data["msg"])
@@ -418,7 +417,34 @@ def test_handle_pyxis_available():
             mock_fetch_manifest.assert_called_once_with(
                 test_data["msg"]["entityData"]["_id"]["$oid"],
             )
+        mock_fetch_manifest.reset_mock()
 
         with patch.object(receiver, "release") as mock_release:
             receiver.on_message(mock_event)
             mock_release.assert_called_once_with(mock_event.delivery, delivered=True)
+            mock_fetch_manifest.assert_called_once_with(
+                test_data["msg"]["entityData"]["_id"]["$oid"],
+            )
+
+
+def test_ignore_pyxis_brew_manifests():
+    """Test that the UMB receiver correctly ignores manifest messages from pyxis
+    when the message is for a container built in Brew / OSBS and not RHTAP"""
+    listener = UMBListener()
+    with patch("corgi.monitor.consumer.SSLDomain"):
+        receiver = UMBReceiverHandler(
+            virtual_topic_addresses=listener.virtual_topic_addresses, selectors=listener.selectors
+        )
+
+    mock_event = MagicMock()
+
+    with open("tests/data/pyxis/umb/brew_manifest_create.json") as test_file:
+        test_data = json.load(test_file)
+    mock_event.message.address = test_data["topic"].replace("/topic/", VIRTUAL_TOPIC_ADDRESS_PREFIX)
+    mock_event.message.body = json.dumps(test_data["msg"])
+
+    with patch("corgi.monitor.consumer.slow_fetch_pyxis_manifest.delay") as mock_fetch_manifest:
+        with patch.object(receiver, "accept") as mock_accept:
+            receiver.on_message(mock_event)
+            mock_accept.assert_called_once_with(mock_event.delivery)
+            mock_fetch_manifest.assert_not_called()

@@ -2,7 +2,7 @@ import logging
 import re
 from abc import abstractmethod
 from typing import Any, Iterable, Iterator, Type, Union
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
@@ -318,6 +318,17 @@ class SoftwareBuild(TimeStampedModel):
             component.save_product_taxonomy(product_details)
 
         return None
+
+    def disassociate_with_service_streams(self, stream_pks: Iterable[str | UUID]) -> None:
+        """Remove the stream references from all components associated with this build.
+        Assumes that all references belong to ProductStreams for managed services."""
+        service_streams = ProductStream.objects.filter(pk__in=stream_pks)
+
+        for component in self.components.iterator():
+            component.disassociate_with_service_streams(service_streams)
+            for cnode in component.cnodes.iterator():
+                for descendant in cnode.get_descendants().iterator():
+                    descendant.obj.disassociate_with_service_streams(service_streams)
 
     def reset_product_taxonomy(self) -> None:
         """Remove the product references from all components associated with this build."""
@@ -2152,6 +2163,34 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         """Return only the purls from the set of all upstream nodes"""
         return self.get_upstreams_nodes(using=using).values_list("purl", flat=True).distinct()
 
+    def disassociate_with_service_streams(self, stream_refs: Iterable[ProductStream]) -> None:
+        """Disassociate this component with the passed in managed service ProductStreams,
+        any child ProductModels, and any unused ancestor ProductModels in that service's hierarchy.
+        This is the reverse of what happens in save_product_taxonomy.
+        """
+        # DANGER: This code is only needed, and only safe, for managed service streams
+        # These streams have no variants. Do not call for other streams, or for variants directly
+        # We call remove in a for-loop, instead of once using nested tuple unpacking
+        # because the code gets really ugly otherwise
+        for stream_ref in stream_refs:
+            if not isinstance(stream_ref, ProductStream):
+                # Many-to-many relationships, like variants to products or variants to versions,
+                # are not supported here because we cannot easily determine the ancestors to unlink
+                # We can only parse many-to-one, like streams to products or streams to versions
+                # We only need this code to unlink components from managed service streams
+                raise ValueError("Unsafe attempt to unlink a non-ProductStream model")
+            # This technically could be incorrect, if the managed service stream
+            # we are unlinking shares a variant with any other streams
+            # or if the removed variant itself had a relation to the component
+            # We would remove these variants, even though they should be kept
+            # Currently none of the service streams have any variants, so this is safe
+            self.productvariants.remove(
+                *stream_ref.productvariants.values_list("pk", flat=True)  # type: ignore[arg-type]
+            )
+            self.productstreams.remove(stream_ref)
+            self._check_and_remove_orphaned_product_refs(stream_ref, "ProductVersion")
+            self._check_and_remove_orphaned_product_refs(stream_ref, "Product")
+
     def reset_product_taxonomy(self):
         """Disassociate this component with the passed in ProductModel and any child ProductModels
         in that product's hierarchy. This is the reverse of what happens in save_product_taxonomy.
@@ -2212,32 +2251,39 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         self.productvariants.clear()
 
     def _check_and_remove_orphaned_product_refs(
-        self, product_ref: ProductModel, ancestor_model_name: str
+        self, stream_ref: ProductStream, ancestor_model_name: str
     ) -> None:
         """Remove product_models from this component where there are no remaining children of
         product_ref or the remaining children of product_ref don't share this product_ref as an
         ancestor"""
-        # For an ancestor_model_name like "ProductVersion", this is 1
+        if not isinstance(stream_ref, ProductStream):
+            # Many-to-many relationships, like variants to products or variants to versions,
+            # are not supported here because we cannot easily determine the ancestors to unlink
+            # We can only parse many-to-one, like streams to products or streams to versions
+            # We only need this code to unlink components from managed service streams
+            raise ValueError("Unsafe attempt to unlink s non-ProductStream model")
+
+        # For an ancestor_model_name like "Product", this is 0
         ancestor_node_level = MODEL_NODE_LEVEL_MAPPING[ancestor_model_name]
-        # and this will be "productversions"
+        # and this will be "products"
         ancestor_attribute = NODE_LEVEL_ATTRIBUTE_MAPPING[ancestor_node_level]
-        # this will be "productstreams", after looking up 1 + 1 AKA 2
+        # this will be "productversions", after looking up 0 + 1 AKA 1
         child_of_ancestor_attribute = NODE_LEVEL_ATTRIBUTE_MAPPING[ancestor_node_level + 1]
-        # e.g.this_component.productstreams.get_queryset()
-        # we get the list of remaining streams, we've already removed this_variant's parent stream
+        # e.g.this_component.productversions.get_queryset()
+        # we get the list of remaining versions, we've already removed this_stream's parent version
         children_of_ancestor = getattr(self, child_of_ancestor_attribute).get_queryset()
-        # children_of_ancestor AKA child_streams_qs.values_list("productversions", flat=True)
-        # gives us just the PKs of the parent versions
+        # children_of_ancestor AKA child_versions_qs.values_list("products", flat=True)
+        # gives us just the PKs of the parent products
         ancestors_of_remaining_siblings = children_of_ancestor.values_list(
             ancestor_attribute, flat=True
         ).distinct()
-        # AKA this_variant.productversions.pk - there's only one
-        ancestor_of_product_ref = getattr(product_ref, ancestor_attribute).pk
-        # If the (grand)parent version of this_variant is not in the list of (grand)parent versions
-        # for parent streams
-        if ancestor_of_product_ref not in ancestors_of_remaining_siblings:
-            # this_component.productversions.remove(PK for grandparent_version_of_this_variant)
-            getattr(self, ancestor_attribute).remove(ancestor_of_product_ref)
+        # AKA this_stream.products.pk - there's only one
+        ancestor_of_stream_ref = getattr(stream_ref, ancestor_attribute).pk
+        # If the (grand)parent product of this_stream is not in the list of (grand)parent products
+        # for parent versions
+        if ancestor_of_stream_ref not in ancestors_of_remaining_siblings:
+            # this_component.products.remove(PK for grandparent_product_of_this_stream)
+            getattr(self, ancestor_attribute).remove(ancestor_of_stream_ref)
 
 
 class ComponentTag(Tag):

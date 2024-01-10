@@ -221,21 +221,25 @@ def parse_product_version(
         _match_and_save_stream_cpes(product_version)
 
 
-def _parse_variants_from_brew_tags(brew_tags: list[str]) -> dict[str, str]:
+def _parse_variants_from_brew_tags(brew_tags: list[str]) -> dict[str, tuple[str, str, str]]:
     """We don't link core ProductVariant models to streams via brew_tags because it results in too
     many builds being linked to the stream. These variants should include all possible builds that
     could match the stream. We use them for finding which errata match this stream, so it's OK to
     find too many errata"""
-    distinct_variants: dict[str, str] = {}
+    distinct_variants: dict[str, tuple[str, str, str]] = {}
     for brew_tag in brew_tags:
         trimmed_brew_tag, sans_container_released = brew_tag_to_et_prefixes(brew_tag)
         variant_data = CollectorErrataProductVersion.objects.filter(
             brew_tags__overlap=[trimmed_brew_tag, sans_container_released]
-        ).values_list("variants__name", "variants__cpe")
-        for variant_name, variant_cpe in variant_data:
+        ).values_list("variants__name", "variants__cpe", "product__short_name", "name")
+        for variant_name, variant_cpe, et_product_name, et_version_name in variant_data:
             if not variant_cpe:
                 continue
-            distinct_variants[variant_name] = variant_cpe
+            distinct_variants[variant_name] = (
+                variant_cpe,
+                et_product_name,
+                et_version_name,
+            )
 
     return distinct_variants
 
@@ -246,11 +250,13 @@ def _create_inferred_variants(
     parent: ProductNode,
 ) -> None:
     variants_and_cpes = _parse_variants_from_brew_tags(brew_tag_names)
-    for variant_name, cpe in variants_and_cpes.items():
+    for variant_name, cpe_and_et_names in variants_and_cpes.items():
         variant, created = ProductVariant.objects.update_or_create(
             name=variant_name,
             defaults={
-                "cpe": cpe,
+                "cpe": cpe_and_et_names[0],
+                "et_product": cpe_and_et_names[1],
+                "et_product_version": cpe_and_et_names[2],
             },
         )
         if created:
@@ -445,10 +451,8 @@ def parse_errata_info(
                     name=variant,
                     defaults={
                         "cpe": et_variant_cpe if et_variant_cpe else "",
-                        "meta_attr": {
-                            "et_product": et_product_name,
-                            "et_product_version": et_pv_name,
-                        },
+                        "et_product": et_product_name,
+                        "et_product_version": et_pv_name,
                     },
                 )
                 _, node_created = ProductNode.objects.update_or_create(

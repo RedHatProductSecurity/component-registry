@@ -27,7 +27,7 @@ from corgi.core.constants import (
     SRPM_CONDITION,
 )
 from corgi.core.files import ComponentManifestFile, ProductManifestFile
-from corgi.core.fixups import cpe_lookup
+from corgi.core.fixups import cpe_lookup, external_name_lookup
 from corgi.core.mixins import TimeStampedModel
 
 logger = logging.getLogger(__name__)
@@ -745,6 +745,53 @@ class ProductStream(ProductModel):
     def cpes_from_brew_tags(self):
         return self.distinct_inferred_variant_cpes()
 
+    @property
+    def external_name(self) -> str:
+        constant_name = external_name_lookup(self.name)
+        if constant_name:
+            return constant_name
+        # streams with composes (like rhel-8.8.0) do not have attached Variants, so we need to
+        # search all variants here, not just this stream's productvariants
+        et_versions_matching_cpes = (
+            ProductVariant.objects.filter(cpe__in=self.cpes)
+            .exclude(et_product_version="")
+            .values_list("et_product_version", flat=True)
+            .distinct()
+        )
+        variants_matching_cpe_length = len(et_versions_matching_cpes)
+        # There is a single matching et_product_version for this streams cpes
+        if variants_matching_cpe_length == 1:
+            return et_versions_matching_cpes[0].upper()
+        else:
+            et_versions_with_match = (
+                ProductVariant.objects.filter(
+                    cpe__in=self.cpes, et_product_version__contains=self.version.removesuffix(".z")
+                )
+                .values_list("et_product_version", flat=True)
+                .distinct()
+            )
+            # There is a single matching et_product_version with this streams cpes, and this
+            # stream's version in the et_product_version
+            if len(et_versions_with_match) == 1:
+                return et_versions_with_match[0].upper()
+            et_products_matching_cpes = (
+                ProductVariant.objects.filter(cpe__in=self.cpes)
+                .exclude(et_product="")
+                .values_list("et_product", flat=True)
+                .distinct()
+            )
+            # There is a single matching et_product with this stream's cpes
+            if len(et_products_matching_cpes) == 1:
+                return f"{et_products_matching_cpes[0]}-{self.version}".upper()
+            elif len(et_products_matching_cpes) > 1:
+                for et_product in et_products_matching_cpes:
+                    # There is a matching et_product where the et_product name is found in the
+                    # stream name. For example rhn_satellite_6.8 has multiple products, "SAT-TOOLS",
+                    # and "SATELLITE" use the stream's name to favour "SATELLITE" found in that case
+                    if self.name.upper().find(et_product) > 0:
+                        return f"{et_product}-{self.version}".upper()
+        return self.name.upper()
+
 
 class ProductStreamTag(Tag):
     tagged_model = models.ForeignKey(ProductStream, on_delete=models.CASCADE, related_name="tags")
@@ -758,6 +805,8 @@ class ProductVariant(ProductModel):
     """
 
     cpe = models.CharField(max_length=1000, default="")
+    et_product = models.CharField(max_length=1000, default="")
+    et_product_version = models.CharField(max_length=1000, default="")
 
     products = models.ForeignKey(
         "Product", on_delete=models.CASCADE, related_name="productvariants", null=True

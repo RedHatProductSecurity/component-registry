@@ -6,7 +6,6 @@ import jsonschema
 from django.conf import settings
 from django.template.loader import render_to_string
 
-from corgi.core.fixups import cpe_lookup
 from corgi.core.mixins import TimeStampedModel
 
 logger = logging.getLogger(__name__)

@@ -1913,3 +1913,105 @@ def test_save_product_taxonomy_inferred():
 
     sb.save_product_taxonomy()
     assert c.productvariants.first() == variant
+
+
+@pytest.mark.django_db
+def test_stream_external_names_for_compose_stream():
+    stream_external_name = "RHEL-8.8.0.Z.MAIN+EUS"
+    variant_cpe = "cpe:/a:redhat:enterprise_linux:8::appstream"
+    stream = ProductStreamFactory(name="rhel-8.8.0", version="8.8.0")
+    assert variant_cpe in stream.cpes
+    stream_node = ProductStreamNodeFactory(obj=stream)
+
+    matching_variant = ProductVariantFactory(
+        name="AppStream-8.8.0.Z.MAIN.EUS", cpe=variant_cpe, et_product_version=stream_external_name
+    )
+    ProductVariantNodeFactory(obj=matching_variant, parent=stream_node)
+    assert matching_variant.et_product_version == stream_external_name
+
+    non_matching_variant = ProductVariantFactory(
+        name="AppStream-8.7.0.Z.MAIN.EUS", cpe=variant_cpe, et_product_version="RHEL-8.7.0.Z.MAIN"
+    )
+    ProductVariantNodeFactory(obj=non_matching_variant, parent=stream_node)
+
+    assert stream.productvariants.exists()
+    assert stream.external_name == stream_external_name
+
+
+external_names_test_data = [
+    (
+        "openshift-4.14.z",
+        "4.14.z",
+        ["OSE-4.14-RHEL-9", "OSE-IRONIC-4.14-RHEL-9", "OSE-4.14-RHEL-8"],
+        ["RHOSE"],
+        "RHOSE-4.14.Z",
+    ),
+    (
+        "dts-12.1.z",
+        "12.1.z",
+        [
+            "RHEL-7-RHSCL-3.5",
+            "RHEL-7-RHSCL-3.7",
+            "RHEL-7.6.Z-RHSCL-3.5",
+            "RHEL-7-RHSCL-3.8",
+            "RHEL-7-RHSCL-3.6",
+            "RHEL-7.6.Z-RHSCL-3.6",
+            "RHEL-7-RHSCL-3.9",
+        ],
+        ["RHSCL"],
+        "DTS-12.1.Z",
+    ),
+    (
+        "rhn_satellite_6.8",
+        "6.8",
+        [
+            "SAT-TOOLS-6.10-RHEL-7.7.AUS",
+            "SAT-TOOLS-6.10-RHEL-7.4.E4S",
+            "RHEL-8-SATELLITE-6.8",
+            "RHEL-7-SATELLITE-6.8",
+            "RHEL-7-SATELLITE-6.10",
+        ],
+        ["SAT-TOOLS", "SATELLITE"],
+        "SATELLITE-6.8",
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    "stream_name,stream_version,et_product_versions,et_products,expected", external_names_test_data
+)
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_stream_external_names_for_brew_tag_stream(
+    stream_name, stream_version, et_product_versions, et_products, expected
+):
+    stream = ProductStreamFactory(name=stream_name, version=stream_version)
+    stream_node = ProductStreamNodeFactory(obj=stream)
+    test_cpe = "cpe:/a:redhat:test"
+    i = 0
+    for et_product_version in et_product_versions:
+        if len(et_products) == 1:
+            et_product = et_products[0]
+        else:
+            et_product = et_products[0]
+            for et_product_name in et_products:
+                # Matches et_product "SATELITTE" to "RHEL-8-SATELLITE-6.8" for example
+                if et_product_version.find(et_product_name) > 0:
+                    et_product = et_product_name
+                    break
+        i += 1
+        variant = ProductVariantFactory(
+            name=f"variant-{i}",
+            cpe=test_cpe,
+            et_product_version=et_product_version,
+            et_product=et_product,
+        )
+        # This links the test_cpe to the stream so it's returned by the cpes property of
+        # ProductStream
+        ProductVariantNodeFactory(obj=variant, parent=stream_node)
+    assert stream.external_name == expected
+
+
+def test_hardcoded_external_name():
+    stream_name = "dts-11.1.z"
+    stream = ProductStreamFactory(name=stream_name)
+    assert stream.external_name == "DTS-11.1.Z"

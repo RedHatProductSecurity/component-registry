@@ -27,6 +27,7 @@ from corgi.core.constants import (
     SRPM_CONDITION,
 )
 from corgi.core.files import ComponentManifestFile, ProductManifestFile
+from corgi.core.fixups import cpe_lookup
 from corgi.core.mixins import TimeStampedModel
 
 logger = logging.getLogger(__name__)
@@ -427,7 +428,11 @@ class ProductModel(TimeStampedModel):
     def cpes(self) -> tuple[str, ...]:
         """Return CPEs for direct descendant variants if they exist. Otherwise, return a union
         of indirect descendant variants and descendant streams cpes_matching_patterns"""
-        if self is ProductVariant:
+        if isinstance(self, ProductStream):
+            hardcoded_cpes: set[str] = cpe_lookup(self.name)
+            if hardcoded_cpes:
+                return tuple(hardcoded_cpes)
+        elif isinstance(self, ProductVariant):
             return (self.cpe,)  # type: ignore[attr-defined]
 
         direct_variant_cpes = (

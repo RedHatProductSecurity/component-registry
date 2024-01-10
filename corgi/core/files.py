@@ -71,7 +71,7 @@ class ProductManifestFile(ManifestFile):
         released_components = components.manifest_components(ofuri=self.obj.ofuri)  # type: ignore[attr-defined] # noqa: E501
         distinct_provides = self.obj.provides_queryset  # type: ignore[attr-defined]
         distinct_upstreams = self.obj.upstreams_queryset  # type: ignore[attr-defined]
-        cpes = self._get_stream_cpes(self.obj)
+        cpes = self.obj.cpes  # type: ignore[attr-defined]
 
         kwargs_for_template = {
             "obj": self.obj,
@@ -84,10 +84,3 @@ class ProductManifestFile(ManifestFile):
         content = render_to_string(self.file_name, kwargs_for_template)
 
         return self._validate_and_clean(content)
-
-    @classmethod
-    def _get_stream_cpes(cls, model: TimeStampedModel) -> set[str]:
-        hardcoded_cpes = cpe_lookup(model.name)  # type: ignore[attr-defined]
-        if hardcoded_cpes:
-            return hardcoded_cpes
-        return set(model.cpes)  # type: ignore[attr-defined]

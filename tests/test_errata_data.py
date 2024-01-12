@@ -141,6 +141,40 @@ def test_update_variant_repos():
         )
 
 
+def test_update_multi_parent_variant_repos():
+    psnode1 = ProductStreamNodeFactory()
+    psnode2 = ProductStreamNodeFactory()
+    pvnode1 = ProductVariantNodeFactory(parent=psnode1)
+    variant = pvnode1.obj
+    ProductVariantNodeFactory(obj=variant, parent=psnode2)
+
+    et_id = 0
+    repos = ["repo1", "repo2"]
+    et_product = CollectorErrataProduct.objects.create(
+        et_id=et_id, name=f"name-{et_id}", short_name=str(et_id)
+    )
+    et_product_version = CollectorErrataProductVersion.objects.create(
+        et_id=et_id, name=f"name-{et_id}", product=et_product
+    )
+    CollectorErrataProductVariant.objects.create(
+        et_id=et_id, name=variant.name, product_version=et_product_version, repos=repos
+    )
+    for repo in repos:
+        CollectorRPMRepository.objects.get_or_create(name=repo)
+
+    update_variant_repos()
+
+    assert Channel.objects.count() == 2
+    for channel in Channel.objects.get_queryset():
+        assert channel.productvariants.count() == 1
+        assert channel.productvariants.first() == variant
+        assert channel.productstreams.count() == 2
+        channel_streams_names = channel.productstreams.values_list("name", flat=True)
+        assert len(channel_streams_names) == 2
+        assert psnode1.obj.name in channel_streams_names
+        assert psnode2.obj.name in channel_streams_names
+
+
 def setup_models_for_variant_repos(repos, ps_node, variant, et_id):
     et_product = CollectorErrataProduct.objects.create(
         et_id=et_id, name=f"name-{et_id}", short_name=str(et_id)

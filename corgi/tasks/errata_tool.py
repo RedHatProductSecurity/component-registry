@@ -185,8 +185,6 @@ def update_variant_repos() -> None:
                 logger.warning("Product Variant %s from ET not found in models", name)
                 continue
 
-            pv_node = pv.pnodes.get()
-
             for repo_name in et_variant_data:
                 # Filter out inactive repos in pulp and get content_set
                 try:
@@ -207,12 +205,16 @@ def update_variant_repos() -> None:
                 # TODO: investigate whether we need to delete CDN repos that were removed from a
                 #  Variant between two different runs of this task.
                 #
-                # Create a Product Node for each CDN repo linked to a Variant. This means that one
-                # CDN repo (since we run update_or_create above) can be linked to
-                # multiple product nodes, each linked to a different Variant.
-                ProductNode.objects.get_or_create(
-                    object_id=repo_obj.pk, parent=pv_node, defaults={"obj": repo_obj}
-                )
+                for pv_node in pv.pnodes.get_queryset():
+                    # Create a Product Node linking this repo to the variant in each tree it
+                    # participates in.
+                    # For example the 7Server-RHSCL-3.8 Variant participates in both the dts-12.1
+                    # and rhscl-3.8.z ProductStream trees, so we create a ProductNode linking this
+                    # Channel to both the 7Server-RHSCL-3.8 node with rhscl-3.8.z parent and the
+                    # 7Server-RHSCL-3.8 node with the dts-12.1 parent.
+                    ProductNode.objects.get_or_create(
+                        object_id=repo_obj.pk, parent=pv_node, defaults={"obj": repo_obj}
+                    )
                 # Saving the Channel's taxonomy automatically links it to all other models
                 # Those other models don't need to have their taxonomies saved separately
                 repo_obj.save_product_taxonomy()

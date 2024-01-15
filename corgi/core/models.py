@@ -992,6 +992,7 @@ class ComponentQuerySet(models.QuerySet):
         model_type: str = "ProductStream",
         include: bool = True,
         include_inactive_streams: bool = False,
+        include_all_variants: bool = False,
     ) -> "ComponentQuerySet":
         """Return components from latest builds in a single stream."""
 
@@ -1011,7 +1012,7 @@ class ComponentQuerySet(models.QuerySet):
         if model_type == "ProductStream":
             stream = ProductStream.objects.get(ofuri=ofuri)
             stream_variant_ofuris = stream.productvariants.values_list("ofuri", flat=True)
-            if len(stream_variant_ofuris) > 1:
+            if len(stream_variant_ofuris) > 1 and include_all_variants:
                 # calculate the latest uuids for each variant
                 for variant_ofuri in stream_variant_ofuris:
                     variant_latest_uuids = self._latest_pks_by_ofuri(
@@ -1150,7 +1151,10 @@ class ComponentQuerySet(models.QuerySet):
             # Only filter when we're actually generating a manifest
             # not when checking if there are components to manifest, since it's slow
             roots = roots.latest_components(
-                model_type="ProductStream", ofuri=ofuri, include_inactive_streams=True
+                model_type="ProductStream",
+                ofuri=ofuri,
+                include_inactive_streams=True,
+                include_all_variants=True,
             )
 
         # Order by UUID to give stable results in manifests

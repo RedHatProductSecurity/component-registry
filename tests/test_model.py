@@ -1646,7 +1646,7 @@ def test_latest_from_each_variant(stored_proc):
         ofuri=stream.ofuri, include_inactive_streams=True
     )
     assert openshift_8base in stream.components.latest_components(
-        ofuri=stream.ofuri, include_inactive_streams=True
+        ofuri=stream.ofuri, include_inactive_streams=True, include_all_variants=True
     )
 
 

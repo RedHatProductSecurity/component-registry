@@ -1,4 +1,11 @@
 {# ProductModel manifest, obj is a ProductModel subclass here #}{% extends "base_manifest.json" %}{% load base_extras %}
+{% block document %}
+  "documentDescribes": [
+    "SPDXRef-{{document_uuid}}"
+  ],
+  "documentNamespace": "https://access.redhat.com/security/data/sbom/beta/spdx/{{external_name|escapejs}}",
+  "name": "{{external_name|escapejs}}",
+{% endblock document %}
 {% block packages %}{% for component in released_components %}
     {
       "copyrightText": {% if component.copyright_text %}"{{component.copyright_text|escapejs}}"{% else %}"NOASSERTION"{% endif %},
@@ -84,9 +91,9 @@
       "licenseComments": "Licensing information is provided for individual components only at this time.",
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "NOASSERTION",
-      "name": "{{obj.name|escapejs}}",
+      "name": "{{external_name|escapejs}}",
       "packageFileName": "NOASSERTION",
-      "SPDXID": "SPDXRef-{{obj.uuid}}",
+      "SPDXID": "SPDXRef-{{document_uuid}}",
       "supplier": "Organization: Red Hat",
       "versionInfo": "{{obj.version}}"
     }{% endblock packages %}
@@ -102,7 +109,12 @@
       "spdxElementId": "SPDXRef-{{node_id}}"
     },{% endfor %}{% endif %}
     {
-      "relatedSpdxElement": "SPDXRef-{{obj.uuid}}", 
+      "relatedSpdxElement": "SPDXRef-{{document_uuid}}",
       "relationshipType": "PACKAGE_OF",
       "spdxElementId": "SPDXRef-{{component.uuid}}"
-    },{% endfor %}{% endblock relationships %}
+    },{% endfor %}
+    {
+      "relatedSpdxElement": "SPDXRef-{{external_name}}",{# Document describes the stream being manifested #}
+      "relationshipType": "DESCRIBES",
+      "spdxElementId": "SPDXRef-DOCUMENT"
+    }{% endblock relationships %}

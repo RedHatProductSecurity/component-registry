@@ -429,11 +429,13 @@ class ProductModel(TimeStampedModel):
         """Return CPEs for direct descendant variants if they exist. Otherwise, return a union
         of indirect descendant variants and descendant streams cpes_matching_patterns"""
         if isinstance(self, ProductStream):
-            hardcoded_cpes: set[str] = cpe_lookup(self.name)
+            hardcoded_cpes = cpe_lookup(self.name)
             if hardcoded_cpes:
                 return tuple(hardcoded_cpes)
         elif isinstance(self, ProductVariant):
             return (self.cpe,)  # type: ignore[attr-defined]
+        # else this is a Product, ProductVersion,
+        # or ProductStream with no hardcoded cpes
 
         direct_variant_cpes = (
             self.pnodes.get_queryset()
@@ -758,38 +760,42 @@ class ProductStream(ProductModel):
             .values_list("et_product_version", flat=True)
             .distinct()
         )
-        variants_matching_cpe_length = len(et_versions_matching_cpes)
         # There is a single matching et_product_version for this streams cpes
-        if variants_matching_cpe_length == 1:
+        if len(et_versions_matching_cpes) == 1:
             return et_versions_matching_cpes[0].upper()
-        else:
-            et_versions_with_match = (
-                ProductVariant.objects.filter(
-                    cpe__in=self.cpes, et_product_version__contains=self.version.removesuffix(".z")
-                )
-                .values_list("et_product_version", flat=True)
-                .distinct()
+        # else we have more than 1 matching Variant with distinct et_product_version values.
+        et_versions_with_match = (
+            ProductVariant.objects.filter(
+                cpe__in=self.cpes, et_product_version__contains=self.version.removesuffix(".z")
             )
-            # There is a single matching et_product_version with this streams cpes, and this
-            # stream's version in the et_product_version
-            if len(et_versions_with_match) == 1:
-                return et_versions_with_match[0].upper()
-            et_products_matching_cpes = (
-                ProductVariant.objects.filter(cpe__in=self.cpes)
-                .exclude(et_product="")
-                .values_list("et_product", flat=True)
-                .distinct()
-            )
-            # There is a single matching et_product with this stream's cpes
-            if len(et_products_matching_cpes) == 1:
-                return f"{et_products_matching_cpes[0]}-{self.version}".upper()
-            elif len(et_products_matching_cpes) > 1:
-                for et_product in et_products_matching_cpes:
-                    # There is a matching et_product where the et_product name is found in the
-                    # stream name. For example rhn_satellite_6.8 has multiple products, "SAT-TOOLS",
-                    # and "SATELLITE" use the stream's name to favour "SATELLITE" found in that case
-                    if self.name.upper().find(et_product) > 0:
-                        return f"{et_product}-{self.version}".upper()
+            .values_list("et_product_version", flat=True)
+            .distinct()
+        )
+        # There is a single matching et_product_version with this stream's cpes, and this
+        # stream's version in the et_product_version
+        if len(et_versions_with_match) == 1:
+            return et_versions_with_match[0].upper()
+        et_products_matching_cpes = (
+            ProductVariant.objects.filter(cpe__in=self.cpes)
+            .exclude(et_product="")
+            .values_list("et_product", flat=True)
+            .distinct()
+        )
+        # There is a single matching et_product with this stream's cpes
+        if len(et_products_matching_cpes) == 1:
+            # Some products such as 'Ansible Automation Platform' have spaces in the name, which
+            # does not work well in a Linux filename
+            return f"{et_products_matching_cpes[0]}-{self.version}".upper().replace(" ", "-")
+        elif len(et_products_matching_cpes) > 1:
+            for et_product in et_products_matching_cpes:
+                # There is a matching et_product where the et_product name is found in the
+                # stream name. For example rhn_satellite_6.8 has multiple products, "SAT-TOOLS",
+                # and "SATELLITE" use the stream's name to favour "SATELLITE" found in that case
+                if self.name.upper().find(et_product) > 0:
+                    # Upper case any trailing '.z' here to match the values from Errata Tool
+                    return f"{et_product}-{self.version}".upper()
+        # else there are no matching variants with this stream's cpes, could be a managed service
+        # Make the stream name upper case to matching product version names from Errata Tool
         return self.name.upper()
 
 

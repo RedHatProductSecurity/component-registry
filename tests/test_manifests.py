@@ -20,7 +20,10 @@ from .factories import (
     ComponentFactory,
     ContainerImageComponentFactory,
     ProductComponentRelationFactory,
+    ProductStreamFactory,
     ProductStreamNodeFactory,
+    ProductVariantFactory,
+    ProductVariantNodeFactory,
     SoftwareBuildFactory,
     SrpmComponentFactory,
     UpstreamComponentFactory,
@@ -169,6 +172,8 @@ def test_slim_rpm_in_containers_manifest(stored_proc):
     stream_manifest = stream.manifest
     manifest = json.loads(stream_manifest)
 
+    document_uuid = manifest["documentDescribes"][0]
+
     # One package for each component
     # One (and only one) package for each distinct provided
     # Plus one package for the stream itself
@@ -202,13 +207,13 @@ def test_slim_rpm_in_containers_manifest(stored_proc):
         component = containers[1]
 
     document_describes_product = {
-        "relatedSpdxElement": f"SPDXRef-{stream.uuid}",
+        "relatedSpdxElement": document_uuid,
         "relationshipType": "DESCRIBES",
         "spdxElementId": "SPDXRef-DOCUMENT",
     }
 
     component_is_package_of_product = {
-        "relatedSpdxElement": f"SPDXRef-{stream.uuid}",
+        "relatedSpdxElement": document_uuid,
         "relationshipType": "PACKAGE_OF",
         "spdxElementId": f"SPDXRef-{component.uuid}",
     }
@@ -233,6 +238,8 @@ def test_product_manifest_excludes_unreleased_components(stored_proc):
 
     manifest = json.loads(stream.manifest)
 
+    document_uuid = manifest["documentDescribes"][0]
+
     # No released components linked to this product
     num_components = len(stream.components.manifest_components(ofuri=stream.get_ofuri()))
     assert num_components == 0
@@ -246,15 +253,15 @@ def test_product_manifest_excludes_unreleased_components(stored_proc):
     # Only "component" is actually the product
     product_data = manifest["packages"][0]
 
-    assert product_data["SPDXID"] == f"SPDXRef-{stream.uuid}"
-    assert product_data["name"] == stream.name
+    assert product_data["SPDXID"] == document_uuid
+    assert product_data["name"] == stream.external_name
     assert product_data["externalRefs"][0]["referenceLocator"] == "cpe:/o:redhat:enterprise_linux:8"
 
     # Only one "document describes product" relationship for the whole document at the end
     assert len(manifest["relationships"]) == 1
 
     assert manifest["relationships"][0] == {
-        "relatedSpdxElement": f"SPDXRef-{stream.uuid}",
+        "relatedSpdxElement": document_uuid,
         "relationshipType": "DESCRIBES",
         "spdxElementId": "SPDXRef-DOCUMENT",
     }
@@ -363,6 +370,8 @@ def test_product_manifest_properties(stored_proc):
 
     manifest = json.loads(stream.manifest)
 
+    document_uuid = manifest["documentDescribes"][0]
+
     # One component linked to this product
     num_components = len(stream.components.manifest_components(ofuri=stream.ofuri))
     assert num_components == 1
@@ -387,17 +396,17 @@ def test_product_manifest_properties(stored_proc):
     )
     assert component_data["externalRefs"][-1]["referenceLocator"] == component.purl
 
-    assert product_data["SPDXID"] == f"SPDXRef-{stream.uuid}"
-    assert product_data["name"] == stream.name
+    assert product_data["SPDXID"] == f"{document_uuid}"
+    assert product_data["name"] == stream.external_name
 
     document_describes_product = {
-        "relatedSpdxElement": f"SPDXRef-{stream.uuid}",
+        "relatedSpdxElement": f"{document_uuid}",
         "relationshipType": "DESCRIBES",
         "spdxElementId": "SPDXRef-DOCUMENT",
     }
 
     component_is_package_of_product = {
-        "relatedSpdxElement": f"SPDXRef-{stream.uuid}",
+        "relatedSpdxElement": f"{document_uuid}",
         "relationshipType": "PACKAGE_OF",
         "spdxElementId": f"SPDXRef-{component.uuid}",
     }
@@ -460,6 +469,12 @@ def test_component_manifest_properties():
     component, _, provided, dev_provided = setup_products_and_components_provides()
 
     manifest = json.loads(component.manifest)
+
+    document_namespace_prefix = "https://access.redhat.com/security/data/sbom/beta/spdx/"
+    assert (
+        manifest["documentNamespace"]
+        == f"{document_namespace_prefix}{component.name}-{component.version}"
+    )
 
     num_provided = len(component.get_provides_pks())
 

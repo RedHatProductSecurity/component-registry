@@ -1,5 +1,6 @@
 import json
 import logging
+import uuid
 from abc import ABC, abstractmethod
 
 import jsonschema
@@ -28,7 +29,8 @@ class ManifestFile(ABC):
         self.obj = obj  # Model instance to manifest (either Component or Product)
 
     def render_content(self) -> str:
-        kwargs_for_template = {"obj": self.obj}
+        document_namespace = f"{self.obj.name.replace('/', '_')}-{self.obj.version}"
+        kwargs_for_template = {"obj": self.obj, "namespace": document_namespace}
         content = render_to_string(self.file_name, kwargs_for_template)
 
         return self._validate_and_clean(content)
@@ -71,9 +73,11 @@ class ProductManifestFile(ManifestFile):
         distinct_provides = self.obj.provides_queryset  # type: ignore[attr-defined]
         distinct_upstreams = self.obj.upstreams_queryset  # type: ignore[attr-defined]
         cpes = self.obj.cpes  # type: ignore[attr-defined]
-
+        external_name = self.obj.external_name  # type: ignore[attr-defined]
         kwargs_for_template = {
             "obj": self.obj,
+            "external_name": external_name,
+            "document_uuid": uuid.uuid4(),
             "released_components": released_components,
             "distinct_provides": distinct_provides,
             "distinct_upstreams": distinct_upstreams,

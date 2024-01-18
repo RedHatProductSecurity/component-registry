@@ -7,19 +7,10 @@
     "licenseListVersion": "3.8"
   },
   "dataLicense": "CC0-1.0",
-  "documentDescribes": [
-    "SPDXRef-{{obj.uuid}}"
-  ],
-  "documentNamespace": "https://access.redhat.com/security/data/sbom/beta/spdx/{{obj.name|escapejs}}-{{obj.uuid}}",
-  "name": "{{obj.name|escapejs}}",
+  {% block document %}{% endblock %}
   "packages": [{% block packages %}{% endblock %}
   ],
   "relationships": [{% block relationships %}{% endblock %}
-    {
-      "relatedSpdxElement": "SPDXRef-{{obj.uuid}}",{# Document describes stream or component being manifested #}
-      "relationshipType": "DESCRIBES",
-      "spdxElementId": "SPDXRef-DOCUMENT"
-    }
   ],
   "SPDXID": "SPDXRef-DOCUMENT",
   "spdxVersion": "SPDX-2.2"

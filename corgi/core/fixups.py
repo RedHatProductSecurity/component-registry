@@ -97,9 +97,8 @@ def cpe_lookup(product_stream_name: str) -> set[str]:
 
 
 external_names = {
-    # Can't parse the stream version properly
+    # Can't parse the stream version properly due to the version not being after the last dash
     "openstack-13-els": "RHEL-7-OS-13-ELS",
-    "rhel-m-4.4": "RHEL-8-RHEV-4",
 }
 
 
@@ -110,6 +109,6 @@ def external_name_lookup(product_stream_name: str) -> str:
     # 'mtr-' streams share the 'RHEL-8-MTR-1' variant, but have distinct brew_tags
     # 'quay-' streams share the 'QUAY-3-RHEL-8' variant, but have distinct brew_tags
     for stream_prefix in stream_prefixes:
-        if product_stream_name.startswith(stream_prefix):
+        if product_stream_name.lower().startswith(stream_prefix):
             return product_stream_name.upper()
     return external_names.get(product_stream_name, "")

@@ -704,8 +704,8 @@ class ProductStream(ProductModel):
 
     @property
     def manifest(self) -> str:
-        """Return an SPDX-style manifest in JSON format."""
-        return ProductManifestFile(self).render_content()
+        """Return an SPDX-style manifest in JSON format"""
+        return ProductManifestFile(self).render_content()[0]
 
     @property
     def provides_queryset(self, using: str = "read_only") -> QuerySet["Component"]:
@@ -2130,7 +2130,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     @property
     def manifest(self) -> str:
         """Return an SPDX-style manifest in JSON format."""
-        return ComponentManifestFile(self).render_content()
+        return ComponentManifestFile(self).render_content()[0]
 
     def get_provides_pks(self, include_dev: bool = True, using: str = "read_only") -> set[str]:
         """Return Component PKs which are PROVIDES descendants of this Component, for taxonomies"""

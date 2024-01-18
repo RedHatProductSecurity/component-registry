@@ -3,7 +3,7 @@
   "documentDescribes": [
     "SPDXRef-{{obj.uuid}}"
   ],
-  "documentNamespace": "https://access.redhat.com/security/data/sbom/beta/spdx/{{namespace|escapejs}}",
+  "documentNamespace": "https://access.redhat.com/security/data/sbom/beta/spdx/{{document_namespace|escapejs}}",
   "name": "{{obj.name|escapejs}}",
 {% endblock document %}
 {% block packages %}{% for component in obj.provides_queryset %}

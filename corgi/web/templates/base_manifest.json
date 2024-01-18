@@ -1,6 +1,6 @@
 {# Used as the base of all manifest.json templates, obj is either a Component or a ProductModel subclass #}{
   "creationInfo": {
-    "created": "{% now 'Y-m-d' %}T{% now 'H:i:00' %}Z",
+    "created": "{{ created_at }}",
     "creators": [
       "Organization: Red Hat Product Security (secalert@redhat.com)"
     ],

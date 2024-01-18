@@ -3,8 +3,8 @@ import logging
 from json import JSONDecodeError
 
 import pytest
+from django_celery_results.models import TaskResult
 
-from corgi.core.files import ProductManifestFile
 from corgi.core.fixups import cpe_lookup
 from corgi.core.models import (
     Component,
@@ -12,6 +12,7 @@ from corgi.core.models import (
     ProductComponentRelation,
     ProductNode,
 )
+from corgi.tasks.manifest import same_contents
 from corgi.web.templatetags.base_extras import provided_relationship
 
 from .conftest import setup_product
@@ -73,8 +74,7 @@ def test_manifests_exclude_source_container(stored_proc):
     """Test that container sources are excluded packages"""
     containers, stream, _ = setup_products_and_rpm_in_containers()
     assert len(containers) == 3
-    manifest_str = ProductManifestFile(stream).render_content()
-    manifest = json.loads(manifest_str)
+    manifest = json.loads(stream.manifest)
     components = manifest["packages"]
     # Two containers, one RPM, and a product are included
     assert len(components) == 4
@@ -100,8 +100,7 @@ def test_manifests_exclude_bad_golang_components(stored_proc):
     containers[0].save_component_taxonomy()
     assert containers[0].provides.filter(name=bad_golang.name).exists()
 
-    manifest_str = ProductManifestFile(stream).render_content()
-    manifest = json.loads(manifest_str)
+    manifest = json.loads(stream.manifest)
     components = manifest["packages"]
     # Two containers, one RPM, and a product are included
     assert len(components) == 4, components
@@ -717,3 +716,59 @@ def test_provided_relationships():
     assert provided_relationship(purl, node_type) == "CONTAINED_BY"
     purl = f"pkg:{Component.Type.RPM.lower()}/name@version"
     assert provided_relationship(purl, node_type) == "CONTAINED_BY"
+
+
+def test_same_contents(stored_proc):
+    existing_file = "tests/data/manifest/sbom.json"
+    cpe = "cpe:/a:redhat:external_name:1.0::el8"
+    external_name = "external-name-1.0"
+    stream = ProductStreamFactory(name=external_name, version="1.0")
+    TaskResult.objects.create(
+        task_name="corgi.tasks.manifest.cpu_update_ps_manifest",
+        task_args=f"\"('{external_name}', 'EXTERNAL-NAME-1.0')\"",
+        status="SUCCESS",
+        result='[true, "2024-01-22T01:23:00Z", "SPDXRef-0cb13029-3f4e-49ed-a960-8aad455425ef"]',
+    )
+    stream_node = ProductStreamNodeFactory(obj=stream)
+    variant = ProductVariantFactory(cpe=cpe)
+    ProductVariantNodeFactory(obj=variant, parent=stream_node)
+    stream.refresh_from_db()
+
+    assert same_contents(existing_file, stream)[0]
+
+
+def test_different_contents(stored_proc):
+    missing_file = "tests/data/manifest/missing.json"
+    external_name = "external-name-1.0"
+    stream = ProductStreamFactory(name=external_name, version="1.0")
+    assert not same_contents(missing_file, stream)[0]
+
+    # test missing result
+    existing_file = "tests/data/manifest/sbom.json"
+
+    result = same_contents(existing_file, stream)
+    for i in range(0, 3):
+        assert not result[i]
+
+    # test different content
+    existing_file = "tests/data/manifest/sbom.json"
+    TaskResult.objects.create(
+        task_name="corgi.tasks.manifest.cpu_update_ps_manifest",
+        task_args=f"\"('{external_name}', 'EXTERNAL-NAME-1.0')\"",
+        status="SUCCESS",
+        result='[true, "2024-01-22T01:23:00Z", "SPDXRef-0cb13029-3f4e-49ed-a960-8aad455425ef"]',
+    )
+    # This allows the ofuri value to work during manifest creation
+    ProductStreamNodeFactory(obj=stream)
+    stream.refresh_from_db()
+    # Don't create and link a variant so there is not cpe value in the content (a mismatch)
+
+    result = same_contents(existing_file, stream)
+    assert not result[0]
+    new_content = result[1]
+    created_at = result[2]
+    document_uuid = result[3]
+    assert created_at
+    assert document_uuid
+    assert created_at in new_content
+    assert document_uuid in new_content

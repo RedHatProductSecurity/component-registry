@@ -1,7 +1,7 @@
 {# ProductModel manifest, obj is a ProductModel subclass here #}{% extends "base_manifest.json" %}{% load base_extras %}
 {% block document %}
   "documentDescribes": [
-    "SPDXRef-{{document_uuid}}"
+    "{{document_uuid}}"
   ],
   "documentNamespace": "https://access.redhat.com/security/data/sbom/beta/spdx/{{external_name|escapejs}}",
   "name": "{{external_name|escapejs}}",
@@ -93,7 +93,7 @@
       "licenseDeclared": "NOASSERTION",
       "name": "{{external_name|escapejs}}",
       "packageFileName": "NOASSERTION",
-      "SPDXID": "SPDXRef-{{document_uuid}}",
+      "SPDXID": "{{document_uuid}}",
       "supplier": "Organization: Red Hat",
       "versionInfo": "{{obj.version}}"
     }{% endblock packages %}
@@ -109,12 +109,12 @@
       "spdxElementId": "SPDXRef-{{node_id}}"
     },{% endfor %}{% endif %}
     {
-      "relatedSpdxElement": "SPDXRef-{{document_uuid}}",
+      "relatedSpdxElement": "{{document_uuid}}",
       "relationshipType": "PACKAGE_OF",
       "spdxElementId": "SPDXRef-{{component.uuid}}"
     },{% endfor %}
     {
-      "relatedSpdxElement": "SPDXRef-{{external_name}}",{# Document describes the stream being manifested #}
+      "relatedSpdxElement": "{{document_uuid}}",{# Document describes the stream being manifested #}
       "relationshipType": "DESCRIBES",
       "spdxElementId": "SPDXRef-DOCUMENT"
     }{% endblock relationships %}

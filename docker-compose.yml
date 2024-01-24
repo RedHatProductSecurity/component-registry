@@ -225,5 +225,14 @@ services:
       - .:/opt/app-root/src:z
       - /opt/app-root/src/venv/
 
+  locust:
+    container_name: locust
+    image: docker.io/locustio/locust:2.20.1
+    ports:
+      - '9000:8089'
+    volumes:
+      - ${PWD}/perf:/mnt/locust:z
+    command: --class-picker -f /mnt/locust -H http://corgi-nginx:8080 --web-host 0.0.0.0  --modern-ui
+
 volumes:
   corgi-pg-data:

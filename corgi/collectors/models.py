@@ -143,3 +143,15 @@ class CollectorPyxisImageRepository(CollectorPyxisModel):
 
     def __str__(self):
         return f"{self.registry}/{self.name}"
+
+
+class CollectorSpdxLicense(models.Model):
+    uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    identifier = models.CharField(max_length=50, unique=True)
+    name = models.CharField(max_length=200)
+    reference = models.CharField(max_length=200)
+    details_url = models.CharField(max_length=200)
+    meta_attr = models.JSONField(default=dict)
+
+    def __str__(self):
+        return self.identifier

@@ -66,6 +66,7 @@ def setup_periodic_tasks(sender, **kwargs):
         # task at all: https://github.com/celery/django-celery-beat/issues/221
         upsert_cron_task("errata_tool", "load_et_products", hour=0, minute=0)
         upsert_cron_task("prod_defs", "update_products", hour=1, minute=0)
+        upsert_cron_task("licenses", "update_spdx_license_list", hour=1, minute=30)
         upsert_cron_task("pulp", "update_cdn_repo_channels", hour=2, minute=0)
         upsert_cron_task("rhel_compose", "save_composes", hour=3, minute=0)
         upsert_cron_task("rhel_compose", "get_builds", hour=4, minute=0)

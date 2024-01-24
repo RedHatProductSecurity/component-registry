@@ -27,6 +27,7 @@ from corgi.core.constants import (
     SRPM_CONDITION,
 )
 from corgi.core.files import ComponentManifestFile, ProductManifestFile
+from corgi.core.fixups import cpe_lookup, external_name_lookup
 from corgi.core.mixins import TimeStampedModel
 
 logger = logging.getLogger(__name__)
@@ -427,8 +428,14 @@ class ProductModel(TimeStampedModel):
     def cpes(self) -> tuple[str, ...]:
         """Return CPEs for direct descendant variants if they exist. Otherwise, return a union
         of indirect descendant variants and descendant streams cpes_matching_patterns"""
-        if self is ProductVariant:
+        if isinstance(self, ProductStream):
+            hardcoded_cpes = cpe_lookup(self.name)
+            if hardcoded_cpes:
+                return tuple(hardcoded_cpes)
+        elif isinstance(self, ProductVariant):
             return (self.cpe,)  # type: ignore[attr-defined]
+        # else this is a Product, ProductVersion,
+        # or ProductStream with no hardcoded cpes
 
         direct_variant_cpes = (
             self.pnodes.get_queryset()
@@ -697,8 +704,8 @@ class ProductStream(ProductModel):
 
     @property
     def manifest(self) -> str:
-        """Return an SPDX-style manifest in JSON format."""
-        return ProductManifestFile(self).render_content()
+        """Return an SPDX-style manifest in JSON format"""
+        return ProductManifestFile(self).render_content()[0]
 
     @property
     def provides_queryset(self, using: str = "read_only") -> QuerySet["Component"]:
@@ -740,6 +747,57 @@ class ProductStream(ProductModel):
     def cpes_from_brew_tags(self):
         return self.distinct_inferred_variant_cpes()
 
+    @property
+    def external_name(self) -> str:
+        constant_name = external_name_lookup(self.name)
+        if constant_name:
+            return constant_name
+        # streams with composes (like rhel-8.8.0) do not have attached Variants, so we need to
+        # search all variants here, not just this stream's productvariants
+        et_versions_matching_cpes = (
+            ProductVariant.objects.filter(cpe__in=self.cpes)
+            .exclude(et_product_version="")
+            .values_list("et_product_version", flat=True)
+            .distinct()
+        )
+        # There is a single matching et_product_version for this streams cpes
+        if len(et_versions_matching_cpes) == 1:
+            return et_versions_matching_cpes[0].upper()
+        # else we have more than 1 matching Variant with distinct et_product_version values.
+        et_versions_with_match = (
+            ProductVariant.objects.filter(
+                cpe__in=self.cpes, et_product_version__contains=self.version.removesuffix(".z")
+            )
+            .values_list("et_product_version", flat=True)
+            .distinct()
+        )
+        # There is a single matching et_product_version with this stream's cpes, and this
+        # stream's version in the et_product_version
+        if len(et_versions_with_match) == 1:
+            return et_versions_with_match[0].upper()
+        et_products_matching_cpes = (
+            ProductVariant.objects.filter(cpe__in=self.cpes)
+            .exclude(et_product="")
+            .values_list("et_product", flat=True)
+            .distinct()
+        )
+        # There is a single matching et_product with this stream's cpes
+        if len(et_products_matching_cpes) == 1:
+            # Some products such as 'Ansible Automation Platform' have spaces in the name, which
+            # does not work well in a Linux filename
+            return f"{et_products_matching_cpes[0]}-{self.version}".upper().replace(" ", "-")
+        elif len(et_products_matching_cpes) > 1:
+            for et_product in et_products_matching_cpes:
+                # There is a matching et_product where the et_product name is found in the
+                # stream name. For example rhn_satellite_6.8 has multiple products, "SAT-TOOLS",
+                # and "SATELLITE" use the stream's name to favour "SATELLITE" found in that case
+                if self.name.upper().find(et_product) > 0:
+                    # Upper case any trailing '.z' here to match the values from Errata Tool
+                    return f"{et_product}-{self.version}".upper()
+        # else there are no matching variants with this stream's cpes, could be a managed service
+        # Make the stream name upper case to matching product version names from Errata Tool
+        return self.name.upper()
+
 
 class ProductStreamTag(Tag):
     tagged_model = models.ForeignKey(ProductStream, on_delete=models.CASCADE, related_name="tags")
@@ -753,6 +811,8 @@ class ProductVariant(ProductModel):
     """
 
     cpe = models.CharField(max_length=1000, default="")
+    et_product = models.CharField(max_length=1000, default="")
+    et_product_version = models.CharField(max_length=1000, default="")
 
     products = models.ForeignKey(
         "Product", on_delete=models.CASCADE, related_name="productvariants", null=True
@@ -2070,7 +2130,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     @property
     def manifest(self) -> str:
         """Return an SPDX-style manifest in JSON format."""
-        return ComponentManifestFile(self).render_content()
+        return ComponentManifestFile(self).render_content()[0]
 
     def get_provides_pks(self, include_dev: bool = True, using: str = "read_only") -> set[str]:
         """Return Component PKs which are PROVIDES descendants of this Component, for taxonomies"""

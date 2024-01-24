@@ -1,4 +1,11 @@
 {# Component manifest, obj is a Component here #}{% extends "base_manifest.json" %}{% load base_extras %}
+{% block document %}
+  "documentDescribes": [
+    "SPDXRef-{{obj.uuid}}"
+  ],
+  "documentNamespace": "https://access.redhat.com/security/data/sbom/beta/spdx/{{document_namespace|escapejs}}",
+  "name": "{{obj.name|escapejs}}",
+{% endblock document %}
 {% block packages %}{% for component in obj.provides_queryset %}
     {
       "copyrightText": {% if component.copyright_text %}"{{component.copyright_text|escapejs}}"{% else %}"NOASSERTION"{% endif %},
@@ -79,4 +86,9 @@
       "relatedSpdxElement": "SPDXRef-{{obj.uuid}}",
       "relationshipType": "GENERATES",
       "spdxElementId": "SPDXRef-{{node_id}}"
-    },{% endfor %}{% endif %}{% endblock relationships %}
+    },{% endfor %}{% endif %}
+    {
+      "relatedSpdxElement": "SPDXRef-{{obj.uuid}}",{# Document describes the component being manifested #}
+      "relationshipType": "DESCRIBES",
+      "spdxElementId": "SPDXRef-DOCUMENT"
+    }{% endblock relationships %}

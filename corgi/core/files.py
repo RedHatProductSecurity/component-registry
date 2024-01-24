@@ -1,12 +1,13 @@
 import json
 import logging
+import uuid
 from abc import ABC, abstractmethod
+from datetime import datetime
 
 import jsonschema
 from django.conf import settings
 from django.template.loader import render_to_string
 
-from corgi.core.fixups import cpe_lookup
 from corgi.core.mixins import TimeStampedModel
 
 logger = logging.getLogger(__name__)
@@ -28,11 +29,29 @@ class ManifestFile(ABC):
     def __init__(self, obj: TimeStampedModel) -> None:
         self.obj = obj  # Model instance to manifest (either Component or Product)
 
-    def render_content(self) -> str:
-        kwargs_for_template = {"obj": self.obj}
-        content = render_to_string(self.file_name, kwargs_for_template)
+    @staticmethod
+    def get_created_at():
+        dt = datetime.now()
+        return dt.strftime("%Y-%m-%dT%H:%M:00Z")
 
-        return self._validate_and_clean(content)
+    @staticmethod
+    def get_document_uuid():
+        return f"SPDXRef-{uuid.uuid4()}"
+
+    def render_content(self, created_at: str = "", document_uuid: str = "") -> tuple[str, str, str]:
+        if not created_at:
+            created_at = self.get_created_at()
+        document_namespace = (
+            f"{self.obj.name.replace('/', '_')}-{self.obj.version}"  # type: ignore[attr-defined]
+        )
+        kwargs_for_template = {
+            "obj": self.obj,
+            "document_namespace": document_namespace,
+            "created_at": created_at,
+        }
+        content = render_to_string(self.file_name, kwargs_for_template)
+        cleaned_content = self._validate_and_clean(content)
+        return cleaned_content, created_at, self.obj.pk
 
     @classmethod
     def _validate_and_clean(cls, content: str) -> str:
@@ -65,16 +84,23 @@ class ProductManifestFile(ManifestFile):
     # We can subclass this to handle different Product subclasses with different properties
     # Or to handle different ways of generating manifest properties from Product properties
 
-    def render_content(self) -> str:
+    def render_content(self, created_at: str = "", document_uuid: str = "") -> tuple[str, str, str]:
         components = self.obj.components  # type: ignore[attr-defined]
         # As this is a ProductManifestFile so we can assume self.obj has an ofuri
         released_components = components.manifest_components(ofuri=self.obj.ofuri)  # type: ignore[attr-defined] # noqa: E501
         distinct_provides = self.obj.provides_queryset  # type: ignore[attr-defined]
         distinct_upstreams = self.obj.upstreams_queryset  # type: ignore[attr-defined]
-        cpes = self._get_stream_cpes(self.obj)
-
+        cpes = self.obj.cpes  # type: ignore[attr-defined]
+        external_name = self.obj.external_name  # type: ignore[attr-defined]
+        if not created_at:
+            created_at = self.get_created_at()
+        if not document_uuid:
+            document_uuid = f"SPDXRef-{uuid.uuid4()}"
         kwargs_for_template = {
             "obj": self.obj,
+            "external_name": external_name,
+            "document_uuid": document_uuid,
+            "created_at": created_at,
             "released_components": released_components,
             "distinct_provides": distinct_provides,
             "distinct_upstreams": distinct_upstreams,
@@ -82,12 +108,6 @@ class ProductManifestFile(ManifestFile):
         }
 
         content = render_to_string(self.file_name, kwargs_for_template)
+        cleaned_content = self._validate_and_clean(content)
 
-        return self._validate_and_clean(content)
-
-    @classmethod
-    def _get_stream_cpes(cls, model: TimeStampedModel) -> set[str]:
-        hardcoded_cpes = cpe_lookup(model.name)  # type: ignore[attr-defined]
-        if hardcoded_cpes:
-            return hardcoded_cpes
-        return set(model.cpes)  # type: ignore[attr-defined]
+        return cleaned_content, created_at, document_uuid

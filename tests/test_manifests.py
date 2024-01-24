@@ -3,8 +3,8 @@ import logging
 from json import JSONDecodeError
 
 import pytest
+from django_celery_results.models import TaskResult
 
-from corgi.core.files import ProductManifestFile
 from corgi.core.fixups import cpe_lookup
 from corgi.core.models import (
     Component,
@@ -12,6 +12,7 @@ from corgi.core.models import (
     ProductComponentRelation,
     ProductNode,
 )
+from corgi.tasks.manifest import same_contents
 from corgi.web.templatetags.base_extras import provided_relationship
 
 from .conftest import setup_product
@@ -20,7 +21,10 @@ from .factories import (
     ComponentFactory,
     ContainerImageComponentFactory,
     ProductComponentRelationFactory,
+    ProductStreamFactory,
     ProductStreamNodeFactory,
+    ProductVariantFactory,
+    ProductVariantNodeFactory,
     SoftwareBuildFactory,
     SrpmComponentFactory,
     UpstreamComponentFactory,
@@ -70,8 +74,7 @@ def test_manifests_exclude_source_container(stored_proc):
     """Test that container sources are excluded packages"""
     containers, stream, _ = setup_products_and_rpm_in_containers()
     assert len(containers) == 3
-    manifest_str = ProductManifestFile(stream).render_content()
-    manifest = json.loads(manifest_str)
+    manifest = json.loads(stream.manifest)
     components = manifest["packages"]
     # Two containers, one RPM, and a product are included
     assert len(components) == 4
@@ -97,8 +100,7 @@ def test_manifests_exclude_bad_golang_components(stored_proc):
     containers[0].save_component_taxonomy()
     assert containers[0].provides.filter(name=bad_golang.name).exists()
 
-    manifest_str = ProductManifestFile(stream).render_content()
-    manifest = json.loads(manifest_str)
+    manifest = json.loads(stream.manifest)
     components = manifest["packages"]
     # Two containers, one RPM, and a product are included
     assert len(components) == 4, components
@@ -169,6 +171,8 @@ def test_slim_rpm_in_containers_manifest(stored_proc):
     stream_manifest = stream.manifest
     manifest = json.loads(stream_manifest)
 
+    document_uuid = manifest["documentDescribes"][0]
+
     # One package for each component
     # One (and only one) package for each distinct provided
     # Plus one package for the stream itself
@@ -202,13 +206,13 @@ def test_slim_rpm_in_containers_manifest(stored_proc):
         component = containers[1]
 
     document_describes_product = {
-        "relatedSpdxElement": f"SPDXRef-{stream.uuid}",
+        "relatedSpdxElement": document_uuid,
         "relationshipType": "DESCRIBES",
         "spdxElementId": "SPDXRef-DOCUMENT",
     }
 
     component_is_package_of_product = {
-        "relatedSpdxElement": f"SPDXRef-{stream.uuid}",
+        "relatedSpdxElement": document_uuid,
         "relationshipType": "PACKAGE_OF",
         "spdxElementId": f"SPDXRef-{component.uuid}",
     }
@@ -233,6 +237,8 @@ def test_product_manifest_excludes_unreleased_components(stored_proc):
 
     manifest = json.loads(stream.manifest)
 
+    document_uuid = manifest["documentDescribes"][0]
+
     # No released components linked to this product
     num_components = len(stream.components.manifest_components(ofuri=stream.get_ofuri()))
     assert num_components == 0
@@ -246,15 +252,15 @@ def test_product_manifest_excludes_unreleased_components(stored_proc):
     # Only "component" is actually the product
     product_data = manifest["packages"][0]
 
-    assert product_data["SPDXID"] == f"SPDXRef-{stream.uuid}"
-    assert product_data["name"] == stream.name
+    assert product_data["SPDXID"] == document_uuid
+    assert product_data["name"] == stream.external_name
     assert product_data["externalRefs"][0]["referenceLocator"] == "cpe:/o:redhat:enterprise_linux:8"
 
     # Only one "document describes product" relationship for the whole document at the end
     assert len(manifest["relationships"]) == 1
 
     assert manifest["relationships"][0] == {
-        "relatedSpdxElement": f"SPDXRef-{stream.uuid}",
+        "relatedSpdxElement": document_uuid,
         "relationshipType": "DESCRIBES",
         "spdxElementId": "SPDXRef-DOCUMENT",
     }
@@ -363,6 +369,8 @@ def test_product_manifest_properties(stored_proc):
 
     manifest = json.loads(stream.manifest)
 
+    document_uuid = manifest["documentDescribes"][0]
+
     # One component linked to this product
     num_components = len(stream.components.manifest_components(ofuri=stream.ofuri))
     assert num_components == 1
@@ -387,17 +395,17 @@ def test_product_manifest_properties(stored_proc):
     )
     assert component_data["externalRefs"][-1]["referenceLocator"] == component.purl
 
-    assert product_data["SPDXID"] == f"SPDXRef-{stream.uuid}"
-    assert product_data["name"] == stream.name
+    assert product_data["SPDXID"] == f"{document_uuid}"
+    assert product_data["name"] == stream.external_name
 
     document_describes_product = {
-        "relatedSpdxElement": f"SPDXRef-{stream.uuid}",
+        "relatedSpdxElement": f"{document_uuid}",
         "relationshipType": "DESCRIBES",
         "spdxElementId": "SPDXRef-DOCUMENT",
     }
 
     component_is_package_of_product = {
-        "relatedSpdxElement": f"SPDXRef-{stream.uuid}",
+        "relatedSpdxElement": f"{document_uuid}",
         "relationshipType": "PACKAGE_OF",
         "spdxElementId": f"SPDXRef-{component.uuid}",
     }
@@ -460,6 +468,12 @@ def test_component_manifest_properties():
     component, _, provided, dev_provided = setup_products_and_components_provides()
 
     manifest = json.loads(component.manifest)
+
+    document_namespace_prefix = "https://access.redhat.com/security/data/sbom/beta/spdx/"
+    assert (
+        manifest["documentNamespace"]
+        == f"{document_namespace_prefix}{component.name}-{component.version}"
+    )
 
     num_provided = len(component.get_provides_pks())
 
@@ -702,3 +716,59 @@ def test_provided_relationships():
     assert provided_relationship(purl, node_type) == "CONTAINED_BY"
     purl = f"pkg:{Component.Type.RPM.lower()}/name@version"
     assert provided_relationship(purl, node_type) == "CONTAINED_BY"
+
+
+def test_same_contents(stored_proc):
+    existing_file = "tests/data/manifest/sbom.json"
+    cpe = "cpe:/a:redhat:external_name:1.0::el8"
+    external_name = "external-name-1.0"
+    stream = ProductStreamFactory(name=external_name, version="1.0")
+    TaskResult.objects.create(
+        task_name="corgi.tasks.manifest.cpu_update_ps_manifest",
+        task_args=f"\"('{external_name}', 'EXTERNAL-NAME-1.0')\"",
+        status="SUCCESS",
+        result='[true, "2024-01-22T01:23:00Z", "SPDXRef-0cb13029-3f4e-49ed-a960-8aad455425ef"]',
+    )
+    stream_node = ProductStreamNodeFactory(obj=stream)
+    variant = ProductVariantFactory(cpe=cpe)
+    ProductVariantNodeFactory(obj=variant, parent=stream_node)
+    stream.refresh_from_db()
+
+    assert same_contents(existing_file, stream)[0]
+
+
+def test_different_contents(stored_proc):
+    missing_file = "tests/data/manifest/missing.json"
+    external_name = "external-name-1.0"
+    stream = ProductStreamFactory(name=external_name, version="1.0")
+    assert not same_contents(missing_file, stream)[0]
+
+    # test missing result
+    existing_file = "tests/data/manifest/sbom.json"
+
+    result = same_contents(existing_file, stream)
+    for i in range(0, 3):
+        assert not result[i]
+
+    # test different content
+    existing_file = "tests/data/manifest/sbom.json"
+    TaskResult.objects.create(
+        task_name="corgi.tasks.manifest.cpu_update_ps_manifest",
+        task_args=f"\"('{external_name}', 'EXTERNAL-NAME-1.0')\"",
+        status="SUCCESS",
+        result='[true, "2024-01-22T01:23:00Z", "SPDXRef-0cb13029-3f4e-49ed-a960-8aad455425ef"]',
+    )
+    # This allows the ofuri value to work during manifest creation
+    ProductStreamNodeFactory(obj=stream)
+    stream.refresh_from_db()
+    # Don't create and link a variant so there is not cpe value in the content (a mismatch)
+
+    result = same_contents(existing_file, stream)
+    assert not result[0]
+    new_content = result[1]
+    created_at = result[2]
+    document_uuid = result[3]
+    assert created_at
+    assert document_uuid
+    assert created_at in new_content
+    assert document_uuid in new_content

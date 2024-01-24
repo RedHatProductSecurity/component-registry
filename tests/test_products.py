@@ -308,6 +308,8 @@ def test_inferred_and_direct_variants(requests_mock):
     update_products()
 
     variant = ProductVariant.objects.get(name=variant_name)
+    assert variant.et_product == "RHBQ"
+    assert variant.et_product_version == "Middleware-RHBQ-2.13"
     assert variant.pnodes.count() == 1
     assert list(variant.pnodes.values_list("node_type", flat=True)) == [
         ProductNode.ProductNodeType.DIRECT
@@ -636,9 +638,13 @@ brew_tag_streams = [
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 @pytest.mark.parametrize("variant_name,cpe,brew_tag,stream_name", brew_tag_streams)
 def test_brew_tag_matching(variant_name, cpe, brew_tag, stream_name, requests_mock):
-    et_product = CollectorErrataProduct.objects.create(et_id=1, name="product")
+    product_name = "product"
+    product_version_name = "product_version"
+    et_product = CollectorErrataProduct.objects.create(
+        et_id=1, name=product_name, short_name=product_name
+    )
     et_product_version = CollectorErrataProductVersion.objects.create(
-        et_id=10, name="product_version", product=et_product, brew_tags=[brew_tag]
+        et_id=10, name=product_version_name, product=et_product, brew_tags=[brew_tag]
     )
     CollectorErrataProductVariant.objects.create(
         et_id=100, name=variant_name, product_version=et_product_version, cpe=cpe
@@ -654,6 +660,10 @@ def test_brew_tag_matching(variant_name, cpe, brew_tag, stream_name, requests_mo
     stream = ProductStream.objects.get(name=stream_name)
     assert stream.productvariants.get_queryset().count() == 1
     assert list(stream.productvariants.values_list("cpe", flat=True)) == [cpe]
+    assert list(stream.productvariants.values_list("et_product", flat=True)) == [product_name]
+    assert list(stream.productvariants.values_list("et_product_version", flat=True)) == [
+        product_version_name
+    ]
 
 
 @pytest.mark.django_db
@@ -661,9 +671,16 @@ def test_parse_variants_from_brew_tags():
     # "quay-3.8-rhel-8", , "quay-3.9-rhel-8",
     brew_tag = "quay-3.9-rhel-8-container"
     brew_tags = [brew_tag]
-    et_product = CollectorErrataProduct.objects.create(et_id=142, name="Red Hat Quay")
+    product_name = "Quay"
+    version_name = "Quay-3-RHEL-8"
+    et_product = CollectorErrataProduct.objects.create(
+        et_id=142, name="Red Hat Quay", short_name=product_name
+    )
     et_product_version = CollectorErrataProductVersion.objects.create(
-        et_id=1268, name="Quay-3-RHEL-8", product=et_product, brew_tags=brew_tags
+        et_id=1268,
+        name=version_name,
+        product=et_product,
+        brew_tags=brew_tags,
     )
     variant_name = "8Base-Quay-3"
     cpe = "cpe:/a:redhat:quay:3::el8"
@@ -672,7 +689,7 @@ def test_parse_variants_from_brew_tags():
     )
 
     result = _parse_variants_from_brew_tags(brew_tags)
-    assert result == {variant_name: cpe}
+    assert result == {variant_name: (cpe, product_name, version_name)}
 
     # Now add another brew_tag to the ProductVersion, and verify a single variant is returned
     other_brew_tag = "quay-3.8-rhel-8-container"
@@ -681,7 +698,7 @@ def test_parse_variants_from_brew_tags():
     et_product_version.save()
 
     result = _parse_variants_from_brew_tags([other_brew_tag])
-    assert result == {variant_name: cpe}
+    assert result == {variant_name: (cpe, product_name, version_name)}
 
 
 @pytest.mark.django_db

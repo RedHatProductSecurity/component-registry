@@ -52,7 +52,7 @@ class IncludeFieldsFilterSet(FilterSet):
             try:
                 # check that the field actually exists
                 field = self._meta.model._meta.get_field(fname)
-            except AttributeError or FieldDoesNotExist:
+            except FieldDoesNotExist:
                 continue
             if not field.concrete:
                 # a field is concrete if it has a column in the database, we don't

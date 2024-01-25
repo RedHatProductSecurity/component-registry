@@ -1,5 +1,4 @@
 {
-  "SPDXID": "SPDXRef-DOCUMENT",
   "creationInfo": {
     "created": "2024-01-22T01:23:00Z",
     "creators": [
@@ -15,7 +14,6 @@
   "name": "EXTERNAL-NAME-1.0",
   "packages": [
     {
-      "SPDXID": "SPDXRef-0cb13029-3f4e-49ed-a960-8aad455425ef",
       "copyrightText": "NOASSERTION",
       "downloadLocation": "NOASSERTION",
       "externalRefs": [
@@ -32,6 +30,7 @@
       "licenseDeclared": "NOASSERTION",
       "name": "EXTERNAL-NAME-1.0",
       "packageFileName": "NOASSERTION",
+      "SPDXID": "SPDXRef-0cb13029-3f4e-49ed-a960-8aad455425ef",
       "supplier": "Organization: Red Hat",
       "versionInfo": "1.0"
     }
@@ -43,5 +42,6 @@
       "spdxElementId": "SPDXRef-DOCUMENT"
     }
   ],
+  "SPDXID": "SPDXRef-DOCUMENT",
   "spdxVersion": "SPDX-2.2"
 }

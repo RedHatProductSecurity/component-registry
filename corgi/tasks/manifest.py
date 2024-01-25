@@ -67,6 +67,7 @@ def same_contents(existing_file: str, stream: ProductStream) -> tuple[bool, str,
             TaskResult.objects.filter(
                 task_name="corgi.tasks.manifest.cpu_update_ps_manifest",
                 task_args__contains=stream.external_name,
+                result__contains="true",
                 status="SUCCESS",
             )
             .order_by("-date_created")

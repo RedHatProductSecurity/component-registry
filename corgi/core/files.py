@@ -1,11 +1,8 @@
-import json
 import logging
 import uuid
 from abc import ABC, abstractmethod
 from datetime import datetime
 
-import jsonschema
-from django.conf import settings
 from django.template.loader import render_to_string
 
 from corgi.core.mixins import TimeStampedModel
@@ -15,10 +12,6 @@ logger = logging.getLogger(__name__)
 
 class ManifestFile(ABC):
     """A data file that represents a generic manifest in machine-readable SPDX / JSON format."""
-
-    # From https://raw.githubusercontent.com/spdx/spdx-spec/development/
-    # v2.2.2/schemas/spdx-schema.json
-    SCHEMA_FILE = settings.BASE_DIR / "corgi/web/static/spdx-22-schema.json"
 
     @property
     @abstractmethod
@@ -50,23 +43,8 @@ class ManifestFile(ABC):
             "created_at": created_at,
         }
         content = render_to_string(self.file_name, kwargs_for_template)
-        cleaned_content = self._validate_and_clean(content)
-        return cleaned_content, created_at, self.obj.pk
 
-    @classmethod
-    def _validate_and_clean(cls, content: str) -> str:
-        """Raise an exception if content for SPDX file is not valid JSON / SPDX"""
-        # The manifest template must use Django's escapejs filter,
-        # to generate valid JSON and escape quotes + newlines
-        # But this may output ugly Unicode like "\u000A",
-        # so we convert from JSON back to JSON to get "\n" instead
-        content = json.loads(content)
-
-        with open(str(cls.SCHEMA_FILE), "r") as schema_file:
-            schema = json.load(schema_file)
-        jsonschema.validate(content, schema)
-
-        return json.dumps(content, indent=2, sort_keys=True)
+        return content, created_at, self.obj.pk
 
 
 class ComponentManifestFile(ManifestFile):
@@ -108,6 +86,4 @@ class ProductManifestFile(ManifestFile):
         }
 
         content = render_to_string(self.file_name, kwargs_for_template)
-        cleaned_content = self._validate_and_clean(content)
-
-        return cleaned_content, created_at, document_uuid
+        return content, created_at, document_uuid

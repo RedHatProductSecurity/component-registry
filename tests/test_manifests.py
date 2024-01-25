@@ -2,7 +2,9 @@ import json
 import logging
 from json import JSONDecodeError
 
+import jsonschema
 import pytest
+from django.conf import settings
 from django_celery_results.models import TaskResult
 
 from corgi.core.fixups import cpe_lookup
@@ -35,6 +37,10 @@ pytestmark = [
     pytest.mark.unit,
     pytest.mark.django_db(databases=("default", "read_only"), transaction=True),
 ]
+
+# From https://raw.githubusercontent.com/spdx/spdx-spec/development/
+# v2.2.2/schemas/spdx-schema.json
+SCHEMA_FILE = settings.BASE_DIR / "corgi/web/static/spdx-22-schema.json"
 
 
 def test_escapejs_on_copyright():
@@ -359,6 +365,19 @@ def test_manifest_cpes_from_patterns_and_brew_tags(stored_proc):
     assert {test_cpe, variant.cpe} == cpes_in_manifest
 
 
+def _validate_schema(content: str):
+    """Raise an exception if content for SPDX file is not valid JSON / SPDX"""
+    # The manifest template must use Django's escapejs filter,
+    # to generate valid JSON and escape quotes + newlines
+    # But this may output ugly Unicode like "\u000A",
+    # so we convert from JSON back to JSON to get "\n" instead
+    content = json.loads(content)
+    with open(SCHEMA_FILE, "r") as schema_file:
+        schema = json.load(schema_file)
+    jsonschema.validate(content, schema)
+    return content
+
+
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_product_manifest_properties(stored_proc):
     """Test that all models inheriting from ProductModel have a .manifest property
@@ -366,8 +385,7 @@ def test_product_manifest_properties(stored_proc):
     component, stream, provided, dev_provided = setup_products_and_components_provides()
 
     # assert all those are in the manifest too
-
-    manifest = json.loads(stream.manifest)
+    manifest = _validate_schema(stream.manifest)
 
     document_uuid = manifest["documentDescribes"][0]
 
@@ -467,7 +485,7 @@ def test_component_manifest_properties():
     And that it generates valid JSON."""
     component, _, provided, dev_provided = setup_products_and_components_provides()
 
-    manifest = json.loads(component.manifest)
+    manifest = _validate_schema(component.manifest)
 
     document_namespace_prefix = "https://access.redhat.com/security/data/sbom/beta/spdx/"
     assert (

@@ -1,4 +1,4 @@
-from locust import HttpUser, between, task, tag
+from locust import HttpUser, between, task
 
 
 class GriffonUser(HttpUser):
@@ -18,5 +18,5 @@ class GriffonUser(HttpUser):
     @task
     def get_re_name_provides(self):
         self.client.get(
-            "/api/v1/components?re_provides_name=webkitgtk&include_fields=purl,link&active_streams=True&latest_components_by_streams=True",
+            "/api/v1/components?re_provides_name=webkitgtk&include_fields=purl,link&active_streams=True&latest_components_by_streams=True",  # noqa
         )

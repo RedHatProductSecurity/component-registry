@@ -1,4 +1,4 @@
-from locust import HttpUser, between, task, tag
+from locust import HttpUser, between, task
 
 
 class ServiceApiV1(HttpUser):
@@ -36,7 +36,6 @@ class ServiceApiV1(HttpUser):
         self.client.get("/api/v1/components?re_name=curl")
 
     @task
-    @tag("now")
     def get_components_include_fields(self):
         resp = self.client.get(
             "/api/v1/components?re_name=curl&include_fields=name,nvr,purl,product_streams"

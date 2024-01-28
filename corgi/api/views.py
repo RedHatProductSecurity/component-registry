@@ -557,6 +557,7 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         Component.objects.order_by("name", "type", "arch", "version", "release")
         .using("read_only")
         .select_related("software_build")
+        .prefetch_related("tags")
     )
     serializer_class: Union[
         Type[ComponentSerializer], Type[ComponentListSerializer]

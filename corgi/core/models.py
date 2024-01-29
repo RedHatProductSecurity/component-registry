@@ -10,7 +10,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
 from django.db import models, transaction
 from django.db.models import ManyToManyField, Q, QuerySet
-from django.db.models.expressions import F, Func, Subquery, Value
+from django.db.models.expressions import F, Func, Value
 from mptt.managers import TreeManager
 from mptt.models import MPTTModel, TreeForeignKey
 from packageurl import PackageURL
@@ -1026,25 +1026,20 @@ class ComponentQuerySet(models.QuerySet):
     def _latest_components_func(
         components: "ComponentQuerySet", model_type: str, ofuri: str, include_inactive_streams: bool
     ) -> Iterable[str]:
-        return (
-            components.values("type", "namespace", "name", "arch")
-            .order_by("type", "namespace", "name", "arch")
-            .distinct("type", "namespace", "name", "arch")
-            .annotate(
-                latest_version=Func(
-                    Value(model_type),
-                    Value(ofuri),
-                    F("type"),
-                    F("namespace"),
-                    F("name"),
-                    F("arch"),
-                    Value(include_inactive_streams),
-                    function="get_latest_component",
-                    output_field=models.UUIDField(),
-                )
+        components = components.values("type", "namespace", "name", "arch").order_by().distinct()
+        return components.annotate(
+            latest_version=Func(
+                Value(model_type),
+                Value(ofuri),
+                F("type"),
+                F("namespace"),
+                F("name"),
+                F("arch"),
+                Value(include_inactive_streams),
+                function="get_latest_component",
+                output_field=models.UUIDField(),
             )
-            .values_list("latest_version", flat=True)
-        )
+        ).values_list("latest_version", flat=True)
 
     def latest_components(
         self,
@@ -1127,11 +1122,11 @@ class ComponentQuerySet(models.QuerySet):
         # if include_inactive_streams is False we need to filter ofuris
         # Clear ordering inherited from parent Queryset, if any
         # So .distinct() works properly and doesn't have duplicates
-        productstreams = components.values_list("productstreams").order_by().distinct()
-        product_stream_objs = ProductStream.objects.filter(pk__in=Subquery(productstreams))
         if not include_inactive_streams:
-            product_stream_objs = product_stream_objs.filter(active=True)
-        product_stream_ofuris = product_stream_objs.values_list("ofuri", flat=True).distinct()
+            components = components.active_streams()
+        product_stream_ofuris = (
+            components.values_list("productstreams__ofuri", flat=True).order_by().distinct()
+        )
 
         # aggregate up all latest component uuids across all matched product streams
         latest_components_uuids: set[str] = set()

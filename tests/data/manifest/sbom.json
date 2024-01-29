@@ -1,47 +1,43 @@
 {
-  "creationInfo": {
-    "created": "2024-01-22T01:23:00Z",
-    "creators": [
-      "Organization: Red Hat Product Security (secalert@redhat.com)"
-    ],
-    "licenseListVersion": "3.8"
-  },
-  "dataLicense": "CC0-1.0",
-  "documentDescribes": [
-    "SPDXRef-0cb13029-3f4e-49ed-a960-8aad455425ef"
-  ],
-  "documentNamespace": "https://access.redhat.com/security/data/sbom/beta/spdx/EXTERNAL-NAME-1.0",
-  "name": "EXTERNAL-NAME-1.0",
-  "packages": [
-    {
-      "copyrightText": "NOASSERTION",
-      "downloadLocation": "NOASSERTION",
-      "externalRefs": [
+    "SPDXID": "SPDXRef-DOCUMENT",
+    "creationInfo": {
+        "created": "2024-01-31T00:22:29Z",
+        "creators": [
+            "Organization: Red Hat Product Security (secalert@redhat.com)"
+        ],
+        "licenseListVersion": "3.8"
+    },
+    "dataLicense": "CC0-1.0",
+    "name": "EXTERNAL-NAME-1.0",
+    "spdxVersion": "SPDX-2.3",
+    "documentNamespace": "https://access.redhat.com/security/data/sbom/spdx/EXTERNAL-NAME-1.0",
+    "packages": [
         {
-          "referenceCategory": "SECURITY",
-          "referenceLocator": "cpe:/a:redhat:external_name:1.0::el8",
-          "referenceType": "cpe22Type"
+            "SPDXID": "SPDXRef-303ea2fd-1a48-4590-90b4-4fd901272ca3",
+            "copyrightText": "NOASSERTION",
+            "downloadLocation": "NOASSERTION",
+            "externalRefs": [
+                {
+                    "referenceCategory": "SECURITY",
+                    "referenceLocator": "cpe:/a:redhat:external_name:1.0::el8",
+                    "referenceType": "cpe22Type"
+                }
+            ],
+            "filesAnalyzed": false,
+            "homepage": "https://www.redhat.com/",
+            "licenseComments": "Licensing information is provided for individual components only at this time.",
+            "licenseConcluded": "NOASSERTION",
+            "licenseDeclared": "NOASSERTION",
+            "name": "EXTERNAL-NAME-1.0",
+            "supplier": "Organization: Red Hat",
+            "versionInfo": "1.0"
         }
-      ],
-      "filesAnalyzed": false,
-      "homepage": "https://www.redhat.com/",
-      "licenseComments": "Licensing information is provided for individual components only at this time.",
-      "licenseConcluded": "NOASSERTION",
-      "licenseDeclared": "NOASSERTION",
-      "name": "EXTERNAL-NAME-1.0",
-      "packageFileName": "NOASSERTION",
-      "SPDXID": "SPDXRef-0cb13029-3f4e-49ed-a960-8aad455425ef",
-      "supplier": "Organization: Red Hat",
-      "versionInfo": "1.0"
-    }
-  ],
-  "relationships": [
-    {
-      "relatedSpdxElement": "SPDXRef-0cb13029-3f4e-49ed-a960-8aad455425ef",
-      "relationshipType": "DESCRIBES",
-      "spdxElementId": "SPDXRef-DOCUMENT"
-    }
-  ],
-  "SPDXID": "SPDXRef-DOCUMENT",
-  "spdxVersion": "SPDX-2.2"
+    ],
+    "relationships": [
+        {
+            "spdxElementId": "SPDXRef-DOCUMENT",
+            "relatedSpdxElement": "SPDXRef-303ea2fd-1a48-4590-90b4-4fd901272ca3",
+            "relationshipType": "DESCRIBES"
+        }
+    ]
 }

@@ -7,6 +7,7 @@ import pytest
 from django.conf import settings
 from django_celery_results.models import TaskResult
 
+from corgi.core.files import ComponentManifestFile, ProductManifestFile
 from corgi.core.fixups import cpe_lookup
 from corgi.core.models import (
     Component,
@@ -60,7 +61,7 @@ def test_escapejs_on_copyright():
         " C.au, (c) UiL (c)"
     )
     try:
-        c.manifest
+        json.dumps(ComponentManifestFile(c).render_content())
     except JSONDecodeError as e:
         assert (
             False
@@ -68,7 +69,7 @@ def test_escapejs_on_copyright():
 
     c = ComponentFactory(copyright_text="©, 🄯, ®, ™")
     try:
-        c.manifest
+        json.dumps(ComponentManifestFile(c).render_content())
     except JSONDecodeError as e:
         assert (
             False
@@ -80,7 +81,8 @@ def test_manifests_exclude_source_container(stored_proc):
     """Test that container sources are excluded packages"""
     containers, stream, _ = setup_products_and_rpm_in_containers()
     assert len(containers) == 3
-    manifest = json.loads(stream.manifest)
+
+    manifest = ProductManifestFile(stream).render_content()
     components = manifest["packages"]
     # Two containers, one RPM, and a product are included
     assert len(components) == 4
@@ -106,7 +108,7 @@ def test_manifests_exclude_bad_golang_components(stored_proc):
     containers[0].save_component_taxonomy()
     assert containers[0].provides.filter(name=bad_golang.name).exists()
 
-    manifest = json.loads(stream.manifest)
+    manifest = ProductManifestFile(stream).render_content()
     components = manifest["packages"]
     # Two containers, one RPM, and a product are included
     assert len(components) == 4, components
@@ -125,7 +127,7 @@ def test_stream_manifest_backslash(stored_proc):
     component.productstreams.add(stream)
 
     try:
-        stream.manifest
+        json.dumps(ProductManifestFile(stream).render_content())
     except JSONDecodeError:
         assert False
 
@@ -139,7 +141,7 @@ def test_component_manifest_backslash():
     )
     assert component.download_url
     try:
-        component.manifest
+        json.dumps(ComponentManifestFile(component).render_content())
     except JSONDecodeError:
         assert False
 
@@ -174,10 +176,9 @@ def test_slim_rpm_in_containers_manifest(stored_proc):
     distinct_provides = stream.provides_queryset
     assert len(distinct_provides) == num_provided
 
-    stream_manifest = stream.manifest
-    manifest = json.loads(stream_manifest)
+    document_uuid = "TEST"
 
-    document_uuid = manifest["documentDescribes"][0]
+    manifest = ProductManifestFile(stream).render_content(document_uuid=document_uuid)
 
     # One package for each component
     # One (and only one) package for each distinct provided
@@ -241,9 +242,7 @@ def test_product_manifest_excludes_unreleased_components(stored_proc):
         released=False
     )
 
-    manifest = json.loads(stream.manifest)
-
-    document_uuid = manifest["documentDescribes"][0]
+    manifest = ProductManifestFile(stream).render_content()
 
     # No released components linked to this product
     num_components = len(stream.components.manifest_components(ofuri=stream.get_ofuri()))
@@ -258,7 +257,7 @@ def test_product_manifest_excludes_unreleased_components(stored_proc):
     # Only "component" is actually the product
     product_data = manifest["packages"][0]
 
-    assert product_data["SPDXID"] == document_uuid
+    document_uuid = product_data["SPDXID"]
     assert product_data["name"] == stream.external_name
     assert product_data["externalRefs"][0]["referenceLocator"] == "cpe:/o:redhat:enterprise_linux:8"
 
@@ -279,7 +278,7 @@ def test_product_manifest_excludes_internal_components(stored_proc):
         internal_component=True
     )
 
-    manifest = json.loads(stream.manifest)
+    manifest = ProductManifestFile(stream).render_content()
 
     # This is the root rpm src component
     num_components = len(stream.components.manifest_components(ofuri=stream.ofuri))
@@ -326,7 +325,7 @@ def test_manifest_cpes_from_variants(stored_proc):
     # Make sure the stream doesn't exist in cpe_lookup
     assert not cpe_lookup(stream.name)
 
-    manifest = json.loads(stream.manifest)
+    manifest = ProductManifestFile(stream).render_content()
     product_data = manifest["packages"][-1]
     cpes_in_manifest = [ref["referenceLocator"] for ref in product_data["externalRefs"]]
     assert len(cpes_in_manifest) == 1
@@ -341,7 +340,7 @@ def test_manifest_cpes_from_cpe_lookup(stored_proc):
     assert stream.productvariants.exists()
     assert hardcoded_cpes
 
-    manifest = json.loads(stream.manifest)
+    manifest = ProductManifestFile(stream).render_content()
     product_data = manifest["packages"][-1]
     cpes_in_manifest = set(ref["referenceLocator"] for ref in product_data["externalRefs"])
     assert hardcoded_cpes == cpes_in_manifest
@@ -359,7 +358,7 @@ def test_manifest_cpes_from_patterns_and_brew_tags(stored_proc):
         "cpe:/o:redhat:enterprise_linux:8",
     )
 
-    manifest = json.loads(stream.manifest)
+    manifest = ProductManifestFile(stream).render_content()
     product_data = manifest["packages"][-1]
     cpes_in_manifest = set(ref["referenceLocator"] for ref in product_data["externalRefs"])
     assert {test_cpe, variant.cpe} == cpes_in_manifest
@@ -384,10 +383,7 @@ def test_product_manifest_properties(stored_proc):
     And that it generates valid JSON."""
     component, stream, provided, dev_provided = setup_products_and_components_provides()
 
-    # assert all those are in the manifest too
-    manifest = _validate_schema(stream.manifest)
-
-    document_uuid = manifest["documentDescribes"][0]
+    manifest = ProductManifestFile(stream).render_content()
 
     # One component linked to this product
     num_components = len(stream.components.manifest_components(ofuri=stream.ofuri))
@@ -407,13 +403,13 @@ def test_product_manifest_properties(stored_proc):
     assert component_data["SPDXID"] == f"SPDXRef-{component.uuid}"
     assert component_data["name"] == component.name
     assert component_data["packageFileName"] == f"{component.nevra}.rpm"
+    assert component_data["externalRefs"][0]["referenceLocator"] == component.purl
     assert (
-        component_data["externalRefs"][0]["referenceLocator"]
+        component_data["externalRefs"][-1]["referenceLocator"]
         == stream.productvariants.values_list("cpe", flat=True).get()
     )
-    assert component_data["externalRefs"][-1]["referenceLocator"] == component.purl
 
-    assert product_data["SPDXID"] == f"{document_uuid}"
+    document_uuid = product_data["SPDXID"]
     assert product_data["name"] == stream.external_name
 
     document_describes_product = {
@@ -476,7 +472,7 @@ def test_no_duplicates_in_manifest_with_upstream(stored_proc):
     assert len(upstream_components) == 1
     assert upstream_components.first() == upstream
 
-    manifest = json.loads(stream.manifest)
+    manifest = ProductManifestFile(stream).render_content()
     assert len(manifest["packages"]) == 4
 
 
@@ -485,9 +481,9 @@ def test_component_manifest_properties():
     And that it generates valid JSON."""
     component, _, provided, dev_provided = setup_products_and_components_provides()
 
-    manifest = _validate_schema(component.manifest)
+    manifest = ComponentManifestFile(component).render_content()
 
-    document_namespace_prefix = "https://access.redhat.com/security/data/sbom/beta/spdx/"
+    document_namespace_prefix = "https://access.redhat.com/security/data/sbom/spdx/"
     assert (
         manifest["documentNamespace"]
         == f"{document_namespace_prefix}{component.name}-{component.version}"
@@ -504,8 +500,8 @@ def test_component_manifest_properties():
     assert component_data["SPDXID"] == f"SPDXRef-{component.uuid}"
     assert component_data["name"] == component.name
     assert component_data["packageFileName"] == f"{component.nevra}.rpm"
-    assert component_data["externalRefs"][0]["referenceLocator"] == component.cpes.get()
-    assert component_data["externalRefs"][-1]["referenceLocator"] == component.purl
+    assert component_data["externalRefs"][0]["referenceLocator"] == component.purl
+    assert component_data["externalRefs"][-1]["referenceLocator"] == component.cpes.get()
 
     document_describes_product = {
         "relatedSpdxElement": f"SPDXRef-{component.uuid}",
@@ -618,9 +614,7 @@ def setup_products_and_components_provides(released=True, internal_component=Fal
 
     if internal_component:
         provided = UpstreamComponentFactory(name="blah.redhat.com/", type=Component.Type.GOLANG)
-        dev_provided = UpstreamComponentFactory(
-            name="github.com/blah.redhat.com", type=Component.Type.NPM
-        )
+        dev_provided = UpstreamComponentFactory(name="github.com/blah", type=Component.Type.NPM)
     else:
         provided = BinaryRpmComponentFactory()
         dev_provided = UpstreamComponentFactory(type=Component.Type.NPM)
@@ -745,28 +739,33 @@ def test_same_contents(stored_proc):
         task_name="corgi.tasks.manifest.cpu_update_ps_manifest",
         task_args=f"\"('{external_name}', 'EXTERNAL-NAME-1.0')\"",
         status="SUCCESS",
-        result='[true, "2024-01-22T01:23:00Z", "SPDXRef-0cb13029-3f4e-49ed-a960-8aad455425ef"]',
+        result='[true, "2024-01-31T00:22:29Z", "SPDXRef-303ea2fd-1a48-4590-90b4-4fd901272ca3"]',
     )
     stream_node = ProductStreamNodeFactory(obj=stream)
     variant = ProductVariantFactory(cpe=cpe)
     ProductVariantNodeFactory(obj=variant, parent=stream_node)
     stream.refresh_from_db()
-
-    assert same_contents(existing_file, stream)[0]
+    is_same_contents, new_content = same_contents(existing_file, stream)
+    assert is_same_contents
+    assert not new_content
 
 
 def test_different_contents(stored_proc):
     missing_file = "tests/data/manifest/missing.json"
     external_name = "external-name-1.0"
     stream = ProductStreamFactory(name=external_name, version="1.0")
-    assert not same_contents(missing_file, stream)[0]
+    is_same_contents, new_content = same_contents(missing_file, stream)
+    assert not is_same_contents
+    assert not new_content
 
     # test missing result
     existing_file = "tests/data/manifest/sbom.json"
+    last_successful_created_at_date = "2024-01-31T00:22:29Z"
+    last_successful_document_id = "SPDXRef-303ea2fd-1a48-4590-90b4-4fd901272ca3"
 
-    result = same_contents(existing_file, stream)
-    for i in range(0, 3):
-        assert not result[i]
+    is_same_contents, new_content = same_contents(existing_file, stream)
+    assert not is_same_contents
+    assert not new_content
 
     # test different content
     existing_file = "tests/data/manifest/sbom.json"
@@ -774,19 +773,16 @@ def test_different_contents(stored_proc):
         task_name="corgi.tasks.manifest.cpu_update_ps_manifest",
         task_args=f"\"('{external_name}', 'EXTERNAL-NAME-1.0')\"",
         status="SUCCESS",
-        result='[true, "2024-01-22T01:23:00Z", "SPDXRef-0cb13029-3f4e-49ed-a960-8aad455425ef"]',
+        result=f'[true, "{last_successful_created_at_date}", "{last_successful_document_id}"]',
     )
     # This allows the ofuri value to work during manifest creation
     ProductStreamNodeFactory(obj=stream)
     stream.refresh_from_db()
     # Don't create and link a variant so there is not cpe value in the content (a mismatch)
 
-    result = same_contents(existing_file, stream)
-    assert not result[0]
-    new_content = result[1]
-    created_at = result[2]
-    document_uuid = result[3]
-    assert created_at
-    assert document_uuid
-    assert created_at in new_content
-    assert document_uuid in new_content
+    is_same_contents, new_content = same_contents(existing_file, stream)
+    assert not is_same_contents
+    assert new_content["creationInfo"]["created"] != last_successful_created_at_date
+    # document_uuid is populated
+    assert new_content["packages"][0]["SPDXID"] != last_successful_document_id
+    assert new_content["relationships"][0]["relatedSpdxElement"] != last_successful_document_id

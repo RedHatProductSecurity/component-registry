@@ -1,4 +1,3 @@
-import json
 import logging
 from typing import Any, Type, Union
 
@@ -6,7 +5,7 @@ import django_filters.rest_framework
 from django.conf import settings
 from django.db import connections
 from django.db.models import QuerySet
-from django.http import Http404
+from django.http import Http404, HttpResponse, JsonResponse
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
@@ -41,6 +40,7 @@ from corgi.core.models import (
     SoftwareBuild,
 )
 
+from ..core.files import ComponentManifestFile, ProductManifestFile
 from .constants import CORGI_API_VERSION
 from .filters import (
     ChannelFilter,
@@ -500,12 +500,12 @@ class ProductStreamViewSet(ProductDataViewSet):
             raise Http404
 
     @action(methods=["get"], detail=True)
-    def manifest(self, request: Request, pk: str = "") -> Response:
+    def manifest(self, request: Request, pk: str = "") -> HttpResponse:
         obj = self.queryset.filter(pk=pk).first()
         if not obj:
             return Response(status=status.HTTP_404_NOT_FOUND)
-        manifest = json.loads(obj.manifest)
-        return Response(manifest)
+        manifest = ProductManifestFile(obj).render_content()
+        return JsonResponse(manifest)
 
 
 @INCLUDE_EXCLUDE_FIELDS_SCHEMA
@@ -601,12 +601,12 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
             raise Http404
 
     @action(methods=["get"], detail=True)
-    def manifest(self, request: Request, pk: str = "") -> Response:
+    def manifest(self, request: Request, pk: str = "") -> HttpResponse:
         obj = self.queryset.filter(pk=pk).first()
         if not obj:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-        manifest = json.loads(obj.manifest)
-        return Response(manifest)
+            return HttpResponse(status=status.HTTP_404_NOT_FOUND)
+        manifest = ComponentManifestFile(obj).render_content()
+        return JsonResponse(manifest)
 
     @action(
         methods=["put"],

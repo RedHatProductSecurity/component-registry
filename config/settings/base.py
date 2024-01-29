@@ -503,3 +503,6 @@ SCA_ENABLED = strtobool(os.getenv("CORGI_SCA_ENABLED", "true"))
 SCA_SCRATCH_DIR = os.getenv("CORGI_SCA_SCATCH_DIR", "/tmp")
 
 QUAY_TOKEN = os.getenv("CORGI_QUAY_TOKEN", "")
+
+# disable using reltuples in corgi.api.paginate.FasterPageNumberPagination for fast count estimates
+OPTIMISE_REST_API_COUNT = False

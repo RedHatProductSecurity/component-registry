@@ -17,7 +17,7 @@ and from the API when using the root_components=True filter
 * Set gunicorn worker_tmp_dir to use /dev/shm
 * migrated product stream loop from django to pg function get_latest_components()
 * refactored include/exclude filter
-
+* Add RHCOS Brew build collector
 
 ## [1.4.2] - 2023-12-19
 

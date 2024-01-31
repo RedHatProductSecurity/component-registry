@@ -52,7 +52,7 @@ from tests.factories import (
 pytestmark = pytest.mark.unit
 
 # TODO add mock data for commented tests in build_corpus
-# build id, source URL, namespace, name, license_declared_raw, type
+# build id, source URL, name, license_declared_raw, type, component name, name label
 build_corpus = [
     # firefox -brew buildID=1872838
     # (
@@ -73,6 +73,7 @@ build_corpus = [
         "image",
         "grafana",
         "rhel8/grafana",
+        None,
     ),
     # rh - nodejs: brew buildID=1700251
     # (
@@ -93,6 +94,7 @@ build_corpus = [
         "rpm",
         "",
         "",
+        None,
     ),
     # jboss-webserver-container:
     # brew buildID=1879214
@@ -147,6 +149,18 @@ build_corpus = [
         "image",
         "",
         "ansible-tower-messaging",
+        None,
+    ),
+    # rhcos - brew buildID=2615868
+    (
+        2856398,
+        "https://github.com/openshift/os",
+        "rhcos-x86_64",
+        "",
+        "image",
+        "rhcos-x86_64",
+        "",
+        "x86_64",
     ),
 ]
 
@@ -158,7 +172,8 @@ class MockBrewResult(object):
 @patch("koji.ClientSession")
 @patch("corgi.collectors.brew.Brew.brew_rpm_headers_lookup")
 @pytest.mark.parametrize(
-    "build_id,build_source,build_name,license_declared_raw,build_type,component_name,name_label",
+    "build_id,build_source,build_name,license_declared_raw,build_type,component_name,name_label,"
+    "arch",
     build_corpus,
 )
 def test_get_component_data(
@@ -171,6 +186,7 @@ def test_get_component_data(
     build_type,
     component_name,
     name_label,
+    arch,
     monkeypatch,
 ):
     mock_rpm_infos = []
@@ -219,20 +235,26 @@ def test_get_component_data(
             "components",
             "build_meta",
         ]
-        expected_image_meta_keys = {
-            "parent",
-            "build_parent_nvrs",
-            "release",
-            "version",
-            "arch",
-            "epoch",
-            "name",
-            "digests",
-            "source",
-            "pull",
-            "description",
-            "name_from_label_raw",
-        }
+        if c["build_meta"]["build_info"]["cg_name"] == "coreos-assembler":
+            # RHCOS builds have less info
+            expected_image_meta_keys = {"name", "version", "release", "epoch", "arch", "source"}
+        else:
+            expected_image_meta_keys = {
+                "parent",
+                "build_parent_nvrs",
+                "release",
+                "version",
+                "arch",
+                "epoch",
+                "name",
+                "digests",
+                "source",
+                "pull",
+                "description",
+                "name_from_label_raw",
+            }
+
+        assert c["meta"]["arch"] == arch
         # name_from_label and repository_url are not set for 903617 because it's name label
         # is not a valid repository path
         assert expected_image_meta_keys.issubset(set(c["meta"].keys()))
@@ -1588,3 +1610,45 @@ def test_check_red_hat_namespace(component_type, version, publisher, expected_va
     assert (
         Brew.check_red_hat_namespace(component_type, version, publisher=publisher) == expected_value
     )
+
+
+@pytest.mark.django_db
+@patch("corgi.tasks.brew.Brew")
+@patch("corgi.tasks.sca.cpu_software_composition_analysis.delay")
+@patch("corgi.tasks.brew.slow_fetch_brew_build.delay")
+def test_fetch_rhcos_build(mock_fetch_brew_build, mock_sca, mock_brew):
+    build_id = "2856398"
+    with open(f"tests/data/brew/{build_id}/component_data.json", "r") as component_data_file:
+        mock_brew.return_value.get_component_data.return_value = json.load(component_data_file)
+    with patch(
+        "corgi.tasks.common.slow_save_taxonomy.delay", wraps=slow_save_taxonomy
+    ) as wrapped_save_taxonomy:
+        # Wrap the mocked object, and call its methods directly
+        # So that doing task.delay(*args, **kwargs) becomes task(*args, **kwargs)
+        # and we can test the same logic as before without a separate test
+        # and without the Celery task's wrapper layer getting in the way
+        with patch(
+            "corgi.tasks.brew.Brew.check_red_hat_namespace", wraps=Brew.check_red_hat_namespace
+        ) as wrapped_check_namespace:
+            with patch(
+                "corgi.tasks.brew.slow_save_container_children.delay",
+                wraps=slow_save_container_children,
+            ) as wrapped_save_children:
+                slow_fetch_brew_build(build_id)
+                wrapped_save_children.assert_called_once_with(
+                    build_id, SoftwareBuild.Type.BREW, ANY, ANY, ANY, True
+                )
+            wrapped_check_namespace.assert_called()
+        save_taxonomy_call = call(build_id, SoftwareBuild.Type.BREW)
+        # Called twice - once at end of main fetch_brew_build task
+        # And once at end of save_container_children subtask
+        # Because we can't guarantee which will finish first
+        # and we need to save the whole taxonomy, even if children are saved / added later
+        wrapped_save_taxonomy.assert_has_calls((save_taxonomy_call, save_taxonomy_call))
+
+    component = Component.objects.get(name="rhcos-x86_64")
+    assert component.purl == "pkg:oci/rhcos-x86_64?arch=x86_64&tag=416.94.202401181356-0"
+    assert component.arch == "x86_64"
+    assert component.epoch == 0
+    # Check that it is related to the software build
+    assert component.software_build.build_id == build_id

@@ -105,7 +105,7 @@ def test_get_latest_component_stored_proc(stored_proc):
 
     with connection.cursor() as cursor:
         cursor.execute(
-            "select * from get_latest_component('ProductStream','o:redhat:openshift-enterprise:3.11.z','RPM','REDHAT','ansible-runner','src',True);"  # noqa: E501
+            "select * from get_latest_component('ProductStream',ARRAY['o:redhat:openshift-enterprise:3.11.z'],'RPM','REDHAT','ansible-runner','src',True);"  # noqa: E501
         )
         row = cursor.fetchone()
 

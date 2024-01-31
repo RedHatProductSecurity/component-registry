@@ -84,7 +84,7 @@ SBOMER_PRODUCT_MAP = {
 # So the SQL syntax will be correct in the final stored procedure code
 LATEST_FILTER_DEFINITION = (
     "get_latest_component( "
-    "model_type text, ps_ofuri text, component_type text, component_ns text, "
+    "model_type text, ps_ofuris text[], component_type text, component_ns text, "
     "component_name text, component_arch text, include_inactive_streams boolean) "
     "RETURNS uuid AS $$"
 )
@@ -125,7 +125,7 @@ CREATE OR REPLACE FUNCTION {LATEST_FILTER_DEFINITION}
             INNER JOIN "core_product"
             ON ("core_component_products"."product_id" = "core_product"."uuid")
             {LATEST_FILTER_WHERE}
-            AND (ps_ofuri IS NOT NULL AND core_product.ofuri = ps_ofuri);
+            AND (ps_ofuris IS NOT NULL AND core_product.ofuri = ANY(ps_ofuris));
 
     product_version_component_cursor CURSOR FOR
         SELECT {LATEST_FILTER_FIELDS}
@@ -134,7 +134,7 @@ CREATE OR REPLACE FUNCTION {LATEST_FILTER_DEFINITION}
             INNER JOIN "core_productversion"
             ON ("core_component_productversions"."productversion_id" = "core_productversion"."uuid")
             {LATEST_FILTER_WHERE}
-            AND (ps_ofuri IS NOT NULL AND core_productversion.ofuri = ps_ofuri);
+            AND (ps_ofuris IS NOT NULL AND core_productversion.ofuri = ANY(ps_ofuris));
 
     product_stream_component_cursor CURSOR FOR
         SELECT {LATEST_FILTER_FIELDS}
@@ -144,7 +144,7 @@ CREATE OR REPLACE FUNCTION {LATEST_FILTER_DEFINITION}
             ON ("core_component_productstreams"."productstream_id" = "core_productstream"."uuid")
             {LATEST_FILTER_WHERE}
             AND (include_inactive_streams OR core_productstream.active)
-            AND (ps_ofuri IS NOT NULL AND core_productstream.ofuri = ps_ofuri);
+            AND (ps_ofuris IS NOT NULL AND core_productstream.ofuri = ANY(ps_ofuris));
 
     product_variant_component_cursor CURSOR FOR
         SELECT {LATEST_FILTER_FIELDS}
@@ -153,7 +153,7 @@ CREATE OR REPLACE FUNCTION {LATEST_FILTER_DEFINITION}
             INNER JOIN "core_productvariant"
             ON ("core_component_productvariants"."productvariant_id" = "core_productvariant"."uuid")
             {LATEST_FILTER_WHERE}
-            AND (ps_ofuri IS NOT NULL AND core_productvariant.ofuri = ps_ofuri);
+            AND (ps_ofuris IS NOT NULL AND core_productvariant.ofuri = ANY(ps_ofuris));
 
     component_uuid text;
     component_epoch int;

@@ -10,7 +10,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
 from django.db import models, transaction
 from django.db.models import ManyToManyField, Q, QuerySet
-from django.db.models.expressions import F, Func, Value
+from django.db.models.expressions import F, Func, Subquery, Value
 from mptt.managers import TreeManager
 from mptt.models import MPTTModel, TreeForeignKey
 from packageurl import PackageURL
@@ -1026,20 +1026,27 @@ class ComponentQuerySet(models.QuerySet):
     def _latest_components_func(
         components: "ComponentQuerySet", model_type: str, ofuri: str, include_inactive_streams: bool
     ) -> Iterable[str]:
-        components = components.values("type", "namespace", "name", "arch").order_by().distinct()
-        return components.annotate(
-            latest_version=Func(
-                Value(model_type),
-                Value(ofuri),
-                F("type"),
-                F("namespace"),
-                F("name"),
-                F("arch"),
-                Value(include_inactive_streams),
-                function="get_latest_component",
-                output_field=models.UUIDField(),
+        # get_latest_component ps_ofuris is an array
+        ofuris = [ofuri]
+        return (
+            components.values("type", "namespace", "name", "arch")
+            .order_by("type", "namespace", "name", "arch")
+            .distinct("type", "namespace", "name", "arch")
+            .annotate(
+                latest_version=Func(
+                    Value(model_type),
+                    Value(ofuris),
+                    F("type"),
+                    F("namespace"),
+                    F("name"),
+                    F("arch"),
+                    Value(include_inactive_streams),
+                    function="get_latest_component",
+                    output_field=models.UUIDField(),
+                )
             )
-        ).values_list("latest_version", flat=True)
+            .values_list("latest_version", flat=True)
+        )
 
     def latest_components(
         self,
@@ -1122,23 +1129,33 @@ class ComponentQuerySet(models.QuerySet):
         # if include_inactive_streams is False we need to filter ofuris
         # Clear ordering inherited from parent Queryset, if any
         # So .distinct() works properly and doesn't have duplicates
+        productstreams = components.values("productstreams").order_by().distinct()
+        productstreams = ProductStream.objects.filter(pk__in=Subquery(productstreams))
         if not include_inactive_streams:
-            components = components.active_streams()
-        product_stream_ofuris = (
-            components.values_list("productstreams__ofuri", flat=True).order_by().distinct()
-        )
+            productstreams = productstreams.filter(active=True)
+        product_stream_ofuris = list(productstreams.values_list("ofuri", flat=True).distinct())
 
-        # aggregate up all latest component uuids across all matched product streams
-        latest_components_uuids: set[str] = set()
-        for ps_ofuri in product_stream_ofuris:
-            latest_components_uuids.update(
-                self._latest_components_func(
-                    components.filter(productstreams__ofuri=ps_ofuri),
-                    "ProductStream",  # always ProductStream model type
-                    ps_ofuri,
-                    include_inactive_streams,
+        latest_components_uuids = list(
+            set(
+                components.values("type", "namespace", "name", "arch")
+                .order_by("type", "namespace", "name", "arch")
+                .distinct("type", "namespace", "name", "arch")
+                .annotate(
+                    latest_version=Func(
+                        Value("ProductStream"),
+                        Value(product_stream_ofuris),
+                        F("type"),
+                        F("namespace"),
+                        F("name"),
+                        F("arch"),
+                        Value(include_inactive_streams),
+                        function="get_latest_component",
+                        output_field=models.UUIDField(),
+                    )
                 )
+                .values_list("latest_version", flat=True)
             )
+        )
 
         lookup = {"pk__in": latest_components_uuids}
         if include:

@@ -75,6 +75,9 @@ class IncludeFieldsFilterSet(FilterSet):
         This method converts such a string into a Python list like so:
             ["cve_id", "affects__uuid", "affects__trackers__resolution"]
         """
+        # temporary hack for bindings
+        if "__placeholder_field" in value:
+            value = "uuid"
         return value.replace(".", "__").split(",")
 
     def _filter_fields(self, fields):

@@ -70,10 +70,6 @@ class IncludeFieldsFilterSet(FilterSet):
     def _preprocess_fields(self, value):
         """
         Converts a comma-separated list of fields into an ORM-friendly format.
-        A list of fields passed-in to a filter will look something like:
-            cve_id,affects.uuid,affects.trackers.resolution
-        This method converts such a string into a Python list like so:
-            ["cve_id", "affects__uuid", "affects__trackers__resolution"]
         """
         # temporary hack for bindings
         if "__placeholder_field" in value:

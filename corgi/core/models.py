@@ -1041,7 +1041,7 @@ class ComponentQuerySet(models.QuerySet):
                     F("name"),
                     F("arch"),
                     Value(include_inactive_streams),
-                    function="get_latest_component",
+                    function="get_latest_components",
                     output_field=models.UUIDField(),
                 )
             )
@@ -1149,7 +1149,7 @@ class ComponentQuerySet(models.QuerySet):
                         F("name"),
                         F("arch"),
                         Value(include_inactive_streams),
-                        function="get_latest_component",
+                        function="get_latest_components",
                         output_field=models.UUIDField(),
                     )
                 )

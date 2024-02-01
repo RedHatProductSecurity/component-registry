@@ -84,7 +84,7 @@ SBOMER_PRODUCT_MAP = {
 # So the SQL syntax will be correct in the final stored procedure code
 LATEST_FILTER_DEFINITION = (
     "get_latest_component( "
-    "model_type text, ps_ofuris text[], component_type text, component_ns text, "
+    "model_type text, ps_ofuri text, component_type text, component_ns text, "
     "component_name text, component_arch text, include_inactive_streams boolean) "
     "RETURNS uuid AS $$"
 )
@@ -125,7 +125,7 @@ CREATE OR REPLACE FUNCTION {LATEST_FILTER_DEFINITION}
             INNER JOIN "core_product"
             ON ("core_component_products"."product_id" = "core_product"."uuid")
             {LATEST_FILTER_WHERE}
-            AND (ps_ofuris IS NOT NULL AND core_product.ofuri = ANY(ps_ofuris));
+            AND (ps_ofuri IS NOT NULL AND core_product.ofuri = ps_ofuri);
 
     product_version_component_cursor CURSOR FOR
         SELECT {LATEST_FILTER_FIELDS}
@@ -134,7 +134,7 @@ CREATE OR REPLACE FUNCTION {LATEST_FILTER_DEFINITION}
             INNER JOIN "core_productversion"
             ON ("core_component_productversions"."productversion_id" = "core_productversion"."uuid")
             {LATEST_FILTER_WHERE}
-            AND (ps_ofuris IS NOT NULL AND core_productversion.ofuri = ANY(ps_ofuris));
+            AND (ps_ofuri IS NOT NULL AND core_productversion.ofuri = ps_ofuri);
 
     product_stream_component_cursor CURSOR FOR
         SELECT {LATEST_FILTER_FIELDS}
@@ -144,7 +144,7 @@ CREATE OR REPLACE FUNCTION {LATEST_FILTER_DEFINITION}
             ON ("core_component_productstreams"."productstream_id" = "core_productstream"."uuid")
             {LATEST_FILTER_WHERE}
             AND (include_inactive_streams OR core_productstream.active)
-            AND (ps_ofuris IS NOT NULL AND core_productstream.ofuri = ANY(ps_ofuris));
+            AND (ps_ofuri IS NOT NULL AND core_productstream.ofuri = ps_ofuri);
 
     product_variant_component_cursor CURSOR FOR
         SELECT {LATEST_FILTER_FIELDS}
@@ -153,7 +153,7 @@ CREATE OR REPLACE FUNCTION {LATEST_FILTER_DEFINITION}
             INNER JOIN "core_productvariant"
             ON ("core_component_productvariants"."productvariant_id" = "core_productvariant"."uuid")
             {LATEST_FILTER_WHERE}
-            AND (ps_ofuris IS NOT NULL AND core_productvariant.ofuri = ANY(ps_ofuris));
+            AND (ps_ofuri IS NOT NULL AND core_productvariant.ofuri = ps_ofuri);
 
     component_uuid text;
     component_epoch int;
@@ -193,3 +193,96 @@ CREATE OR REPLACE FUNCTION {LATEST_FILTER_DEFINITION}
   END;
   $$ LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE;
 """
+
+# Note- both get_latest_component and get_latest_components function will be
+# deprecated during graphdb refactor
+GET_LATEST_COMPONENTS_STOREDPROC_SQL = """
+CREATE OR REPLACE FUNCTION get_latest_components( model_type text, ofuris text[], component_type text, component_ns text, component_name text, component_arch text, include_inactive_streams boolean) RETURNS SETOF uuid AS $$
+  DECLARE
+    p_ofuri text;
+    component_uuid text;
+    component_epoch int;
+    component_version text;
+    component_release text;
+    latest_uuid text;
+    latest_epoch int;
+    latest_version text;
+    latest_release text;
+
+    product_component_cursor CURSOR FOR
+        SELECT core_component.uuid, core_component.epoch, core_component.version, core_component.release from core_component
+            INNER JOIN "core_component_products"
+            ON ("core_component"."uuid" = "core_component_products"."component_id")
+            INNER JOIN "core_product"
+            ON ("core_component_products"."product_id" = "core_product"."uuid")
+            WHERE core_component.name=component_name AND core_component.namespace=component_ns AND core_component.type=component_type AND core_component.arch=component_arch AND (core_component.software_build_uuid IS NOT NULL AND NOT (core_component.arch = 'src' AND core_component.release LIKE '%.module%' AND core_component.type = 'RPM'))
+            AND core_product.ofuri = p_ofuri;
+
+    product_version_component_cursor CURSOR FOR
+        SELECT core_component.uuid, core_component.epoch, core_component.version, core_component.release from core_component
+            INNER JOIN "core_component_productversions"
+            ON ("core_component"."uuid" = "core_component_productversions"."component_id")
+            INNER JOIN "core_productversion"
+            ON ("core_component_productversions"."productversion_id" = "core_productversion"."uuid")
+            WHERE core_component.name=component_name AND core_component.namespace=component_ns AND core_component.type=component_type AND core_component.arch=component_arch AND (core_component.software_build_uuid IS NOT NULL AND NOT (core_component.arch = 'src' AND core_component.release LIKE '%.module%' AND core_component.type = 'RPM'))
+            AND core_productversion.ofuri = p_ofuri;
+
+    product_stream_component_cursor CURSOR FOR
+        SELECT core_component.uuid, core_component.epoch, core_component.version, core_component.release from core_component
+            INNER JOIN "core_component_productstreams"
+            ON ("core_component"."uuid" = "core_component_productstreams"."component_id")
+            INNER JOIN "core_productstream"
+            ON ("core_component_productstreams"."productstream_id" = "core_productstream"."uuid")
+            WHERE core_component.name=component_name AND core_component.namespace=component_ns AND core_component.type=component_type AND core_component.arch=component_arch AND (core_component.software_build_uuid IS NOT NULL AND NOT (core_component.arch = 'src' AND core_component.release LIKE '%.module%' AND core_component.type = 'RPM'))
+            AND (include_inactive_streams OR core_productstream.active)
+            AND core_productstream.ofuri = p_ofuri;
+
+    product_variant_component_cursor CURSOR FOR
+        SELECT core_component.uuid, core_component.epoch, core_component.version, core_component.release from core_component
+            INNER JOIN "core_component_productvariants"
+            ON ("core_component"."uuid" = "core_component_productvariants"."component_id")
+            INNER JOIN "core_productvariant"
+            ON ("core_component_productvariants"."productvariant_id" = "core_productvariant"."uuid")
+            WHERE core_component.name=component_name AND core_component.namespace=component_ns AND core_component.type=component_type AND core_component.arch=component_arch AND (core_component.software_build_uuid IS NOT NULL AND NOT (core_component.arch = 'src' AND core_component.release LIKE '%.module%' AND core_component.type = 'RPM'))
+            AND core_productvariant.ofuri = p_ofuri;
+
+  BEGIN
+    FOREACH p_ofuri IN ARRAY ofuris
+    LOOP
+
+    latest_uuid := NULL;
+    latest_epoch := 0;
+    latest_version := '';
+    latest_release := '';
+
+    IF model_type = 'ProductVariant' THEN
+        OPEN product_variant_component_cursor;
+        LOOP
+            FETCH NEXT FROM product_variant_component_cursor INTO component_uuid, component_epoch, component_version, component_release; EXIT WHEN NOT FOUND; IF rpmvercmp_epoch(component_epoch, component_version, component_release, latest_epoch, latest_version, latest_release) >= 0 THEN latest_uuid := component_uuid; latest_epoch := component_epoch; latest_version := component_version; latest_release := component_release; END IF;
+        END LOOP;
+        CLOSE product_variant_component_cursor;
+    ELSIF model_type = 'ProductVersion' THEN
+        OPEN product_version_component_cursor;
+        LOOP
+            FETCH NEXT FROM product_version_component_cursor INTO component_uuid, component_epoch, component_version, component_release; EXIT WHEN NOT FOUND; IF rpmvercmp_epoch(component_epoch, component_version, component_release, latest_epoch, latest_version, latest_release) >= 0 THEN latest_uuid := component_uuid; latest_epoch := component_epoch; latest_version := component_version; latest_release := component_release; END IF;
+        END LOOP;
+        CLOSE product_version_component_cursor;
+    ELSIF model_type = 'Product' THEN
+        OPEN product_component_cursor;
+        LOOP
+            FETCH NEXT FROM product_component_cursor INTO component_uuid, component_epoch, component_version, component_release; EXIT WHEN NOT FOUND; IF rpmvercmp_epoch(component_epoch, component_version, component_release, latest_epoch, latest_version, latest_release) >= 0 THEN latest_uuid := component_uuid; latest_epoch := component_epoch; latest_version := component_version; latest_release := component_release; END IF;
+        END LOOP;
+        CLOSE product_component_cursor;
+    ELSE
+        OPEN product_stream_component_cursor;
+        LOOP
+            FETCH NEXT FROM product_stream_component_cursor INTO component_uuid, component_epoch, component_version, component_release; EXIT WHEN NOT FOUND; IF rpmvercmp_epoch(component_epoch, component_version, component_release, latest_epoch, latest_version, latest_release) >= 0 THEN latest_uuid := component_uuid; latest_epoch := component_epoch; latest_version := component_version; latest_release := component_release; END IF;
+        END LOOP;
+        CLOSE product_stream_component_cursor;
+    END IF;
+    RETURN NEXT latest_uuid;
+    END LOOP;
+    RETURN;
+  END;
+  $$ LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE;
+"""  # noqa

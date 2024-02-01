@@ -6,7 +6,10 @@ from django.db import connection
 from rest_framework.test import APIClient
 
 from corgi.api.constants import CORGI_API_VERSION
-from corgi.core.constants import GET_LATEST_COMPONENT_STOREDPROC_SQL
+from corgi.core.constants import (
+    GET_LATEST_COMPONENT_STOREDPROC_SQL,
+    GET_LATEST_COMPONENTS_STOREDPROC_SQL,
+)
 from corgi.core.models import ProductNode
 from tests.factories import (
     ProductStreamFactory,
@@ -42,7 +45,8 @@ def stored_proc(django_db_setup, django_db_blocker):
         with connection.cursor() as c:
             c.execute(stored_proc.RPMVERCMP_STOREDPROC_SQL)
             c.execute(stored_proc.RPMVERCMP_EPOCH_STOREDPROC_SQL),
-            c.execute(GET_LATEST_COMPONENT_STOREDPROC_SQL)
+            c.execute(GET_LATEST_COMPONENT_STOREDPROC_SQL),
+            c.execute(GET_LATEST_COMPONENTS_STOREDPROC_SQL)
 
 
 def setup_product(

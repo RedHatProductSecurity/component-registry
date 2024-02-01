@@ -414,7 +414,6 @@ def test_latest_components_by_streams_filter(client, api_path, stored_proc):
         )
 
 
-@pytest.mark.skip(reason="need more time for analysis")
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_latest_components_by_streams_filter_with_multiple_products(client, api_path, stored_proc):
     ps1 = ProductStreamFactory(name="rhel-7", version="7")

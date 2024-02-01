@@ -1,10 +1,15 @@
 import logging
+import re
 import uuid
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Generator, Union
 
+from boolean import Expression as LicenseExpression
+from boolean import ParseError
 from django.db.models import Manager, QuerySet
+from license_expression import ExpressionError
+from spdx_tools.common.spdx_licensing import spdx_licensing
 from spdx_tools.spdx.jsonschema.document_converter import DocumentConverter
 from spdx_tools.spdx.model import (
     Actor,
@@ -13,14 +18,15 @@ from spdx_tools.spdx.model import (
     Document,
     ExternalPackageRef,
     ExternalPackageRefCategory,
+    ExtractedLicensingInfo,
     Package,
     Relationship,
     RelationshipType,
     Version,
 )
 from spdx_tools.spdx.model.spdx_no_assertion import SpdxNoAssertion
-# from spdx_tools.spdx.validation.document_validator import validate_full_spdx_document
-# from spdx_tools.spdx.validation.validation_message import ValidationMessage
+from spdx_tools.spdx.validation.document_validator import validate_full_spdx_document
+from spdx_tools.spdx.validation.validation_message import ValidationMessage
 
 from corgi.core.models import Component, ComponentNode, ProductStream
 
@@ -53,6 +59,22 @@ class ManifestFile(ABC):
         "release",
         "type",
     ]
+    LICENSE_REF_PREFIX = "LicenseRef-"
+    LICENSE_EXTRACTED_TEXT = (
+        "There is a mapping of many of License Names to SPDX Licenses and "
+        "links to full extracted text available at "
+        "https://docs.fedoraproject.org/en-US/legal/"
+    )
+    LICENSE_EXTRACTED_COMMENT = (
+        "External License Info is obtained from a build system which predates the SPDX "
+        "specification and is not strict in accepting valid SPDX licenses."
+    )
+
+    def __init__(self) -> None:
+        # Ensures a unique LicenceRef index per manifest
+        self.license_ref_counter = 0
+        # Stored external licenses per manifest
+        self.extracted_licenses: dict[str, int] = {}
 
     @staticmethod
     def version_info(epoch: int, version: str, release: str) -> str:
@@ -87,6 +109,59 @@ class ManifestFile(ABC):
                 reference_type="cpe22Type",
                 locator=cpe,
             )
+
+    def validate_licenses(self, license_raw: str) -> Union[LicenseExpression, SpdxNoAssertion]:
+        """Check the license_raw argument is a valid SPDX license expression, if not decompose the
+        expression, and replace each invalid license with a licenseRef.
+        The set of licenseRefs for the manifest can then be looked up with
+        self.get_external_licenses()"""
+        if license_raw == "":
+            return SpdxNoAssertion()
+        try:
+            # Red Hat tends to use valid exception symbols such as 'Bison-exception-2.2' separated
+            # by 'and' when they should only be used after 'with'.
+            # Make sure that any 'exception' license symbol follows a 'with'
+            for _ in spdx_licensing.tokenize(license_raw, strict=True):
+                pass
+            # Look for invalidate license symbols
+            license_expression = spdx_licensing.parse(license_raw, validate=True, strict=True)
+        except ParseError as e:
+            logger.debug(f"Error tokenizing license expression {e}")
+            license_ref = self.add_license_ref(license_raw)
+            return spdx_licensing.parse(f"{self.LICENSE_REF_PREFIX}{license_ref}")
+        except ExpressionError as e:
+            logger.debug(f"Invalid License expression. {e}")
+        else:
+            # Valid license expression, return it
+            return license_expression
+        # In Brew we normally do not have valid 'with' symbols on the right side of 'with' in
+        # license expressions. Avoid trying to replace invalid licenses with license refs in that
+        # case. Just replace the entire license expression with a license ref.
+        if re.search("with", license_raw, re.IGNORECASE):
+            license_ref = self.add_license_ref(license_raw)
+            return spdx_licensing.parse(f"{self.LICENSE_REF_PREFIX}{license_ref}")
+        try:
+            for invalid_license in spdx_licensing.unknown_license_keys(license_raw, unique=False):
+                license_ref = self.add_license_ref(invalid_license)
+                # unknown_license_keys returns the symbols in order, multiple times if they occur,
+                # hence only replace 1 each time
+                license_raw = license_raw.replace(
+                    invalid_license, f"{self.LICENSE_REF_PREFIX}{license_ref}", 1
+                )
+            return spdx_licensing.parse(license_raw)
+        except ExpressionError as e:
+            logger.debug(f"Error iterating unknown license keys: {e}")
+            license_ref = self.add_license_ref(license_raw)
+            return spdx_licensing.parse(f"{self.LICENSE_REF_PREFIX}{license_ref}")
+
+    def add_license_ref(self, invalid_license):
+        if invalid_license in self.extracted_licenses:
+            return self.extracted_licenses[invalid_license]
+        # Copy the original value of license_ref_counter and return it after incrementing it
+        license_ref_index = self.license_ref_counter
+        self.extracted_licenses[invalid_license] = license_ref_index
+        self.license_ref_counter += 1
+        return license_ref_index
 
     def get_relationships_for_component(self, component) -> Generator[Relationship, None, None]:
         for node_purl, node_type, node_id in component.get_provides_nodes_queryset():
@@ -143,6 +218,10 @@ class ManifestFile(ABC):
 
         version_info = self.version_info(component.epoch, component.version, component.release)
         file_name = component.filename if component.filename else None
+
+        license_concluded = self.validate_licenses(component.license_concluded_raw)
+        license_declared = self.validate_licenses(component.license_declared_raw)
+
         if not package_id:
             package_id = f"{self.REF_PREFIX}{component.pk}"
         return Package(
@@ -151,8 +230,8 @@ class ManifestFile(ABC):
             external_references=external_references,
             files_analyzed=False,
             homepage=non_rpm_related_url,
-            # license_concluded=self.no_assert_if_empty(component.license_concluded),
-            # license_declared=self.no_assert_if_empty(component.license_declared),
+            license_concluded=license_concluded,
+            license_declared=license_declared,
             name=component.name,
             originator=SpdxNoAssertion(),
             file_name=file_name,
@@ -167,11 +246,36 @@ class ManifestFile(ABC):
         for component in manager.only(*self.PACKAGE_FIELDS).iterator():
             yield self.build_package(component)
 
+    def build_extracted_license_info(self) -> list[ExtractedLicensingInfo]:
+        extracted_licensing_info: list[ExtractedLicensingInfo] = []
+        for value, ref in self.extracted_licenses.items():
+            extracted_licensing_info.append(
+                ExtractedLicensingInfo(
+                    license_id=f"{self.LICENSE_REF_PREFIX}{ref}",
+                    license_name=value,
+                    extracted_text=self.LICENSE_EXTRACTED_TEXT,
+                    comment=self.LICENSE_EXTRACTED_COMMENT,
+                )
+            )
+        return extracted_licensing_info
+
+    def validate_document(self, document: Document, document_name: str) -> None:
+        validation_messages: list[ValidationMessage] = validate_full_spdx_document(
+            document, spdx_version=self.SPDX_VERSION
+        )
+        for message in validation_messages:
+            logging.error(message.context)
+            raise ValueError(
+                f"SPDX validation failed for component {document_name}: "
+                f"{message.validation_message}"
+            )
+
 
 class ComponentManifestFile(ManifestFile):
     """A data file that represents a component manifest in machine-readable SPDX / JSON format."""
 
     def __init__(self, component: Component) -> None:
+        super().__init__()
         self.component = component
         self.document_uuid = f"{self.REF_PREFIX}{component.pk}"
 
@@ -207,16 +311,8 @@ class ComponentManifestFile(ManifestFile):
         )
         document.relationships = relationships
 
-        # validation_messages: list[ValidationMessage] = validate_full_spdx_document(
-        #     document, spdx_version=self.SPDX_VERSION
-        # )
-
-        # for message in validation_messages:
-        #     logging.error(message.context)
-        #     raise ValueError(
-        #         f"SPDX validation failed for component {document_name}: "
-        #         f"{message.validation_message}"
-        #     )
+        document.extracted_licensing_info = self.build_extracted_license_info()
+        self.validate_document(document, document_name)
 
         return DocumentConverter().convert(document)
 
@@ -229,6 +325,7 @@ class ProductManifestFile(ManifestFile):
     )
 
     def __init__(self, stream: ProductStream) -> None:
+        super().__init__()
         self.stream = stream
 
     def render_content(
@@ -274,6 +371,9 @@ class ProductManifestFile(ManifestFile):
 
         document.packages = packages
         document.relationships = relationships
+
+        document.extracted_licensing_info = self.build_extracted_license_info()
+        self.validate_document(document, document_name)
 
         return DocumentConverter().convert(document)
 

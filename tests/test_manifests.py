@@ -1,5 +1,6 @@
 import json
 import logging
+import uuid
 from json import JSONDecodeError
 
 import jsonschema
@@ -176,7 +177,7 @@ def test_slim_rpm_in_containers_manifest(stored_proc):
     distinct_provides = stream.provides_queryset
     assert len(distinct_provides) == num_provided
 
-    document_uuid = "TEST"
+    document_uuid = f"SPDXRef-{uuid.uuid4()}"
 
     manifest = ProductManifestFile(stream).render_content(document_uuid=document_uuid)
 
@@ -476,12 +477,87 @@ def test_no_duplicates_in_manifest_with_upstream(stored_proc):
     assert len(manifest["packages"]) == 4
 
 
+license_expressions = [
+    (
+        "0BSD",
+        "0BSD",
+        {},
+    ),
+    # I'm surprised 0BSD+ is not recognized as an alias to 0BSD or later
+    (
+        "0BSD+",
+        "LicenseRef-0",
+        {"0BSD+": 0},
+    ),
+    ("0BSD+ or 0BSD+", "LicenseRef-0 OR LicenseRef-0", {"0BSD+": 0}),
+    ("BSD-3-Clause or GPLv3+", "BSD-3-Clause OR LicenseRef-0", {"GPLv3+": 0}),
+    (
+        "BSD-3-Clause or (GPLv3+ or LGPLv3+)",
+        "BSD-3-Clause OR (LicenseRef-0 OR LicenseRef-1)",
+        {"GPLv3+": 0, "LGPLv3+": 1},
+    ),
+    (
+        "BSD-3-Clause with exceptions",
+        "LicenseRef-0",
+        {"BSD-3-Clause with exceptions": 0},
+    ),
+    (
+        "BSD-3-Clause or (GPLv3+ with exceptions and LGPLv3+) and Public Domain",
+        "LicenseRef-0",
+        {
+            "BSD-3-Clause or (GPLv3+ with exceptions and LGPLv3+) and Public Domain": 0,
+        },
+    ),
+    # Actual license declared data examples
+    (
+        "(MPLv1.1 or LGPLv3+) and LGPLv3 and LGPLv2+ and BSD and (MPLv1.1 or GPLv2 or LGPLv2 or "
+        "Netscape) and Public Domain and ASL 2.0 and MPLv2.0 and CC0",
+        "(LicenseRef-0 OR LicenseRef-1) AND LicenseRef-2 AND LicenseRef-3 AND LicenseRef-4 AND "
+        "(LicenseRef-0 OR LicenseRef-5 OR LicenseRef-6 OR LicenseRef-7) AND LicenseRef-8 AND "
+        "LicenseRef-9 AND LicenseRef-10 AND LicenseRef-11",
+        {
+            "MPLv1.1": 0,
+            "LGPLv3+": 1,
+            "LGPLv3": 2,
+            "LGPLv2+": 3,
+            "BSD": 4,
+            "GPLv2": 5,
+            "LGPLv2": 6,
+            "Netscape": 7,
+            "Public Domain": 8,
+            "ASL 2.0": 9,
+            "MPLv2.0": 10,
+            "CC0": 11,
+        },
+    ),
+    (
+        "GPLv2 and Redistributable, no modification permitted",
+        "LicenseRef-0",
+        {"GPLv2 and Redistributable, no modification permitted": 0},
+    ),
+    (
+        "0BSD and Bison-exception-2.2",
+        "LicenseRef-0",
+        {"0BSD and Bison-exception-2.2": 0},
+    ),
+]
+
+
+@pytest.mark.parametrize("license_raw, license_valid, license_refs", license_expressions)
+def test_validate_licenses(license_raw, license_valid, license_refs):
+    manifest = ComponentManifestFile(ComponentFactory())
+    result = str(manifest.validate_licenses(license_raw))
+    assert result == license_valid
+    assert license_refs == manifest.extracted_licenses
+
+
 def test_component_manifest_properties():
     """Test that all Components have a .manifest property
     And that it generates valid JSON."""
     component, _, provided, dev_provided = setup_products_and_components_provides()
 
-    manifest = ComponentManifestFile(component).render_content()
+    component_manifest_file = ComponentManifestFile(component)
+    manifest = component_manifest_file.render_content()
 
     document_namespace_prefix = "https://access.redhat.com/security/data/sbom/spdx/"
     assert (
@@ -534,6 +610,24 @@ def test_component_manifest_properties():
     assert manifest["relationships"][provided_index] == provided_contained_by_component
     assert manifest["relationships"][dev_provided_index] == dev_provided_dependency_of_component
     assert manifest["relationships"][-1] == document_describes_product
+
+    extracted_licensing_info = manifest["hasExtractedLicensingInfos"]
+    assert len(extracted_licensing_info) == 2
+    expected_extracted_licensing_info = [
+        {
+            "comment": component_manifest_file.LICENSE_EXTRACTED_COMMENT,
+            "extractedText": component_manifest_file.LICENSE_EXTRACTED_TEXT,
+            "licenseId": "LicenseRef-0",
+            "name": "(MIT and (ASL 2.0 or GPLv3+ with exceptions)) or LGPLv3+",
+        },
+        {
+            "comment": component_manifest_file.LICENSE_EXTRACTED_COMMENT,
+            "extractedText": component_manifest_file.LICENSE_EXTRACTED_TEXT,
+            "licenseId": "LicenseRef-1",
+            "name": "BSD-3-Clause or (GPLv3+ with exceptions and LGPLv3+) and Public Domain",
+        },
+    ]
+    assert expected_extracted_licensing_info == extracted_licensing_info
 
 
 def setup_products_and_components_upstreams():

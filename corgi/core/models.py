@@ -1026,6 +1026,8 @@ class ComponentQuerySet(models.QuerySet):
     def _latest_components_func(
         components: "ComponentQuerySet", model_type: str, ofuri: str, include_inactive_streams: bool
     ) -> Iterable[str]:
+        # get_latest_component ps_ofuris is an array
+        ofuris = [ofuri]
         return (
             components.values("type", "namespace", "name", "arch")
             .order_by("type", "namespace", "name", "arch")
@@ -1033,13 +1035,13 @@ class ComponentQuerySet(models.QuerySet):
             .annotate(
                 latest_version=Func(
                     Value(model_type),
-                    Value(ofuri),
+                    Value(ofuris),
                     F("type"),
                     F("namespace"),
                     F("name"),
                     F("arch"),
                     Value(include_inactive_streams),
-                    function="get_latest_component",
+                    function="get_latest_components",
                     output_field=models.UUIDField(),
                 )
             )
@@ -1127,23 +1129,33 @@ class ComponentQuerySet(models.QuerySet):
         # if include_inactive_streams is False we need to filter ofuris
         # Clear ordering inherited from parent Queryset, if any
         # So .distinct() works properly and doesn't have duplicates
-        productstreams = components.values_list("productstreams").order_by().distinct()
-        product_stream_objs = ProductStream.objects.filter(pk__in=Subquery(productstreams))
+        productstreams = components.values("productstreams").order_by().distinct()
+        productstreams = ProductStream.objects.filter(pk__in=Subquery(productstreams))
         if not include_inactive_streams:
-            product_stream_objs = product_stream_objs.filter(active=True)
-        product_stream_ofuris = product_stream_objs.values_list("ofuri", flat=True).distinct()
+            productstreams = productstreams.filter(active=True)
+        product_stream_ofuris = list(productstreams.values_list("ofuri", flat=True).distinct())
 
-        # aggregate up all latest component uuids across all matched product streams
-        latest_components_uuids: set[str] = set()
-        for ps_ofuri in product_stream_ofuris:
-            latest_components_uuids.update(
-                self._latest_components_func(
-                    components.filter(productstreams__ofuri=ps_ofuri),
-                    "ProductStream",  # always ProductStream model type
-                    ps_ofuri,
-                    include_inactive_streams,
+        latest_components_uuids = list(
+            set(
+                components.values("type", "namespace", "name", "arch")
+                .order_by("type", "namespace", "name", "arch")
+                .distinct("type", "namespace", "name", "arch")
+                .annotate(
+                    latest_version=Func(
+                        Value("ProductStream"),
+                        Value(product_stream_ofuris),
+                        F("type"),
+                        F("namespace"),
+                        F("name"),
+                        F("arch"),
+                        Value(include_inactive_streams),
+                        function="get_latest_components",
+                        output_field=models.UUIDField(),
+                    )
                 )
+                .values_list("latest_version", flat=True)
             )
+        )
 
         lookup = {"pk__in": latest_components_uuids}
         if include:

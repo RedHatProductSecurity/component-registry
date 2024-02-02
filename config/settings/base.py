@@ -414,7 +414,7 @@ REST_FRAMEWORK = {
         "rest_framework.renderers.JSONRenderer",
         "rest_framework.renderers.BrowsableAPIRenderer",
     ],
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.LimitOffsetPagination",
+    "DEFAULT_PAGINATION_CLASS": "corgi.api.pagination.FasterPageNumberPagination",
     "PAGE_SIZE": 10,
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "EXCEPTION_HANDLER": "corgi.api.exception_handlers.exception_handler",
@@ -503,3 +503,6 @@ SCA_ENABLED = strtobool(os.getenv("CORGI_SCA_ENABLED", "true"))
 SCA_SCRATCH_DIR = os.getenv("CORGI_SCA_SCATCH_DIR", "/tmp")
 
 QUAY_TOKEN = os.getenv("CORGI_QUAY_TOKEN", "")
+
+# disable using reltuples in corgi.api.paginate.FasterPageNumberPagination for fast count estimates
+OPTIMISE_REST_API_COUNT = False

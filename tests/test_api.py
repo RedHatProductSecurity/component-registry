@@ -136,6 +136,21 @@ def test_channel_detail(client, api_path):
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_component(client, api_path):
+    SrpmComponentFactory(name="curl")
+
+    response = client.get(f"{api_path}/components")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 1
+
+    response = client.get(f"{api_path}/components?limit=1")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 1
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_component_include_exclude_fields(client, api_path):
     SrpmComponentFactory(name="curl")
 

@@ -9,11 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 * added **epoch** to component filters, ex. /api/v1/components?epoch=0
 * added **re_downstreams_name** to component filters, ex. /api/v1/components?re_downstreams_name=foo
+* added new FasterPageNumberPagination for quicker REST API counts
 
 ### Changed
 * Exclude modular source RPMs (type="RPM", arch="src", release__contains=".module") from manifests,
 and from the API when using the root_components=True filter
 * Set gunicorn worker_tmp_dir to use /dev/shm
+* migrated product stream loop from django to pg function get_latest_components()
+* refactored include/exclude filter
+
 
 ## [1.4.2] - 2023-12-19
 

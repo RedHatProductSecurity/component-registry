@@ -4,6 +4,7 @@ stages:
   - build
   - deploy-stage
   - deploy-prod
+  - perf
 
 include:
   - project: 'product-security/dev/component-registry-ops'
@@ -130,7 +131,7 @@ test-migrations:
       - schedules
 
 test-performance:
-  stage: test
+  stage: perf
   allow_failure: true
   # Keep in sync with Dockerfile
   image: registry.redhat.io/ubi9/ubi
@@ -141,6 +142,9 @@ test-performance:
     - $DNF_WITH_OPTIONS install $RPM_REQUIREMENTS
     - python3.11 -m pip install tox
     - tox -e corgi -- -m performance --no-cov
+  only:
+    refs:
+      - schedules
 
 mypy:
   stage: test
@@ -208,6 +212,23 @@ secrets:
     - *common_ci_setup
   script:
     - tox -e secrets
+  only:
+    refs:
+      - schedules
+
+locust:
+  stage: perf
+  image: $PYTHON_TOX_IMAGE_LATEST
+  before_script:
+    - *common_ci_setup
+    - *common_test_setup
+  script:
+    - pip3 install locust
+    - timeout --foreground 90s locust --headless -f ./perf --host https://$CORGI_DOMAIN --users 5 --spawn-rate 2 --csv=locust-result.csv --run-time 1m || exit 1
+  artifacts:
+    when: always
+    paths:
+      - locust-result.csv
   only:
     refs:
       - schedules

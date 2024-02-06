@@ -26,7 +26,6 @@ from corgi.core.constants import (
     ROOT_COMPONENTS_CONDITION,
     SRPM_CONDITION,
 )
-from corgi.core.files import ComponentManifestFile, ProductManifestFile
 from corgi.core.fixups import cpe_lookup, external_name_lookup
 from corgi.core.mixins import TimeStampedModel
 
@@ -701,11 +700,6 @@ class ProductStream(ProductModel):
     # implicit "components" field on ProductStream model
     # is created by productstreams field on Component model
     components: "ComponentQuerySet"
-
-    @property
-    def manifest(self) -> str:
-        """Return an SPDX-style manifest in JSON format"""
-        return ProductManifestFile(self).render_content()[0]
 
     @property
     def provides_queryset(self, using: str = "read_only") -> QuerySet["Component"]:
@@ -2139,11 +2133,6 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     def license_declared_list(self) -> list[str]:
         return self.license_list(self.license_declared)
 
-    @property
-    def manifest(self) -> str:
-        """Return an SPDX-style manifest in JSON format."""
-        return ComponentManifestFile(self).render_content()[0]
-
     def get_provides_pks(self, include_dev: bool = True, using: str = "read_only") -> set[str]:
         """Return Component PKs which are PROVIDES descendants of this Component, for taxonomies"""
         provides_set = set()
@@ -2185,6 +2174,10 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             )
         return (
             ComponentNode.objects.filter(pk__in=provides_set)
+            # See CORGI-658 for the motivation
+            .exclude(purl__contains="redhat.com")
+            # Remove .exclude() below when CORGI-428 is resolved
+            .exclude(purl__startswith="pkg:golang/", purl__contains="./")
             .using(using)
             .values_list("purl", "type", "object_id")
             # Ensure generated manifests only change when content does

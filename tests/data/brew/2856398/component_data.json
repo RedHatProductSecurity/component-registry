@@ -1,0 +1,7067 @@
+{
+  "type": "OCI",
+  "meta": {
+    "name": "rhcos-x86_64",
+    "version": "416.94.202401181356",
+    "release": "0",
+    "epoch": 0,
+    "arch": "x86_64",
+    "source": ["koji.listArchives"],
+    "filename": "commitmeta.json",
+    "brew_archive_id": 10116085
+  },
+  "nested_builds": [
+    2256902, 1689607, 2764820, 2048040, 2218036, 2850868, 2779194, 2777147,
+    2625620, 2777178, 2250854, 2820207, 1273970, 1691766, 1689724, 2846846,
+    1788033, 2451601, 2418855, 1689785, 2470083, 1818836, 1689818, 2818303,
+    2433279, 2838785, 1689867, 2836752, 1691921, 2685204, 2853151, 1689887,
+    2853154, 2853155, 2214191, 2709815, 1771837, 1798464, 1689923, 2593092,
+    1689925, 2838866, 1691989, 2797913, 1728857, 2838887, 2232680, 1689961,
+    1689962, 2765165, 1692018, 2541942, 1888632, 1692025, 1692031, 1689999,
+    1690002, 1690012, 2212253, 2539937, 1690027, 2478510, 1690038, 1690049,
+    2615746, 2634179, 2818504, 1690056, 1690058, 1690059, 1690061, 2650576,
+    1690079, 1690083, 1690091, 1690098, 2437620, 2363895, 2820602, 1690130,
+    2339351, 2322977, 2826790, 1702445, 2798133, 2042430, 1692227, 2130514,
+    1690195, 1690196, 2800213, 2769499, 1690209, 2290284, 1882751, 2785925,
+    2785928, 2538128, 1843857, 1884820, 1690260, 1766038, 2630305, 2634410,
+    2765484, 2840574, 2339526, 2085589, 2624225, 2394854, 1692391, 2622184,
+    2427626, 2444015, 1690356, 2837237, 2601727, 1690398, 2366244, 1891122,
+    2646856, 1839949, 2546522, 1690479, 1692534, 1690488, 2032508, 2206593,
+    1690504, 1690509, 1706899, 2597784, 1692573, 1706911, 2816935, 2214836,
+    2012098, 2175957, 2051035, 2847716, 2816997, 1852394, 1682427, 2208781,
+    1842197, 2501654, 1690656, 2751521, 2296866, 2845766, 1690697, 2483276,
+    1690709, 1848406, 1887324, 1690718, 2770021, 1690726, 2716789, 2817160,
+    2770077, 2718882, 2813094, 1690792, 2804911, 2804913, 1690802, 1707185,
+    2159794, 2137271, 2481337, 2632891, 2577605, 1690822, 2821329, 1690833,
+    2772179, 2821335, 2827480, 1690848, 2852070, 2481397, 1690871, 1690872,
+    1688838, 2792712, 2835724, 1688850, 1688853, 1690905, 2835738, 1690923,
+    2805041, 2561331, 2577719, 1688888, 2577728, 2782529, 1822021, 2692430,
+    2061647, 2770260, 1688924, 1879398, 2100586, 1688939, 1690989, 2332036,
+    2241926, 2563465, 2293132, 2805134, 1691034, 1867165, 1697188, 1691045,
+    2805158, 2516392, 1689000, 1689001, 1691049, 2637237, 2821561, 2641338,
+    1691067, 1691068, 1691070, 1689035, 2215378, 1986004, 2827735, 1689047,
+    1691096, 2590170, 1691099, 2809308, 2821600, 2821622, 1738235, 2592251,
+    2835964, 2821641, 1691156, 1691173, 2512428, 1691186, 1982016, 2823755,
+    1689169, 2526805, 1689181, 1691236, 1691245, 1736302, 1691250, 2801270,
+    1689213, 2637443, 2807439, 2115217, 1861265, 2643605, 2356885, 1691288,
+    2797210, 1689243, 2303647, 2737831, 2737838, 2467503, 2637501, 1892040,
+    1689293, 2311885, 2553551, 1689299, 1695462, 1691369, 1691382, 2162423,
+    2324220, 2828028, 1691390, 2590462, 2766593, 2807564, 2850573, 1691416,
+    1689369, 1691421, 1691423, 2563875, 1691431, 2537272, 1806145, 2330435,
+    2797396, 2350940, 2467679, 2836320, 2635622, 2535277, 2819950, 2848623,
+    1894262, 2629518, 2820002, 2807721, 1757098, 2428848, 2777012, 2840501,
+    2676665, 1691580, 2807751, 1691597, 2459621, 2625518, 1691630, 1728505,
+    2721788, 2697214
+  ],
+  "sources": [],
+  "image_components": [],
+  "components": [
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2852070,
+      "meta": {
+        "nvr": "NetworkManager-1.45.10-1.el9",
+        "name": "NetworkManager",
+        "version": "1.45.10",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 13001825,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2769499,
+      "meta": {
+        "nvr": "audit-libs-3.1.2-2.el9",
+        "name": "audit-libs",
+        "version": "3.1.2",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12722670,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2625620,
+      "meta": {
+        "nvr": "authselect-1.2.6-2.el9",
+        "name": "authselect",
+        "version": "1.2.6",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12405293,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2625620,
+      "meta": {
+        "nvr": "authselect-libs-1.2.6-2.el9",
+        "name": "authselect-libs",
+        "version": "1.2.6",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12405294,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2770260,
+      "meta": {
+        "nvr": "avahi-libs-0.8-20.el9",
+        "name": "avahi-libs",
+        "version": "0.8",
+        "release": "20.el9",
+        "arch": "x86_64",
+        "rpm_id": 12724662,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1688850,
+      "meta": {
+        "nvr": "basesystem-11-13.el9",
+        "name": "basesystem",
+        "version": "11",
+        "release": "13.el9",
+        "arch": "noarch",
+        "rpm_id": 10073197,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1688853,
+      "meta": {
+        "nvr": "bash-completion-2.11-4.el9",
+        "name": "bash-completion",
+        "version": "2.11",
+        "release": "4.el9",
+        "arch": "noarch",
+        "rpm_id": 10073199,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2481397,
+      "meta": {
+        "nvr": "binutils-2.35.2-42.el9",
+        "name": "binutils",
+        "version": "2.35.2",
+        "release": "42.el9",
+        "arch": "x86_64",
+        "rpm_id": 12121657,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2481397,
+      "meta": {
+        "nvr": "binutils-gold-2.35.2-42.el9",
+        "name": "binutils-gold",
+        "version": "2.35.2",
+        "release": "42.el9",
+        "arch": "x86_64",
+        "rpm_id": 12121654,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2827735,
+      "meta": {
+        "nvr": "bootupd-0.2.17-1.el9",
+        "name": "bootupd",
+        "version": "0.2.17",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12917500,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2293132,
+      "meta": {
+        "nvr": "bsdtar-3.5.3-4.el9",
+        "name": "bsdtar",
+        "version": "3.5.3",
+        "release": "4.el9",
+        "arch": "x86_64",
+        "rpm_id": 11733101,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1688924,
+      "meta": {
+        "nvr": "bubblewrap-0.4.1-6.el9",
+        "name": "bubblewrap",
+        "version": "0.4.1",
+        "release": "6.el9",
+        "arch": "x86_64",
+        "rpm_id": 10075586,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1688939,
+      "meta": {
+        "nvr": "bzip2-1.0.8-8.el9",
+        "name": "bzip2",
+        "version": "1.0.8",
+        "release": "8.el9",
+        "arch": "x86_64",
+        "rpm_id": 10075946,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1688939,
+      "meta": {
+        "nvr": "bzip2-libs-1.0.8-8.el9",
+        "name": "bzip2-libs",
+        "version": "1.0.8",
+        "release": "8.el9",
+        "arch": "x86_64",
+        "rpm_id": 10075951,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2852070,
+      "meta": {
+        "nvr": "NetworkManager-cloud-setup-1.45.10-1.el9",
+        "name": "NetworkManager-cloud-setup",
+        "version": "1.45.10",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 13001819,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2852070,
+      "meta": {
+        "nvr": "NetworkManager-libnm-1.45.10-1.el9",
+        "name": "NetworkManager-libnm",
+        "version": "1.45.10",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 13001827,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2852070,
+      "meta": {
+        "nvr": "NetworkManager-ovs-1.45.10-1.el9",
+        "name": "NetworkManager-ovs",
+        "version": "1.45.10",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 13001808,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2852070,
+      "meta": {
+        "nvr": "NetworkManager-team-1.45.10-1.el9",
+        "name": "NetworkManager-team",
+        "version": "1.45.10",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 13001810,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2852070,
+      "meta": {
+        "nvr": "NetworkManager-tui-1.45.10-1.el9",
+        "name": "NetworkManager-tui",
+        "version": "1.45.10",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 13001829,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2366244,
+      "meta": {
+        "nvr": "WALinuxAgent-udev-2.7.0.6-9.el9",
+        "name": "WALinuxAgent-udev",
+        "version": "2.7.0.6",
+        "release": "9.el9",
+        "arch": "noarch",
+        "rpm_id": 11924163,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2012098,
+      "meta": {
+        "nvr": "libref_array-0.1.5-53.el9",
+        "name": "libref_array",
+        "version": "0.1.5",
+        "release": "53.el9",
+        "arch": "x86_64",
+        "rpm_id": 11090225,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2797210,
+      "meta": {
+        "nvr": "librepo-1.14.5-2.el9",
+        "name": "librepo",
+        "version": "1.14.5",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12794608,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1852394,
+      "meta": {
+        "nvr": "libreport-filesystem-2.15.2-6.el9",
+        "name": "libreport-filesystem",
+        "version": "2.15.2",
+        "release": "6.el9",
+        "arch": "noarch",
+        "rpm_id": 10655030,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1788033,
+      "meta": {
+        "nvr": "libseccomp-2.5.2-2.el9",
+        "name": "libseccomp",
+        "version": "2.5.2",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 10430806,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2821561,
+      "meta": {
+        "nvr": "libselinux-3.6-1.el9",
+        "name": "libselinux",
+        "version": "3.6",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12891605,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2821561,
+      "meta": {
+        "nvr": "libselinux-utils-3.6-1.el9",
+        "name": "libselinux-utils",
+        "version": "3.6",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12891606,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2821600,
+      "meta": {
+        "nvr": "libsemanage-3.6-1.el9",
+        "name": "libsemanage",
+        "version": "3.6",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12891746,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2820602,
+      "meta": {
+        "nvr": "libsepol-3.6-1.el9",
+        "name": "libsepol",
+        "version": "3.6",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12889525,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690130,
+      "meta": {
+        "nvr": "libsigsegv-2.13-4.el9",
+        "name": "libsigsegv",
+        "version": "2.13",
+        "release": "4.el9",
+        "arch": "x86_64",
+        "rpm_id": 10097106,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2807564,
+      "meta": {
+        "nvr": "aardvark-dns-1.9.0-1.el9",
+        "name": "aardvark-dns",
+        "version": "1.9.0",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12818508,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2526805,
+      "meta": {
+        "nvr": "c-ares-1.19.1-1.el9",
+        "name": "c-ares",
+        "version": "1.19.1",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12214776,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2821641,
+      "meta": {
+        "nvr": "checkpolicy-3.6-1.el9",
+        "name": "checkpolicy",
+        "version": "3.6",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12891785,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2709815,
+      "meta": {
+        "nvr": "acl-2.3.1-4.el9",
+        "name": "acl",
+        "version": "2.3.1",
+        "release": "4.el9",
+        "arch": "x86_64",
+        "rpm_id": 12621833,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2208781,
+      "meta": {
+        "nvr": "adcli-0.9.2-1.el9",
+        "name": "adcli",
+        "version": "0.9.2",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 11571324,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1884820,
+      "meta": {
+        "nvr": "libslirp-4.4.0-7.el9",
+        "name": "libslirp",
+        "version": "4.4.0",
+        "release": "7.el9",
+        "arch": "x86_64",
+        "rpm_id": 10772089,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2650576,
+      "meta": {
+        "nvr": "libsmartcols-2.37.4-15.el9",
+        "name": "libsmartcols",
+        "version": "2.37.4",
+        "release": "15.el9",
+        "arch": "x86_64",
+        "rpm_id": 12465955,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2782529,
+      "meta": {
+        "nvr": "afterburn-5.4.3-2.rhaos4.15.el9",
+        "name": "afterburn",
+        "version": "5.4.3",
+        "release": "2.rhaos4.15.el9",
+        "arch": "x86_64",
+        "rpm_id": 12753511,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2206593,
+      "meta": {
+        "nvr": "chrony-4.3-1.el9",
+        "name": "chrony",
+        "version": "4.3",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 11565779,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2350940,
+      "meta": {
+        "nvr": "cifs-utils-7.0-1.el9",
+        "name": "cifs-utils",
+        "version": "7.0",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 11889088,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2539937,
+      "meta": {
+        "nvr": "clevis-18-112.el9",
+        "name": "clevis",
+        "version": "18",
+        "release": "112.el9",
+        "arch": "x86_64",
+        "rpm_id": 12235406,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2539937,
+      "meta": {
+        "nvr": "clevis-dracut-18-112.el9",
+        "name": "clevis-dracut",
+        "version": "18",
+        "release": "112.el9",
+        "arch": "x86_64",
+        "rpm_id": 12235403,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2539937,
+      "meta": {
+        "nvr": "clevis-luks-18-112.el9",
+        "name": "clevis-luks",
+        "version": "18",
+        "release": "112.el9",
+        "arch": "x86_64",
+        "rpm_id": 12235404,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2539937,
+      "meta": {
+        "nvr": "clevis-systemd-18-112.el9",
+        "name": "clevis-systemd",
+        "version": "18",
+        "release": "112.el9",
+        "arch": "x86_64",
+        "rpm_id": 12235399,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2218036,
+      "meta": {
+        "nvr": "cloud-utils-growpart-0.33-1.el9",
+        "name": "cloud-utils-growpart",
+        "version": "0.33",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 11596865,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2782529,
+      "meta": {
+        "nvr": "afterburn-dracut-5.4.3-2.rhaos4.15.el9",
+        "name": "afterburn-dracut",
+        "version": "5.4.3",
+        "release": "2.rhaos4.15.el9",
+        "arch": "x86_64",
+        "rpm_id": 12753510,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2516392,
+      "meta": {
+        "nvr": "alternatives-1.24-1.el9",
+        "name": "alternatives",
+        "version": "1.24",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12194998,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1688838,
+      "meta": {
+        "nvr": "attr-2.5.1-3.el9",
+        "name": "attr",
+        "version": "2.5.1",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 10073869,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2769499,
+      "meta": {
+        "nvr": "audit-3.1.2-2.el9",
+        "name": "audit",
+        "version": "3.1.2",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12722672,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2777178,
+      "meta": {
+        "nvr": "sssd-krb5-common-2.9.3-2.el9",
+        "name": "sssd-krb5-common",
+        "version": "2.9.3",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12739776,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2819950,
+      "meta": {
+        "nvr": "libsmbclient-4.19.3-100.el9",
+        "name": "libsmbclient",
+        "version": "4.19.3",
+        "release": "100.el9",
+        "arch": "x86_64",
+        "rpm_id": 12888595,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1689999,
+      "meta": {
+        "nvr": "libsmbios-2.4.3-4.el9",
+        "name": "libsmbios",
+        "version": "2.4.3",
+        "release": "4.el9",
+        "arch": "x86_64",
+        "rpm_id": 10083316,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2563465,
+      "meta": {
+        "nvr": "libsolv-0.7.24-2.el9",
+        "name": "libsolv",
+        "version": "0.7.24",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12275642,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2820207,
+      "meta": {
+        "nvr": "libss-1.46.5-5.el9",
+        "name": "libss",
+        "version": "1.46.5",
+        "release": "5.el9",
+        "arch": "x86_64",
+        "rpm_id": 12889354,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2563875,
+      "meta": {
+        "nvr": "libssh-0.10.4-11.el9",
+        "name": "libssh",
+        "version": "0.10.4",
+        "release": "11.el9",
+        "arch": "x86_64",
+        "rpm_id": 12275897,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2563875,
+      "meta": {
+        "nvr": "libssh-config-0.10.4-11.el9",
+        "name": "libssh-config",
+        "version": "0.10.4",
+        "release": "11.el9",
+        "arch": "noarch",
+        "rpm_id": 12275886,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2777178,
+      "meta": {
+        "nvr": "sssd-ldap-2.9.3-2.el9",
+        "name": "sssd-ldap",
+        "version": "2.9.3",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12739813,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2777178,
+      "meta": {
+        "nvr": "sssd-nfs-idmap-2.9.3-2.el9",
+        "name": "sssd-nfs-idmap",
+        "version": "2.9.3",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12739788,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2777178,
+      "meta": {
+        "nvr": "sssd-proxy-2.9.3-2.el9",
+        "name": "sssd-proxy",
+        "version": "2.9.3",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12739777,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2214836,
+      "meta": {
+        "nvr": "stalld-1.17.1-1.el9",
+        "name": "stalld",
+        "version": "1.17.1",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 11590016,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2737831,
+      "meta": {
+        "nvr": "conmon-2.1.7-3.1.rhaos4.14.el9",
+        "name": "conmon",
+        "version": "2.1.7",
+        "release": "3.1.rhaos4.14.el9",
+        "arch": "x86_64",
+        "rpm_id": 12670736,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2418855,
+      "meta": {
+        "nvr": "conmon-rs-0.5.1-5.rhaos4.13.git.el9",
+        "name": "conmon-rs",
+        "version": "0.5.1",
+        "release": "5.rhaos4.13.git.el9",
+        "arch": "x86_64",
+        "rpm_id": 12050840,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2085589,
+      "meta": {
+        "nvr": "strace-5.18-2.el9",
+        "name": "strace",
+        "version": "5.18",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 11291334,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2303647,
+      "meta": {
+        "nvr": "conntrack-tools-1.4.7-2.el9",
+        "name": "conntrack-tools",
+        "version": "1.4.7",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 11759615,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2777178,
+      "meta": {
+        "nvr": "libsss_certmap-2.9.3-2.el9",
+        "name": "libsss_certmap",
+        "version": "2.9.3",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12739781,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2777178,
+      "meta": {
+        "nvr": "libsss_idmap-2.9.3-2.el9",
+        "name": "libsss_idmap",
+        "version": "2.9.3",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12739773,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2777178,
+      "meta": {
+        "nvr": "libsss_nss_idmap-2.9.3-2.el9",
+        "name": "libsss_nss_idmap",
+        "version": "2.9.3",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12739782,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2777178,
+      "meta": {
+        "nvr": "libsss_sudo-2.9.3-2.el9",
+        "name": "libsss_sudo",
+        "version": "2.9.3",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12739814,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2828028,
+      "meta": {
+        "nvr": "libstdc++-11.4.1-3.el9",
+        "name": "libstdc++",
+        "version": "11.4.1",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 12919000,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2801270,
+      "meta": {
+        "nvr": "libtalloc-2.4.1-1.el9",
+        "name": "libtalloc",
+        "version": "2.4.1",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12795563,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2061647,
+      "meta": {
+        "nvr": "subscription-manager-rhsm-certificates-20220623-1.el9",
+        "name": "subscription-manager-rhsm-certificates",
+        "version": "20220623",
+        "release": "1.el9",
+        "arch": "noarch",
+        "rpm_id": 11237104,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2339526,
+      "meta": {
+        "nvr": "sudo-1.9.5p2-9.el9",
+        "name": "sudo",
+        "version": "1.9.5p2",
+        "release": "9.el9",
+        "arch": "x86_64",
+        "rpm_id": 11855087,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2846846,
+      "meta": {
+        "nvr": "systemd-252-23.el9",
+        "name": "systemd",
+        "version": "252",
+        "release": "23.el9",
+        "arch": "x86_64",
+        "rpm_id": 12989589,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2804911,
+      "meta": {
+        "nvr": "libtdb-1.4.9-1.el9",
+        "name": "libtdb",
+        "version": "1.4.9",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12812512,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2115217,
+      "meta": {
+        "nvr": "console-login-helper-messages-0.21.3-1.el9",
+        "name": "console-login-helper-messages",
+        "version": "0.21.3",
+        "release": "1.el9",
+        "arch": "noarch",
+        "rpm_id": 11376020,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2115217,
+      "meta": {
+        "nvr": "console-login-helper-messages-issuegen-0.21.3-1.el9",
+        "name": "console-login-helper-messages-issuegen",
+        "version": "0.21.3",
+        "release": "1.el9",
+        "arch": "noarch",
+        "rpm_id": 11376021,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2115217,
+      "meta": {
+        "nvr": "console-login-helper-messages-profile-0.21.3-1.el9",
+        "name": "console-login-helper-messages-profile",
+        "version": "0.21.3",
+        "release": "1.el9",
+        "arch": "noarch",
+        "rpm_id": 11376023,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2846846,
+      "meta": {
+        "nvr": "systemd-journal-remote-252-23.el9",
+        "name": "systemd-journal-remote",
+        "version": "252",
+        "release": "23.el9",
+        "arch": "x86_64",
+        "rpm_id": 12989581,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2846846,
+      "meta": {
+        "nvr": "systemd-libs-252-23.el9",
+        "name": "systemd-libs",
+        "version": "252",
+        "release": "23.el9",
+        "arch": "x86_64",
+        "rpm_id": 12989571,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2846846,
+      "meta": {
+        "nvr": "systemd-pam-252-23.el9",
+        "name": "systemd-pam",
+        "version": "252",
+        "release": "23.el9",
+        "arch": "x86_64",
+        "rpm_id": 12989583,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2846846,
+      "meta": {
+        "nvr": "systemd-rpm-macros-252-23.el9",
+        "name": "systemd-rpm-macros",
+        "version": "252",
+        "release": "23.el9",
+        "arch": "noarch",
+        "rpm_id": 12989516,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2846846,
+      "meta": {
+        "nvr": "systemd-udev-252-23.el9",
+        "name": "systemd-udev",
+        "version": "252",
+        "release": "23.el9",
+        "arch": "x86_64",
+        "rpm_id": 12989590,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2459621,
+      "meta": {
+        "nvr": "tmux-3.2a-5.el9",
+        "name": "tmux",
+        "version": "3.2a",
+        "release": "5.el9",
+        "arch": "x86_64",
+        "rpm_id": 12083004,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2845766,
+      "meta": {
+        "nvr": "container-selinux-2.228.0-1.rhaos4.16.el9",
+        "name": "container-selinux",
+        "version": "2.228.0",
+        "release": "1.rhaos4.16.el9",
+        "arch": "noarch",
+        "rpm_id": 12985885,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2835738,
+      "meta": {
+        "nvr": "containernetworking-plugins-1.4.0-1.el9",
+        "name": "containernetworking-plugins",
+        "version": "1.4.0",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12932992,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2718882,
+      "meta": {
+        "nvr": "containers-common-1-36.rhaos4.13.el9",
+        "name": "containers-common",
+        "version": "1",
+        "release": "36.rhaos4.13.el9",
+        "arch": "x86_64",
+        "rpm_id": 12634668,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2805041,
+      "meta": {
+        "nvr": "libtevent-0.16.0-1.el9",
+        "name": "libtevent",
+        "version": "0.16.0",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12812945,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2797913,
+      "meta": {
+        "nvr": "toolbox-0.1.2-1.rhaos4.16.el9",
+        "name": "toolbox",
+        "version": "0.1.2",
+        "release": "1.rhaos4.16.el9",
+        "arch": "noarch",
+        "rpm_id": 12789732,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2537272,
+      "meta": {
+        "nvr": "libtirpc-1.3.3-2.el9",
+        "name": "libtirpc",
+        "version": "1.3.3",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12230871,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1861265,
+      "meta": {
+        "nvr": "libtool-ltdl-2.4.6-45.el9",
+        "name": "libtool-ltdl",
+        "version": "2.4.6",
+        "release": "45.el9",
+        "arch": "x86_64",
+        "rpm_id": 10683555,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690195,
+      "meta": {
+        "nvr": "libunistring-0.9.10-15.el9",
+        "name": "libunistring",
+        "version": "0.9.10",
+        "release": "15.el9",
+        "arch": "x86_64",
+        "rpm_id": 10098195,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2535277,
+      "meta": {
+        "nvr": "tpm2-tools-5.2-3.el9",
+        "name": "tpm2-tools",
+        "version": "5.2",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 12228447,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2800213,
+      "meta": {
+        "nvr": "coreos-installer-0.18.0-1.el9",
+        "name": "coreos-installer",
+        "version": "0.18.0",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12793074,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2800213,
+      "meta": {
+        "nvr": "coreos-installer-bootinfra-0.18.0-1.el9",
+        "name": "coreos-installer-bootinfra",
+        "version": "0.18.0",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12793076,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2324220,
+      "meta": {
+        "nvr": "coreutils-8.32-34.el9",
+        "name": "coreutils",
+        "version": "8.32",
+        "release": "34.el9",
+        "arch": "x86_64",
+        "rpm_id": 11813052,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2324220,
+      "meta": {
+        "nvr": "coreutils-common-8.32-34.el9",
+        "name": "coreutils-common",
+        "version": "8.32",
+        "release": "34.el9",
+        "arch": "x86_64",
+        "rpm_id": 11813048,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1728505,
+      "meta": {
+        "nvr": "cpio-2.13-16.el9",
+        "name": "cpio",
+        "version": "2.13",
+        "release": "16.el9",
+        "arch": "x86_64",
+        "rpm_id": 10231957,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1689047,
+      "meta": {
+        "nvr": "cracklib-2.9.6-27.el9",
+        "name": "cracklib",
+        "version": "2.9.6",
+        "release": "27.el9",
+        "arch": "x86_64",
+        "rpm_id": 10078414,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1689047,
+      "meta": {
+        "nvr": "cracklib-dicts-2.9.6-27.el9",
+        "name": "cracklib-dicts",
+        "version": "2.9.6",
+        "release": "27.el9",
+        "arch": "x86_64",
+        "rpm_id": 10078413,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2850868,
+      "meta": {
+        "nvr": "cri-o-1.29.1-3.rhaos4.16.git78e179b.el9",
+        "name": "cri-o",
+        "version": "1.29.1",
+        "release": "3.rhaos4.16.git78e179b.el9",
+        "arch": "x86_64",
+        "rpm_id": 12998622,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2818303,
+      "meta": {
+        "nvr": "cri-tools-1.29.0-1.el9",
+        "name": "cri-tools",
+        "version": "1.29.0",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12853426,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2577728,
+      "meta": {
+        "nvr": "tpm2-tss-3.2.2-2.el9",
+        "name": "tpm2-tss",
+        "version": "3.2.2",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12300706,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2835964,
+      "meta": {
+        "nvr": "tzdata-2023d-1.el9",
+        "name": "tzdata",
+        "version": "2023d",
+        "release": "1.el9",
+        "arch": "noarch",
+        "rpm_id": 12936230,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2339351,
+      "meta": {
+        "nvr": "unbound-libs-1.16.2-3.el9",
+        "name": "unbound-libs",
+        "version": "1.16.2",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 11854858,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1692227,
+      "meta": {
+        "nvr": "userspace-rcu-0.12.1-6.el9",
+        "name": "userspace-rcu",
+        "version": "0.12.1",
+        "release": "6.el9",
+        "arch": "x86_64",
+        "rpm_id": 10125016,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2650576,
+      "meta": {
+        "nvr": "util-linux-2.37.4-15.el9",
+        "name": "util-linux",
+        "version": "2.37.4",
+        "release": "15.el9",
+        "arch": "x86_64",
+        "rpm_id": 12465954,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2650576,
+      "meta": {
+        "nvr": "util-linux-core-2.37.4-15.el9",
+        "name": "util-linux-core",
+        "version": "2.37.4",
+        "release": "15.el9",
+        "arch": "x86_64",
+        "rpm_id": 12465942,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2437620,
+      "meta": {
+        "nvr": "which-2.21-29.el9",
+        "name": "which",
+        "version": "2.21",
+        "release": "29.el9",
+        "arch": "x86_64",
+        "rpm_id": 12045802,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2779194,
+      "meta": {
+        "nvr": "xfsprogs-6.3.0-1.el9",
+        "name": "xfsprogs",
+        "version": "6.3.0",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12744769,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1692391,
+      "meta": {
+        "nvr": "xmlsec1-1.2.29-9.el9",
+        "name": "xmlsec1",
+        "version": "1.2.29",
+        "release": "9.el9",
+        "arch": "x86_64",
+        "rpm_id": 10126604,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1692391,
+      "meta": {
+        "nvr": "xmlsec1-openssl-1.2.29-9.el9",
+        "name": "xmlsec1-openssl",
+        "version": "1.2.29",
+        "release": "9.el9",
+        "arch": "x86_64",
+        "rpm_id": 10126609,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2032508,
+      "meta": {
+        "nvr": "xz-5.2.5-8.el9",
+        "name": "xz",
+        "version": "5.2.5",
+        "release": "8.el9",
+        "arch": "x86_64",
+        "rpm_id": 11151032,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2816935,
+      "meta": {
+        "nvr": "criu-3.19-1.el9",
+        "name": "criu",
+        "version": "3.19",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12850875,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2816935,
+      "meta": {
+        "nvr": "criu-libs-3.19-1.el9",
+        "name": "criu-libs",
+        "version": "3.19",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12850874,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2850573,
+      "meta": {
+        "nvr": "crun-1.13-1.rhaos4.16.el9",
+        "name": "crun",
+        "version": "1.13",
+        "release": "1.rhaos4.16.el9",
+        "arch": "x86_64",
+        "rpm_id": 12997784,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2777012,
+      "meta": {
+        "nvr": "crypto-policies-20231113-1.gite9247c2.el9",
+        "name": "crypto-policies",
+        "version": "20231113",
+        "release": "1.gite9247c2.el9",
+        "arch": "noarch",
+        "rpm_id": 12737371,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2777012,
+      "meta": {
+        "nvr": "crypto-policies-scripts-20231113-1.gite9247c2.el9",
+        "name": "crypto-policies-scripts",
+        "version": "20231113",
+        "release": "1.gite9247c2.el9",
+        "arch": "noarch",
+        "rpm_id": 12737372,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2577605,
+      "meta": {
+        "nvr": "cryptsetup-2.6.0-3.el9",
+        "name": "cryptsetup",
+        "version": "2.6.0",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 12299233,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2577605,
+      "meta": {
+        "nvr": "cryptsetup-libs-2.6.0-3.el9",
+        "name": "cryptsetup-libs",
+        "version": "2.6.0",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 12299229,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2716789,
+      "meta": {
+        "nvr": "curl-7.76.1-28.el9",
+        "name": "curl",
+        "version": "7.76.1",
+        "release": "28.el9",
+        "arch": "x86_64",
+        "rpm_id": 12633279,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2162423,
+      "meta": {
+        "nvr": "cyrus-sasl-gssapi-2.1.27-21.el9",
+        "name": "cyrus-sasl-gssapi",
+        "version": "2.1.27",
+        "release": "21.el9",
+        "arch": "x86_64",
+        "rpm_id": 11481252,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2162423,
+      "meta": {
+        "nvr": "cyrus-sasl-lib-2.1.27-21.el9",
+        "name": "cyrus-sasl-lib",
+        "version": "2.1.27",
+        "release": "21.el9",
+        "arch": "x86_64",
+        "rpm_id": 11481244,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2546522,
+      "meta": {
+        "nvr": "dbus-1.12.20-8.el9",
+        "name": "dbus",
+        "version": "1.12.20",
+        "release": "8.el9",
+        "arch": "x86_64",
+        "rpm_id": 12245825,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2130514,
+      "meta": {
+        "nvr": "dbus-broker-28-7.el9",
+        "name": "dbus-broker",
+        "version": "28",
+        "release": "7.el9",
+        "arch": "x86_64",
+        "rpm_id": 11420224,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2546522,
+      "meta": {
+        "nvr": "dbus-common-1.12.20-8.el9",
+        "name": "dbus-common",
+        "version": "1.12.20",
+        "release": "8.el9",
+        "arch": "noarch",
+        "rpm_id": 12245794,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2546522,
+      "meta": {
+        "nvr": "dbus-libs-1.12.20-8.el9",
+        "name": "dbus-libs",
+        "version": "1.12.20",
+        "release": "8.el9",
+        "arch": "x86_64",
+        "rpm_id": 12245836,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2593092,
+      "meta": {
+        "nvr": "device-mapper-1.02.195-3.el9",
+        "name": "device-mapper",
+        "version": "1.02.195",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 12337914,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2593092,
+      "meta": {
+        "nvr": "device-mapper-event-1.02.195-3.el9",
+        "name": "device-mapper-event",
+        "version": "1.02.195",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 12337913,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2593092,
+      "meta": {
+        "nvr": "device-mapper-event-libs-1.02.195-3.el9",
+        "name": "device-mapper-event-libs",
+        "version": "1.02.195",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 12337915,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2593092,
+      "meta": {
+        "nvr": "device-mapper-libs-1.02.195-3.el9",
+        "name": "device-mapper-libs",
+        "version": "1.02.195",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 12337917,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2622184,
+      "meta": {
+        "nvr": "device-mapper-multipath-0.8.7-22.el9",
+        "name": "device-mapper-multipath",
+        "version": "0.8.7",
+        "release": "22.el9",
+        "arch": "x86_64",
+        "rpm_id": 12399531,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2622184,
+      "meta": {
+        "nvr": "device-mapper-multipath-libs-0.8.7-22.el9",
+        "name": "device-mapper-multipath-libs",
+        "version": "0.8.7",
+        "release": "22.el9",
+        "arch": "x86_64",
+        "rpm_id": 12399527,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2483276,
+      "meta": {
+        "nvr": "liburing-2.3-2.el9",
+        "name": "liburing",
+        "version": "2.3",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12129221,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2032508,
+      "meta": {
+        "nvr": "xz-libs-5.2.5-8.el9",
+        "name": "xz-libs",
+        "version": "5.2.5",
+        "release": "8.el9",
+        "arch": "x86_64",
+        "rpm_id": 11151033,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2592251,
+      "meta": {
+        "nvr": "yajl-2.1.0-22.el9",
+        "name": "yajl",
+        "version": "2.1.0",
+        "release": "22.el9",
+        "arch": "x86_64",
+        "rpm_id": 12335091,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1879398,
+      "meta": {
+        "nvr": "zstd-1.5.1-2.el9",
+        "name": "zstd",
+        "version": "1.5.1",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 10752017,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1986004,
+      "meta": {
+        "nvr": "libusbx-1.0.26-1.el9",
+        "name": "libusbx",
+        "version": "1.0.26",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 11020453,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2635622,
+      "meta": {
+        "nvr": "device-mapper-persistent-data-1.0.6-1.el9",
+        "name": "device-mapper-persistent-data",
+        "version": "1.0.6",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12431698,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1689169,
+      "meta": {
+        "nvr": "diffutils-3.7-12.el9",
+        "name": "diffutils",
+        "version": "3.7",
+        "release": "12.el9",
+        "arch": "x86_64",
+        "rpm_id": 10079631,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2590170,
+      "meta": {
+        "nvr": "libuser-0.63-13.el9",
+        "name": "libuser",
+        "version": "0.63",
+        "release": "13.el9",
+        "arch": "x86_64",
+        "rpm_id": 12329909,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690196,
+      "meta": {
+        "nvr": "libutempter-1.2.1-6.el9",
+        "name": "libutempter",
+        "version": "1.2.1",
+        "release": "6.el9",
+        "arch": "x86_64",
+        "rpm_id": 10098141,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2650576,
+      "meta": {
+        "nvr": "libuuid-2.37.4-15.el9",
+        "name": "libuuid",
+        "version": "2.37.4",
+        "release": "15.el9",
+        "arch": "x86_64",
+        "rpm_id": 12465956,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1736302,
+      "meta": {
+        "nvr": "libuv-1.42.0-1.el9",
+        "name": "libuv",
+        "version": "1.42.0",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 10271151,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690209,
+      "meta": {
+        "nvr": "libverto-0.3.2-3.el9",
+        "name": "libverto",
+        "version": "0.3.2",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 10098343,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690209,
+      "meta": {
+        "nvr": "libverto-libev-0.3.2-3.el9",
+        "name": "libverto-libev",
+        "version": "0.3.2",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 10098350,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2819950,
+      "meta": {
+        "nvr": "libwbclient-4.19.3-100.el9",
+        "name": "libwbclient",
+        "version": "4.19.3",
+        "release": "100.el9",
+        "arch": "x86_64",
+        "rpm_id": 12888623,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690260,
+      "meta": {
+        "nvr": "libxcrypt-4.4.18-3.el9",
+        "name": "libxcrypt",
+        "version": "4.4.18",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 10099094,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690260,
+      "meta": {
+        "nvr": "libxcrypt-compat-4.4.18-3.el9",
+        "name": "libxcrypt-compat",
+        "version": "4.4.18",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 10099093,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1843857,
+      "meta": {
+        "nvr": "dmidecode-3.3-7.el9",
+        "name": "dmidecode",
+        "version": "3.3",
+        "release": "7.el9",
+        "arch": "x86_64",
+        "rpm_id": 10617653,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2214191,
+      "meta": {
+        "nvr": "libxmlb-0.3.10-1.el9",
+        "name": "libxmlb",
+        "version": "0.3.10",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 11587920,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1867165,
+      "meta": {
+        "nvr": "libxslt-1.1.34-9.el9",
+        "name": "libxslt",
+        "version": "1.1.34",
+        "release": "9.el9",
+        "arch": "x86_64",
+        "rpm_id": 10708157,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690356,
+      "meta": {
+        "nvr": "libyaml-0.2.5-7.el9",
+        "name": "libyaml",
+        "version": "0.2.5",
+        "release": "7.el9",
+        "arch": "x86_64",
+        "rpm_id": 10100220,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1879398,
+      "meta": {
+        "nvr": "libzstd-1.5.1-2.el9",
+        "name": "libzstd",
+        "version": "1.5.1",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 10752021,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2615746,
+      "meta": {
+        "nvr": "dnsmasq-2.85-14.el9",
+        "name": "dnsmasq",
+        "version": "2.85",
+        "release": "14.el9",
+        "arch": "x86_64",
+        "rpm_id": 12390273,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1689181,
+      "meta": {
+        "nvr": "dosfstools-4.2-3.el9",
+        "name": "dosfstools",
+        "version": "4.2",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 10079674,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2837237,
+      "meta": {
+        "nvr": "dracut-057-53.git20240104.el9",
+        "name": "dracut",
+        "version": "057",
+        "release": "53.git20240104.el9",
+        "arch": "x86_64",
+        "rpm_id": 12943504,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2837237,
+      "meta": {
+        "nvr": "dracut-network-057-53.git20240104.el9",
+        "name": "dracut-network",
+        "version": "057",
+        "release": "53.git20240104.el9",
+        "arch": "x86_64",
+        "rpm_id": 12943508,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2837237,
+      "meta": {
+        "nvr": "dracut-squash-057-53.git20240104.el9",
+        "name": "dracut-squash",
+        "version": "057",
+        "release": "53.git20240104.el9",
+        "arch": "x86_64",
+        "rpm_id": 12943502,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2820207,
+      "meta": {
+        "nvr": "e2fsprogs-1.46.5-5.el9",
+        "name": "e2fsprogs",
+        "version": "1.46.5",
+        "release": "5.el9",
+        "arch": "x86_64",
+        "rpm_id": 12889362,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2820207,
+      "meta": {
+        "nvr": "e2fsprogs-libs-1.46.5-5.el9",
+        "name": "e2fsprogs-libs",
+        "version": "1.46.5",
+        "release": "5.el9",
+        "arch": "x86_64",
+        "rpm_id": 12889353,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1689000,
+      "meta": {
+        "nvr": "efi-filesystem-4-8.el9",
+        "name": "efi-filesystem",
+        "version": "4",
+        "release": "8.el9",
+        "arch": "noarch",
+        "rpm_id": 10074088,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1689001,
+      "meta": {
+        "nvr": "efibootmgr-16-12.el9",
+        "name": "efibootmgr",
+        "version": "16",
+        "release": "12.el9",
+        "arch": "x86_64",
+        "rpm_id": 10077237,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2330435,
+      "meta": {
+        "nvr": "efivar-libs-38-3.el9",
+        "name": "efivar-libs",
+        "version": "38",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 11828184,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2817160,
+      "meta": {
+        "nvr": "elfutils-debuginfod-client-0.190-2.el9",
+        "name": "elfutils-debuginfod-client",
+        "version": "0.190",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12851939,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2817160,
+      "meta": {
+        "nvr": "elfutils-default-yama-scope-0.190-2.el9",
+        "name": "elfutils-default-yama-scope",
+        "version": "0.190",
+        "release": "2.el9",
+        "arch": "noarch",
+        "rpm_id": 12851895,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2817160,
+      "meta": {
+        "nvr": "elfutils-libelf-0.190-2.el9",
+        "name": "elfutils-libelf",
+        "version": "0.190",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12851933,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2817160,
+      "meta": {
+        "nvr": "elfutils-libs-0.190-2.el9",
+        "name": "elfutils-libs",
+        "version": "0.190",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12851940,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2428848,
+      "meta": {
+        "nvr": "ethtool-6.2-1.el9",
+        "name": "ethtool",
+        "version": "6.2",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12036499,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2256902,
+      "meta": {
+        "nvr": "expat-2.5.0-1.el9",
+        "name": "expat",
+        "version": "2.5.0",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 11662315,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2597784,
+      "meta": {
+        "nvr": "file-5.39-14.el9",
+        "name": "file",
+        "version": "5.39",
+        "release": "14.el9",
+        "arch": "x86_64",
+        "rpm_id": 12355585,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2597784,
+      "meta": {
+        "nvr": "file-libs-5.39-14.el9",
+        "name": "file-libs",
+        "version": "5.39",
+        "release": "14.el9",
+        "arch": "x86_64",
+        "rpm_id": 12355584,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1689243,
+      "meta": {
+        "nvr": "filesystem-3.16-2.el9",
+        "name": "filesystem",
+        "version": "3.16",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 10081916,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2641338,
+      "meta": {
+        "nvr": "findutils-4.8.0-6.el9",
+        "name": "findutils",
+        "version": "4.8.0",
+        "release": "6.el9",
+        "arch": "x86_64",
+        "rpm_id": 12449021,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1689035,
+      "meta": {
+        "nvr": "flashrom-1.2-10.el9",
+        "name": "flashrom",
+        "version": "1.2",
+        "release": "10.el9",
+        "arch": "x86_64",
+        "rpm_id": 10077867,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1692573,
+      "meta": {
+        "nvr": "fstrm-0.6.1-3.el9",
+        "name": "fstrm",
+        "version": "0.6.1",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 10131577,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1848406,
+      "meta": {
+        "nvr": "fuse-2.9.9-15.el9",
+        "name": "fuse",
+        "version": "2.9.9",
+        "release": "15.el9",
+        "arch": "x86_64",
+        "rpm_id": 10634161,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2634179,
+      "meta": {
+        "nvr": "fuse-common-3.10.2-6.el9",
+        "name": "fuse-common",
+        "version": "3.10.2",
+        "release": "6.el9",
+        "arch": "x86_64",
+        "rpm_id": 12425846,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1848406,
+      "meta": {
+        "nvr": "fuse-libs-2.9.9-15.el9",
+        "name": "fuse-libs",
+        "version": "2.9.9",
+        "release": "15.el9",
+        "arch": "x86_64",
+        "rpm_id": 10634159,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2772179,
+      "meta": {
+        "nvr": "linux-firmware-20231030-141.el9",
+        "name": "linux-firmware",
+        "version": "20231030",
+        "release": "141.el9",
+        "arch": "noarch",
+        "rpm_id": 12726232,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2772179,
+      "meta": {
+        "nvr": "linux-firmware-whence-20231030-141.el9",
+        "name": "linux-firmware-whence",
+        "version": "20231030",
+        "release": "141.el9",
+        "arch": "noarch",
+        "rpm_id": 12726235,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690398,
+      "meta": {
+        "nvr": "lmdb-libs-0.9.29-3.el9",
+        "name": "lmdb-libs",
+        "version": "0.9.29",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 10100434,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2322977,
+      "meta": {
+        "nvr": "logrotate-3.18.0-8.el9",
+        "name": "logrotate",
+        "version": "3.18.0",
+        "release": "8.el9",
+        "arch": "x86_64",
+        "rpm_id": 11808670,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690479,
+      "meta": {
+        "nvr": "lsof-4.94.0-3.el9",
+        "name": "lsof",
+        "version": "4.94.0",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 10100821,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2467503,
+      "meta": {
+        "nvr": "lua-libs-5.4.4-4.el9",
+        "name": "lua-libs",
+        "version": "5.4.4",
+        "release": "4.el9",
+        "arch": "x86_64",
+        "rpm_id": 12099556,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690488,
+      "meta": {
+        "nvr": "luksmeta-9-12.el9",
+        "name": "luksmeta",
+        "version": "9",
+        "release": "12.el9",
+        "arch": "x86_64",
+        "rpm_id": 10101097,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2593092,
+      "meta": {
+        "nvr": "lvm2-2.03.21-3.el9",
+        "name": "lvm2",
+        "version": "2.03.21",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 12337916,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2593092,
+      "meta": {
+        "nvr": "lvm2-libs-2.03.21-3.el9",
+        "name": "lvm2-libs",
+        "version": "2.03.21",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 12337909,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690509,
+      "meta": {
+        "nvr": "lz4-libs-1.9.3-5.el9",
+        "name": "lz4-libs",
+        "version": "1.9.3",
+        "release": "5.el9",
+        "arch": "x86_64",
+        "rpm_id": 10101215,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690504,
+      "meta": {
+        "nvr": "lzo-2.10-7.el9",
+        "name": "lzo",
+        "version": "2.10",
+        "release": "7.el9",
+        "arch": "x86_64",
+        "rpm_id": 10101130,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2764820,
+      "meta": {
+        "nvr": "mdadm-4.2-10.el9",
+        "name": "mdadm",
+        "version": "4.2",
+        "release": "10.el9",
+        "arch": "x86_64",
+        "rpm_id": 12713433,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2646856,
+      "meta": {
+        "nvr": "microcode_ctl-20230808-2.el9",
+        "name": "microcode_ctl",
+        "version": "20230808",
+        "release": "2.el9",
+        "arch": "noarch",
+        "rpm_id": 12458676,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2232680,
+      "meta": {
+        "nvr": "mokutil-0.6.0-4.el9",
+        "name": "mokutil",
+        "version": "0.6.0",
+        "release": "4.el9",
+        "arch": "x86_64",
+        "rpm_id": 11624970,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690656,
+      "meta": {
+        "nvr": "mpfr-4.1.0-7.el9",
+        "name": "mpfr",
+        "version": "4.1.0",
+        "release": "7.el9",
+        "arch": "x86_64",
+        "rpm_id": 10102276,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690697,
+      "meta": {
+        "nvr": "nano-5.6.1-5.el9",
+        "name": "nano",
+        "version": "5.6.1",
+        "release": "5.el9",
+        "arch": "x86_64",
+        "rpm_id": 10103375,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2643605,
+      "meta": {
+        "nvr": "ncurses-6.2-10.20210508.el9",
+        "name": "ncurses",
+        "version": "6.2",
+        "release": "10.20210508.el9",
+        "arch": "x86_64",
+        "rpm_id": 12455309,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2643605,
+      "meta": {
+        "nvr": "ncurses-base-6.2-10.20210508.el9",
+        "name": "ncurses-base",
+        "version": "6.2",
+        "release": "10.20210508.el9",
+        "arch": "noarch",
+        "rpm_id": 12455274,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2643605,
+      "meta": {
+        "nvr": "ncurses-libs-6.2-10.20210508.el9",
+        "name": "ncurses-libs",
+        "version": "6.2",
+        "release": "10.20210508.el9",
+        "arch": "x86_64",
+        "rpm_id": 12455301,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690718,
+      "meta": {
+        "nvr": "net-tools-2.0-0.62.20160912git.el9",
+        "name": "net-tools",
+        "version": "2.0",
+        "release": "0.62.20160912git.el9",
+        "arch": "x86_64",
+        "rpm_id": 10103831,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2501654,
+      "meta": {
+        "nvr": "fuse-overlayfs-1.12-1.el9",
+        "name": "fuse-overlayfs",
+        "version": "1.12",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12169349,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2634179,
+      "meta": {
+        "nvr": "fuse3-3.10.2-6.el9",
+        "name": "fuse3",
+        "version": "3.10.2",
+        "release": "6.el9",
+        "arch": "x86_64",
+        "rpm_id": 12425849,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2634179,
+      "meta": {
+        "nvr": "fuse3-libs-3.10.2-6.el9",
+        "name": "fuse3-libs",
+        "version": "3.10.2",
+        "release": "6.el9",
+        "arch": "x86_64",
+        "rpm_id": 12425848,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2807439,
+      "meta": {
+        "nvr": "netavark-1.9.0-1.el9",
+        "name": "netavark",
+        "version": "1.9.0",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12818259,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2785925,
+      "meta": {
+        "nvr": "nettle-3.9.1-1.el9",
+        "name": "nettle",
+        "version": "3.9.1",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12761071,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2356885,
+      "meta": {
+        "nvr": "fwupd-1.8.10-2.el9",
+        "name": "fwupd",
+        "version": "1.8.10",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 11905929,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2356885,
+      "meta": {
+        "nvr": "fwupd-plugin-flashrom-1.8.10-2.el9",
+        "name": "fwupd-plugin-flashrom",
+        "version": "1.8.10",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 11905927,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1891122,
+      "meta": {
+        "nvr": "gawk-5.1.0-6.el9",
+        "name": "gawk",
+        "version": "5.1.0",
+        "release": "6.el9",
+        "arch": "x86_64",
+        "rpm_id": 10791074,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1891122,
+      "meta": {
+        "nvr": "gawk-all-langpacks-5.1.0-6.el9",
+        "name": "gawk-all-langpacks",
+        "version": "5.1.0",
+        "release": "6.el9",
+        "arch": "x86_64",
+        "rpm_id": 10791075,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1689293,
+      "meta": {
+        "nvr": "gdbm-libs-1.19-4.el9",
+        "name": "gdbm-libs",
+        "version": "1.19",
+        "release": "4.el9",
+        "arch": "x86_64",
+        "rpm_id": 10082822,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690709,
+      "meta": {
+        "nvr": "newt-0.52.21-11.el9",
+        "name": "newt",
+        "version": "0.52.21",
+        "release": "11.el9",
+        "arch": "x86_64",
+        "rpm_id": 10103787,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1771837,
+      "meta": {
+        "nvr": "gdisk-1.0.7-5.el9",
+        "name": "gdisk",
+        "version": "1.0.7",
+        "release": "5.el9",
+        "arch": "x86_64",
+        "rpm_id": 10385207,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1689213,
+      "meta": {
+        "nvr": "geolite2-city-20191217-6.el9",
+        "name": "geolite2-city",
+        "version": "20191217",
+        "release": "6.el9",
+        "arch": "noarch",
+        "rpm_id": 10075886,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1689213,
+      "meta": {
+        "nvr": "geolite2-country-20191217-6.el9",
+        "name": "geolite2-country",
+        "version": "20191217",
+        "release": "6.el9",
+        "arch": "noarch",
+        "rpm_id": 10075884,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2630305,
+      "meta": {
+        "nvr": "nfs-utils-2.5.4-20.el9",
+        "name": "nfs-utils",
+        "version": "2.5.4",
+        "release": "20.el9",
+        "arch": "x86_64",
+        "rpm_id": 12417434,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2444015,
+      "meta": {
+        "nvr": "gettext-0.21-8.el9",
+        "name": "gettext",
+        "version": "0.21",
+        "release": "8.el9",
+        "arch": "x86_64",
+        "rpm_id": 12056974,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2444015,
+      "meta": {
+        "nvr": "gettext-libs-0.21-8.el9",
+        "name": "gettext-libs",
+        "version": "0.21",
+        "release": "8.el9",
+        "arch": "x86_64",
+        "rpm_id": 12056972,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2807751,
+      "meta": {
+        "nvr": "git-core-2.43.0-1.el9",
+        "name": "git-core",
+        "version": "2.43.0",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12818875,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2765484,
+      "meta": {
+        "nvr": "glib2-2.68.4-12.el9",
+        "name": "glib2",
+        "version": "2.68.4",
+        "release": "12.el9",
+        "arch": "x86_64",
+        "rpm_id": 12714875,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2427626,
+      "meta": {
+        "nvr": "nmap-ncat-7.92-1.el9",
+        "name": "nmap-ncat",
+        "version": "7.92",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12035106,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2838785,
+      "meta": {
+        "nvr": "nmstate-2.2.22-1.el9",
+        "name": "nmstate",
+        "version": "2.2.22",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12953275,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690792,
+      "meta": {
+        "nvr": "npth-1.6-8.el9",
+        "name": "npth",
+        "version": "1.6",
+        "release": "8.el9",
+        "arch": "x86_64",
+        "rpm_id": 10104540,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2813094,
+      "meta": {
+        "nvr": "glibc-2.34-95.el9",
+        "name": "glibc",
+        "version": "2.34",
+        "release": "95.el9",
+        "arch": "x86_64",
+        "rpm_id": 12843236,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1682427,
+      "meta": {
+        "nvr": "nss-altfiles-2.18.1-20.el9",
+        "name": "nss-altfiles",
+        "version": "2.18.1",
+        "release": "20.el9",
+        "arch": "x86_64",
+        "rpm_id": 10047953,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2813094,
+      "meta": {
+        "nvr": "glibc-common-2.34-95.el9",
+        "name": "glibc-common",
+        "version": "2.34",
+        "release": "95.el9",
+        "arch": "x86_64",
+        "rpm_id": 12843443,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2813094,
+      "meta": {
+        "nvr": "glibc-gconv-extra-2.34-95.el9",
+        "name": "glibc-gconv-extra",
+        "version": "2.34",
+        "release": "95.el9",
+        "arch": "x86_64",
+        "rpm_id": 12843269,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2813094,
+      "meta": {
+        "nvr": "glibc-minimal-langpack-2.34-95.el9",
+        "name": "glibc-minimal-langpack",
+        "version": "2.34",
+        "release": "95.el9",
+        "arch": "x86_64",
+        "rpm_id": 12843461,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2692430,
+      "meta": {
+        "nvr": "numactl-libs-2.0.16-3.el9",
+        "name": "numactl-libs",
+        "version": "2.0.16",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 12580440,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2785928,
+      "meta": {
+        "nvr": "nvme-cli-2.6-4.el9",
+        "name": "nvme-cli",
+        "version": "2.6",
+        "release": "4.el9",
+        "arch": "x86_64",
+        "rpm_id": 12761091,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1822021,
+      "meta": {
+        "nvr": "oniguruma-6.9.6-1.el9.5",
+        "name": "oniguruma",
+        "version": "6.9.6",
+        "release": "1.el9.5",
+        "arch": "x86_64",
+        "rpm_id": 10547530,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2804913,
+      "meta": {
+        "nvr": "open-vm-tools-12.3.5-2.el9",
+        "name": "open-vm-tools",
+        "version": "12.3.5",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12812541,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2721788,
+      "meta": {
+        "nvr": "openldap-2.6.6-1.el9",
+        "name": "openldap",
+        "version": "2.6.6",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12642375,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1689369,
+      "meta": {
+        "nvr": "glusterfs-6.0-57.4.el9",
+        "name": "glusterfs",
+        "version": "6.0",
+        "release": "57.4.el9",
+        "arch": "x86_64",
+        "rpm_id": 10084071,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1689369,
+      "meta": {
+        "nvr": "glusterfs-client-xlators-6.0-57.4.el9",
+        "name": "glusterfs-client-xlators",
+        "version": "6.0",
+        "release": "57.4.el9",
+        "arch": "x86_64",
+        "rpm_id": 10084065,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1689369,
+      "meta": {
+        "nvr": "glusterfs-fuse-6.0-57.4.el9",
+        "name": "glusterfs-fuse",
+        "version": "6.0",
+        "release": "57.4.el9",
+        "arch": "x86_64",
+        "rpm_id": 10084063,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1689369,
+      "meta": {
+        "nvr": "glusterfs-libs-6.0-57.4.el9",
+        "name": "glusterfs-libs",
+        "version": "6.0",
+        "release": "57.4.el9",
+        "arch": "x86_64",
+        "rpm_id": 10084064,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2625518,
+      "meta": {
+        "nvr": "gmp-6.2.0-13.el9",
+        "name": "gmp",
+        "version": "6.2.0",
+        "release": "13.el9",
+        "arch": "x86_64",
+        "rpm_id": 12405111,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2481337,
+      "meta": {
+        "nvr": "gnupg2-2.3.3-4.el9",
+        "name": "gnupg2",
+        "version": "2.3.3",
+        "release": "4.el9",
+        "arch": "x86_64",
+        "rpm_id": 12121587,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2821329,
+      "meta": {
+        "nvr": "gnutls-3.8.2-2.el9",
+        "name": "gnutls",
+        "version": "3.8.2",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12890324,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1892040,
+      "meta": {
+        "nvr": "gpgme-1.15.1-6.el9",
+        "name": "gpgme",
+        "version": "1.15.1",
+        "release": "6.el9",
+        "arch": "x86_64",
+        "rpm_id": 10795571,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1689607,
+      "meta": {
+        "nvr": "grep-3.6-5.el9",
+        "name": "grep",
+        "version": "3.6",
+        "release": "5.el9",
+        "arch": "x86_64",
+        "rpm_id": 10085115,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1757098,
+      "meta": {
+        "nvr": "groff-base-1.22.4-10.el9",
+        "name": "groff-base",
+        "version": "1.22.4",
+        "release": "10.el9",
+        "arch": "x86_64",
+        "rpm_id": 10340740,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2853154,
+      "meta": {
+        "nvr": "openshift-clients-4.16.0-202401162251.p0.ge3734ee.assembly.stream.el9",
+        "name": "openshift-clients",
+        "version": "4.16.0",
+        "release": "202401162251.p0.ge3734ee.assembly.stream.el9",
+        "arch": "x86_64",
+        "rpm_id": 13004111,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2853155,
+      "meta": {
+        "nvr": "openshift-hyperkube-4.16.0-202401162251.p0.gf629574.assembly.stream.el9",
+        "name": "openshift-hyperkube",
+        "version": "4.16.0",
+        "release": "202401162251.p0.gf629574.assembly.stream.el9",
+        "arch": "x86_64",
+        "rpm_id": 13004105,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2838887,
+      "meta": {
+        "nvr": "openssh-8.7p1-38.el9",
+        "name": "openssh",
+        "version": "8.7p1",
+        "release": "38.el9",
+        "arch": "x86_64",
+        "rpm_id": 12954258,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2838887,
+      "meta": {
+        "nvr": "openssh-clients-8.7p1-38.el9",
+        "name": "openssh-clients",
+        "version": "8.7p1",
+        "release": "38.el9",
+        "arch": "x86_64",
+        "rpm_id": 12954254,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2838887,
+      "meta": {
+        "nvr": "openssh-server-8.7p1-38.el9",
+        "name": "openssh-server",
+        "version": "8.7p1",
+        "release": "38.el9",
+        "arch": "x86_64",
+        "rpm_id": 12954251,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2770021,
+      "meta": {
+        "nvr": "openssl-3.0.7-25.el9",
+        "name": "openssl",
+        "version": "3.0.7",
+        "release": "25.el9",
+        "arch": "x86_64",
+        "rpm_id": 12724339,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2770021,
+      "meta": {
+        "nvr": "openssl-libs-3.0.7-25.el9",
+        "name": "openssl-libs",
+        "version": "3.0.7",
+        "release": "25.el9",
+        "arch": "x86_64",
+        "rpm_id": 12724338,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2553551,
+      "meta": {
+        "nvr": "openvswitch-selinux-extra-policy-1.0-34.el9fdp",
+        "name": "openvswitch-selinux-extra-policy",
+        "version": "1.0",
+        "release": "34.el9fdp",
+        "arch": "noarch",
+        "rpm_id": 12260596,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2827480,
+      "meta": {
+        "nvr": "openvswitch3.1-3.1.0-73.el9fdp",
+        "name": "openvswitch3.1",
+        "version": "3.1.0",
+        "release": "73.el9fdp",
+        "arch": "x86_64",
+        "rpm_id": 12916733,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2394854,
+      "meta": {
+        "nvr": "os-prober-1.77-10.el9",
+        "name": "os-prober",
+        "version": "1.77",
+        "release": "10.el9",
+        "arch": "x86_64",
+        "rpm_id": 11984691,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2853151,
+      "meta": {
+        "nvr": "ose-aws-ecr-image-credential-provider-4.16.0-202401162251.p0.g49e3377.assembly.stream.el9",
+        "name": "ose-aws-ecr-image-credential-provider",
+        "version": "4.16.0",
+        "release": "202401162251.p0.g49e3377.assembly.stream.el9",
+        "arch": "x86_64",
+        "rpm_id": 13004100,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2821335,
+      "meta": {
+        "nvr": "ostree-2023.8-3.el9",
+        "name": "ostree",
+        "version": "2023.8",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 12890277,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2821335,
+      "meta": {
+        "nvr": "ostree-grub2-2023.8-3.el9",
+        "name": "ostree-grub2",
+        "version": "2023.8",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 12890272,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2821335,
+      "meta": {
+        "nvr": "ostree-libs-2023.8-3.el9",
+        "name": "ostree-libs",
+        "version": "2023.8",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 12890276,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2792712,
+      "meta": {
+        "nvr": "p11-kit-0.25.3-2.el9",
+        "name": "p11-kit",
+        "version": "0.25.3",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12775687,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2792712,
+      "meta": {
+        "nvr": "p11-kit-trust-0.25.3-2.el9",
+        "name": "p11-kit-trust",
+        "version": "0.25.3",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12775685,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2624225,
+      "meta": {
+        "nvr": "grub2-common-2.06-68.el9",
+        "name": "grub2-common",
+        "version": "2.06",
+        "release": "68.el9",
+        "arch": "noarch",
+        "rpm_id": 12401966,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2624225,
+      "meta": {
+        "nvr": "grub2-efi-x64-2.06-68.el9",
+        "name": "grub2-efi-x64",
+        "version": "2.06",
+        "release": "68.el9",
+        "arch": "x86_64",
+        "rpm_id": 12402009,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2624225,
+      "meta": {
+        "nvr": "grub2-pc-2.06-68.el9",
+        "name": "grub2-pc",
+        "version": "2.06",
+        "release": "68.el9",
+        "arch": "x86_64",
+        "rpm_id": 12402016,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2624225,
+      "meta": {
+        "nvr": "grub2-pc-modules-2.06-68.el9",
+        "name": "grub2-pc-modules",
+        "version": "2.06",
+        "release": "68.el9",
+        "arch": "noarch",
+        "rpm_id": 12401998,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2624225,
+      "meta": {
+        "nvr": "grub2-tools-2.06-68.el9",
+        "name": "grub2-tools",
+        "version": "2.06",
+        "release": "68.el9",
+        "arch": "x86_64",
+        "rpm_id": 12402017,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2624225,
+      "meta": {
+        "nvr": "grub2-tools-minimal-2.06-68.el9",
+        "name": "grub2-tools-minimal",
+        "version": "2.06",
+        "release": "68.el9",
+        "arch": "x86_64",
+        "rpm_id": 12402020,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2840574,
+      "meta": {
+        "nvr": "pam-1.5.1-17.el9",
+        "name": "pam",
+        "version": "1.5.1",
+        "release": "17.el9",
+        "arch": "x86_64",
+        "rpm_id": 12958416,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2470083,
+      "meta": {
+        "nvr": "gssproxy-0.8.4-6.el9",
+        "name": "gssproxy",
+        "version": "0.8.4",
+        "release": "6.el9",
+        "arch": "x86_64",
+        "rpm_id": 12103158,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1982016,
+      "meta": {
+        "nvr": "gzip-1.12-1.el9",
+        "name": "gzip",
+        "version": "1.12",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 11015336,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1689724,
+      "meta": {
+        "nvr": "hostname-3.23-6.el9",
+        "name": "hostname",
+        "version": "3.23",
+        "release": "6.el9",
+        "arch": "x86_64",
+        "rpm_id": 10087132,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2816997,
+      "meta": {
+        "nvr": "hwdata-0.348-9.12.el9",
+        "name": "hwdata",
+        "version": "0.348",
+        "release": "9.12.el9",
+        "arch": "noarch",
+        "rpm_id": 12851221,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2826790,
+      "meta": {
+        "nvr": "ignition-2.17.0-1.rhaos4.16.el9",
+        "name": "ignition",
+        "version": "2.17.0",
+        "release": "1.rhaos4.16.el9",
+        "arch": "x86_64",
+        "rpm_id": 12915056,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1894262,
+      "meta": {
+        "nvr": "info-6.7-15.el9",
+        "name": "info",
+        "version": "6.7",
+        "release": "15.el9",
+        "arch": "x86_64",
+        "rpm_id": 10802657,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2823755,
+      "meta": {
+        "nvr": "passt-0^20231204.gb86afe3-1.el9",
+        "name": "passt",
+        "version": "0^20231204.gb86afe3",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12908546,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2823755,
+      "meta": {
+        "nvr": "passt-selinux-0^20231204.gb86afe3-1.el9",
+        "name": "passt-selinux",
+        "version": "0^20231204.gb86afe3",
+        "release": "1.el9",
+        "arch": "noarch",
+        "rpm_id": 12908536,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1691236,
+      "meta": {
+        "nvr": "passwd-0.80-12.el9",
+        "name": "passwd",
+        "version": "0.80",
+        "release": "12.el9",
+        "arch": "x86_64",
+        "rpm_id": 10106671,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1691245,
+      "meta": {
+        "nvr": "pciutils-3.7.0-5.el9",
+        "name": "pciutils",
+        "version": "3.7.0",
+        "release": "5.el9",
+        "arch": "x86_64",
+        "rpm_id": 10106907,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1691245,
+      "meta": {
+        "nvr": "pciutils-libs-3.7.0-5.el9",
+        "name": "pciutils-libs",
+        "version": "3.7.0",
+        "release": "5.el9",
+        "arch": "x86_64",
+        "rpm_id": 10106909,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1691250,
+      "meta": {
+        "nvr": "pcre-8.44-3.el9.3",
+        "name": "pcre",
+        "version": "8.44",
+        "release": "3.el9.3",
+        "arch": "x86_64",
+        "rpm_id": 10107070,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2777147,
+      "meta": {
+        "nvr": "pcre2-10.40-4.el9",
+        "name": "pcre2",
+        "version": "10.40",
+        "release": "4.el9",
+        "arch": "x86_64",
+        "rpm_id": 12739200,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2777147,
+      "meta": {
+        "nvr": "pcre2-syntax-10.40-4.el9",
+        "name": "pcre2-syntax",
+        "version": "10.40",
+        "release": "4.el9",
+        "arch": "noarch",
+        "rpm_id": 12739168,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2797396,
+      "meta": {
+        "nvr": "perl-AutoLoader-5.74-481.el9",
+        "name": "perl-AutoLoader",
+        "version": "5.74",
+        "release": "481.el9",
+        "arch": "noarch",
+        "rpm_id": 12787924,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2797396,
+      "meta": {
+        "nvr": "perl-B-1.80-481.el9",
+        "name": "perl-B",
+        "version": "1.80",
+        "release": "481.el9",
+        "arch": "x86_64",
+        "rpm_id": 12788078,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690726,
+      "meta": {
+        "nvr": "perl-Carp-1.50-460.el9",
+        "name": "perl-Carp",
+        "version": "1.50",
+        "release": "460.el9",
+        "arch": "noarch",
+        "rpm_id": 10094395,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2797396,
+      "meta": {
+        "nvr": "perl-Class-Struct-0.66-481.el9",
+        "name": "perl-Class-Struct",
+        "version": "0.66",
+        "release": "481.el9",
+        "arch": "noarch",
+        "rpm_id": 12787884,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1691288,
+      "meta": {
+        "nvr": "perl-Data-Dumper-2.174-462.el9",
+        "name": "perl-Data-Dumper",
+        "version": "2.174",
+        "release": "462.el9",
+        "arch": "x86_64",
+        "rpm_id": 10107684,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690802,
+      "meta": {
+        "nvr": "perl-Digest-1.19-4.el9",
+        "name": "perl-Digest",
+        "version": "1.19",
+        "release": "4.el9",
+        "arch": "noarch",
+        "rpm_id": 10094488,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1691382,
+      "meta": {
+        "nvr": "perl-Digest-MD5-2.58-4.el9",
+        "name": "perl-Digest-MD5",
+        "version": "2.58",
+        "release": "4.el9",
+        "arch": "x86_64",
+        "rpm_id": 10109163,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1692534,
+      "meta": {
+        "nvr": "perl-Encode-3.08-462.el9",
+        "name": "perl-Encode",
+        "version": "3.08",
+        "release": "462.el9",
+        "arch": "x86_64",
+        "rpm_id": 10128116,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2797396,
+      "meta": {
+        "nvr": "perl-Errno-1.30-481.el9",
+        "name": "perl-Errno",
+        "version": "1.30",
+        "release": "481.el9",
+        "arch": "x86_64",
+        "rpm_id": 12788111,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690822,
+      "meta": {
+        "nvr": "perl-Exporter-5.74-461.el9",
+        "name": "perl-Exporter",
+        "version": "5.74",
+        "release": "461.el9",
+        "arch": "noarch",
+        "rpm_id": 10094514,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2797396,
+      "meta": {
+        "nvr": "perl-Fcntl-1.13-481.el9",
+        "name": "perl-Fcntl",
+        "version": "1.13",
+        "release": "481.el9",
+        "arch": "x86_64",
+        "rpm_id": 12788105,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2797396,
+      "meta": {
+        "nvr": "perl-File-Basename-2.85-481.el9",
+        "name": "perl-File-Basename",
+        "version": "2.85",
+        "release": "481.el9",
+        "arch": "noarch",
+        "rpm_id": 12787931,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690848,
+      "meta": {
+        "nvr": "perl-File-Path-2.18-4.el9",
+        "name": "perl-File-Path",
+        "version": "2.18",
+        "release": "4.el9",
+        "arch": "noarch",
+        "rpm_id": 10094580,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690871,
+      "meta": {
+        "nvr": "perl-File-Temp-0.231.100-4.el9",
+        "name": "perl-File-Temp",
+        "version": "0.231.100",
+        "release": "4.el9",
+        "arch": "noarch",
+        "rpm_id": 10094602,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2797396,
+      "meta": {
+        "nvr": "perl-File-stat-1.09-481.el9",
+        "name": "perl-File-stat",
+        "version": "1.09",
+        "release": "481.el9",
+        "arch": "noarch",
+        "rpm_id": 12787934,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2797396,
+      "meta": {
+        "nvr": "perl-FileHandle-2.03-481.el9",
+        "name": "perl-FileHandle",
+        "version": "2.03",
+        "release": "481.el9",
+        "arch": "noarch",
+        "rpm_id": 12787945,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690872,
+      "meta": {
+        "nvr": "perl-Getopt-Long-2.52-4.el9",
+        "name": "perl-Getopt-Long",
+        "version": "2.52",
+        "release": "4.el9",
+        "arch": "noarch",
+        "rpm_id": 10094603,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2797396,
+      "meta": {
+        "nvr": "perl-Getopt-Std-1.12-481.el9",
+        "name": "perl-Getopt-Std",
+        "version": "1.12",
+        "release": "481.el9",
+        "arch": "noarch",
+        "rpm_id": 12787943,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2629518,
+      "meta": {
+        "nvr": "perl-HTTP-Tiny-0.076-461.el9",
+        "name": "perl-HTTP-Tiny",
+        "version": "0.076",
+        "release": "461.el9",
+        "arch": "noarch",
+        "rpm_id": 12414543,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2797396,
+      "meta": {
+        "nvr": "perl-IO-1.43-481.el9",
+        "name": "perl-IO",
+        "version": "1.43",
+        "release": "481.el9",
+        "arch": "x86_64",
+        "rpm_id": 12788095,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690905,
+      "meta": {
+        "nvr": "perl-IO-Socket-IP-0.41-5.el9",
+        "name": "perl-IO-Socket-IP",
+        "version": "0.41",
+        "release": "5.el9",
+        "arch": "noarch",
+        "rpm_id": 10094648,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1839949,
+      "meta": {
+        "nvr": "perl-IO-Socket-SSL-2.073-1.el9",
+        "name": "perl-IO-Socket-SSL",
+        "version": "2.073",
+        "release": "1.el9",
+        "arch": "noarch",
+        "rpm_id": 10601786,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2797396,
+      "meta": {
+        "nvr": "perl-IPC-Open3-1.21-481.el9",
+        "name": "perl-IPC-Open3",
+        "version": "1.21",
+        "release": "481.el9",
+        "arch": "noarch",
+        "rpm_id": 12787877,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1691390,
+      "meta": {
+        "nvr": "perl-MIME-Base64-3.16-4.el9",
+        "name": "perl-MIME-Base64",
+        "version": "3.16",
+        "release": "4.el9",
+        "arch": "x86_64",
+        "rpm_id": 10109214,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690989,
+      "meta": {
+        "nvr": "perl-Mozilla-CA-20200520-6.el9",
+        "name": "perl-Mozilla-CA",
+        "version": "20200520",
+        "release": "6.el9",
+        "arch": "noarch",
+        "rpm_id": 10094769,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2797396,
+      "meta": {
+        "nvr": "perl-NDBM_File-1.15-481.el9",
+        "name": "perl-NDBM_File",
+        "version": "1.15",
+        "release": "481.el9",
+        "arch": "x86_64",
+        "rpm_id": 12788092,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2100586,
+      "meta": {
+        "nvr": "perl-Net-SSLeay-1.92-2.el9",
+        "name": "perl-Net-SSLeay",
+        "version": "1.92",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 11337993,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2797396,
+      "meta": {
+        "nvr": "perl-POSIX-1.94-481.el9",
+        "name": "perl-POSIX",
+        "version": "1.94",
+        "release": "481.el9",
+        "arch": "x86_64",
+        "rpm_id": 12788076,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1691423,
+      "meta": {
+        "nvr": "perl-PathTools-3.78-461.el9",
+        "name": "perl-PathTools",
+        "version": "3.78",
+        "release": "461.el9",
+        "arch": "x86_64",
+        "rpm_id": 10109805,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1691045,
+      "meta": {
+        "nvr": "perl-Pod-Escapes-1.07-460.el9",
+        "name": "perl-Pod-Escapes",
+        "version": "1.07",
+        "release": "460.el9",
+        "arch": "noarch",
+        "rpm_id": 10094856,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1691068,
+      "meta": {
+        "nvr": "perl-Pod-Perldoc-3.28.01-461.el9",
+        "name": "perl-Pod-Perldoc",
+        "version": "3.28.01",
+        "release": "461.el9",
+        "arch": "noarch",
+        "rpm_id": 10094876,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1691070,
+      "meta": {
+        "nvr": "perl-Pod-Simple-3.42-4.el9",
+        "name": "perl-Pod-Simple",
+        "version": "3.42",
+        "release": "4.el9",
+        "arch": "noarch",
+        "rpm_id": 10094880,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1691067,
+      "meta": {
+        "nvr": "perl-Pod-Usage-2.01-4.el9",
+        "name": "perl-Pod-Usage",
+        "version": "2.01",
+        "release": "4.el9",
+        "arch": "noarch",
+        "rpm_id": 10094878,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1691416,
+      "meta": {
+        "nvr": "perl-Scalar-List-Utils-1.56-461.el9",
+        "name": "perl-Scalar-List-Utils",
+        "version": "1.56",
+        "release": "461.el9",
+        "arch": "x86_64",
+        "rpm_id": 10109722,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2797396,
+      "meta": {
+        "nvr": "perl-SelectSaver-1.02-481.el9",
+        "name": "perl-SelectSaver",
+        "version": "1.02",
+        "release": "481.el9",
+        "arch": "noarch",
+        "rpm_id": 12787974,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1691421,
+      "meta": {
+        "nvr": "perl-Socket-2.031-4.el9",
+        "name": "perl-Socket",
+        "version": "2.031",
+        "release": "4.el9",
+        "arch": "x86_64",
+        "rpm_id": 10109790,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1691431,
+      "meta": {
+        "nvr": "perl-Storable-3.21-460.el9",
+        "name": "perl-Storable",
+        "version": "3.21",
+        "release": "460.el9",
+        "arch": "x86_64",
+        "rpm_id": 10109870,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2797396,
+      "meta": {
+        "nvr": "perl-Symbol-1.08-481.el9",
+        "name": "perl-Symbol",
+        "version": "1.08",
+        "release": "481.el9",
+        "arch": "noarch",
+        "rpm_id": 12787949,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1691099,
+      "meta": {
+        "nvr": "perl-Term-ANSIColor-5.01-461.el9",
+        "name": "perl-Term-ANSIColor",
+        "version": "5.01",
+        "release": "461.el9",
+        "arch": "noarch",
+        "rpm_id": 10094913,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1691096,
+      "meta": {
+        "nvr": "perl-Term-Cap-1.17-460.el9",
+        "name": "perl-Term-Cap",
+        "version": "1.17",
+        "release": "460.el9",
+        "arch": "noarch",
+        "rpm_id": 10094916,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1691156,
+      "meta": {
+        "nvr": "perl-Text-ParseWords-3.30-460.el9",
+        "name": "perl-Text-ParseWords",
+        "version": "3.30",
+        "release": "460.el9",
+        "arch": "noarch",
+        "rpm_id": 10095065,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1706899,
+      "meta": {
+        "nvr": "perl-Text-Tabs+Wrap-2013.0523-460.el9",
+        "name": "perl-Text-Tabs+Wrap",
+        "version": "2013.0523",
+        "release": "460.el9",
+        "arch": "noarch",
+        "rpm_id": 10163080,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1691173,
+      "meta": {
+        "nvr": "perl-Time-Local-1.300-7.el9",
+        "name": "perl-Time-Local",
+        "version": "1.300",
+        "release": "7.el9",
+        "arch": "noarch",
+        "rpm_id": 10095085,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1691186,
+      "meta": {
+        "nvr": "perl-URI-5.09-3.el9",
+        "name": "perl-URI",
+        "version": "5.09",
+        "release": "3.el9",
+        "arch": "noarch",
+        "rpm_id": 10095144,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2797396,
+      "meta": {
+        "nvr": "perl-base-2.27-481.el9",
+        "name": "perl-base",
+        "version": "2.27",
+        "release": "481.el9",
+        "arch": "noarch",
+        "rpm_id": 12787937,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690833,
+      "meta": {
+        "nvr": "perl-constant-1.33-461.el9",
+        "name": "perl-constant",
+        "version": "1.33",
+        "release": "461.el9",
+        "arch": "noarch",
+        "rpm_id": 10094536,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2797396,
+      "meta": {
+        "nvr": "perl-if-0.60.800-481.el9",
+        "name": "perl-if",
+        "version": "0.60.800",
+        "release": "481.el9",
+        "arch": "noarch",
+        "rpm_id": 12787959,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2797396,
+      "meta": {
+        "nvr": "perl-interpreter-5.32.1-481.el9",
+        "name": "perl-interpreter",
+        "version": "5.32.1",
+        "release": "481.el9",
+        "arch": "x86_64",
+        "rpm_id": 12788106,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690923,
+      "meta": {
+        "nvr": "perl-libnet-3.13-4.el9",
+        "name": "perl-libnet",
+        "version": "3.13",
+        "release": "4.el9",
+        "arch": "noarch",
+        "rpm_id": 10094666,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2797396,
+      "meta": {
+        "nvr": "perl-libs-5.32.1-481.el9",
+        "name": "perl-libs",
+        "version": "5.32.1",
+        "release": "481.el9",
+        "arch": "x86_64",
+        "rpm_id": 12788084,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2797396,
+      "meta": {
+        "nvr": "perl-mro-1.23-481.el9",
+        "name": "perl-mro",
+        "version": "1.23",
+        "release": "481.el9",
+        "arch": "x86_64",
+        "rpm_id": 12788089,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2797396,
+      "meta": {
+        "nvr": "perl-overload-1.31-481.el9",
+        "name": "perl-overload",
+        "version": "1.31",
+        "release": "481.el9",
+        "arch": "noarch",
+        "rpm_id": 12787883,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2797396,
+      "meta": {
+        "nvr": "perl-overloading-0.02-481.el9",
+        "name": "perl-overloading",
+        "version": "0.02",
+        "release": "481.el9",
+        "arch": "noarch",
+        "rpm_id": 12787964,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1691034,
+      "meta": {
+        "nvr": "perl-parent-0.238-460.el9",
+        "name": "perl-parent",
+        "version": "0.238",
+        "release": "460.el9",
+        "arch": "noarch",
+        "rpm_id": 10094835,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1691049,
+      "meta": {
+        "nvr": "perl-podlators-4.14-460.el9",
+        "name": "perl-podlators",
+        "version": "4.14",
+        "release": "460.el9",
+        "arch": "noarch",
+        "rpm_id": 10094855,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2797396,
+      "meta": {
+        "nvr": "perl-subs-1.03-481.el9",
+        "name": "perl-subs",
+        "version": "1.03",
+        "release": "481.el9",
+        "arch": "noarch",
+        "rpm_id": 12787975,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2797396,
+      "meta": {
+        "nvr": "perl-vars-1.05-481.el9",
+        "name": "perl-vars",
+        "version": "1.05",
+        "release": "481.el9",
+        "arch": "noarch",
+        "rpm_id": 12787969,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1766038,
+      "meta": {
+        "nvr": "pigz-2.5-4.el9",
+        "name": "pigz",
+        "version": "2.5",
+        "release": "4.el9",
+        "arch": "x86_64",
+        "rpm_id": 10365171,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2175957,
+      "meta": {
+        "nvr": "pkgconf-1.7.3-10.el9",
+        "name": "pkgconf",
+        "version": "1.7.3",
+        "release": "10.el9",
+        "arch": "x86_64",
+        "rpm_id": 11501078,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2175957,
+      "meta": {
+        "nvr": "pkgconf-m4-1.7.3-10.el9",
+        "name": "pkgconf-m4",
+        "version": "1.7.3",
+        "release": "10.el9",
+        "arch": "noarch",
+        "rpm_id": 11501053,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2175957,
+      "meta": {
+        "nvr": "pkgconf-pkg-config-1.7.3-10.el9",
+        "name": "pkgconf-pkg-config",
+        "version": "1.7.3",
+        "release": "10.el9",
+        "arch": "x86_64",
+        "rpm_id": 11501077,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2737838,
+      "meta": {
+        "nvr": "podman-4.4.1-10.1.rhaos4.14.el9",
+        "name": "podman",
+        "version": "4.4.1",
+        "release": "10.1.rhaos4.14.el9",
+        "arch": "x86_64",
+        "rpm_id": 12670804,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2821622,
+      "meta": {
+        "nvr": "policycoreutils-3.6-1.el9",
+        "name": "policycoreutils",
+        "version": "3.6",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12893056,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2821622,
+      "meta": {
+        "nvr": "policycoreutils-python-utils-3.6-1.el9",
+        "name": "policycoreutils-python-utils",
+        "version": "3.6",
+        "release": "1.el9",
+        "arch": "noarch",
+        "rpm_id": 12893009,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2290284,
+      "meta": {
+        "nvr": "polkit-0.117-11.el9",
+        "name": "polkit",
+        "version": "0.117",
+        "release": "11.el9",
+        "arch": "x86_64",
+        "rpm_id": 11728139,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2290284,
+      "meta": {
+        "nvr": "polkit-libs-0.117-11.el9",
+        "name": "polkit-libs",
+        "version": "0.117",
+        "release": "11.el9",
+        "arch": "x86_64",
+        "rpm_id": 11728138,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1691580,
+      "meta": {
+        "nvr": "polkit-pkla-compat-0.1-21.el9",
+        "name": "polkit-pkla-compat",
+        "version": "0.1",
+        "release": "21.el9",
+        "arch": "x86_64",
+        "rpm_id": 10111538,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1691597,
+      "meta": {
+        "nvr": "popt-1.18-8.el9",
+        "name": "popt",
+        "version": "1.18",
+        "release": "8.el9",
+        "arch": "x86_64",
+        "rpm_id": 10111815,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2637501,
+      "meta": {
+        "nvr": "procps-ng-3.3.17-13.el9",
+        "name": "procps-ng",
+        "version": "3.3.17",
+        "release": "13.el9",
+        "arch": "x86_64",
+        "rpm_id": 12436209,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2478510,
+      "meta": {
+        "nvr": "protobuf-c-1.3.3-13.el9",
+        "name": "protobuf-c",
+        "version": "1.3.3",
+        "release": "13.el9",
+        "arch": "x86_64",
+        "rpm_id": 12114885,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1691630,
+      "meta": {
+        "nvr": "psmisc-23.4-3.el9",
+        "name": "psmisc",
+        "version": "23.4",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 10112182,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1882751,
+      "meta": {
+        "nvr": "publicsuffix-list-dafsa-20210518-3.el9",
+        "name": "publicsuffix-list-dafsa",
+        "version": "20210518",
+        "release": "3.el9",
+        "arch": "noarch",
+        "rpm_id": 10762793,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2838866,
+      "meta": {
+        "nvr": "python-unversioned-command-3.9.18-2.el9",
+        "name": "python-unversioned-command",
+        "version": "3.9.18",
+        "release": "2.el9",
+        "arch": "noarch",
+        "rpm_id": 12953848,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2838866,
+      "meta": {
+        "nvr": "python3-3.9.18-2.el9",
+        "name": "python3",
+        "version": "3.9.18",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12953871,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2769499,
+      "meta": {
+        "nvr": "python3-audit-3.1.2-2.el9",
+        "name": "python3-audit",
+        "version": "3.1.2",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12722667,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1691369,
+      "meta": {
+        "nvr": "python3-distro-1.5.0-7.el9",
+        "name": "python3-distro",
+        "version": "1.5.0",
+        "release": "7.el9",
+        "arch": "noarch",
+        "rpm_id": 10095619,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2838866,
+      "meta": {
+        "nvr": "python3-libs-3.9.18-2.el9",
+        "name": "python3-libs",
+        "version": "3.9.18",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12953879,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2821561,
+      "meta": {
+        "nvr": "python3-libselinux-3.6-1.el9",
+        "name": "python3-libselinux",
+        "version": "3.6",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12891604,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2821600,
+      "meta": {
+        "nvr": "python3-libsemanage-3.6-1.el9",
+        "name": "python3-libsemanage",
+        "version": "3.6",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12891745,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2634410,
+      "meta": {
+        "nvr": "python3-pip-wheel-21.2.3-7.el9",
+        "name": "python3-pip-wheel",
+        "version": "21.2.3",
+        "release": "7.el9",
+        "arch": "noarch",
+        "rpm_id": 12426784,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2821622,
+      "meta": {
+        "nvr": "python3-policycoreutils-3.6-1.el9",
+        "name": "python3-policycoreutils",
+        "version": "3.6",
+        "release": "1.el9",
+        "arch": "noarch",
+        "rpm_id": 12893015,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2048040,
+      "meta": {
+        "nvr": "inih-49-6.el9",
+        "name": "inih",
+        "version": "49",
+        "release": "6.el9",
+        "arch": "x86_64",
+        "rpm_id": 11199901,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1887324,
+      "meta": {
+        "nvr": "python3-pyyaml-5.4.1-6.el9",
+        "name": "python3-pyyaml",
+        "version": "5.4.1",
+        "release": "6.el9",
+        "arch": "x86_64",
+        "rpm_id": 10778437,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2137271,
+      "meta": {
+        "nvr": "initscripts-service-10.11.5-1.el9",
+        "name": "initscripts-service",
+        "version": "10.11.5",
+        "release": "1.el9",
+        "arch": "noarch",
+        "rpm_id": 11434202,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1689785,
+      "meta": {
+        "nvr": "ipcalc-1.0.0-5.el9",
+        "name": "ipcalc",
+        "version": "1.0.0",
+        "release": "5.el9",
+        "arch": "x86_64",
+        "rpm_id": 10088087,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2538128,
+      "meta": {
+        "nvr": "iproute-6.2.0-5.el9",
+        "name": "iproute",
+        "version": "6.2.0",
+        "release": "5.el9",
+        "arch": "x86_64",
+        "rpm_id": 12232973,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2538128,
+      "meta": {
+        "nvr": "iproute-tc-6.2.0-5.el9",
+        "name": "iproute-tc",
+        "version": "6.2.0",
+        "release": "5.el9",
+        "arch": "x86_64",
+        "rpm_id": 12232972,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2818504,
+      "meta": {
+        "nvr": "python3-setools-4.4.4-1.el9",
+        "name": "python3-setools",
+        "version": "4.4.4",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12854136,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2332036,
+      "meta": {
+        "nvr": "python3-setuptools-53.0.0-12.el9",
+        "name": "python3-setuptools",
+        "version": "53.0.0",
+        "release": "12.el9",
+        "arch": "noarch",
+        "rpm_id": 11832400,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2332036,
+      "meta": {
+        "nvr": "python3-setuptools-wheel-53.0.0-12.el9",
+        "name": "python3-setuptools-wheel",
+        "version": "53.0.0",
+        "release": "12.el9",
+        "arch": "noarch",
+        "rpm_id": 11832399,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2840501,
+      "meta": {
+        "nvr": "qemu-guest-agent-8.2.0-2.el9",
+        "name": "qemu-guest-agent",
+        "version": "8.2.0",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12958320,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2541942,
+      "meta": {
+        "nvr": "iputils-20210202-9.el9",
+        "name": "iputils",
+        "version": "20210202",
+        "release": "9.el9",
+        "arch": "x86_64",
+        "rpm_id": 12238731,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2637237,
+      "meta": {
+        "nvr": "irqbalance-1.9.2-3.el9",
+        "name": "irqbalance",
+        "version": "1.9.2",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 12435632,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2798133,
+      "meta": {
+        "nvr": "iscsi-initiator-utils-6.2.1.9-1.gita65a472.el9",
+        "name": "iscsi-initiator-utils",
+        "version": "6.2.1.9",
+        "release": "1.gita65a472.el9",
+        "arch": "x86_64",
+        "rpm_id": 12789917,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2798133,
+      "meta": {
+        "nvr": "iscsi-initiator-utils-iscsiuio-6.2.1.9-1.gita65a472.el9",
+        "name": "iscsi-initiator-utils-iscsiuio",
+        "version": "6.2.1.9",
+        "release": "1.gita65a472.el9",
+        "arch": "x86_64",
+        "rpm_id": 12789915,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1738235,
+      "meta": {
+        "nvr": "isns-utils-libs-0.101-4.el9",
+        "name": "isns-utils-libs",
+        "version": "0.101",
+        "release": "4.el9",
+        "arch": "x86_64",
+        "rpm_id": 10274996,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1798464,
+      "meta": {
+        "nvr": "jansson-2.14-1.el9",
+        "name": "jansson",
+        "version": "2.14",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 10466867,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1689818,
+      "meta": {
+        "nvr": "jose-11-3.el9",
+        "name": "jose",
+        "version": "11",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 10089245,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2751521,
+      "meta": {
+        "nvr": "jq-1.6-16.el9",
+        "name": "jq",
+        "version": "1.6",
+        "release": "16.el9",
+        "arch": "x86_64",
+        "rpm_id": 12689960,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1728857,
+      "meta": {
+        "nvr": "json-c-0.14-11.el9",
+        "name": "json-c",
+        "version": "0.14",
+        "release": "11.el9",
+        "arch": "x86_64",
+        "rpm_id": 10235140,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1707185,
+      "meta": {
+        "nvr": "json-glib-1.6.6-1.el9",
+        "name": "json-glib",
+        "version": "1.6.6",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 10164299,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2561331,
+      "meta": {
+        "nvr": "kbd-2.4.0-9.el9",
+        "name": "kbd",
+        "version": "2.4.0",
+        "release": "9.el9",
+        "arch": "x86_64",
+        "rpm_id": 12273019,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2561331,
+      "meta": {
+        "nvr": "kbd-legacy-2.4.0-9.el9",
+        "name": "kbd-legacy",
+        "version": "2.4.0",
+        "release": "9.el9",
+        "arch": "noarch",
+        "rpm_id": 12273007,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2561331,
+      "meta": {
+        "nvr": "kbd-misc-2.4.0-9.el9",
+        "name": "kbd-misc",
+        "version": "2.4.0",
+        "release": "9.el9",
+        "arch": "noarch",
+        "rpm_id": 12273010,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2847716,
+      "meta": {
+        "nvr": "kernel-5.14.0-408.el9",
+        "name": "kernel",
+        "version": "5.14.0",
+        "release": "408.el9",
+        "arch": "x86_64",
+        "rpm_id": 12993673,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2847716,
+      "meta": {
+        "nvr": "kernel-core-5.14.0-408.el9",
+        "name": "kernel-core",
+        "version": "5.14.0",
+        "release": "408.el9",
+        "arch": "x86_64",
+        "rpm_id": 12993647,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2847716,
+      "meta": {
+        "nvr": "kernel-modules-5.14.0-408.el9",
+        "name": "kernel-modules",
+        "version": "5.14.0",
+        "release": "408.el9",
+        "arch": "x86_64",
+        "rpm_id": 12993652,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2847716,
+      "meta": {
+        "nvr": "kernel-modules-core-5.14.0-408.el9",
+        "name": "kernel-modules-core",
+        "version": "5.14.0",
+        "release": "408.el9",
+        "arch": "x86_64",
+        "rpm_id": 12993682,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2847716,
+      "meta": {
+        "nvr": "kernel-modules-extra-5.14.0-408.el9",
+        "name": "kernel-modules-extra",
+        "version": "5.14.0",
+        "release": "408.el9",
+        "arch": "x86_64",
+        "rpm_id": 12993655,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2836320,
+      "meta": {
+        "nvr": "kexec-tools-2.0.27-7.el9",
+        "name": "kexec-tools",
+        "version": "2.0.27",
+        "release": "7.el9",
+        "arch": "x86_64",
+        "rpm_id": 12937236,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2212253,
+      "meta": {
+        "nvr": "keyutils-1.6.3-1.el9",
+        "name": "keyutils",
+        "version": "1.6.3",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 11583996,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2212253,
+      "meta": {
+        "nvr": "keyutils-libs-1.6.3-1.el9",
+        "name": "keyutils-libs",
+        "version": "1.6.3",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 11583994,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2512428,
+      "meta": {
+        "nvr": "kmod-28-9.el9",
+        "name": "kmod",
+        "version": "28",
+        "release": "9.el9",
+        "arch": "x86_64",
+        "rpm_id": 12185859,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2512428,
+      "meta": {
+        "nvr": "kmod-libs-28-9.el9",
+        "name": "kmod-libs",
+        "version": "28",
+        "release": "9.el9",
+        "arch": "x86_64",
+        "rpm_id": 12185855,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2622184,
+      "meta": {
+        "nvr": "kpartx-0.8.7-22.el9",
+        "name": "kpartx",
+        "version": "0.8.7",
+        "release": "22.el9",
+        "arch": "x86_64",
+        "rpm_id": 12399521,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2632891,
+      "meta": {
+        "nvr": "krb5-libs-1.21.1-1.el9",
+        "name": "krb5-libs",
+        "version": "1.21.1",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12420745,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2709815,
+      "meta": {
+        "nvr": "libacl-2.3.1-4.el9",
+        "name": "libacl",
+        "version": "2.3.1",
+        "release": "4.el9",
+        "arch": "x86_64",
+        "rpm_id": 12621835,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1689867,
+      "meta": {
+        "nvr": "libaio-0.3.111-13.el9",
+        "name": "libaio",
+        "version": "0.3.111",
+        "release": "13.el9",
+        "arch": "x86_64",
+        "rpm_id": 10089892,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2293132,
+      "meta": {
+        "nvr": "libarchive-3.5.3-4.el9",
+        "name": "libarchive",
+        "version": "3.5.3",
+        "release": "4.el9",
+        "arch": "x86_64",
+        "rpm_id": 11733109,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1689887,
+      "meta": {
+        "nvr": "libassuan-2.5.5-3.el9",
+        "name": "libassuan",
+        "version": "2.5.5",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 10090124,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1688838,
+      "meta": {
+        "nvr": "libattr-2.5.1-3.el9",
+        "name": "libattr",
+        "version": "2.5.1",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 10073873,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2012098,
+      "meta": {
+        "nvr": "libbasicobjects-0.1.1-53.el9",
+        "name": "libbasicobjects",
+        "version": "0.1.1",
+        "release": "53.el9",
+        "arch": "x86_64",
+        "rpm_id": 11090233,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2650576,
+      "meta": {
+        "nvr": "libblkid-2.37.4-15.el9",
+        "name": "libblkid",
+        "version": "2.37.4",
+        "release": "15.el9",
+        "arch": "x86_64",
+        "rpm_id": 12465946,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2577719,
+      "meta": {
+        "nvr": "libbpf-1.2.0-1.el9",
+        "name": "libbpf",
+        "version": "1.2.0",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12300518,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1688888,
+      "meta": {
+        "nvr": "libbrotli-1.0.9-6.el9",
+        "name": "libbrotli",
+        "version": "1.0.9",
+        "release": "6.el9",
+        "arch": "x86_64",
+        "rpm_id": 10075391,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1888632,
+      "meta": {
+        "nvr": "libcap-ng-0.8.2-7.el9",
+        "name": "libcap-ng",
+        "version": "0.8.2",
+        "release": "7.el9",
+        "arch": "x86_64",
+        "rpm_id": 10783297,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1689923,
+      "meta": {
+        "nvr": "libcbor-0.7.0-5.el9",
+        "name": "libcbor",
+        "version": "0.7.0",
+        "release": "5.el9",
+        "arch": "x86_64",
+        "rpm_id": 10092928,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2012098,
+      "meta": {
+        "nvr": "libcollection-0.7.0-53.el9",
+        "name": "libcollection",
+        "version": "0.7.0",
+        "release": "53.el9",
+        "arch": "x86_64",
+        "rpm_id": 11090231,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2820207,
+      "meta": {
+        "nvr": "libcom_err-1.46.5-5.el9",
+        "name": "libcom_err",
+        "version": "1.46.5",
+        "release": "5.el9",
+        "arch": "x86_64",
+        "rpm_id": 12889361,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2716789,
+      "meta": {
+        "nvr": "libcurl-7.76.1-28.el9",
+        "name": "libcurl",
+        "version": "7.76.1",
+        "release": "28.el9",
+        "arch": "x86_64",
+        "rpm_id": 12633282,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1689925,
+      "meta": {
+        "nvr": "libdaemon-0.14-23.el9",
+        "name": "libdaemon",
+        "version": "0.14",
+        "release": "23.el9",
+        "arch": "x86_64",
+        "rpm_id": 10090865,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1806145,
+      "meta": {
+        "nvr": "libdb-5.3.28-53.el9",
+        "name": "libdb",
+        "version": "5.3.28",
+        "release": "53.el9",
+        "arch": "x86_64",
+        "rpm_id": 10496300,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2012098,
+      "meta": {
+        "nvr": "libdhash-0.5.0-53.el9",
+        "name": "libdhash",
+        "version": "0.5.0",
+        "release": "53.el9",
+        "arch": "x86_64",
+        "rpm_id": 11090222,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1691766,
+      "meta": {
+        "nvr": "quota-4.06-6.el9",
+        "name": "quota",
+        "version": "4.06",
+        "release": "6.el9",
+        "arch": "x86_64",
+        "rpm_id": 10115285,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1691766,
+      "meta": {
+        "nvr": "quota-nls-4.06-6.el9",
+        "name": "quota-nls",
+        "version": "4.06",
+        "release": "6.el9",
+        "arch": "noarch",
+        "rpm_id": 10115250,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2766593,
+      "meta": {
+        "nvr": "libdrm-2.4.117-1.el9",
+        "name": "libdrm",
+        "version": "2.4.117",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12716701,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2601727,
+      "meta": {
+        "nvr": "libedit-3.1-38.20210216cvs.el9",
+        "name": "libedit",
+        "version": "3.1",
+        "release": "38.20210216cvs.el9",
+        "arch": "x86_64",
+        "rpm_id": 12360438,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1689961,
+      "meta": {
+        "nvr": "libev-4.33-5.el9",
+        "name": "libev",
+        "version": "4.33",
+        "release": "5.el9",
+        "arch": "x86_64",
+        "rpm_id": 10091320,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1689962,
+      "meta": {
+        "nvr": "libevent-2.1.12-6.el9",
+        "name": "libevent",
+        "version": "2.1.12",
+        "release": "6.el9",
+        "arch": "x86_64",
+        "rpm_id": 10091433,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2650576,
+      "meta": {
+        "nvr": "libfdisk-2.37.4-15.el9",
+        "name": "libfdisk",
+        "version": "2.37.4",
+        "release": "15.el9",
+        "arch": "x86_64",
+        "rpm_id": 12465951,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2467679,
+      "meta": {
+        "nvr": "libffi-3.4.2-8.el9",
+        "name": "libffi",
+        "version": "3.4.2",
+        "release": "8.el9",
+        "arch": "x86_64",
+        "rpm_id": 12100162,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2770077,
+      "meta": {
+        "nvr": "libfido2-1.13.0-2.el9",
+        "name": "libfido2",
+        "version": "1.13.0",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12724372,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1689299,
+      "meta": {
+        "nvr": "libgcab1-1.4-6.el9",
+        "name": "libgcab1",
+        "version": "1.4",
+        "release": "6.el9",
+        "arch": "x86_64",
+        "rpm_id": 10082856,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2828028,
+      "meta": {
+        "nvr": "libgcc-11.4.1-3.el9",
+        "name": "libgcc",
+        "version": "11.4.1",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 12918992,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2697214,
+      "meta": {
+        "nvr": "rdma-core-48.0-1.el9",
+        "name": "rdma-core",
+        "version": "48.0",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12591799,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1691921,
+      "meta": {
+        "nvr": "readline-8.1-4.el9",
+        "name": "readline",
+        "version": "8.1",
+        "release": "4.el9",
+        "arch": "x86_64",
+        "rpm_id": 10117777,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2159794,
+      "meta": {
+        "nvr": "rpcbind-1.2.6-5.el9",
+        "name": "rpcbind",
+        "version": "1.2.6",
+        "release": "5.el9",
+        "arch": "x86_64",
+        "rpm_id": 11477217,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2820002,
+      "meta": {
+        "nvr": "rpm-4.16.1.3-29.el9",
+        "name": "rpm",
+        "version": "4.16.1.3",
+        "release": "29.el9",
+        "arch": "x86_64",
+        "rpm_id": 12888815,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2820002,
+      "meta": {
+        "nvr": "rpm-libs-4.16.1.3-29.el9",
+        "name": "rpm-libs",
+        "version": "4.16.1.3",
+        "release": "29.el9",
+        "arch": "x86_64",
+        "rpm_id": 12888805,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2836752,
+      "meta": {
+        "nvr": "rpm-ostree-2024.1-2.el9",
+        "name": "rpm-ostree",
+        "version": "2024.1",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12940880,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2836752,
+      "meta": {
+        "nvr": "rpm-ostree-libs-2024.1-2.el9",
+        "name": "rpm-ostree-libs",
+        "version": "2024.1",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12940881,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2820002,
+      "meta": {
+        "nvr": "rpm-plugin-selinux-4.16.1.3-29.el9",
+        "name": "rpm-plugin-selinux",
+        "version": "4.16.1.3",
+        "release": "29.el9",
+        "arch": "x86_64",
+        "rpm_id": 12888816,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2241926,
+      "meta": {
+        "nvr": "rsync-3.2.3-19.el9",
+        "name": "rsync",
+        "version": "3.2.3",
+        "release": "19.el9",
+        "arch": "x86_64",
+        "rpm_id": 11638586,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2433279,
+      "meta": {
+        "nvr": "libgcrypt-1.10.0-10.el9",
+        "name": "libgcrypt",
+        "version": "1.10.0",
+        "release": "10.el9",
+        "arch": "x86_64",
+        "rpm_id": 12041886,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2828028,
+      "meta": {
+        "nvr": "libgomp-11.4.1-3.el9",
+        "name": "libgomp",
+        "version": "11.4.1",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 12918987,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1818836,
+      "meta": {
+        "nvr": "libgpg-error-1.42-5.el9",
+        "name": "libgpg-error",
+        "version": "1.42",
+        "release": "5.el9",
+        "arch": "x86_64",
+        "rpm_id": 10534297,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2835724,
+      "meta": {
+        "nvr": "runc-1.1.11-1.el9",
+        "name": "runc",
+        "version": "1.1.11",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12932623,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2819950,
+      "meta": {
+        "nvr": "samba-client-libs-4.19.3-100.el9",
+        "name": "samba-client-libs",
+        "version": "4.19.3",
+        "release": "100.el9",
+        "arch": "x86_64",
+        "rpm_id": 12888626,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2819950,
+      "meta": {
+        "nvr": "samba-common-4.19.3-100.el9",
+        "name": "samba-common",
+        "version": "4.19.3",
+        "release": "100.el9",
+        "arch": "noarch",
+        "rpm_id": 12888461,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2819950,
+      "meta": {
+        "nvr": "samba-common-libs-4.19.3-100.el9",
+        "name": "samba-common-libs",
+        "version": "4.19.3",
+        "release": "100.el9",
+        "arch": "x86_64",
+        "rpm_id": 12888598,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1692031,
+      "meta": {
+        "nvr": "sed-4.8-9.el9",
+        "name": "sed",
+        "version": "4.8",
+        "release": "9.el9",
+        "arch": "x86_64",
+        "rpm_id": 10121391,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2848623,
+      "meta": {
+        "nvr": "selinux-policy-38.1.30-1.el9",
+        "name": "selinux-policy",
+        "version": "38.1.30",
+        "release": "1.el9",
+        "arch": "noarch",
+        "rpm_id": 12994201,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2848623,
+      "meta": {
+        "nvr": "selinux-policy-targeted-38.1.30-1.el9",
+        "name": "selinux-policy-targeted",
+        "version": "38.1.30",
+        "release": "1.el9",
+        "arch": "noarch",
+        "rpm_id": 12994198,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2311885,
+      "meta": {
+        "nvr": "setup-2.13.7-9.el9",
+        "name": "setup",
+        "version": "2.13.7",
+        "release": "9.el9",
+        "arch": "noarch",
+        "rpm_id": 11783471,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2051035,
+      "meta": {
+        "nvr": "sg3_utils-1.47-9.el9",
+        "name": "sg3_utils",
+        "version": "1.47",
+        "release": "9.el9",
+        "arch": "x86_64",
+        "rpm_id": 11210656,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2051035,
+      "meta": {
+        "nvr": "sg3_utils-libs-1.47-9.el9",
+        "name": "sg3_utils-libs",
+        "version": "1.47",
+        "release": "9.el9",
+        "arch": "x86_64",
+        "rpm_id": 11210653,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2590462,
+      "meta": {
+        "nvr": "shadow-utils-4.9-8.el9",
+        "name": "shadow-utils",
+        "version": "4.9",
+        "release": "8.el9",
+        "arch": "x86_64",
+        "rpm_id": 12330637,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2590462,
+      "meta": {
+        "nvr": "shadow-utils-subid-4.9-8.el9",
+        "name": "shadow-utils-subid",
+        "version": "4.9",
+        "release": "8.el9",
+        "arch": "x86_64",
+        "rpm_id": 12330636,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2250854,
+      "meta": {
+        "nvr": "shared-mime-info-2.1-5.el9",
+        "name": "shared-mime-info",
+        "version": "2.1",
+        "release": "5.el9",
+        "arch": "x86_64",
+        "rpm_id": 11652089,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1702445,
+      "meta": {
+        "nvr": "libgudev-237-1.el9",
+        "name": "libgudev",
+        "version": "237",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 10150324,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2637443,
+      "meta": {
+        "nvr": "libgusb-0.3.8-2.el9",
+        "name": "libgusb",
+        "version": "0.3.8",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12436049,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2697214,
+      "meta": {
+        "nvr": "libibverbs-48.0-1.el9",
+        "name": "libibverbs",
+        "version": "48.0",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12591814,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1706911,
+      "meta": {
+        "nvr": "libicu-67.1-9.el9",
+        "name": "libicu",
+        "version": "67.1",
+        "release": "9.el9",
+        "arch": "x86_64",
+        "rpm_id": 10163115,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690002,
+      "meta": {
+        "nvr": "libidn2-2.3.0-7.el9",
+        "name": "libidn2",
+        "version": "2.3.0",
+        "release": "7.el9",
+        "arch": "x86_64",
+        "rpm_id": 10092120,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2012098,
+      "meta": {
+        "nvr": "libini_config-1.3.1-53.el9",
+        "name": "libini_config",
+        "version": "1.3.1",
+        "release": "53.el9",
+        "arch": "x86_64",
+        "rpm_id": 11090232,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2777178,
+      "meta": {
+        "nvr": "libipa_hbac-2.9.3-2.el9",
+        "name": "libipa_hbac",
+        "version": "2.9.3",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12739774,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690012,
+      "meta": {
+        "nvr": "libjcat-0.1.6-3.el9",
+        "name": "libjcat",
+        "version": "0.1.6",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 10092297,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1689818,
+      "meta": {
+        "nvr": "libjose-11-3.el9",
+        "name": "libjose",
+        "version": "11",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 10089246,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2809308,
+      "meta": {
+        "nvr": "libkcapi-1.4.0-2.el9",
+        "name": "libkcapi",
+        "version": "1.4.0",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12822905,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2809308,
+      "meta": {
+        "nvr": "libkcapi-hmaccalc-1.4.0-2.el9",
+        "name": "libkcapi-hmaccalc",
+        "version": "1.4.0",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12822908,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1273970,
+      "meta": {
+        "nvr": "shim-x64-15-15.el8_2",
+        "name": "shim-x64",
+        "version": "15",
+        "release": "15.el8_2",
+        "arch": "x86_64",
+        "rpm_id": 8323373,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2807721,
+      "meta": {
+        "nvr": "skopeo-1.14.0-1.el9",
+        "name": "skopeo",
+        "version": "1.14.0",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12818684,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1692025,
+      "meta": {
+        "nvr": "slang-2.3.2-11.el9",
+        "name": "slang",
+        "version": "2.3.2",
+        "release": "11.el9",
+        "arch": "x86_64",
+        "rpm_id": 10121226,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2363895,
+      "meta": {
+        "nvr": "libksba-1.5.1-6.el9",
+        "name": "libksba",
+        "version": "1.5.1",
+        "release": "6.el9",
+        "arch": "x86_64",
+        "rpm_id": 11921084,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2805158,
+      "meta": {
+        "nvr": "libldb-2.8.0-1.el9",
+        "name": "libldb",
+        "version": "2.8.0",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12813816,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690488,
+      "meta": {
+        "nvr": "libluksmeta-9-12.el9",
+        "name": "libluksmeta",
+        "version": "9",
+        "release": "12.el9",
+        "arch": "x86_64",
+        "rpm_id": 10101094,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690027,
+      "meta": {
+        "nvr": "libmaxminddb-1.5.2-3.el9",
+        "name": "libmaxminddb",
+        "version": "1.5.2",
+        "release": "3.el9",
+        "arch": "x86_64",
+        "rpm_id": 10092636,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2451601,
+      "meta": {
+        "nvr": "libmicrohttpd-0.9.72-5.el9",
+        "name": "libmicrohttpd",
+        "version": "0.9.72",
+        "release": "5.el9",
+        "arch": "x86_64",
+        "rpm_id": 12071368,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690038,
+      "meta": {
+        "nvr": "libmnl-1.0.4-15.el9",
+        "name": "libmnl",
+        "version": "1.0.4",
+        "release": "15.el9",
+        "arch": "x86_64",
+        "rpm_id": 10093025,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1695462,
+      "meta": {
+        "nvr": "libmodulemd-2.13.0-2.el9",
+        "name": "libmodulemd",
+        "version": "2.13.0",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 10130645,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2650576,
+      "meta": {
+        "nvr": "libmount-2.37.4-15.el9",
+        "name": "libmount",
+        "version": "2.37.4",
+        "release": "15.el9",
+        "arch": "x86_64",
+        "rpm_id": 12465940,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690049,
+      "meta": {
+        "nvr": "libmspack-0.10.1-0.7.alpha.el9",
+        "name": "libmspack",
+        "version": "0.10.1",
+        "release": "0.7.alpha.el9",
+        "arch": "x86_64",
+        "rpm_id": 10093342,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690056,
+      "meta": {
+        "nvr": "libndp-1.8-4.el9",
+        "name": "libndp",
+        "version": "1.8",
+        "release": "4.el9",
+        "arch": "x86_64",
+        "rpm_id": 10093586,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690059,
+      "meta": {
+        "nvr": "libnet-1.2-6.el9",
+        "name": "libnet",
+        "version": "1.2",
+        "release": "6.el9",
+        "arch": "x86_64",
+        "rpm_id": 10093645,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2685204,
+      "meta": {
+        "nvr": "slirp4netns-1.2.2-1.el9",
+        "name": "slirp4netns",
+        "version": "1.2.2",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12553043,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1691989,
+      "meta": {
+        "nvr": "snappy-1.1.8-8.el9",
+        "name": "snappy",
+        "version": "1.1.8",
+        "release": "8.el9",
+        "arch": "x86_64",
+        "rpm_id": 10119915,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1692018,
+      "meta": {
+        "nvr": "socat-1.7.4.1-5.el9",
+        "name": "socat",
+        "version": "1.7.4.1",
+        "release": "5.el9",
+        "arch": "x86_64",
+        "rpm_id": 10120745,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2676665,
+      "meta": {
+        "nvr": "squashfs-tools-4.4-10.git1.el9",
+        "name": "squashfs-tools",
+        "version": "4.4",
+        "release": "10.git1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12526905,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2296866,
+      "meta": {
+        "nvr": "libnetfilter_conntrack-1.0.9-1.el9",
+        "name": "libnetfilter_conntrack",
+        "version": "1.0.9",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 11740351,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1842197,
+      "meta": {
+        "nvr": "libnetfilter_cthelper-1.0.0-22.el9",
+        "name": "libnetfilter_cthelper",
+        "version": "1.0.0",
+        "release": "22.el9",
+        "arch": "x86_64",
+        "rpm_id": 10607925,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690061,
+      "meta": {
+        "nvr": "libnetfilter_cttimeout-1.0.0-19.el9",
+        "name": "libnetfilter_cttimeout",
+        "version": "1.0.0",
+        "release": "19.el9",
+        "arch": "x86_64",
+        "rpm_id": 10093686,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2215378,
+      "meta": {
+        "nvr": "ssh-key-dir-0.1.4-1.el9",
+        "name": "ssh-key-dir",
+        "version": "0.1.4",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 11592317,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2777178,
+      "meta": {
+        "nvr": "sssd-2.9.3-2.el9",
+        "name": "sssd",
+        "version": "2.9.3",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12739784,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2777178,
+      "meta": {
+        "nvr": "sssd-ad-2.9.3-2.el9",
+        "name": "sssd-ad",
+        "version": "2.9.3",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12739785,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2777178,
+      "meta": {
+        "nvr": "sssd-client-2.9.3-2.el9",
+        "name": "sssd-client",
+        "version": "2.9.3",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12739775,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2777178,
+      "meta": {
+        "nvr": "sssd-common-2.9.3-2.el9",
+        "name": "sssd-common",
+        "version": "2.9.3",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12739779,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2777178,
+      "meta": {
+        "nvr": "sssd-common-pac-2.9.3-2.el9",
+        "name": "sssd-common-pac",
+        "version": "2.9.3",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12739783,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2777178,
+      "meta": {
+        "nvr": "sssd-ipa-2.9.3-2.el9",
+        "name": "sssd-ipa",
+        "version": "2.9.3",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12739764,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2777178,
+      "meta": {
+        "nvr": "sssd-krb5-2.9.3-2.el9",
+        "name": "sssd-krb5",
+        "version": "2.9.3",
+        "release": "2.el9",
+        "arch": "x86_64",
+        "rpm_id": 12739809,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1697188,
+      "meta": {
+        "nvr": "libnetfilter_queue-1.0.5-1.el9",
+        "name": "libnetfilter_queue",
+        "version": "1.0.5",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 10134828,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690058,
+      "meta": {
+        "nvr": "libnfnetlink-1.0.1-21.el9",
+        "name": "libnfnetlink",
+        "version": "1.0.1",
+        "release": "21.el9",
+        "arch": "x86_64",
+        "rpm_id": 10093621,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2630305,
+      "meta": {
+        "nvr": "libnfsidmap-2.5.4-20.el9",
+        "name": "libnfsidmap",
+        "version": "2.5.4",
+        "release": "20.el9",
+        "arch": "x86_64",
+        "rpm_id": 12417431,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2042430,
+      "meta": {
+        "nvr": "libnftnl-1.2.2-1.el9",
+        "name": "libnftnl",
+        "version": "1.2.2",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 11180330,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2805134,
+      "meta": {
+        "nvr": "libnl3-3.9.0-1.el9",
+        "name": "libnl3",
+        "version": "3.9.0",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12813301,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2805134,
+      "meta": {
+        "nvr": "libnl3-cli-3.9.0-1.el9",
+        "name": "libnl3-cli",
+        "version": "3.9.0",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12813300,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2765165,
+      "meta": {
+        "nvr": "libnvme-1.6-1.el9",
+        "name": "libnvme",
+        "version": "1.6",
+        "release": "1.el9",
+        "arch": "x86_64",
+        "rpm_id": 12713956,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2012098,
+      "meta": {
+        "nvr": "libpath_utils-0.2.1-53.el9",
+        "name": "libpath_utils",
+        "version": "0.2.1",
+        "release": "53.el9",
+        "arch": "x86_64",
+        "rpm_id": 11090237,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690079,
+      "meta": {
+        "nvr": "libpcap-1.10.0-4.el9",
+        "name": "libpcap",
+        "version": "1.10.0",
+        "release": "4.el9",
+        "arch": "x86_64",
+        "rpm_id": 10094361,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690083,
+      "meta": {
+        "nvr": "libpciaccess-0.16-6.el9",
+        "name": "libpciaccess",
+        "version": "0.16",
+        "release": "6.el9",
+        "arch": "x86_64",
+        "rpm_id": 10095513,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 2175957,
+      "meta": {
+        "nvr": "libpkgconf-1.7.3-10.el9",
+        "name": "libpkgconf",
+        "version": "1.7.3",
+        "release": "10.el9",
+        "arch": "x86_64",
+        "rpm_id": 11501073,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690091,
+      "meta": {
+        "nvr": "libpsl-0.21.1-5.el9",
+        "name": "libpsl",
+        "version": "0.21.1",
+        "release": "5.el9",
+        "arch": "x86_64",
+        "rpm_id": 10095796,
+        "source": ["koji.listRPMs"]
+      }
+    },
+    {
+      "type": "RPM",
+      "namespace": "REDHAT",
+      "brew_build_id": 1690098,
+      "meta": {
+        "nvr": "libpwquality-1.4.4-8.el9",
+        "name": "libpwquality",
+        "version": "1.4.4",
+        "release": "8.el9",
+        "arch": "x86_64",
+        "rpm_id": 10096100,
+        "source": ["koji.listRPMs"]
+      }
+    }
+  ],
+  "build_meta": {
+    "build_info": {
+      "build_id": 2856398,
+      "cg_id": 4,
+      "completion_time": "2024-01-18 17:01:00.048491",
+      "completion_ts": 1705597260.04849,
+      "creation_event_id": 55754272,
+      "creation_time": "2024-01-18 17:00:57.952563",
+      "creation_ts": 1705597257.95256,
+      "epoch": null,
+      "extra": { "typeinfo": { "image": { "arch": "x86_64" } } },
+      "id": 2856398,
+      "name": "rhcos-x86_64",
+      "nvr": "rhcos-x86_64-416.94.202401181356-0",
+      "owner_id": 6809,
+      "owner_name": "rhcos-build/jenkins-rhcos.apps.ocp-virt.prod.psi.redhat.com",
+      "package_id": 80343,
+      "package_name": "rhcos-x86_64",
+      "release": "0",
+      "source": "https://github.com/openshift/os",
+      "start_time": "2024-01-18 17:00:57.948234",
+      "start_ts": 1705597257.94823,
+      "state": 1,
+      "task_id": null,
+      "version": "416.94.202401181356",
+      "volume_id": 0,
+      "volume_name": "DEFAULT",
+      "cg_name": "coreos-assembler",
+      "type": "image",
+      "tags": ["rhaos-4.16-rhel-9-candidate"],
+      "errata_tags": [],
+      "released_errata_tags": []
+    },
+    "type_info": { "image": { "build_id": 2856398 } }
+  }
+}

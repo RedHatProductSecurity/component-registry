@@ -40,7 +40,6 @@ class ManifestFile(ABC):
     REF_PREFIX = "SPDXRef-"
     DOCUMENT_REF = f"{REF_PREFIX}DOCUMENT"
     DOCUMENT_UUID = f"{REF_PREFIX}{uuid.uuid4()}"
-    # TODO verify this path
     DOCUMENT_NAMESPACE_URL = "https://access.redhat.com/security/data/sbom/spdx/"
     CREATED_BY = Actor(ActorType.ORGANIZATION, "Red Hat Product Security", "secalert@redhat.com")
     PACKAGE_SUPPLIER = Actor(ActorType.ORGANIZATION, "Red Hat")

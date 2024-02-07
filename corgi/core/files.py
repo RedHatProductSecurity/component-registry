@@ -3,12 +3,13 @@ import re
 import uuid
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Generator, Union
+from string import Template
+from typing import Generator, Optional, Union
 
 from boolean import Expression as LicenseExpression
 from boolean import ParseError
 from django.db.models import Manager, QuerySet
-from license_expression import ExpressionError
+from license_expression import ExpressionError, LicenseSymbol
 from spdx_tools.common.spdx_licensing import spdx_licensing
 from spdx_tools.spdx.jsonschema.document_converter import DocumentConverter
 from spdx_tools.spdx.model import (
@@ -43,7 +44,7 @@ class ManifestFile(ABC):
     DOCUMENT_NAMESPACE_URL = "https://access.redhat.com/security/data/sbom/spdx/"
     CREATED_BY = Actor(ActorType.ORGANIZATION, "Red Hat Product Security", "secalert@redhat.com")
     PACKAGE_SUPPLIER = Actor(ActorType.ORGANIZATION, "Red Hat")
-    LICENSE_LIST_VERSION = Version(3, 8)
+    LICENSE_LIST_VERSION = Version(3, 22)
     DATA_LICENSE = "CC0-1.0"
     PACKAGE_FIELDS = [
         "copyright_text",
@@ -58,26 +59,30 @@ class ManifestFile(ABC):
         "release",
         "type",
     ]
+    VALID_LICENSE_REF = r"^[\w.-]*$"
     LICENSE_REF_PREFIX = "LicenseRef-"
     LICENSE_CONCLUDED_EXTRACTED_TEXT = (
         "These license names are from the ScanCode LicenseDB. Extracted license text are available "
         "at https://scancode-licensedb.aboutcode.org/"
     )
-    LICENSE_DECLARED_EXTRACTED_TEXT = (
-        "There is a mapping of many license names to SPDX Licenses and "
-        "links to full extracted text available at "
-        "https://docs.fedoraproject.org/en-US/legal/all-allowed/"
+    LICENSE_DECLARED_EXTRACTED_TEMPLATE = Template(
+        "The license info found in the package meta data is: ${license_name}. See the specific "
+        "package info in this SPDX document or the package itself for more details."
     )
     LICENSE_EXTRACTED_COMMENT = (
         "External License Info is obtained from a build system which predates the SPDX "
         "specification and is not strict in accepting valid SPDX licenses."
+    )
+    LICENSE_COMMENT = (
+        "Licensing information is automatically generated from the upstream package meta data and "
+        "may not be accurate."
     )
 
     def __init__(self) -> None:
         # Ensures a unique LicenceRef index per manifest
         self.license_ref_counter = 0
         # Stored external licenses per manifest
-        self.extracted_licenses: dict[tuple[str, bool], int] = {}
+        self.extracted_licenses: dict[str, str] = {}
 
     @staticmethod
     def version_info(epoch: int, version: str, release: str) -> str:
@@ -122,52 +127,51 @@ class ManifestFile(ABC):
         self.get_external_licenses()"""
         if license_raw == "":
             return SpdxNoAssertion()
-        try:
-            # Red Hat tends to use valid exception symbols such as 'Bison-exception-2.2' separated
-            # by 'and' when they should only be used after 'with'.
-            # Make sure that any 'exception' license symbol follows a 'with'
-            for _ in spdx_licensing.tokenize(license_raw, strict=True):
-                pass
-            # Look for invalidate license symbols
-            license_expression = spdx_licensing.parse(license_raw, validate=True, strict=True)
-        except ParseError as e:
-            logger.debug(f"Error tokenizing license expression {e}")
-            license_ref = self.add_license_ref(license_raw, concluded)
-            return spdx_licensing.parse(f"{self.LICENSE_REF_PREFIX}{license_ref}")
-        except ExpressionError as e:
-            logger.debug(f"Invalid License expression. {e}")
-        else:
-            # Valid license expression, return it
+
+        license_expression = self._parse_license_expression(license_raw, concluded)
+        if license_expression is not None:
             return license_expression
-        # In Brew we normally do not have valid 'with' symbols on the right side of 'with' in
-        # license expressions. Avoid trying to replace invalid licenses with license refs in that
-        # case. Just replace the entire license expression with a license ref.
-        if re.search("with", license_raw, re.IGNORECASE):
-            license_ref = self.add_license_ref(license_raw, concluded)
-            return spdx_licensing.parse(f"{self.LICENSE_REF_PREFIX}{license_ref}")
+        elif concluded:
+            return SpdxNoAssertion()
+
+        # else we have a license expression which can be tokenized, so let's try to replace all
+        # invalid licenses with license-refs.
         try:
-            for invalid_license in spdx_licensing.unknown_license_keys(license_raw, unique=False):
-                license_ref = self.add_license_ref(invalid_license, concluded)
-                # unknown_license_keys returns the symbols in order, multiple times if they occur,
-                # hence only replace 1 each time
-                license_raw = license_raw.replace(
-                    invalid_license, f"{self.LICENSE_REF_PREFIX}{license_ref}", 1
-                )
-            return spdx_licensing.parse(license_raw)
+            licenses_with_refs: list[str] = []
+            unknown_license_keys = spdx_licensing.unknown_license_keys(license_raw)
+            for token in spdx_licensing.tokenize(license_raw, strict=True):
+                # Token example "(LicenseSymbol('Netscape', is_exception=False), 'Netscape', 87)"
+                entry = token[0]
+                if isinstance(entry, LicenseSymbol):
+                    if entry.key in unknown_license_keys:
+                        license_ref = self.add_license_ref(entry.key)
+                        licenses_with_refs.append(f"{self.LICENSE_REF_PREFIX}{license_ref}")
+                    else:
+                        licenses_with_refs.append(entry.key)
+                # 'AND', 'OR', 'WITH', '(', or ')' symbols, for example "(1, 'and', 127)"
+                else:
+                    entry = token[1]
+                    licenses_with_refs.append(entry.upper())
+            valid_licenses_with_refs = " ".join(licenses_with_refs)
+            return spdx_licensing.parse(valid_licenses_with_refs)
         except ExpressionError as e:
             logger.debug(f"Error iterating unknown license keys: {e}")
-            license_ref = self.add_license_ref(license_raw, concluded)
-            return spdx_licensing.parse(f"{self.LICENSE_REF_PREFIX}{license_ref}")
+            return self._license_as_ref(license_raw)
 
-    def add_license_ref(self, invalid_license, concluded: bool = False):
-        if (
-            invalid_license,
-            concluded,
-        ) in self.extracted_licenses:
-            return self.extracted_licenses[(invalid_license, concluded)]
+    def add_license_ref(self, invalid_license: str):
+        if invalid_license in self.extracted_licenses:
+            return self.extracted_licenses[invalid_license]
+
+        # If the invalid_license was a valid license ref we use it as a reference
+        if re.match(self.VALID_LICENSE_REF, invalid_license):
+            self.extracted_licenses[invalid_license] = invalid_license
+            return invalid_license
+
+        # Invalid characters in invalid_license to use as a reference directly, using
+        # license_ref_counter instead
         # Copy the original value of license_ref_counter and return it after incrementing it
         license_ref_index = self.license_ref_counter
-        self.extracted_licenses[(invalid_license, concluded)] = license_ref_index
+        self.extracted_licenses[invalid_license] = str(license_ref_index)
         self.license_ref_counter += 1
         return license_ref_index
 
@@ -201,6 +205,7 @@ class ManifestFile(ABC):
             creators=[self.CREATED_BY],
             data_license=self.DATA_LICENSE,
             license_list_version=self.LICENSE_LIST_VERSION,
+            document_comment=self.LICENSE_COMMENT,
         )
         return creation_info
 
@@ -256,12 +261,9 @@ class ManifestFile(ABC):
 
     def build_extracted_license_info(self) -> list[ExtractedLicensingInfo]:
         extracted_licensing_info: list[ExtractedLicensingInfo] = []
-        for license_key, ref in self.extracted_licenses.items():
-            license_name, is_concluded = license_key
-            extracted_text = (
-                self.LICENSE_CONCLUDED_EXTRACTED_TEXT
-                if is_concluded
-                else self.LICENSE_DECLARED_EXTRACTED_TEXT
+        for license_name, ref in self.extracted_licenses.items():
+            extracted_text = self.LICENSE_DECLARED_EXTRACTED_TEMPLATE.substitute(
+                license_name=license_name
             )
             info = ExtractedLicensingInfo(
                 license_id=f"{self.LICENSE_REF_PREFIX}{ref}",
@@ -282,6 +284,33 @@ class ManifestFile(ABC):
                 f"SPDX validation failed for component {document_name}: "
                 f"{message.validation_message}"
             )
+
+    def _parse_license_expression(
+        self, license_raw: str, concluded: bool
+    ) -> Optional[LicenseExpression]:
+        try:
+            # If there are commas in license expression this will throw an Expression Error
+            spdx_licensing.unknown_license_keys(license_raw)
+            # Red Hat tends to use valid exception symbols such as 'Bison-exception-2.2' separated
+            # by 'and' when they should only be used after 'with'.
+            # Make sure that any 'exception' license symbol follows a 'with'
+            for _ in spdx_licensing.tokenize(license_raw, strict=True):
+                pass
+            # Look for invalid license symbols
+            return spdx_licensing.parse(license_raw, validate=True, strict=True)
+        except ParseError as e:
+            logger.debug(f"Error tokenizing license expression {e}")
+            if concluded:
+                # Don't add a license ref in this case
+                return None
+            return self._license_as_ref(license_raw)
+        except ExpressionError as e:
+            logger.debug(f"Invalid License expression. {e}")
+            return None
+
+    def _license_as_ref(self, license_raw: str) -> LicenseExpression:
+        license_ref = self.add_license_ref(license_raw)
+        return spdx_licensing.parse(f"{self.LICENSE_REF_PREFIX}{license_ref}")
 
 
 class ComponentManifestFile(ManifestFile):
@@ -332,10 +361,6 @@ class ComponentManifestFile(ManifestFile):
 
 class ProductManifestFile(ManifestFile):
     """A data file that represents a product manifest in machine-readable SPDX / JSON format."""
-
-    license_comment = (
-        "Licensing information is provided for individual components only at this time."
-    )
 
     def __init__(self, stream: ProductStream) -> None:
         super().__init__()
@@ -403,7 +428,6 @@ class ProductManifestFile(ManifestFile):
             external_references=list(external_references),
             files_analyzed=False,
             homepage=homepage,
-            license_comment=self.license_comment,
             license_concluded=SpdxNoAssertion(),
             license_declared=SpdxNoAssertion(),
             name=document_name,

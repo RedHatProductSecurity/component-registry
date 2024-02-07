@@ -487,25 +487,65 @@ license_expressions = [
     (
         "0BSD+",
         "LicenseRef-0",
-        {"0BSD+": 0},
+        {
+            (
+                "0BSD+",
+                False,
+            ): 0
+        },
     ),
-    ("0BSD+ or 0BSD+", "LicenseRef-0 OR LicenseRef-0", {"0BSD+": 0}),
-    ("BSD-3-Clause or GPLv3+", "BSD-3-Clause OR LicenseRef-0", {"GPLv3+": 0}),
+    (
+        "0BSD+ or 0BSD+",
+        "LicenseRef-0 OR LicenseRef-0",
+        {
+            (
+                "0BSD+",
+                False,
+            ): 0
+        },
+    ),
+    (
+        "BSD-3-Clause or GPLv3+",
+        "BSD-3-Clause OR LicenseRef-0",
+        {
+            (
+                "GPLv3+",
+                False,
+            ): 0
+        },
+    ),
     (
         "BSD-3-Clause or (GPLv3+ or LGPLv3+)",
         "BSD-3-Clause OR (LicenseRef-0 OR LicenseRef-1)",
-        {"GPLv3+": 0, "LGPLv3+": 1},
+        {
+            (
+                "GPLv3+",
+                False,
+            ): 0,
+            (
+                "LGPLv3+",
+                False,
+            ): 1,
+        },
     ),
     (
         "BSD-3-Clause with exceptions",
         "LicenseRef-0",
-        {"BSD-3-Clause with exceptions": 0},
+        {
+            (
+                "BSD-3-Clause with exceptions",
+                False,
+            ): 0
+        },
     ),
     (
         "BSD-3-Clause or (GPLv3+ with exceptions and LGPLv3+) and Public Domain",
         "LicenseRef-0",
         {
-            "BSD-3-Clause or (GPLv3+ with exceptions and LGPLv3+) and Public Domain": 0,
+            (
+                "BSD-3-Clause or (GPLv3+ with exceptions and LGPLv3+) and Public Domain",
+                False,
+            ): 0,
         },
     ),
     # Actual license declared data examples
@@ -516,29 +556,75 @@ license_expressions = [
         "(LicenseRef-0 OR LicenseRef-5 OR LicenseRef-6 OR LicenseRef-7) AND LicenseRef-8 AND "
         "LicenseRef-9 AND LicenseRef-10 AND LicenseRef-11",
         {
-            "MPLv1.1": 0,
-            "LGPLv3+": 1,
-            "LGPLv3": 2,
-            "LGPLv2+": 3,
-            "BSD": 4,
-            "GPLv2": 5,
-            "LGPLv2": 6,
-            "Netscape": 7,
-            "Public Domain": 8,
-            "ASL 2.0": 9,
-            "MPLv2.0": 10,
-            "CC0": 11,
+            (
+                "MPLv1.1",
+                False,
+            ): 0,
+            (
+                "LGPLv3+",
+                False,
+            ): 1,
+            (
+                "LGPLv3",
+                False,
+            ): 2,
+            (
+                "LGPLv2+",
+                False,
+            ): 3,
+            (
+                "BSD",
+                False,
+            ): 4,
+            (
+                "GPLv2",
+                False,
+            ): 5,
+            (
+                "LGPLv2",
+                False,
+            ): 6,
+            (
+                "Netscape",
+                False,
+            ): 7,
+            (
+                "Public Domain",
+                False,
+            ): 8,
+            (
+                "ASL 2.0",
+                False,
+            ): 9,
+            (
+                "MPLv2.0",
+                False,
+            ): 10,
+            (
+                "CC0",
+                False,
+            ): 11,
         },
     ),
     (
         "GPLv2 and Redistributable, no modification permitted",
         "LicenseRef-0",
-        {"GPLv2 and Redistributable, no modification permitted": 0},
+        {
+            (
+                "GPLv2 and Redistributable, no modification permitted",
+                False,
+            ): 0
+        },
     ),
     (
         "0BSD and Bison-exception-2.2",
         "LicenseRef-0",
-        {"0BSD and Bison-exception-2.2": 0},
+        {
+            (
+                "0BSD and Bison-exception-2.2",
+                False,
+            ): 0
+        },
     ),
 ]
 
@@ -547,8 +633,8 @@ license_expressions = [
 def test_validate_licenses(license_raw, license_valid, license_refs):
     manifest = ComponentManifestFile(ComponentFactory())
     result = str(manifest.validate_licenses(license_raw))
-    assert result == license_valid
     assert license_refs == manifest.extracted_licenses
+    assert result == license_valid
 
 
 def test_component_manifest_properties():
@@ -616,13 +702,13 @@ def test_component_manifest_properties():
     expected_extracted_licensing_info = [
         {
             "comment": component_manifest_file.LICENSE_EXTRACTED_COMMENT,
-            "extractedText": component_manifest_file.LICENSE_EXTRACTED_TEXT,
+            "extractedText": component_manifest_file.LICENSE_CONCLUDED_EXTRACTED_TEXT,
             "licenseId": "LicenseRef-0",
             "name": "(MIT and (ASL 2.0 or GPLv3+ with exceptions)) or LGPLv3+",
         },
         {
             "comment": component_manifest_file.LICENSE_EXTRACTED_COMMENT,
-            "extractedText": component_manifest_file.LICENSE_EXTRACTED_TEXT,
+            "extractedText": component_manifest_file.LICENSE_DECLARED_EXTRACTED_TEXT,
             "licenseId": "LicenseRef-1",
             "name": "BSD-3-Clause or (GPLv3+ with exceptions and LGPLv3+) and Public Domain",
         },

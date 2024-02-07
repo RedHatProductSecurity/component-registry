@@ -59,10 +59,14 @@ class ManifestFile(ABC):
         "type",
     ]
     LICENSE_REF_PREFIX = "LicenseRef-"
-    LICENSE_EXTRACTED_TEXT = (
-        "There is a mapping of many of License Names to SPDX Licenses and "
+    LICENSE_CONCLUDED_EXTRACTED_TEXT = (
+        "These license names are from the ScanCode LicenseDB. Extracted license text are available "
+        "at https://scancode-licensedb.aboutcode.org/"
+    )
+    LICENSE_DECLARED_EXTRACTED_TEXT = (
+        "There is a mapping of many license names to SPDX Licenses and "
         "links to full extracted text available at "
-        "https://docs.fedoraproject.org/en-US/legal/"
+        "https://docs.fedoraproject.org/en-US/legal/all-allowed/"
     )
     LICENSE_EXTRACTED_COMMENT = (
         "External License Info is obtained from a build system which predates the SPDX "
@@ -73,7 +77,7 @@ class ManifestFile(ABC):
         # Ensures a unique LicenceRef index per manifest
         self.license_ref_counter = 0
         # Stored external licenses per manifest
-        self.extracted_licenses: dict[str, int] = {}
+        self.extracted_licenses: dict[tuple[str, bool], int] = {}
 
     @staticmethod
     def version_info(epoch: int, version: str, release: str) -> str:
@@ -109,7 +113,9 @@ class ManifestFile(ABC):
                 locator=cpe,
             )
 
-    def validate_licenses(self, license_raw: str) -> Union[LicenseExpression, SpdxNoAssertion]:
+    def validate_licenses(
+        self, license_raw: str, concluded: bool = False
+    ) -> Union[LicenseExpression, SpdxNoAssertion]:
         """Check the license_raw argument is a valid SPDX license expression, if not decompose the
         expression, and replace each invalid license with a licenseRef.
         The set of licenseRefs for the manifest can then be looked up with
@@ -126,7 +132,7 @@ class ManifestFile(ABC):
             license_expression = spdx_licensing.parse(license_raw, validate=True, strict=True)
         except ParseError as e:
             logger.debug(f"Error tokenizing license expression {e}")
-            license_ref = self.add_license_ref(license_raw)
+            license_ref = self.add_license_ref(license_raw, concluded)
             return spdx_licensing.parse(f"{self.LICENSE_REF_PREFIX}{license_ref}")
         except ExpressionError as e:
             logger.debug(f"Invalid License expression. {e}")
@@ -137,11 +143,11 @@ class ManifestFile(ABC):
         # license expressions. Avoid trying to replace invalid licenses with license refs in that
         # case. Just replace the entire license expression with a license ref.
         if re.search("with", license_raw, re.IGNORECASE):
-            license_ref = self.add_license_ref(license_raw)
+            license_ref = self.add_license_ref(license_raw, concluded)
             return spdx_licensing.parse(f"{self.LICENSE_REF_PREFIX}{license_ref}")
         try:
             for invalid_license in spdx_licensing.unknown_license_keys(license_raw, unique=False):
-                license_ref = self.add_license_ref(invalid_license)
+                license_ref = self.add_license_ref(invalid_license, concluded)
                 # unknown_license_keys returns the symbols in order, multiple times if they occur,
                 # hence only replace 1 each time
                 license_raw = license_raw.replace(
@@ -150,15 +156,18 @@ class ManifestFile(ABC):
             return spdx_licensing.parse(license_raw)
         except ExpressionError as e:
             logger.debug(f"Error iterating unknown license keys: {e}")
-            license_ref = self.add_license_ref(license_raw)
+            license_ref = self.add_license_ref(license_raw, concluded)
             return spdx_licensing.parse(f"{self.LICENSE_REF_PREFIX}{license_ref}")
 
-    def add_license_ref(self, invalid_license):
-        if invalid_license in self.extracted_licenses:
-            return self.extracted_licenses[invalid_license]
+    def add_license_ref(self, invalid_license, concluded: bool = False):
+        if (
+            invalid_license,
+            concluded,
+        ) in self.extracted_licenses:
+            return self.extracted_licenses[(invalid_license, concluded)]
         # Copy the original value of license_ref_counter and return it after incrementing it
         license_ref_index = self.license_ref_counter
-        self.extracted_licenses[invalid_license] = license_ref_index
+        self.extracted_licenses[(invalid_license, concluded)] = license_ref_index
         self.license_ref_counter += 1
         return license_ref_index
 
@@ -218,7 +227,7 @@ class ManifestFile(ABC):
         version_info = self.version_info(component.epoch, component.version, component.release)
         file_name = component.filename if component.filename else None
 
-        license_concluded = self.validate_licenses(component.license_concluded_raw)
+        license_concluded = self.validate_licenses(component.license_concluded_raw, True)
         license_declared = self.validate_licenses(component.license_declared_raw)
 
         if not package_id:
@@ -247,15 +256,20 @@ class ManifestFile(ABC):
 
     def build_extracted_license_info(self) -> list[ExtractedLicensingInfo]:
         extracted_licensing_info: list[ExtractedLicensingInfo] = []
-        for value, ref in self.extracted_licenses.items():
-            extracted_licensing_info.append(
-                ExtractedLicensingInfo(
-                    license_id=f"{self.LICENSE_REF_PREFIX}{ref}",
-                    license_name=value,
-                    extracted_text=self.LICENSE_EXTRACTED_TEXT,
-                    comment=self.LICENSE_EXTRACTED_COMMENT,
-                )
+        for license_key, ref in self.extracted_licenses.items():
+            license_name, is_concluded = license_key
+            extracted_text = (
+                self.LICENSE_CONCLUDED_EXTRACTED_TEXT
+                if is_concluded
+                else self.LICENSE_DECLARED_EXTRACTED_TEXT
             )
+            info = ExtractedLicensingInfo(
+                license_id=f"{self.LICENSE_REF_PREFIX}{ref}",
+                license_name=license_name,
+                extracted_text=extracted_text,
+                comment=self.LICENSE_EXTRACTED_COMMENT,
+            )
+            extracted_licensing_info.append(info)
         return extracted_licensing_info
 
     def validate_document(self, document: Document, document_name: str) -> None:

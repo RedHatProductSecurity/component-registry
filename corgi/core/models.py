@@ -1760,14 +1760,35 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     def is_srpm(self):
         return self.type == Component.Type.RPM and self.arch == "src"
 
+    def _get_software_build_name(self, name):
+        if self.software_build:
+            return self.software_build.name
+        # else this component didn't have a software_build foreign key
+        root_node = self.cnodes.get_queryset().get_ancestors().filter(level=0).first()
+        if root_node:
+            return Component.objects.get(pk=root_node.object_id).software_build.name
+
     def get_nvr(self) -> str:
+        name = self.name
+        if (
+            self.namespace == Component.Namespace.REDHAT
+            and self.type == Component.Type.CONTAINER_IMAGE
+        ):
+            name = self._get_software_build_name(name)
+
         # Many GOLANG components don't have a version or release set
         # so don't return an oddly formatted NVR, like f"{name}-"
         version = f"-{self.version}" if self.version else ""
         release = f"-{self.release}" if self.release else ""
-        return f"{self.name}{version}{release}"
+        return f"{name}{version}{release}"
 
     def get_nevra(self) -> str:
+        name = self.name
+        if (
+            self.namespace == Component.Namespace.REDHAT
+            and self.type == Component.Type.CONTAINER_IMAGE
+        ):
+            name = self._get_software_build_name(name)
         epoch = f":{self.epoch}" if self.epoch else ""
         # Many GOLANG components don't have a version or release set
         # so don't return an oddly formatted NEVRA, like f"{name}-.{arch}"
@@ -1775,7 +1796,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         release = f"-{self.release}" if self.release else ""
         arch = f".{self.arch}" if self.arch else ""
 
-        return f"{self.name}{epoch}{version}{release}{arch}"
+        return f"{name}{epoch}{version}{release}{arch}"
 
     def _build_repo_url_for_type(self) -> str:
         """Get an upstream repo URL based on a purl"""

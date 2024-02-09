@@ -70,7 +70,7 @@ def slow_fetch_pyxis_image_by_nvr(nvr: str, force_process=False) -> str:
 
 @app.task(base=Singleton, autoretry_for=RETRYABLE_ERRORS, retry_kwargs=RETRY_KWARGS, priority=6)
 def slow_update_name_for_container_from_pyxis(nvr: str) -> bool:
-    """Fetch a pyxis image and update the container root component with the result"""
+    """Fetch a pyxis image and update the container components with the result"""
     repo_name = slow_fetch_pyxis_image_by_nvr(nvr)
     if not repo_name:
         return False

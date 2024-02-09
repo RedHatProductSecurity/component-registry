@@ -304,6 +304,60 @@ def test_nevra():
             assert package_url.version is None
 
 
+def test_container_nvr():
+    # eg. baremetal-machine-controller-container-v4.11.0-202302271715.p0.g3cbef7f.assembly.stream
+    sb = SoftwareBuildFactory(name="baremetal-machine-controller-container")
+    # simulate a container which has a different external name from Pyxis
+    root_container = ContainerImageComponentFactory(
+        software_build=sb, name="ose-baremetal-machine-controllers"
+    )
+    expected_nvr = (
+        f"baremetal-machine-controller-container-{root_container.version}-{root_container.release}"
+    )
+    assert root_container.nvr == expected_nvr
+
+    root_node = ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        obj=root_container,
+    )
+    child_container = ChildContainerImageComponentFactory(name="ose-baremetal-machine-controllers")
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.PROVIDES, parent=root_node, obj=child_container
+    )
+    child_container.save()
+
+    assert child_container.nvr == expected_nvr
+
+
+def test_container_nevra():
+    # eg. baremetal-machine-controller-container-v4.11.0-202302271715.p0.g3cbef7f.assembly.stream
+    sb = SoftwareBuildFactory(name="baremetal-machine-controller-container")
+    # simulate a container which has a different external name from Pyxis
+    root_container = ContainerImageComponentFactory(
+        software_build=sb, name="ose-baremetal-machine-controllers"
+    )
+    expected_nevra_base = (
+        f"baremetal-machine-controller-container-{root_container.version}-{root_container.release}"
+    )
+    expected_root_nevra = f"{expected_nevra_base}.noarch"
+    assert root_container.nevra == expected_root_nevra
+
+    root_node = ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE,
+        parent=None,
+        obj=root_container,
+    )
+    child_container = ChildContainerImageComponentFactory(name="ose-baremetal-machine-controllers")
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.PROVIDES, parent=root_node, obj=child_container
+    )
+    child_container.save()
+
+    expected_child_nevra = f"{expected_nevra_base}.{child_container.arch}"
+    assert child_container.nevra == expected_child_nevra
+
+
 def test_product_taxonomic_queries():
     rhel, rhel_7, _, rhel_8, _, rhel_8_2, _ = create_product_hierarchy()
 

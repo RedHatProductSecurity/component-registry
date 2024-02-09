@@ -279,6 +279,8 @@ LOGGING = {
         # Any submodules of above use the lowest-defined parent module's config
         # Any other modules use the root logger's config, or their own custom config
         # To see more than defined above, call e.g. logger.setLevel(logging.DEBUG) in a shell
+        # Empty name for code run via manage.py, eg. migrations
+        "": {"level": logging.INFO},
     },
 }
 

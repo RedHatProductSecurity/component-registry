@@ -1,11 +1,12 @@
 {
     "SPDXID": "SPDXRef-DOCUMENT",
+    "comment": "Licensing information is automatically generated from the upstream package meta data and may not be accurate.",
     "creationInfo": {
         "created": "2024-01-31T00:22:29Z",
         "creators": [
             "Organization: Red Hat Product Security (secalert@redhat.com)"
         ],
-        "licenseListVersion": "3.8"
+        "licenseListVersion": "3.22"
     },
     "dataLicense": "CC0-1.0",
     "name": "EXTERNAL-NAME-1.0",
@@ -25,7 +26,6 @@
             ],
             "filesAnalyzed": false,
             "homepage": "https://www.redhat.com/",
-            "licenseComments": "Licensing information is provided for individual components only at this time.",
             "licenseConcluded": "NOASSERTION",
             "licenseDeclared": "NOASSERTION",
             "name": "EXTERNAL-NAME-1.0",

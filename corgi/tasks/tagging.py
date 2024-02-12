@@ -1,4 +1,5 @@
 from celery.utils.log import get_task_logger
+from django.conf import settings
 
 from corgi.core.models import Product, ProductStream, ProductStreamTag, ProductVersion
 
@@ -18,6 +19,8 @@ def apply_middleware_stream_no_manifest_tags(tag_name: str, tag_value: str) -> N
         "productstreams", flat=True
     ):
         stream = ProductStream.objects.get(pk=stream_pk)
+        if stream.name in settings.ALLOWED_MIDDLEWARE_MANIFEST_STREAMS:
+            continue
         _, created = ProductStreamTag.objects.get_or_create(
             name=tag_name, value=tag_value, tagged_model=stream
         )

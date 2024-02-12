@@ -4,7 +4,8 @@ stages:
   - build
   - deploy-stage
   - deploy-prod
-  - perf
+  - perf-stage
+  - perf-prod
 
 include:
   - project: 'product-security/dev/component-registry-ops'
@@ -131,7 +132,7 @@ test-migrations:
       - schedules
 
 test-performance:
-  stage: perf
+  stage: perf-stage
   allow_failure: true
   # Keep in sync with Dockerfile
   image: registry.redhat.io/ubi9/ubi
@@ -216,8 +217,8 @@ secrets:
     refs:
       - schedules
 
-locust:
-  stage: perf
+locust-stage:
+  stage: perf-stage
   image: $PYTHON_TOX_IMAGE_LATEST
   before_script:
     - *common_ci_setup
@@ -225,6 +226,23 @@ locust:
   script:
     - pip3 install locust
     - timeout --foreground 90s locust --headless -f ./perf --host https://$CORGI_DOMAIN --users 5 --spawn-rate 2 --csv=locust-result.csv --run-time 1m || exit 1
+  artifacts:
+    when: always
+    paths:
+      - locust-result.csv
+  only:
+    refs:
+      - schedules
+
+locust-prod:
+  stage: perf-prod
+  image: $PYTHON_TOX_IMAGE_LATEST
+  before_script:
+    - *common_ci_setup
+    - *common_test_setup
+  script:
+    - pip3 install locust
+    - timeout --foreground 90s locust --headless -f ./perf --host https://$CORGI_PROD_DOMAIN --users 5 --spawn-rate 2 --csv=locust-result.csv --run-time 1m || exit 1
   artifacts:
     when: always
     paths:

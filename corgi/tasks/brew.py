@@ -94,7 +94,7 @@ def slow_fetch_brew_build(
         defaults={
             "completion_time": completion_dt,
             "meta_attr": build_meta,
-            "name": component["meta"]["name"],
+            "name": build_meta["name"],
             "source": build_meta.pop("source"),
         },
     )

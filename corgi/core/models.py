@@ -1309,8 +1309,8 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     arch = models.CharField(max_length=1024, default="")
 
     purl = models.CharField(max_length=1024, default="", unique=True)
-    nvr = models.CharField(max_length=2048, default="")
-    nevra = models.CharField(max_length=2048, default="")
+    nvr = models.CharField(max_length=1024, default="")
+    nevra = models.CharField(max_length=1024, default="")
 
     # related_name defaults to modelname_set if not specified
     # e.g. an implicit component_set field is added on the Channel model

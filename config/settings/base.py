@@ -508,3 +508,10 @@ QUAY_TOKEN = os.getenv("CORGI_QUAY_TOKEN", "")
 
 # disable using reltuples in corgi.api.paginate.FasterPageNumberPagination for fast count estimates
 OPTIMISE_REST_API_COUNT = False
+
+# We only process Maven builds from SBOMer, which makes most middleware streams incomplete
+# This list allows the specified streams to have an SBOM published by SDEngine in the customer
+# portal
+ALLOWED_MIDDLEWARE_MANIFEST_STREAMS = os.environ.get(
+    "CORGI_ALLOWED_MIDDLEWARE_MANIFEST_STREAMS", ""
+).split(",")

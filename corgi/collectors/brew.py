@@ -88,6 +88,9 @@ class Brew:
     # A list of component names, for which build analysis will be skipped.
     COMPONENT_EXCLUDES = json.loads(os.getenv("CORGI_COMPONENT_EXCLUDES", "[]"))
 
+    KOJI_LISTARCHIVES_SRC = "koji.listArchives"
+    RHCOS_BUILDER = "coreos-assembler"
+
     koji_session: koji.ClientSession = None
 
     def __init__(self, source: str = ""):
@@ -471,7 +474,6 @@ class Brew:
         return name, version, release
 
     def get_container_build_data(self, build_id: int, build_info: dict[str, Any]) -> dict[str, Any]:
-
         component: dict[str, Any] = {
             "type": Component.Type.CONTAINER_IMAGE,
             "meta": {
@@ -486,23 +488,23 @@ class Brew:
 
         go_stdlib_version = ""
         remote_sources: dict[str, tuple[str, str]] = {}
+        is_rhcos_build = build_info.get("cg_name") == self.RHCOS_BUILDER
         # TODO: Should we raise an error if build_info["extra"] is missing?
         if build_info["extra"]:
-            index = build_info["extra"]["image"].get("index", {})
+            image_info = build_info["extra"].get("image", {})
+            index = image_info.get("index", {})
             if index:
                 component["meta"]["digests"] = index["digests"]
                 component["meta"]["pull"] = index.get("pull", [])
 
-            if "parent_build_id" in build_info["extra"]["image"]:
-                parent_image = build_info["extra"]["image"]["parent_build_id"]
+            if "parent_build_id" in image_info:
+                parent_image = image_info["parent_build_id"]
                 component["meta"]["parent"] = parent_image
 
             # These show up in multistage builds such as Build ID 1475846 and are build dependencies
-            if "parent_image_builds" in build_info["extra"]["image"]:
+            if "parent_image_builds" in image_info:
                 build_parent_nvrs = []
-                for parent_image_build in build_info["extra"]["image"][
-                    "parent_image_builds"
-                ].values():
+                for parent_image_build in image_info["parent_image_builds"].values():
                     build_name, build_version, _ = Brew.split_nvr(parent_image_build["nvr"])
                     if "go-toolset" in build_name or "golang" in build_name:
                         build_parent_nvrs.append(build_name)
@@ -515,7 +517,7 @@ class Brew:
             # the source code came from using the 'go' stanza in container.yaml
             # ref: https://osbs.readthedocs.io/en/osbs_ocp3/users.html#go
             # Handle case when "go" key is present but value is None
-            go = build_info["extra"]["image"].get("go", {})
+            go = image_info.get("go", {})
 
             # AND handle case when "modules" key is present but value is None
             if go and go.get("modules", []):
@@ -555,6 +557,11 @@ class Brew:
                                 source.keys(),
                             )
 
+            # RHCOS builds do not have image archives for each arch build, instead each build
+            # is already for a single arch which is listed in typeinfo
+            if is_rhcos_build:
+                component["meta"]["arch"] = build_info["extra"]["typeinfo"]["image"]["arch"]
+
         child_image_components: list[dict[str, Any]] = []
         archives = self.koji_session.listArchives(build_id)
 
@@ -563,7 +570,9 @@ class Brew:
         rpm_build_ids: set[int] = set()
 
         for archive in archives:
-            if archive["btype"] == "image" and archive["type_name"] == "tar":
+            # RHCOS builds do not have actual image, the tar actually contains the coreos-assembler
+            # source code
+            if archive["btype"] == "image" and archive["type_name"] == "tar" and not is_rhcos_build:
                 noarch_rpms_by_id, child_image_component = self._extract_image_components(
                     archive, build_id, build_info["nvr"], noarch_rpms_by_id, rpm_build_ids
                 )
@@ -581,6 +590,10 @@ class Brew:
                         continue  # Don't try to populate remote_sources map from archives
                     else:
                         self.update_remote_sources(archive, build_info, remote_sources)
+            if is_rhcos_build and archive["filename"] == "commitmeta.json":
+                noarch_rpms_by_id = self._extract_rhcos_image_components(
+                    archive, component, noarch_rpms_by_id, rpm_build_ids
+                )
 
         source_components = self._extract_remote_sources(go_stdlib_version, remote_sources)
 
@@ -636,7 +649,7 @@ class Brew:
                     "version": remote_source.ref,
                     "remote_source": coords[0],
                     "remote_source_archive": coords[1],
-                    "source": ["koji.listArchives"],
+                    "source": [cls.KOJI_LISTARCHIVES_SRC],
                 },
             }
             if build_loc:
@@ -729,24 +742,11 @@ class Brew:
         child_component["meta"]["license"] = labels.get("License", "")
         child_component["meta"]["brew_archive_id"] = archive["id"]
         child_component["meta"]["digests"] = archive["extra"]["docker"]["digests"]
-        child_component["meta"]["source"] = ["koji.listArchives"]
+        child_component["meta"]["source"] = [self.KOJI_LISTARCHIVES_SRC]
         rpms = self.koji_session.listRPMs(imageID=archive["id"])
         arch_specific_rpms = []
         for rpm in rpms:
-            rpm_component = {
-                "type": Component.Type.RPM,
-                "namespace": Component.Namespace.REDHAT,
-                "brew_build_id": rpm["build_id"],
-                "meta": {
-                    "nvr": rpm["nvr"],
-                    "name": rpm["name"],
-                    "version": rpm["version"],
-                    "release": rpm["release"],
-                    "arch": rpm["arch"],
-                    "rpm_id": rpm["id"],
-                    "source": ["koji.listRPMs"],
-                },
-            }
+            rpm_component = self._create_rpm_component_definition(rpm)
             rpm_build_ids.add(rpm["build_id"])
             if rpm["arch"] == "noarch":
                 noarch_rpms_by_id[rpm["id"]] = rpm_component
@@ -754,6 +754,42 @@ class Brew:
                 arch_specific_rpms.append(rpm_component)
         child_component["rpm_components"] = arch_specific_rpms
         return noarch_rpms_by_id, child_component
+
+    def _extract_rhcos_image_components(
+        self,
+        archive: dict[str, Any],
+        component: dict[str, Any],
+        noarch_rpms_by_id: dict[int, dict[str, Any]],
+        rpm_build_ids: set[int],
+    ) -> dict[int, dict[str, Any]]:
+        logger.info("Processing RHCOS image archive %s", archive["filename"])
+        component["meta"]["filename"] = archive["filename"]
+        component["meta"]["brew_archive_id"] = archive["id"]
+        component["meta"]["source"] = [self.KOJI_LISTARCHIVES_SRC]
+        rpms = self.koji_session.listRPMs(imageID=archive["id"])
+        for rpm in rpms:
+            rpm_component = self._create_rpm_component_definition(rpm)
+            rpm_build_ids.add(rpm["build_id"])
+            noarch_rpms_by_id[rpm["id"]] = rpm_component
+        return noarch_rpms_by_id
+
+    @staticmethod
+    def _create_rpm_component_definition(rpm: dict[str, Any]):
+        """Creates the definition of an RPM build from the data given by koji's listRPMs."""
+        return {
+            "type": Component.Type.RPM,
+            "namespace": Component.Namespace.REDHAT,
+            "brew_build_id": rpm["build_id"],
+            "meta": {
+                "nvr": rpm["nvr"],
+                "name": rpm["name"],
+                "version": rpm["version"],
+                "release": rpm["release"],
+                "arch": rpm["arch"],
+                "rpm_id": rpm["id"],
+                "source": ["koji.listRPMs"],
+            },
+        }
 
     @staticmethod
     def _get_labels(docker_config: dict[str, dict[str, dict[str, str]]]) -> dict[str, str]:
@@ -993,7 +1029,6 @@ class Brew:
 
     @staticmethod
     def get_module_build_data(build_info: dict[str, Any]) -> dict[str, Any]:
-
         modulemd_yaml = build_info["extra"]["typeinfo"]["module"].get("modulemd_str", "")
         if not modulemd_yaml:
             raise ValueError("Cannot get module build data, modulemd_yaml is undefined")
@@ -1063,10 +1098,11 @@ class Brew:
             # If this is an "image" type build, it may be building a container image, ISO image,
             # or other types of images.
             build_extra = build.get("extra")
-            if build["cg_name"] == "atomic-reactor":
+            if build["cg_name"] in {"atomic-reactor", self.RHCOS_BUILDER}:
                 # Check the content generator name to determine where this
                 # image was built, which indicates what type of image it is.
                 # Container images are built in OSBS, which uses atomic-reactor to build them.
+                # RHCOS images are built with coreos-assembler
                 pass
             elif build_extra and build_extra.get("submitter") == "osbs":
                 # Some builds such as 903565 have the cg_name field set to None

@@ -23,5 +23,6 @@ python-qpid-proton
 requests
 requests-gssapi
 rpm
+spdx-tools
 splitstream
 mozilla-django-oidc

@@ -31,7 +31,7 @@
       "_id": {
         "$oid": "64dccc646d82013739c4f7e0"
       },
-      "created_by": "hacbs-release-pyxis-staging",
+      "created_by": "metaxor",
       "created_on_behalf_of": null,
       "creation_date": {
         "$date": 1692191844148
@@ -51,7 +51,7 @@
       "last_update_date": {
         "$date": 1692191844148
       },
-      "last_updated_by": "hacbs-release-pyxis-staging",
+      "last_updated_by": "metaxor",
       "updated_on_behalf_of": null
     },
     "entityName": "contentManifest",

@@ -87,43 +87,45 @@ def cpu_remove_old_services_data(build_id: int) -> None:
     build = SoftwareBuild.objects.get(
         build_id=build_id, build_type=SoftwareBuild.Type.APP_INTERFACE
     )
-    for root_component in build.components.get_queryset():
-        # TODO: Clean up deletion logic per notes
-        children_to_delete = set()
 
-        # Delete child components, if they're only provided by the root we're about to delete
-        for provided_component in root_component.provides.get_queryset():
-            if provided_component.cnodes.count() == 1:
-                children_to_delete.add(provided_component.pk)
+    with transaction.atomic():
+        for root_component in build.components.get_queryset():
+            children_to_delete = set()
 
-        # Do this in two steps to reduce size of set / overall memory requirements
-        Component.objects.filter(pk__in=children_to_delete).delete()
-        children_to_delete = set()
+            # Delete child components, if they're only provided by the root we're about to delete
+            for provided_component in root_component.provides.get_queryset():
+                if provided_component.cnodes.count() == 1:
+                    children_to_delete.add(provided_component.pk)
 
-        # Delete child components, if they're only upstream of the root we're about to delete
-        for upstream_component in root_component.upstreams.get_queryset():
-            if upstream_component.cnodes.count() == 1:
-                children_to_delete.add(upstream_component.pk)
+            # Do this in two steps to reduce size of set / overall memory requirements
+            Component.objects.filter(pk__in=children_to_delete).delete()
+            children_to_delete = set()
 
-        # Nodes will be automatically deleted when their linked component is deleted
-        Component.objects.filter(pk__in=children_to_delete).delete()
+            # Delete child components, if they're only upstream of the root we're about to delete
+            for upstream_component in root_component.upstreams.get_queryset():
+                if upstream_component.cnodes.count() == 1:
+                    children_to_delete.add(upstream_component.pk)
 
-    ProductComponentRelation.objects.filter(
-        type=ProductComponentRelation.Type.APP_INTERFACE, build_id=build_id
-    ).delete()
+            # Nodes will be automatically deleted when their linked component is deleted
+            Component.objects.filter(pk__in=children_to_delete).delete()
 
-    old_services = build.meta_attr["services"]
-    logger.info(
-        f"App-Interface build {build_id} and all its current children "
-        f"will be unlinked from old services that no longer use it: {old_services}"
-    )
-    old_stream_pks = ProductStream.objects.filter(name__in=old_services).values_list(
-        "pk", flat=True
-    )
-    build.disassociate_with_product("ProductStream", old_stream_pks)
-    # Root components will be automatically deleted when their linked build is deleted
-    # This also deletes all the nodes which are children of the root (the entire tree)
-    build.delete()
+        ProductComponentRelation.objects.filter(
+            type=ProductComponentRelation.Type.APP_INTERFACE, build_id=build_id
+        ).delete()
+
+        old_services = build.meta_attr["services"]
+        logger.info(
+            f"App-Interface build {build_id} and all its current children "
+            f"will be unlinked from old services that no longer use it: {old_services}"
+        )
+
+        old_stream_pks = ProductStream.objects.filter(name__in=old_services).values_list(
+            "pk", flat=True
+        )
+        build.disassociate_with_service_streams(old_stream_pks)
+        # Root components will be automatically deleted when their linked build is deleted
+        # This also deletes all the nodes which are children of the root (the entire tree)
+        build.delete()
 
 
 @app.task(
@@ -189,12 +191,8 @@ def cpu_manifest_service_component(
             "didn't have any child components after analyzing "
             f"its Quay ({quay_repo}) and / or Git ({git_repo}) repos"
         )
-        # Raise exceptions here if we failed to analyze a repo / image
-        if exceptions:
-            raise_multiple_exceptions(exceptions)
-        # If no exceptions, we still create the build and relations below,
-        # as well as save the taxonomy, even if there are no components
-        # just so that this root component is properly linked to the service
+        # Raise exceptions at the very end if we failed to analyze a repo / image
+        # so the root component still exists and gets linked to the service
 
     save_service_components(
         now,
@@ -257,7 +255,7 @@ def save_service_components(
             old_stream_pks = ProductStream.objects.filter(name__in=old_services).values_list(
                 "pk", flat=True
             )
-            build.disassociate_with_product("ProductStream", old_stream_pks)
+            build.disassociate_with_service_streams(old_stream_pks)
 
             # We delete and recreate this build, root component, and all nodes
             # so that VM does not see stale data / file bad trackers

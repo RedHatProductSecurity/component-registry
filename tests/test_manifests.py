@@ -1,12 +1,22 @@
 import json
 import logging
+import uuid
 from json import JSONDecodeError
 
+import jsonschema
 import pytest
+from django.conf import settings
+from django_celery_results.models import TaskResult
 
-from corgi.core.files import ProductManifestFile
+from corgi.core.files import ComponentManifestFile, ProductManifestFile
 from corgi.core.fixups import cpe_lookup
-from corgi.core.models import Component, ComponentNode, ProductComponentRelation
+from corgi.core.models import (
+    Component,
+    ComponentNode,
+    ProductComponentRelation,
+    ProductNode,
+)
+from corgi.tasks.manifest import same_contents
 from corgi.web.templatetags.base_extras import provided_relationship
 
 from .conftest import setup_product
@@ -16,6 +26,9 @@ from .factories import (
     ContainerImageComponentFactory,
     ProductComponentRelationFactory,
     ProductStreamFactory,
+    ProductStreamNodeFactory,
+    ProductVariantFactory,
+    ProductVariantNodeFactory,
     SoftwareBuildFactory,
     SrpmComponentFactory,
     UpstreamComponentFactory,
@@ -26,6 +39,10 @@ pytestmark = [
     pytest.mark.unit,
     pytest.mark.django_db(databases=("default", "read_only"), transaction=True),
 ]
+
+# From https://raw.githubusercontent.com/spdx/spdx-spec/development/
+# v2.2.2/schemas/spdx-schema.json
+SCHEMA_FILE = settings.BASE_DIR / "corgi/web/static/spdx-22-schema.json"
 
 
 def test_escapejs_on_copyright():
@@ -45,7 +62,7 @@ def test_escapejs_on_copyright():
         " C.au, (c) UiL (c)"
     )
     try:
-        c.manifest
+        json.dumps(ComponentManifestFile(c).render_content())
     except JSONDecodeError as e:
         assert (
             False
@@ -53,7 +70,7 @@ def test_escapejs_on_copyright():
 
     c = ComponentFactory(copyright_text="©, 🄯, ®, ™")
     try:
-        c.manifest
+        json.dumps(ComponentManifestFile(c).render_content())
     except JSONDecodeError as e:
         assert (
             False
@@ -65,8 +82,8 @@ def test_manifests_exclude_source_container(stored_proc):
     """Test that container sources are excluded packages"""
     containers, stream, _ = setup_products_and_rpm_in_containers()
     assert len(containers) == 3
-    manifest_str = ProductManifestFile(stream).render_content()
-    manifest = json.loads(manifest_str)
+
+    manifest = ProductManifestFile(stream).render_content()
     components = manifest["packages"]
     # Two containers, one RPM, and a product are included
     assert len(components) == 4
@@ -92,8 +109,7 @@ def test_manifests_exclude_bad_golang_components(stored_proc):
     containers[0].save_component_taxonomy()
     assert containers[0].provides.filter(name=bad_golang.name).exists()
 
-    manifest_str = ProductManifestFile(stream).render_content()
-    manifest = json.loads(manifest_str)
+    manifest = ProductManifestFile(stream).render_content()
     components = manifest["packages"]
     # Two containers, one RPM, and a product are included
     assert len(components) == 4, components
@@ -105,14 +121,14 @@ def test_manifests_exclude_bad_golang_components(stored_proc):
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_stream_manifest_backslash(stored_proc):
     """Test that a tailing backslash in a purl doesn't break rendering"""
-
-    stream = ProductStreamFactory()
+    stream_node = ProductStreamNodeFactory()
+    stream = stream_node.obj
     sb = SoftwareBuildFactory()
     component = SrpmComponentFactory(version="2.8.0 \\", software_build=sb)
     component.productstreams.add(stream)
 
     try:
-        stream.manifest
+        json.dumps(ProductManifestFile(stream).render_content())
     except JSONDecodeError:
         assert False
 
@@ -126,14 +142,20 @@ def test_component_manifest_backslash():
     )
     assert component.download_url
     try:
-        component.manifest
+        json.dumps(ComponentManifestFile(component).render_content())
     except JSONDecodeError:
         assert False
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
-def a_test_slim_rpm_in_containers_manifest(stored_proc):
+def test_slim_rpm_in_containers_manifest(stored_proc):
     containers, stream, rpm_in_container = setup_products_and_rpm_in_containers()
+
+    test_cpe = "cpe:/a:redhat:test:1"
+    variant = stream.productvariants.get()
+    variant.cpe = test_cpe
+    variant.save()
+    assert test_cpe in stream.cpes
 
     # Two components linked to this product
     # plus a source container which is shown in API but not in manifests
@@ -155,13 +177,29 @@ def a_test_slim_rpm_in_containers_manifest(stored_proc):
     distinct_provides = stream.provides_queryset
     assert len(distinct_provides) == num_provided
 
-    stream_manifest = stream.manifest
-    manifest = json.loads(stream_manifest)
+    document_uuid = f"SPDXRef-{uuid.uuid4()}"
+
+    manifest = ProductManifestFile(stream).render_content(document_uuid=document_uuid)
 
     # One package for each component
     # One (and only one) package for each distinct provided
     # Plus one package for the stream itself
     assert len(manifest["packages"]) == num_components + num_provided + 1
+
+    # CPE for each root component attached to a product should be included in the manifest
+    container_pks = [str(c.pk) for c in containers]
+    for package in manifest["packages"]:
+        pk = package["SPDXID"][len("SPXRef-") + 1 :]
+        if pk in container_pks:
+            found_cpe = False
+            for ref in package["externalRefs"]:
+                if ref["referenceType"] == "cpe22Type":
+                    # The CPE matches the one returned by setup_products_and_rpm_in_containers()
+                    assert ref["referenceLocator"] == test_cpe
+                    found_cpe = True
+                    break
+            # There was at least one CPE
+            assert found_cpe
 
     # For each component, one "component is package of product" relationship
     # For each provided in component, one "provided contained by component"
@@ -176,13 +214,13 @@ def a_test_slim_rpm_in_containers_manifest(stored_proc):
         component = containers[1]
 
     document_describes_product = {
-        "relatedSpdxElement": f"SPDXRef-{stream.uuid}",
+        "relatedSpdxElement": document_uuid,
         "relationshipType": "DESCRIBES",
         "spdxElementId": "SPDXRef-DOCUMENT",
     }
 
     component_is_package_of_product = {
-        "relatedSpdxElement": f"SPDXRef-{stream.uuid}",
+        "relatedSpdxElement": document_uuid,
         "relationshipType": "PACKAGE_OF",
         "spdxElementId": f"SPDXRef-{component.uuid}",
     }
@@ -204,13 +242,11 @@ def test_product_manifest_excludes_unreleased_components(stored_proc):
     component, stream, provided, dev_provided = setup_products_and_components_provides(
         released=False
     )
-    # Use a stream from corgi.core.fixups supported_cpe_map to test cpe_fixups
-    stream.name = "quay-3.6"
-    stream.save()
-    manifest = json.loads(stream.manifest)
+
+    manifest = ProductManifestFile(stream).render_content()
 
     # No released components linked to this product
-    num_components = len(stream.components.manifest_components(ofuri=stream.ofuri))
+    num_components = len(stream.components.manifest_components(ofuri=stream.get_ofuri()))
     assert num_components == 0
 
     num_provided = len(stream.provides_queryset)
@@ -222,15 +258,15 @@ def test_product_manifest_excludes_unreleased_components(stored_proc):
     # Only "component" is actually the product
     product_data = manifest["packages"][0]
 
-    assert product_data["SPDXID"] == f"SPDXRef-{stream.uuid}"
-    assert product_data["name"] == stream.name
-    assert product_data["externalRefs"][0]["referenceLocator"] == "cpe:/a:redhat:quay:3::el8"
+    document_uuid = product_data["SPDXID"]
+    assert product_data["name"] == stream.external_name
+    assert product_data["externalRefs"][0]["referenceLocator"] == "cpe:/o:redhat:enterprise_linux:8"
 
     # Only one "document describes product" relationship for the whole document at the end
     assert len(manifest["relationships"]) == 1
 
     assert manifest["relationships"][0] == {
-        "relatedSpdxElement": f"SPDXRef-{stream.uuid}",
+        "relatedSpdxElement": document_uuid,
         "relationshipType": "DESCRIBES",
         "spdxElementId": "SPDXRef-DOCUMENT",
     }
@@ -243,7 +279,7 @@ def test_product_manifest_excludes_internal_components(stored_proc):
         internal_component=True
     )
 
-    manifest = json.loads(stream.manifest)
+    manifest = ProductManifestFile(stream).render_content()
 
     # This is the root rpm src component
     num_components = len(stream.components.manifest_components(ofuri=stream.ofuri))
@@ -290,7 +326,7 @@ def test_manifest_cpes_from_variants(stored_proc):
     # Make sure the stream doesn't exist in cpe_lookup
     assert not cpe_lookup(stream.name)
 
-    manifest = json.loads(stream.manifest)
+    manifest = ProductManifestFile(stream).render_content()
     product_data = manifest["packages"][-1]
     cpes_in_manifest = [ref["referenceLocator"] for ref in product_data["externalRefs"]]
     assert len(cpes_in_manifest) == 1
@@ -305,7 +341,7 @@ def test_manifest_cpes_from_cpe_lookup(stored_proc):
     assert stream.productvariants.exists()
     assert hardcoded_cpes
 
-    manifest = json.loads(stream.manifest)
+    manifest = ProductManifestFile(stream).render_content()
     product_data = manifest["packages"][-1]
     cpes_in_manifest = set(ref["referenceLocator"] for ref in product_data["externalRefs"])
     assert hardcoded_cpes == cpes_in_manifest
@@ -313,20 +349,33 @@ def test_manifest_cpes_from_cpe_lookup(stored_proc):
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_manifest_cpes_from_patterns_and_brew_tags(stored_proc):
-    stream, variant = setup_product()
+    stream, variant = setup_product(variant_node_type=ProductNode.ProductNodeType.INFERRED)
     assert not cpe_lookup(stream.name)
-    variant.delete()
     test_cpe = "cpe:/a:redhat:test:1"
-    another_test_cpe = "cpe:/a:redhat:test:2"
     stream.cpes_matching_patterns = [test_cpe]
-    stream.cpes_from_brew_tags = [another_test_cpe]
     stream.save()
-    assert not stream.cpes
+    assert stream.cpes == (
+        "cpe:/a:redhat:test:1",
+        "cpe:/o:redhat:enterprise_linux:8",
+    )
 
-    manifest = json.loads(stream.manifest)
+    manifest = ProductManifestFile(stream).render_content()
     product_data = manifest["packages"][-1]
     cpes_in_manifest = set(ref["referenceLocator"] for ref in product_data["externalRefs"])
-    assert {test_cpe, another_test_cpe} == cpes_in_manifest
+    assert {test_cpe, variant.cpe} == cpes_in_manifest
+
+
+def _validate_schema(content: str):
+    """Raise an exception if content for SPDX file is not valid JSON / SPDX"""
+    # The manifest template must use Django's escapejs filter,
+    # to generate valid JSON and escape quotes + newlines
+    # But this may output ugly Unicode like "\u000A",
+    # so we convert from JSON back to JSON to get "\n" instead
+    content = json.loads(content)
+    with open(SCHEMA_FILE, "r") as schema_file:
+        schema = json.load(schema_file)
+    jsonschema.validate(content, schema)
+    return content
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
@@ -335,9 +384,7 @@ def test_product_manifest_properties(stored_proc):
     And that it generates valid JSON."""
     component, stream, provided, dev_provided = setup_products_and_components_provides()
 
-    # assert all those are in the manifest too
-
-    manifest = json.loads(stream.manifest)
+    manifest = ProductManifestFile(stream).render_content()
 
     # One component linked to this product
     num_components = len(stream.components.manifest_components(ofuri=stream.ofuri))
@@ -357,23 +404,23 @@ def test_product_manifest_properties(stored_proc):
     assert component_data["SPDXID"] == f"SPDXRef-{component.uuid}"
     assert component_data["name"] == component.name
     assert component_data["packageFileName"] == f"{component.nevra}.rpm"
+    assert component_data["externalRefs"][0]["referenceLocator"] == component.purl
     assert (
-        component_data["externalRefs"][0]["referenceLocator"]
+        component_data["externalRefs"][-1]["referenceLocator"]
         == stream.productvariants.values_list("cpe", flat=True).get()
     )
-    assert component_data["externalRefs"][-1]["referenceLocator"] == component.purl
 
-    assert product_data["SPDXID"] == f"SPDXRef-{stream.uuid}"
-    assert product_data["name"] == stream.name
+    document_uuid = product_data["SPDXID"]
+    assert product_data["name"] == stream.external_name
 
     document_describes_product = {
-        "relatedSpdxElement": f"SPDXRef-{stream.uuid}",
+        "relatedSpdxElement": f"{document_uuid}",
         "relationshipType": "DESCRIBES",
         "spdxElementId": "SPDXRef-DOCUMENT",
     }
 
     component_is_package_of_product = {
-        "relatedSpdxElement": f"SPDXRef-{stream.uuid}",
+        "relatedSpdxElement": f"{document_uuid}",
         "relationshipType": "PACKAGE_OF",
         "spdxElementId": f"SPDXRef-{component.uuid}",
     }
@@ -426,8 +473,101 @@ def test_no_duplicates_in_manifest_with_upstream(stored_proc):
     assert len(upstream_components) == 1
     assert upstream_components.first() == upstream
 
-    manifest = json.loads(stream.manifest)
+    manifest = ProductManifestFile(stream).render_content()
     assert len(manifest["packages"]) == 4
+
+
+license_expressions = [
+    (
+        "0BSD",
+        "0BSD",
+        {},
+    ),
+    # I'm surprised 0BSD+ is not recognized as an alias to 0BSD or later
+    (
+        "0BSD+",
+        "LicenseRef-0",
+        {"0BSD+": "0"},
+    ),
+    (
+        "0BSD+ or 0BSD+",
+        "LicenseRef-0 OR LicenseRef-0",
+        {"0BSD+": "0"},
+    ),
+    (
+        "BSD-3-Clause or GPLv3+",
+        "BSD-3-Clause OR LicenseRef-0",
+        {"GPLv3+": "0"},
+    ),
+    (
+        "BSD-3-Clause or (GPLv3+ or LGPLv3+)",
+        "BSD-3-Clause OR (LicenseRef-0 OR LicenseRef-1)",
+        {
+            "GPLv3+": "0",
+            "LGPLv3+": "1",
+        },
+    ),
+    (
+        "BSD-3-Clause with exceptions",
+        "LicenseRef-0",
+        {"BSD-3-Clause with exceptions": "0"},
+    ),
+    (
+        "BSD-3-Clause or (GPLv3+ with exceptions and LGPLv3+) and Public Domain",
+        "LicenseRef-0",
+        {"BSD-3-Clause or (GPLv3+ with exceptions and LGPLv3+) and Public Domain": "0"},
+    ),
+    # Actual license declared data examples
+    (
+        "(MPLv1.1 or LGPLv3+) and LGPLv3 and LGPLv2+ and BSD and (MPLv1.1 or GPLv2 or LGPLv2 or "
+        "Netscape) and Public Domain and ASL 2.0 and MPLv2.0 and CC0",
+        "(LicenseRef-MPLv1.1 OR LicenseRef-0) AND LicenseRef-LGPLv3 AND LicenseRef-1 AND "
+        "LicenseRef-BSD AND (LicenseRef-MPLv1.1 OR LicenseRef-GPLv2 OR LicenseRef-LGPLv2 OR "
+        "LicenseRef-Netscape) AND LicenseRef-2 AND LicenseRef-3 AND LicenseRef-MPLv2.0 AND "
+        "LicenseRef-CC0",
+        {
+            "MPLv1.1": "MPLv1.1",
+            "LGPLv3+": "0",
+            "LGPLv3": "LGPLv3",
+            "LGPLv2+": "1",
+            "BSD": "BSD",
+            "GPLv2": "GPLv2",
+            "LGPLv2": "LGPLv2",
+            "Netscape": "Netscape",
+            "Public Domain": "2",
+            "ASL 2.0": "3",
+            "MPLv2.0": "MPLv2.0",
+            "CC0": "CC0",
+        },
+    ),
+    (
+        "GPLv2 and Redistributable, no modification permitted",
+        "LicenseRef-0",
+        {"GPLv2 and Redistributable, no modification permitted": "0"},
+    ),
+    (
+        "0BSD and Bison-exception-2.2",
+        "LicenseRef-0",
+        {"0BSD and Bison-exception-2.2": "0"},
+    ),
+    (
+        "BSD and LGPLv2 and GPLv2",
+        "LicenseRef-BSD AND LicenseRef-LGPLv2 AND LicenseRef-GPLv2",
+        {
+            "BSD": "BSD",
+            "LGPLv2": "LGPLv2",
+            "GPLv2": "GPLv2",
+        },
+    ),
+]
+
+
+@pytest.mark.parametrize("license_raw, license_valid, license_refs", license_expressions)
+def test_validate_licenses(license_raw, license_valid, license_refs):
+    manifest = ComponentManifestFile(ComponentFactory())
+    result = str(manifest.validate_licenses(license_raw))
+    assert license_refs == manifest.extracted_licenses
+    assert result == license_valid
 
 
 def test_component_manifest_properties():
@@ -435,7 +575,14 @@ def test_component_manifest_properties():
     And that it generates valid JSON."""
     component, _, provided, dev_provided = setup_products_and_components_provides()
 
-    manifest = json.loads(component.manifest)
+    component_manifest_file = ComponentManifestFile(component)
+    manifest = component_manifest_file.render_content()
+
+    document_namespace_prefix = "https://access.redhat.com/security/data/sbom/spdx/"
+    assert (
+        manifest["documentNamespace"]
+        == f"{document_namespace_prefix}{component.name}-{component.version}"
+    )
 
     num_provided = len(component.get_provides_pks())
 
@@ -448,8 +595,8 @@ def test_component_manifest_properties():
     assert component_data["SPDXID"] == f"SPDXRef-{component.uuid}"
     assert component_data["name"] == component.name
     assert component_data["packageFileName"] == f"{component.nevra}.rpm"
-    assert component_data["externalRefs"][0]["referenceLocator"] == component.cpes.get()
-    assert component_data["externalRefs"][-1]["referenceLocator"] == component.purl
+    assert component_data["externalRefs"][0]["referenceLocator"] == component.purl
+    assert component_data["externalRefs"][-1]["referenceLocator"] == component.cpes.get()
 
     document_describes_product = {
         "relatedSpdxElement": f"SPDXRef-{component.uuid}",
@@ -482,6 +629,23 @@ def test_component_manifest_properties():
     assert manifest["relationships"][provided_index] == provided_contained_by_component
     assert manifest["relationships"][dev_provided_index] == dev_provided_dependency_of_component
     assert manifest["relationships"][-1] == document_describes_product
+
+    extracted_licensing_info = manifest["hasExtractedLicensingInfos"]
+    assert len(extracted_licensing_info) == 1
+    invalid_license_declared = (
+        "BSD-3-Clause or (GPLv3+ with exceptions and LGPLv3+) and Public Domain"
+    )
+    expected_extracted_licensing_info = [
+        {
+            "comment": component_manifest_file.LICENSE_EXTRACTED_COMMENT,
+            "extractedText": component_manifest_file.LICENSE_DECLARED_EXTRACTED_TEMPLATE.substitute(
+                license_name=invalid_license_declared
+            ),
+            "licenseId": "LicenseRef-0",
+            "name": "BSD-3-Clause or (GPLv3+ with exceptions and LGPLv3+) and Public Domain",
+        },
+    ]
+    assert expected_extracted_licensing_info == extracted_licensing_info
 
 
 def setup_products_and_components_upstreams():
@@ -562,9 +726,7 @@ def setup_products_and_components_provides(released=True, internal_component=Fal
 
     if internal_component:
         provided = UpstreamComponentFactory(name="blah.redhat.com/", type=Component.Type.GOLANG)
-        dev_provided = UpstreamComponentFactory(
-            name="github.com/blah.redhat.com", type=Component.Type.NPM
-        )
+        dev_provided = UpstreamComponentFactory(name="github.com/blah", type=Component.Type.NPM)
     else:
         provided = BinaryRpmComponentFactory()
         dev_provided = UpstreamComponentFactory(type=Component.Type.NPM)
@@ -678,3 +840,61 @@ def test_provided_relationships():
     assert provided_relationship(purl, node_type) == "CONTAINED_BY"
     purl = f"pkg:{Component.Type.RPM.lower()}/name@version"
     assert provided_relationship(purl, node_type) == "CONTAINED_BY"
+
+
+def test_same_contents(stored_proc):
+    existing_file = "tests/data/manifest/sbom.json"
+    cpe = "cpe:/a:redhat:external_name:1.0::el8"
+    external_name = "external-name-1.0"
+    stream = ProductStreamFactory(name=external_name, version="1.0")
+    TaskResult.objects.create(
+        task_name="corgi.tasks.manifest.cpu_update_ps_manifest",
+        task_args=f"\"('{external_name}', 'EXTERNAL-NAME-1.0')\"",
+        status="SUCCESS",
+        result='[true, "2024-01-31T00:22:29Z", "SPDXRef-303ea2fd-1a48-4590-90b4-4fd901272ca3"]',
+    )
+    stream_node = ProductStreamNodeFactory(obj=stream)
+    variant = ProductVariantFactory(cpe=cpe)
+    ProductVariantNodeFactory(obj=variant, parent=stream_node)
+    stream.refresh_from_db()
+    is_same_contents, new_content = same_contents(existing_file, stream)
+    assert is_same_contents
+    assert not new_content
+
+
+def test_different_contents(stored_proc):
+    missing_file = "tests/data/manifest/missing.json"
+    external_name = "external-name-1.0"
+    stream = ProductStreamFactory(name=external_name, version="1.0")
+    is_same_contents, new_content = same_contents(missing_file, stream)
+    assert not is_same_contents
+    assert not new_content
+
+    # test missing result
+    existing_file = "tests/data/manifest/sbom.json"
+    last_successful_created_at_date = "2024-01-31T00:22:29Z"
+    last_successful_document_id = "SPDXRef-303ea2fd-1a48-4590-90b4-4fd901272ca3"
+
+    is_same_contents, new_content = same_contents(existing_file, stream)
+    assert not is_same_contents
+    assert not new_content
+
+    # test different content
+    existing_file = "tests/data/manifest/sbom.json"
+    TaskResult.objects.create(
+        task_name="corgi.tasks.manifest.cpu_update_ps_manifest",
+        task_args=f"\"('{external_name}', 'EXTERNAL-NAME-1.0')\"",
+        status="SUCCESS",
+        result=f'[true, "{last_successful_created_at_date}", "{last_successful_document_id}"]',
+    )
+    # This allows the ofuri value to work during manifest creation
+    ProductStreamNodeFactory(obj=stream)
+    stream.refresh_from_db()
+    # Don't create and link a variant so there is not cpe value in the content (a mismatch)
+
+    is_same_contents, new_content = same_contents(existing_file, stream)
+    assert not is_same_contents
+    assert new_content["creationInfo"]["created"] != last_successful_created_at_date
+    # document_uuid is populated
+    assert new_content["packages"][0]["SPDXID"] != last_successful_document_id
+    assert new_content["relationships"][0]["relatedSpdxElement"] != last_successful_document_id

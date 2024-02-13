@@ -18,3 +18,7 @@ SESSION_COOKIE_SECURE = False
 
 # Report test coverage in templates
 TEMPLATES[0]["OPTIONS"]["debug"] = True  # noqa: F405
+
+# always disable corgi.api.paginate.FasterPageNumberPagination when running tests
+# as the database will not have 'primed' pg_class table with reltuples
+OPTIMISE_REST_API_COUNT = False

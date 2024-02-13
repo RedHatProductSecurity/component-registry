@@ -22,9 +22,13 @@ from .factories import (
     LifeCycleFactory,
     ProductComponentRelationFactory,
     ProductFactory,
+    ProductNodeFactory,
     ProductStreamFactory,
+    ProductStreamNodeFactory,
     ProductVariantFactory,
+    ProductVariantNodeFactory,
     ProductVersionFactory,
+    ProductVersionNodeFactory,
     SoftwareBuildFactory,
     SrpmComponentFactory,
     UpstreamComponentFactory,
@@ -68,9 +72,10 @@ def test_software_build_details(client, api_path, build_type):
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_software_build_by_product(client, api_path):
-    version = ProductVersionFactory()
-    stream_a = ProductStreamFactory(products=version.products, productversions=version)
-    stream_b = ProductStreamFactory(products=version.products, productversions=version)
+    ps_node = ProductStreamNodeFactory()
+    stream_a = ps_node.obj
+    ps_node_b = ProductStreamNodeFactory()
+    stream_b = ps_node_b.obj
     build_a = SoftwareBuildFactory()
     build_b = SoftwareBuildFactory()
     ProductComponentRelationFactory(product_ref=stream_a, software_build=build_a)
@@ -89,16 +94,18 @@ def test_software_build_by_product(client, api_path):
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 @pytest.mark.parametrize(
-    "model, endpoint_name",
+    "model, node_model, endpoint_name",
     [
-        (ProductFactory, "products"),
-        (ProductVersionFactory, "product_versions"),
-        (ProductStreamFactory, "product_streams"),
-        (ProductVariantFactory, "product_variants"),
+        (ProductFactory, ProductNodeFactory, "products"),
+        (ProductVersionFactory, ProductVersionNodeFactory, "product_versions"),
+        (ProductStreamFactory, ProductStreamNodeFactory, "product_streams"),
+        (ProductVariantFactory, ProductVariantNodeFactory, "product_variants"),
     ],
 )
-def test_product_data_detail(model, endpoint_name, client, api_path):
+def test_product_data_detail(model, node_model, endpoint_name, client, api_path):
     p1 = model(name="RHEL", tag__name="t0", tag__value="v0")
+    node_model(obj=p1)
+    p1.refresh_from_db()
 
     response = client.get(f"{api_path}/{endpoint_name}")
     assert response.status_code == 200
@@ -126,6 +133,21 @@ def test_channel_detail(client, api_path):
     response = client.get(f"{api_path}/channels/{p1.uuid}")
     assert response.status_code == 200
     assert response.json()["name"] == "Repo1"
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_component(client, api_path):
+    SrpmComponentFactory(name="curl")
+
+    response = client.get(f"{api_path}/components")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 1
+
+    response = client.get(f"{api_path}/components?limit=1")
+    assert response.status_code == 200
+    response = response.json()
+    assert response["count"] == 1
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
@@ -410,8 +432,12 @@ def test_latest_components_by_streams_filter(client, api_path, stored_proc):
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_latest_components_by_streams_filter_with_multiple_products(client, api_path, stored_proc):
     ps1 = ProductStreamFactory(name="rhel-7", version="7")
+    ProductStreamNodeFactory(obj=ps1)
+    ps1.refresh_from_db()
     assert ps1.ofuri == "o:redhat:rhel:7"
     ps2 = ProductStreamFactory(name="rhel-8", version="8")
+    ProductStreamNodeFactory(obj=ps2)
+    ps2.refresh_from_db()
     assert ps2.ofuri == "o:redhat:rhel:8"
 
     # Only belongs to RHEL7 stream
@@ -750,12 +776,14 @@ def test_component_tags_duplicate(client, api_path):
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_product_stream_tag_filter(client, api_path):
-    ProductStreamFactory()
+    ProductStreamNodeFactory()
     response = client.get(f"{api_path}/product_streams?tags=manifest")
     assert response.status_code == 200
     assert response.json()["count"] == 0
 
     the_second_stream = ProductStreamFactory(tag__name="manifest", tag__value="")
+    ProductStreamNodeFactory(obj=the_second_stream)
+    the_second_stream.refresh_from_db()
     response = client.get(f"{api_path}/product_streams?tags=manifest")
     assert response.status_code == 200
     response = response.json()
@@ -765,13 +793,15 @@ def test_product_stream_tag_filter(client, api_path):
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_product_stream_without_tag_filter(client, api_path):
-    the_first_stream = ProductStreamFactory()
+    stream_node = ProductStreamNodeFactory()
+    the_first_stream = stream_node.obj
     assert ProductStream.objects.exclude(tags__name="manifest").count() == 1
     response = client.get(f"{api_path}/product_streams?tags=!manifest")
     assert response.status_code == 200
     assert response.json()["count"] == 1
 
-    ProductStreamFactory(tag__name="manifest", tag__value="")
+    tagged_stream = ProductStreamFactory(tag__name="manifest", tag__value="")
+    ProductStreamNodeFactory(obj=tagged_stream)
     assert ProductStream.objects.exclude(tags__name="manifest").count() == 1
     response = client.get(f"{api_path}/product_streams?tags=!manifest")
     assert response.status_code == 200
@@ -1073,8 +1103,10 @@ def test_retrieve_lifecycle_defs(requests_mock):
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_products(client, api_path):
-    ProductFactory(name="rhel")
-    ProductFactory(name="rhel-av")
+    rhel = ProductFactory(name="rhel")
+    ProductNodeFactory(obj=rhel)
+    rhel_av = ProductFactory(name="rhel-av")
+    ProductNodeFactory(obj=rhel_av)
 
     response = client.get(f"{api_path}/products")
     assert response.status_code == 200
@@ -1089,8 +1121,10 @@ def test_products(client, api_path):
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_product_versions(client, api_path):
-    ProductVersionFactory(name="rhel-8", version="8")
-    ProductVersionFactory(name="rhel-av-8", version="8")
+    rhel_8 = ProductVersionFactory(name="rhel-8", version="8")
+    ProductVersionNodeFactory(obj=rhel_8)
+    rhel_av_8 = ProductVersionFactory(name="rhel-av-8", version="8")
+    ProductVersionNodeFactory(obj=rhel_av_8)
 
     response = client.get(f"{api_path}/product_versions")
     assert response.status_code == 200
@@ -1106,9 +1140,13 @@ def test_product_versions(client, api_path):
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_product_streams(client, api_path):
     rhel_8_5_stream = ProductStreamFactory(name="rhel-8.5.0-z", version="8.5.0-z")
+    ProductStreamNodeFactory(obj=rhel_8_5_stream)
+    rhel_8_5_stream.refresh_from_db()
     rhel_av_8_5_stream = ProductStreamFactory(
         name="rhel-av-8.5.0-z", version="8.5.0-z", active=False
     )
+    ProductStreamNodeFactory(obj=rhel_av_8_5_stream)
+    rhel_av_8_5_stream.refresh_from_db()
 
     response = client.get(f"{api_path}/product_streams")
     assert response.status_code == 200
@@ -1161,7 +1199,11 @@ def test_product_streams(client, api_path):
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_product_variants(client, api_path):
     pv_appstream = ProductVariantFactory(name="AppStream-8.5.0.Z.MAIN")
+    ProductVariantNodeFactory(obj=pv_appstream)
+    pv_appstream.refresh_from_db()
     pv_baseos = ProductVariantFactory(name="BaseOS-8.5.0.Z.MAIN")
+    ProductVariantNodeFactory(obj=pv_baseos)
+    pv_baseos.refresh_from_db()
 
     response = client.get(f"{api_path}/product_variants")
     assert response.status_code == 200
@@ -1205,10 +1247,16 @@ def test_product_components_ofuri(client, api_path, stored_proc):
     """test 'latest' filter on components"""
 
     ps1 = ProductStreamFactory(name="rhel-8.6.0", version="8.6.0")
+    ProductStreamNodeFactory(obj=ps1)
+    ps1.refresh_from_db()
     assert ps1.ofuri == "o:redhat:rhel:8.6.0"
     ps2 = ProductStreamFactory(name="rhel-8.6.0.z", version="8.6.0.z")
+    ProductStreamNodeFactory(obj=ps2)
+    ps2.refresh_from_db()
     assert ps2.ofuri == "o:redhat:rhel:8.6.0.z"
     ps3 = ProductStreamFactory(name="rhel-8.5.0", version="8.5.0")
+    ProductStreamNodeFactory(obj=ps3)
+    ps3.refresh_from_db()
     assert ps3.ofuri == "o:redhat:rhel:8.5.0"
 
     old_openssl = SrpmComponentFactory(name="openssl", version="1.1.1k", release="5.el8_5")
@@ -1253,8 +1301,12 @@ def test_product_components_ofuri(client, api_path, stored_proc):
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_product_components_versions(client, api_path, stored_proc):
     ps1 = ProductStreamFactory(name="rhel-7", version="7")
+    ProductStreamNodeFactory(obj=ps1)
+    ps1.refresh_from_db()
     assert ps1.ofuri == "o:redhat:rhel:7"
     ps2 = ProductStreamFactory(name="rhel-8", version="8")
+    ProductStreamNodeFactory(obj=ps2)
+    ps2.refresh_from_db()
     assert ps2.ofuri == "o:redhat:rhel:8"
 
     openssl_srpm = SrpmComponentFactory(name="openssl", version="1.1.1k", release="6.el8_5")
@@ -1298,7 +1350,11 @@ def test_product_components(client, api_path):
     openssl = ComponentFactory(name="openssl")
     curl = ComponentFactory(name="curl")
     rhel = ProductFactory(name="rhel")
+    ProductNodeFactory(obj=rhel)
+    rhel.refresh_from_db()
     rhel_br = ProductFactory(name="rhel-br")
+    ProductNodeFactory(obj=rhel_br)
+    rhel_br.refresh_from_db()
 
     openssl.products.add(rhel)
     curl.products.add(rhel_br)
@@ -1805,6 +1861,8 @@ def test_product_streams_exclude_components(client, api_path):
     stream = ProductStreamFactory(
         name="rhel-7", version="7", exclude_components=["starfish", "seahorse"]
     )
+    ProductStreamNodeFactory(obj=stream)
+    stream.refresh_from_db()
     response = client.get(f"{api_path}/product_streams?ofuri={stream.ofuri}")
     assert response.status_code == 200
     response = response.json()

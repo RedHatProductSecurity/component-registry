@@ -1,16 +1,15 @@
 import logging
 import re
 from abc import abstractmethod
-from typing import Any, Iterable, Iterator, Union
+from typing import Any, Iterable, Iterator, Type, Union
 from uuid import UUID, uuid4
 
-from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres import fields
-from django.db import models
-from django.db.models import Q, QuerySet
+from django.db import models, transaction
+from django.db.models import ManyToManyField, Q, QuerySet
 from django.db.models.expressions import F, Func, Subquery, Value
 from mptt.managers import TreeManager
 from mptt.models import MPTTModel, TreeForeignKey
@@ -27,7 +26,7 @@ from corgi.core.constants import (
     ROOT_COMPONENTS_CONDITION,
     SRPM_CONDITION,
 )
-from corgi.core.files import ComponentManifestFile, ProductManifestFile
+from corgi.core.fixups import cpe_lookup, external_name_lookup
 from corgi.core.mixins import TimeStampedModel
 
 logger = logging.getLogger(__name__)
@@ -73,6 +72,15 @@ class NodeModel(MPTTModel, TimeStampedModel):
 class ProductNode(NodeModel):
     """Product taxonomy node."""
 
+    class ProductNodeType(models.TextChoices):
+        DIRECT = "DIRECT"
+        # eg. Variants discovered by stream to ET Product Version brew_tag matching
+        INFERRED = "INFERRED"
+
+    node_type = models.CharField(
+        choices=ProductNodeType.choices, default=ProductNodeType.DIRECT, max_length=20
+    )
+
     class Meta(NodeModel.Meta):
         constraints = (
             # Add unique constraint + index so get_or_create behaves atomically
@@ -110,7 +118,7 @@ class ProductNode(NodeModel):
 
     @staticmethod
     def get_node_pks_for_type(
-        qs: QuerySet["ProductNode"], mapping_model: type, lookup: str = "__pk"
+        qs: QuerySet["ProductNode"], mapping_model: Type[object], lookup: str = "__pk"
     ) -> QuerySet["ProductNode"]:
         """For a given ProductNode queryset, find all nodes with the given type
         and return a lookup on their related objects (primary key by default)"""
@@ -124,20 +132,6 @@ class ProductNode(NodeModel):
         # No way to return "obj" / "productstream" field as a model instance here
         # ManyToManyFields can use PKs, but ForeignKeys require model instances
         return qs
-
-    @staticmethod
-    def get_node_names_for_type(product_model: "ProductModel", target_model: str) -> QuerySet:
-        """For a given ProductModel / Channel, find all related nodes with the given type
-        and return the names of their related objects"""
-        # "product_version" -> "ProductVersion"
-        mapping_model = target_model.title().replace("_", "")
-        # No .distinct() since __name on all ProductModel subclasses + Channel is always unique
-        return (
-            product_model.pnodes.get()
-            .get_family()
-            .filter(level=MODEL_NODE_LEVEL_MAPPING[mapping_model])
-            .values_list(f"{target_model}__name", flat=True)
-        )
 
     @classmethod
     def get_products(
@@ -310,6 +304,7 @@ class SoftwareBuild(TimeStampedModel):
         )
 
         product_details = get_product_details(variant_names, stream_names)
+
         components = set()
         for component in self.components.iterator():
             components.add(component)
@@ -324,19 +319,25 @@ class SoftwareBuild(TimeStampedModel):
 
         return None
 
-    def disassociate_with_product(
-        self, product_model_name: str, product_pks: Iterable[str | UUID]
-    ) -> None:
-        """Remove the product references from all components associated with this build.
-        Assumes that all references belong to the same model."""
-        product_model = apps.get_model("core", product_model_name)
-        products = product_model.objects.filter(pk__in=product_pks)
+    def disassociate_with_service_streams(self, stream_pks: Iterable[str | UUID]) -> None:
+        """Remove the stream references from all components associated with this build.
+        Assumes that all references belong to ProductStreams for managed services."""
+        service_streams = ProductStream.objects.filter(pk__in=stream_pks)
 
         for component in self.components.iterator():
-            component.disassociate_with_product(products)
+            component.disassociate_with_service_streams(service_streams)
             for cnode in component.cnodes.iterator():
                 for descendant in cnode.get_descendants().iterator():
-                    descendant.obj.disassociate_with_product(products)
+                    descendant.obj.disassociate_with_service_streams(service_streams)
+
+    def reset_product_taxonomy(self) -> None:
+        """Remove the product references from all components associated with this build."""
+
+        for component in self.components.iterator():
+            component.reset_product_taxonomy()
+            for cnode in component.cnodes.iterator():
+                for descendant in cnode.get_descendants().iterator():
+                    descendant.obj.reset_product_taxonomy()
 
 
 class SoftwareBuildTag(Tag):
@@ -376,7 +377,7 @@ class ProductModel(TimeStampedModel):
     @abstractmethod
     def productstreams(
         self,
-    ) -> Union["ProductStream", models.ForeignKey, models.Manager["ProductStream"]]:
+    ) -> Union["ProductStream", models.Manager["ProductStream"], ManyToManyField]:
         pass
 
     @property
@@ -424,37 +425,114 @@ class ProductModel(TimeStampedModel):
 
     @property
     def cpes(self) -> tuple[str, ...]:
-        """Return CPEs for all descendant variants."""
-        variant_cpes = (
+        """Return CPEs for direct descendant variants if they exist. Otherwise, return a union
+        of indirect descendant variants and descendant streams cpes_matching_patterns"""
+        if isinstance(self, ProductStream):
+            hardcoded_cpes = cpe_lookup(self.name)
+            if hardcoded_cpes:
+                return tuple(hardcoded_cpes)
+        elif isinstance(self, ProductVariant):
+            return (self.cpe,)  # type: ignore[attr-defined]
+        # else this is a Product, ProductVersion,
+        # or ProductStream with no hardcoded cpes
+
+        direct_variant_cpes = (
+            self.pnodes.get_queryset()
+            .get_descendants()
+            .using("read_only")
+            .filter(level=MODEL_NODE_LEVEL_MAPPING["ProductVariant"])
+            .exclude(node_type=ProductNode.ProductNodeType.INFERRED)
+            .values_list("productvariant__cpe", flat=True)
+            .order_by("productvariant__cpe")
+        )
+        if direct_variant_cpes:
+            return self.qs_to_tuple_no_empty_strings(direct_variant_cpes)
+
+        return self._get_indirect_cpes()
+
+    def _get_indirect_cpes(self):
+        cpes_matching_patterns = (
             self.pnodes.get_queryset()
             .get_descendants(include_self=True)
             .using("read_only")
-            .filter(level=MODEL_NODE_LEVEL_MAPPING["ProductVariant"])
+            .filter(level=MODEL_NODE_LEVEL_MAPPING["ProductStream"])
+            .values_list("productstream__cpes_matching_patterns", flat=True)
+        )
+        distinct_cpes = set(cpe for cpe_patterns in cpes_matching_patterns for cpe in cpe_patterns)
+        distinct_cpes.update(self.distinct_inferred_variant_cpes())
+        return tuple(sorted(distinct_cpes))
+
+    def distinct_inferred_variant_cpes(self):
+        inferred_variant_cpes = (
+            self.pnodes.get_queryset()
+            .get_descendants(include_self=True)
+            .using("read_only")
+            .filter(
+                level=MODEL_NODE_LEVEL_MAPPING["ProductVariant"],
+                node_type=ProductNode.ProductNodeType.INFERRED,
+            )
             .values_list("productvariant__cpe", flat=True)
             .distinct()
         )
-        # Omit CPEs like "", but GenericForeignKeys only support .filter(), not .exclude()??
-        return tuple(cpe for cpe in variant_cpes if cpe)
+        distinct_inferred_cpes = self.qs_to_tuple_no_empty_strings(inferred_variant_cpes)
+        return distinct_inferred_cpes
 
-    @abstractmethod
+    def qs_to_tuple_no_empty_strings(self, direct_variant_cpes: QuerySet) -> tuple[str, ...]:
+        """Omit CPEs like ''"""
+        return tuple(cpe for cpe in direct_variant_cpes if cpe)
+
     def get_ofuri(self) -> str:
-        pass
+        model_level = MODEL_NODE_LEVEL_MAPPING[type(self).__name__]
+        if model_level == 0:
+            return f"o:redhat:{self.name}"
+        else:
+            parent_level = model_level - 1
+        return self._build_ofuri(model_level, parent_level)
+
+    def _build_ofuri(self, model_level, target_level) -> str:
+        # No common parents
+        if target_level == -1:
+            return f"o::::{self.name}"
+        ancestor_query = self.pnodes.get_queryset().get_ancestors().filter(level=target_level)
+        parent_count = ancestor_query.count()
+        if parent_count == 0:
+            raise ValueError(f"ProductModel {self.name} is orphaned")
+        if parent_count > 1:
+            # try going up another level to find a common parent
+            return self._build_ofuri(model_level, target_level - 1)
+        else:
+            parent = ancestor_query.first()
+            # ProductVersion and ProductStream take their ofuri from their own name and version
+            if model_level in (
+                1,
+                2,
+            ):
+                name_without_version = re.sub(r"(-|_|)" + self.version + "$", "", self.name)
+                return f"o:redhat:{name_without_version}:{self.version}"
+            # Must be a variant with a single parent (stream)
+            return f"{parent.obj.ofuri}:{self.name}"
 
     def save_product_taxonomy(self):
         """Save links between related ProductModel subclasses"""
-        family = self.pnodes.get().get_family()
-        # Get obj from raw nodes - no way to return related __product obj in values_list()
-        products = ProductNode.get_products(family, lookup="").first().obj
-        productversions = tuple(
-            node.obj for node in ProductNode.get_product_versions(family, lookup="")
-        )
-        productstreams = tuple(
-            node.obj for node in ProductNode.get_product_streams(family, lookup="")
-        )
-        productvariants = tuple(
-            node.obj for node in ProductNode.get_product_variants(family, lookup="")
-        )
-        channels = ProductNode.get_channels(family)
+        products = set()
+        productversions = set()
+        productstreams = set()
+        productvariants = set()
+        channels = set()
+        for pnode in self.pnodes.get_queryset():
+            family = pnode.get_family()
+            # Get obj from raw nodes - no way to return related __product obj in values_list()
+            products = ProductNode.get_products(family, lookup="").first().obj
+            productversions.update(
+                node.obj for node in ProductNode.get_product_versions(family, lookup="")
+            )
+            productstreams.update(
+                node.obj for node in ProductNode.get_product_streams(family, lookup="")
+            )
+            productvariants.update(
+                node.obj for node in ProductNode.get_product_variants(family, lookup="")
+            )
+            channels.update(ProductNode.get_channels(family))
 
         # Avoid setting fields on models which don't have them
         # Also set fields correctly based on which side of the relationship we see
@@ -469,19 +547,16 @@ class ProductModel(TimeStampedModel):
             self.products = products  # Should be only one parent object
             self.productstreams.set(productstreams)
             self.productvariants.set(productvariants)
-            self.save()
 
         elif isinstance(self, ProductStream):
             self.products = products
-            self.productversions = productversions[0]
+            self.productversions = productversions.pop()
             self.productvariants.set(productvariants)
-            self.save()
 
         elif isinstance(self, ProductVariant):
             self.products = products
-            self.productversions = productversions[0]
-            self.productstreams = productstreams[0]
-            self.save()
+            self.productversions = productversions.pop()
+            self.productstreams.set(productstreams)
 
         else:
             raise NotImplementedError(
@@ -490,9 +565,29 @@ class ProductModel(TimeStampedModel):
 
         # All ProductModels have a set of descendant channels
         self.channels.set(channels)
+        self.ofuri = self.get_ofuri()
+        self.save()
+
+    def get_related_names_of_type(self, mapping_model: type) -> list[str]:
+        """For a given ProductModel instance find all directly related nodes with the given model type
+        and return their names"""
+        mapping_key = mapping_model.__name__
+        attribute_name = mapping_key.lower()
+        results = []
+        direct_pnodes = self.pnodes.exclude(node_type=ProductNode.ProductNodeType.INFERRED)
+        if direct_pnodes.exists():
+            for tree in direct_pnodes.get_cached_trees():
+                query = (
+                    tree.get_family()
+                    .filter(level=MODEL_NODE_LEVEL_MAPPING[mapping_key])
+                    .exclude(node_type=ProductNode.ProductNodeType.INFERRED)
+                    .values_list(f"{attribute_name}__name", flat=True)
+                    .distinct()
+                )
+                results.extend(list(query))
+        return results
 
     def save(self, *args, **kwargs):
-        self.ofuri = self.get_ofuri()
         super().save(*args, **kwargs)
 
     class Meta:
@@ -528,13 +623,6 @@ class Product(ProductModel):
     # is created by products field on Component model
     components: "ComponentQuerySet"
 
-    def get_ofuri(self) -> str:
-        """Return product URI
-
-        Ex.: o:redhat:rhel
-        """
-        return f"o:redhat:{self.name}"
-
 
 class ProductTag(Tag):
     tagged_model = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="tags")
@@ -549,7 +637,7 @@ class ProductVersion(ProductModel):
     cpes_matching_patterns = fields.ArrayField(models.CharField(max_length=1000), default=list)
 
     products = models.ForeignKey(
-        "Product", on_delete=models.CASCADE, related_name="productversions"
+        "Product", on_delete=models.CASCADE, related_name="productversions", null=True
     )
 
     @property
@@ -572,14 +660,6 @@ class ProductVersion(ProductModel):
     # is created by productversions field on Component model
     components: "ComponentQuerySet"
 
-    def get_ofuri(self) -> str:
-        """Return product version URI.
-
-        Ex.: o:redhat:rhel:8
-        """
-        version_name = re.sub(r"(-|_|)" + self.version + "$", "", self.name)
-        return f"o:redhat:{version_name}:{self.version}"
-
 
 class ProductVersionTag(Tag):
     tagged_model = models.ForeignKey(ProductVersion, on_delete=models.CASCADE, related_name="tags")
@@ -597,13 +677,12 @@ class ProductStream(ProductModel):
     exclude_components = fields.ArrayField(models.CharField(max_length=200), default=list)
 
     cpes_matching_patterns = fields.ArrayField(models.CharField(max_length=1000), default=list)
-    cpes_from_brew_tags = fields.ArrayField(models.CharField(max_length=1000), default=list)
 
-    products = models.ForeignKey("Product", on_delete=models.CASCADE, related_name="productstreams")
+    products = models.ForeignKey(
+        "Product", on_delete=models.CASCADE, related_name="productstreams", null=True
+    )
     productversions = models.ForeignKey(
-        "ProductVersion",
-        on_delete=models.CASCADE,
-        related_name="productstreams",
+        "ProductVersion", on_delete=models.CASCADE, related_name="productstreams", null=True
     )
 
     @property
@@ -621,21 +700,6 @@ class ProductStream(ProductModel):
     # implicit "components" field on ProductStream model
     # is created by productstreams field on Component model
     components: "ComponentQuerySet"
-
-    def get_ofuri(self) -> str:
-        """Return product stream URI
-
-        Ex.: o:redhat:rhel:8.2.eus
-
-        TODO: name embeds more then version ... need discussion
-        """
-        stream_name = re.sub(r"(-|_|)" + self.version + "$", "", self.name)
-        return f"o:redhat:{stream_name}:{self.version}"
-
-    @property
-    def manifest(self) -> str:
-        """Return an SPDX-style manifest in JSON format."""
-        return ProductManifestFile(self).render_content()
 
     @property
     def provides_queryset(self, using: str = "read_only") -> QuerySet["Component"]:
@@ -673,6 +737,61 @@ class ProductStream(ProductModel):
         )
         return Component.objects.filter(pk__in=unique_upstreams).using(using)
 
+    @property
+    def cpes_from_brew_tags(self):
+        return self.distinct_inferred_variant_cpes()
+
+    @property
+    def external_name(self) -> str:
+        constant_name = external_name_lookup(self.name)
+        if constant_name:
+            return constant_name
+        # streams with composes (like rhel-8.8.0) do not have attached Variants, so we need to
+        # search all variants here, not just this stream's productvariants
+        et_versions_matching_cpes = (
+            ProductVariant.objects.filter(cpe__in=self.cpes)
+            .exclude(et_product_version="")
+            .values_list("et_product_version", flat=True)
+            .distinct()
+        )
+        # There is a single matching et_product_version for this streams cpes
+        if len(et_versions_matching_cpes) == 1:
+            return et_versions_matching_cpes[0].upper()
+        # else we have more than 1 matching Variant with distinct et_product_version values.
+        et_versions_with_match = (
+            ProductVariant.objects.filter(
+                cpe__in=self.cpes, et_product_version__contains=self.version.removesuffix(".z")
+            )
+            .values_list("et_product_version", flat=True)
+            .distinct()
+        )
+        # There is a single matching et_product_version with this stream's cpes, and this
+        # stream's version in the et_product_version
+        if len(et_versions_with_match) == 1:
+            return et_versions_with_match[0].upper()
+        et_products_matching_cpes = (
+            ProductVariant.objects.filter(cpe__in=self.cpes)
+            .exclude(et_product="")
+            .values_list("et_product", flat=True)
+            .distinct()
+        )
+        # There is a single matching et_product with this stream's cpes
+        if len(et_products_matching_cpes) == 1:
+            # Some products such as 'Ansible Automation Platform' have spaces in the name, which
+            # does not work well in a Linux filename
+            return f"{et_products_matching_cpes[0]}-{self.version}".upper().replace(" ", "-")
+        elif len(et_products_matching_cpes) > 1:
+            for et_product in et_products_matching_cpes:
+                # There is a matching et_product where the et_product name is found in the
+                # stream name. For example rhn_satellite_6.8 has multiple products, "SAT-TOOLS",
+                # and "SATELLITE" use the stream's name to favour "SATELLITE" found in that case
+                if self.name.upper().find(et_product) > 0:
+                    # Upper case any trailing '.z' here to match the values from Errata Tool
+                    return f"{et_product}-{self.version}".upper()
+        # else there are no matching variants with this stream's cpes, could be a managed service
+        # Make the stream name upper case to matching product version names from Errata Tool
+        return self.name.upper()
+
 
 class ProductStreamTag(Tag):
     tagged_model = models.ForeignKey(ProductStream, on_delete=models.CASCADE, related_name="tags")
@@ -686,17 +805,17 @@ class ProductVariant(ProductModel):
     """
 
     cpe = models.CharField(max_length=1000, default="")
+    et_product = models.CharField(max_length=1000, default="")
+    et_product_version = models.CharField(max_length=1000, default="")
 
     products = models.ForeignKey(
-        "Product", on_delete=models.CASCADE, related_name="productvariants"
+        "Product", on_delete=models.CASCADE, related_name="productvariants", null=True
     )
     productversions = models.ForeignKey(
-        "ProductVersion", on_delete=models.CASCADE, related_name="productvariants"
+        "ProductVersion", on_delete=models.CASCADE, related_name="productvariants", null=True
     )
     # Below creates implicit "productvariants" field on ProductStream
-    productstreams = models.ForeignKey(
-        ProductStream, on_delete=models.CASCADE, related_name="productvariants"
-    )
+    productstreams = models.ManyToManyField(ProductStream, related_name="productvariants")
 
     @property
     def productvariants(self) -> "ProductVariant":
@@ -715,13 +834,6 @@ class ProductVariant(ProductModel):
         # Split to fix warning that linter and IDE disagree about
         cpes = (self.cpe,)
         return cpes
-
-    def get_ofuri(self) -> str:
-        """Return product variant URI
-
-        Ex.: o:redhat:rhel:8.6.0.z:baseos-8.6.0.z.main.eus
-        """
-        return f"{self.productstreams.ofuri}:{self.name.lower()}"
 
 
 class ProductVariantTag(Tag):
@@ -851,7 +963,9 @@ class ProductComponentRelation(TimeStampedModel):
         )
 
 
-def get_product_details(variant_names: tuple[str], stream_names: list[str]) -> dict[str, set[str]]:
+def get_product_details(
+    variant_names: tuple[str, ...], stream_names: list[str]
+) -> dict[str, set[str]]:
     """
     Given stream / variant names from the PCR table, look up all related ProductModel subclasses
 
@@ -859,12 +973,9 @@ def get_product_details(variant_names: tuple[str], stream_names: list[str]) -> d
     Components relate to builds, and products / versions relate to variants / streams
     We want to link all build components to their related products, versions, streams, and variants
     """
-    if variant_names:
-        variant_streams = ProductVariant.objects.filter(name__in=variant_names).values_list(
-            "productstreams__name", flat=True
-        )
+    for variant in ProductVariant.objects.filter(name__in=variant_names):
+        variant_streams = variant.get_related_names_of_type(ProductStream)
         stream_names.extend(variant_streams)
-
     product_details: dict[str, set[str]] = {
         "products": set(),
         "productversions": set(),
@@ -909,6 +1020,8 @@ class ComponentQuerySet(models.QuerySet):
     def _latest_components_func(
         components: "ComponentQuerySet", model_type: str, ofuri: str, include_inactive_streams: bool
     ) -> Iterable[str]:
+        # get_latest_component ps_ofuris is an array
+        ofuris = [ofuri]
         return (
             components.values("type", "namespace", "name", "arch")
             .order_by("type", "namespace", "name", "arch")
@@ -916,13 +1029,13 @@ class ComponentQuerySet(models.QuerySet):
             .annotate(
                 latest_version=Func(
                     Value(model_type),
-                    Value(ofuri),
+                    Value(ofuris),
                     F("type"),
                     F("namespace"),
                     F("name"),
                     F("arch"),
                     Value(include_inactive_streams),
-                    function="get_latest_component",
+                    function="get_latest_components",
                     output_field=models.UUIDField(),
                 )
             )
@@ -935,19 +1048,45 @@ class ComponentQuerySet(models.QuerySet):
         model_type: str = "ProductStream",
         include: bool = True,
         include_inactive_streams: bool = False,
+        include_all_variants: bool = False,
     ) -> "ComponentQuerySet":
         """Return components from latest builds in a single stream."""
+
+        # Constrain both the grouping of package (type/namespace/name/arch), and the final filtered
+        # set by the root components of the ProductModel.
+        # This assumes either the Product has root components which are comparable using RPM
+        # schematics, or there is only a single package for the model, not multiple versions.
+        components = self.root_components()
 
         # the concept of 'latest component' is only relevant within product boundaries
         # we want to constrain by product type/ofuri which is why we pass in model_type and ofuri
         # into the get_latest_component stored proc annotation
+        # If a product stream has multiple variants, we want to return the latest package for each
+        # variant, see CORGI-602
 
-        product_prefetch = f"{model_type.lower()}s"
-        components = self.root_components().prefetch_related(product_prefetch)
-
-        latest_components_uuids = set(
-            self._latest_components_func(components, model_type, ofuri, include_inactive_streams)
-        )
+        latest_components_uuids: set[str] = set()
+        if model_type == "ProductStream":
+            stream = ProductStream.objects.get(ofuri=ofuri)
+            stream_variant_ofuris = stream.productvariants.values_list("ofuri", flat=True)
+            if len(stream_variant_ofuris) > 1 and include_all_variants:
+                # calculate the latest uuids for each variant
+                for variant_ofuri in stream_variant_ofuris:
+                    variant_latest_uuids = self._latest_pks_by_ofuri(
+                        components,
+                        "ProductVariant",
+                        variant_ofuri,
+                    )
+                    latest_components_uuids.update(variant_latest_uuids)
+            else:
+                latest_components_uuids = set(
+                    self._latest_pks_by_ofuri(
+                        components, model_type, ofuri, include_inactive_streams
+                    )
+                )
+        else:
+            latest_components_uuids = set(
+                self._latest_pks_by_ofuri(components, model_type, ofuri, include_inactive_streams)
+            )
 
         if latest_components_uuids:
             lookup = {"pk__in": latest_components_uuids}
@@ -956,15 +1095,22 @@ class ComponentQuerySet(models.QuerySet):
             else:
                 return components.exclude(**lookup)
 
-        else:
-            if include:
-                # no latest components, don't do any further filtering
-                return Component.objects.none()
-            else:
-                # Show only the older / non-latest components
-                # But there are no latest components to hide??
-                # So show everything / return unfiltered queryset
-                return self
+        elif include:
+            # no latest components, don't do any further filtering
+            return Component.objects.none()
+        # No latest components found to exclude so show everything / return unfiltered queryset
+        return self
+
+    def _latest_pks_by_ofuri(
+        self,
+        components: "ComponentQuerySet",
+        model_type: str,
+        ofuri: str,
+        include_inactive_streams: bool = False,
+    ) -> Iterable[str]:
+        product_prefetch = f"{model_type.lower()}s"
+        components.prefetch_related(product_prefetch)
+        return self._latest_components_func(components, model_type, ofuri, include_inactive_streams)
 
     def latest_components_by_streams(
         self,
@@ -977,23 +1123,33 @@ class ComponentQuerySet(models.QuerySet):
         # if include_inactive_streams is False we need to filter ofuris
         # Clear ordering inherited from parent Queryset, if any
         # So .distinct() works properly and doesn't have duplicates
-        productstreams = components.values_list("productstreams").order_by().distinct()
-        product_stream_objs = ProductStream.objects.filter(pk__in=Subquery(productstreams))
+        productstreams = components.values("productstreams").order_by().distinct()
+        productstreams = ProductStream.objects.filter(pk__in=Subquery(productstreams))
         if not include_inactive_streams:
-            product_stream_objs = product_stream_objs.filter(active=True)
-        product_stream_ofuris = product_stream_objs.values_list("ofuri", flat=True).distinct()
+            productstreams = productstreams.filter(active=True)
+        product_stream_ofuris = list(productstreams.values_list("ofuri", flat=True).distinct())
 
-        # aggregate up all latest component uuids across all matched product streams
-        latest_components_uuids: set[str] = set()
-        for ps_ofuri in product_stream_ofuris:
-            latest_components_uuids.update(
-                self._latest_components_func(
-                    components.filter(productstreams__ofuri=ps_ofuri),
-                    "ProductStream",  # always ProductStream model type
-                    ps_ofuri,
-                    include_inactive_streams,
+        latest_components_uuids = list(
+            set(
+                components.values("type", "namespace", "name", "arch")
+                .order_by("type", "namespace", "name", "arch")
+                .distinct("type", "namespace", "name", "arch")
+                .annotate(
+                    latest_version=Func(
+                        Value("ProductStream"),
+                        Value(product_stream_ofuris),
+                        F("type"),
+                        F("namespace"),
+                        F("name"),
+                        F("arch"),
+                        Value(include_inactive_streams),
+                        function="get_latest_components",
+                        output_field=models.UUIDField(),
+                    )
                 )
+                .values_list("latest_version", flat=True)
             )
+        )
 
         lookup = {"pk__in": latest_components_uuids}
         if include:
@@ -1016,6 +1172,7 @@ class ComponentQuerySet(models.QuerySet):
             software_build__relations__type__in=(
                 ProductComponentRelation.Type.ERRATA,
                 ProductComponentRelation.Type.COMPOSE,
+                ProductComponentRelation.Type.APP_INTERFACE,
             )
         )
         if include:
@@ -1060,7 +1217,10 @@ class ComponentQuerySet(models.QuerySet):
             # Only filter when we're actually generating a manifest
             # not when checking if there are components to manifest, since it's slow
             roots = roots.latest_components(
-                model_type="ProductStream", ofuri=ofuri, include_inactive_streams=True
+                model_type="ProductStream",
+                ofuri=ofuri,
+                include_inactive_streams=True,
+                include_all_variants=True,
             )
 
         # Order by UUID to give stable results in manifests
@@ -1600,14 +1760,35 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     def is_srpm(self):
         return self.type == Component.Type.RPM and self.arch == "src"
 
+    def _get_software_build_name(self, name):
+        if self.software_build:
+            return self.software_build.name
+        # else this component didn't have a software_build foreign key
+        root_node = self.cnodes.get_queryset().get_ancestors().filter(level=0).first()
+        if root_node:
+            return Component.objects.get(pk=root_node.object_id).software_build.name
+
     def get_nvr(self) -> str:
+        name = self.name
+        if (
+            self.namespace == Component.Namespace.REDHAT
+            and self.type == Component.Type.CONTAINER_IMAGE
+        ):
+            name = self._get_software_build_name(name)
+
         # Many GOLANG components don't have a version or release set
         # so don't return an oddly formatted NVR, like f"{name}-"
         version = f"-{self.version}" if self.version else ""
         release = f"-{self.release}" if self.release else ""
-        return f"{self.name}{version}{release}"
+        return f"{name}{version}{release}"
 
     def get_nevra(self) -> str:
+        name = self.name
+        if (
+            self.namespace == Component.Namespace.REDHAT
+            and self.type == Component.Type.CONTAINER_IMAGE
+        ):
+            name = self._get_software_build_name(name)
         epoch = f":{self.epoch}" if self.epoch else ""
         # Many GOLANG components don't have a version or release set
         # so don't return an oddly formatted NEVRA, like f"{name}-.{arch}"
@@ -1615,7 +1796,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         release = f"-{self.release}" if self.release else ""
         arch = f".{self.arch}" if self.arch else ""
 
-        return f"{self.name}{epoch}{version}{release}{arch}"
+        return f"{name}{epoch}{version}{release}{arch}"
 
     def _build_repo_url_for_type(self) -> str:
         """Get an upstream repo URL based on a purl"""
@@ -1973,11 +2154,6 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     def license_declared_list(self) -> list[str]:
         return self.license_list(self.license_declared)
 
-    @property
-    def manifest(self) -> str:
-        """Return an SPDX-style manifest in JSON format."""
-        return ComponentManifestFile(self).render_content()
-
     def get_provides_pks(self, include_dev: bool = True, using: str = "read_only") -> set[str]:
         """Return Component PKs which are PROVIDES descendants of this Component, for taxonomies"""
         provides_set = set()
@@ -2019,6 +2195,10 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             )
         return (
             ComponentNode.objects.filter(pk__in=provides_set)
+            # See CORGI-658 for the motivation
+            .exclude(purl__contains="redhat.com")
+            # Remove .exclude() below when CORGI-428 is resolved
+            .exclude(purl__startswith="pkg:golang/", purl__contains="./")
             .using(using)
             .values_list("purl", "type", "object_id")
             # Ensure generated manifests only change when content does
@@ -2105,89 +2285,127 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         """Return only the purls from the set of all upstream nodes"""
         return self.get_upstreams_nodes(using=using).values_list("purl", flat=True).distinct()
 
-    def disassociate_with_product(self, product_refs: Iterable[ProductModel]) -> None:
+    def disassociate_with_service_streams(self, stream_refs: Iterable[ProductStream]) -> None:
+        """Disassociate this component with the passed in managed service ProductStreams,
+        any child ProductModels, and any unused ancestor ProductModels in that service's hierarchy.
+        This is the reverse of what happens in save_product_taxonomy.
+        """
+        # DANGER: This code is only needed, and only safe, for managed service streams
+        # These streams have no variants. Do not call for other streams, or for variants directly
+        # We call remove in a for-loop, instead of once using nested tuple unpacking
+        # because the code gets really ugly otherwise
+        for stream_ref in stream_refs:
+            if not isinstance(stream_ref, ProductStream):
+                # Many-to-many relationships, like variants to products or variants to versions,
+                # are not supported here because we cannot easily determine the ancestors to unlink
+                # We can only parse many-to-one, like streams to products or streams to versions
+                # We only need this code to unlink components from managed service streams
+                raise ValueError("Unsafe attempt to unlink a non-ProductStream model")
+            # This technically could be incorrect, if the managed service stream
+            # we are unlinking shares a variant with any other streams
+            # or if the removed variant itself had a relation to the component
+            # We would remove these variants, even though they should be kept
+            # Currently none of the service streams have any variants, so this is safe
+            self.productvariants.remove(
+                *stream_ref.productvariants.values_list("pk", flat=True)  # type: ignore[arg-type]
+            )
+            self.productstreams.remove(stream_ref)
+            self._check_and_remove_orphaned_product_refs(stream_ref, "ProductVersion")
+            self._check_and_remove_orphaned_product_refs(stream_ref, "Product")
+
+    def reset_product_taxonomy(self):
         """Disassociate this component with the passed in ProductModel and any child ProductModels
         in that product's hierarchy. This is the reverse of what happens in save_product_taxonomy.
         """
-        # We call remove in a for-loop, instead of once using nested tuple unpacking
-        # because the code gets really ugly otherwise
-        for product_ref in product_refs:
-            if isinstance(product_ref, Product):
-                self.productvariants.remove(
-                    *product_ref.productvariants.values_list(
-                        "pk", flat=True  # type: ignore[arg-type]
-                    )
+        # Traverse up the tree ancestors to the roots
+        root_pks = set()
+        for cnode in self.cnodes.iterator():
+            for root_pk in (
+                cnode.get_ancestors(include_self=True)
+                .filter(parent=None)
+                # cant filter on component fields for generic foreign key
+                .values_list("component", flat=True)
+                .using("read_only")
+            ):
+                root_pks.add(root_pk)
+        # Get the software builds for roots which have relations
+        software_builds_with_relations = None
+        if root_pks:
+            software_builds_with_relations = (
+                Component.objects.filter(pk__in=root_pks)
+                .exclude(software_build__relations=None)
+                .values_list("software_build")
+            )
+
+        # Build an updated product hierarchy for this set of software builds from the
+        # relations table
+        product_details = {}
+        if software_builds_with_relations:
+            variant_names = tuple(
+                ProductComponentRelation.objects.filter(
+                    software_build__in=software_builds_with_relations,
+                    type__in=ProductComponentRelation.VARIANT_TYPES,
                 )
-                self.productstreams.remove(
-                    *product_ref.productstreams.values_list(
-                        "pk", flat=True  # type: ignore[arg-type]
-                    )
+                .values_list("product_ref", flat=True)
+                .distinct()
+            )
+
+            stream_names = list(
+                ProductComponentRelation.objects.filter(
+                    software_build__in=software_builds_with_relations,
+                    type__in=ProductComponentRelation.STREAM_TYPES,
                 )
-                self.productversions.remove(
-                    *product_ref.productversions.values_list(
-                        "pk", flat=True  # type: ignore[arg-type]
-                    )
-                )
-                self.products.remove(product_ref)
-            elif isinstance(product_ref, ProductVersion):
-                self.productvariants.remove(
-                    *product_ref.productvariants.values_list(
-                        "pk", flat=True  # type: ignore[arg-type]
-                    )
-                )
-                self.productstreams.remove(
-                    *product_ref.productstreams.values_list(
-                        "pk", flat=True  # type: ignore[arg-type]
-                    )
-                )
-                self.productversions.remove(product_ref)
-                self._check_and_remove_orphaned_product_refs(product_ref, "Product")
-            elif isinstance(product_ref, ProductStream):
-                self.productvariants.remove(
-                    *product_ref.productvariants.values_list(
-                        "pk", flat=True  # type: ignore[arg-type]
-                    )
-                )
-                self.productstreams.remove(product_ref)
-                self._check_and_remove_orphaned_product_refs(product_ref, "ProductVersion")
-                self._check_and_remove_orphaned_product_refs(product_ref, "Product")
-            elif isinstance(product_ref, ProductVariant):
-                self.productvariants.remove(product_ref)
-                self._check_and_remove_orphaned_product_refs(product_ref, "ProductStream")
-                self._check_and_remove_orphaned_product_refs(product_ref, "ProductVersion")
-                self._check_and_remove_orphaned_product_refs(product_ref, "Product")
-            else:
-                raise NotImplementedError(
-                    f"Add class {type(product_ref)} to Component.disassociate_with_product()"
-                )
+                .values_list("product_ref", flat=True)
+                .distinct()
+            )
+            product_details = get_product_details(variant_names, stream_names)
+        if product_details:  # Update the product relations for this component atomically
+            with transaction.atomic():
+                self._clear_product_refs()
+                self.save_product_taxonomy(product_details)
+        else:  # There are no longer any product relations for this component
+            self._clear_product_refs()
+
+    def _clear_product_refs(self):
+        self.products.clear()
+        self.productversions.clear()
+        self.productstreams.clear()
+        self.productvariants.clear()
 
     def _check_and_remove_orphaned_product_refs(
-        self, product_ref: ProductModel, ancestor_model_name: str
+        self, stream_ref: ProductStream, ancestor_model_name: str
     ) -> None:
         """Remove product_models from this component where there are no remaining children of
         product_ref or the remaining children of product_ref don't share this product_ref as an
         ancestor"""
-        # For an ancestor_model_name like "ProductVersion", this is 1
+        if not isinstance(stream_ref, ProductStream):
+            # Many-to-many relationships, like variants to products or variants to versions,
+            # are not supported here because we cannot easily determine the ancestors to unlink
+            # We can only parse many-to-one, like streams to products or streams to versions
+            # We only need this code to unlink components from managed service streams
+            raise ValueError("Unsafe attempt to unlink s non-ProductStream model")
+
+        # For an ancestor_model_name like "Product", this is 0
         ancestor_node_level = MODEL_NODE_LEVEL_MAPPING[ancestor_model_name]
-        # and this will be "productversions"
+        # and this will be "products"
         ancestor_attribute = NODE_LEVEL_ATTRIBUTE_MAPPING[ancestor_node_level]
-        # this will be "productstreams", after looking up 1 + 1 AKA 2
+        # this will be "productversions", after looking up 0 + 1 AKA 1
         child_of_ancestor_attribute = NODE_LEVEL_ATTRIBUTE_MAPPING[ancestor_node_level + 1]
-        # e.g.this_component.productstreams.get_queryset()
-        # we get the list of remaining streams, we've already removed this_variant's parent stream
+        # e.g.this_component.productversions.get_queryset()
+        # we get the list of remaining versions, we've already removed this_stream's parent version
         children_of_ancestor = getattr(self, child_of_ancestor_attribute).get_queryset()
-        # children_of_ancestor AKA child_streams_qs.values_list("productversions", flat=True)
-        # gives us just the PKs of the parent versions
+        # children_of_ancestor AKA child_versions_qs.values_list("products", flat=True)
+        # gives us just the PKs of the parent products
         ancestors_of_remaining_siblings = children_of_ancestor.values_list(
             ancestor_attribute, flat=True
         ).distinct()
-        # AKA this_variant.productversions.pk - there's only one
-        ancestor_of_product_ref = getattr(product_ref, ancestor_attribute).pk
-        # If the (grand)parent version of this_variant is not in the list of (grand)parent versions
-        # for parent streams
-        if ancestor_of_product_ref not in ancestors_of_remaining_siblings:
-            # this_component.productversions.remove(PK for grandparent_version_of_this_variant)
-            getattr(self, ancestor_attribute).remove(ancestor_of_product_ref)
+        # AKA this_stream.products.pk - there's only one
+        ancestor_of_stream_ref = getattr(stream_ref, ancestor_attribute).pk
+        # If the (grand)parent product of this_stream is not in the list of (grand)parent products
+        # for parent versions
+        if ancestor_of_stream_ref not in ancestors_of_remaining_siblings:
+            # this_component.products.remove(PK for grandparent_product_of_this_stream)
+            getattr(self, ancestor_attribute).remove(ancestor_of_stream_ref)
 
 
 class ComponentTag(Tag):

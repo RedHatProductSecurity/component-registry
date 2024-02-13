@@ -1,5 +1,6 @@
 from django.core.management.base import BaseCommand, CommandParser
 
+from corgi.core.models import ProductStream
 from corgi.tasks.manifest import cpu_update_ps_manifest, update_manifests
 
 
@@ -13,17 +14,12 @@ class Command(BaseCommand):
             dest="stream",
             help="Update the manifest for the named product stream",
         )
-        parser.add_argument(
-            "-f",
-            "--skip-fixups",
-            action="store_false",
-            help="Skip applying manifest fixups",
-        )
 
     def handle(self, *args, **options) -> None:
         if options["stream"]:
+            ps = ProductStream.objects.get(name=options["stream"])
             self.stdout.write(self.style.SUCCESS(f"Updating manifest for {options['stream']}"))
-            cpu_update_ps_manifest(options["stream"], fixup=options["skip_fixups"])
+            cpu_update_ps_manifest(ps.name, ps.external_name)
         else:
             self.stdout.write(self.style.SUCCESS("Updating manifests for all streams"))
-            update_manifests(fixup=options["skip_fixups"])
+            update_manifests()

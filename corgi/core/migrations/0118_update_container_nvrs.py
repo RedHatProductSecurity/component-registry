@@ -2,34 +2,27 @@
 import logging
 
 from django.db import migrations
-from django.db.models import F, Value
-from django.db.models.functions import Replace
+from django.db.models import F
 
 logger = logging.getLogger(__name__)
 
 
 def update_container_nvrs(apps, schema_editor) -> None:
     Component = apps.get_model("core", "Component")
-    for root_container_values in (
+    for root_container_name in (
         Component.objects.filter(type="OCI", namespace="REDHAT")
         .exclude(software_build=None)
         # This excludes root_containers which were previously updated with this migration therefore
         # it's safe to rerun it more than once
         .exclude(nvr__startswith=F("software_build__name"))
-        .values_list("name", "software_build__name")
+        .values_list("name", flat=True)
         .distinct()
-        .iterator()
     ):
-        logger.info(
-            f"updating nvr and nevra to include {root_container_values[1]} for containers with "
-            f"name: {root_container_values[0]}"
-        )
-        Component.objects.filter(name=root_container_values[0]).update(
-            nvr=Replace(F("nvr"), Value(root_container_values[0]), Value(root_container_values[1])),
-            nevra=Replace(
-                F("nevra"), Value(root_container_values[0]), Value(root_container_values[1])
-            ),
-        )
+        for c in Component.objects.filter(
+            type="OCI", namespace="REDHAT", name=root_container_name
+        ).iterator():
+            logger.info(f"Calling save for {c.purl}")
+            c.save()
 
 
 class Migration(migrations.Migration):

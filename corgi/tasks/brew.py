@@ -94,7 +94,7 @@ def slow_fetch_brew_build(
         defaults={
             "completion_time": completion_dt,
             "meta_attr": build_meta,
-            "name": component["meta"]["name"],
+            "name": build_meta["name"],
             "source": build_meta.pop("source"),
         },
     )
@@ -512,10 +512,16 @@ def save_container(
     name_label = build_data["meta"].get("name_label_raw", "")
     nvr = softwarebuild.meta_attr["nvr"]
     repo_name = get_container_repo_from_pyxis(name_label, nvr, force_process)
-    related_url = CONTAINER_REPOSITORY
-    if repo_name:
-        name = repo_name.rsplit("/", 1)[-1]
-        related_url = f"{related_url}/{repo_name}"
+    filename = build_data["meta"].pop("filename", "")
+    if build_data["build_meta"]["build_info"].get("cg_name") == Brew.RHCOS_BUILDER:
+        # RHCOS images do not have a registry URL or a container file attachment
+        related_url = ""
+        filename = ""
+    else:
+        related_url = CONTAINER_REPOSITORY
+        if repo_name:
+            name = repo_name.rsplit("/", 1)[-1]
+            related_url = f"{related_url}/{repo_name}"
 
     license_declared_raw = build_data["meta"].pop("license", "")
 
@@ -524,10 +530,10 @@ def save_container(
         name=name,
         version=build_data["meta"].pop("version"),
         release=build_data["meta"].pop("release"),
-        arch="noarch",
+        arch=build_data["meta"].get("arch") or "noarch",
         defaults={
             "description": build_data["meta"].pop("description", ""),
-            "filename": build_data["meta"].pop("filename", ""),
+            "filename": filename,
             "meta_attr": build_data["meta"],
             "namespace": Component.Namespace.REDHAT,
             "related_url": related_url,
@@ -537,45 +543,8 @@ def save_container(
 
     set_license_declared_safely(obj, license_declared_raw)
     root_node, root_node_created = save_node(ComponentNode.ComponentNodeType.SOURCE, None, obj)
-    any_image_created = any_image_node_created = False
-    any_rpm_created = False
 
-    if "image_components" in build_data:
-        for image in build_data["image_components"]:
-            license_declared_raw = image["meta"].pop("license", "")
-
-            obj, temp_created = Component.objects.update_or_create(
-                type=image["type"],
-                name=image["meta"].pop("name"),
-                version=image["meta"].pop("version"),
-                release=image["meta"].pop("release"),
-                arch=image["meta"].pop("arch"),
-                defaults={
-                    "description": image["meta"].pop("description", ""),
-                    "filename": image["meta"].pop("filename", ""),
-                    "meta_attr": image["meta"],
-                    "namespace": Component.Namespace.REDHAT,
-                },
-            )
-            any_image_created |= temp_created
-
-            set_license_declared_safely(obj, license_declared_raw)
-            # Based on a conversation with the container factory team,
-            # almost all image components are build-time dependencies in a multi-stage build
-            # and are discarded / do not end up in the final image.
-            # The only exceptions are image components from the base layer (ie UBI)
-            # So we should probably still use PROVIDES here, and not PROVIDES_DEV
-            # Unless we can distinguish between these two types of components
-            # using some other Brew metadata
-            image_arch_node, temp_created = save_node(
-                ComponentNode.ComponentNodeType.PROVIDES, root_node, obj
-            )
-            any_image_node_created |= temp_created
-
-            if "rpm_components" in image:
-                for rpm in image["rpm_components"]:
-                    any_rpm_created |= save_component(rpm, image_arch_node)
-                    # SRPMs are loaded using nested_builds
+    any_image_created = _save_image_components(build_data, root_node)
 
     slow_save_container_children.delay(
         softwarebuild.build_id,
@@ -585,11 +554,47 @@ def save_container(
         str(root_node.pk),
         save_product,
     )
-    return root_node, (
-        (root_created or root_node_created)
-        or (any_image_created or any_image_node_created)
-        or any_rpm_created
-    )
+    return root_node, (root_created or root_node_created or any_image_created)
+
+
+def _save_image_components(build_data: dict, root_node: ComponentNode) -> bool:
+    anything_created = False
+    for image in build_data.get("image_components", []):
+        license_declared_raw = image["meta"].pop("license", "")
+
+        obj, temp_created = Component.objects.update_or_create(
+            type=image["type"],
+            name=image["meta"].pop("name"),
+            version=image["meta"].pop("version"),
+            release=image["meta"].pop("release"),
+            arch=image["meta"].pop("arch"),
+            defaults={
+                "description": image["meta"].pop("description", ""),
+                "filename": image["meta"].pop("filename", ""),
+                "meta_attr": image["meta"],
+                "namespace": Component.Namespace.REDHAT,
+            },
+        )
+        anything_created |= temp_created
+
+        set_license_declared_safely(obj, license_declared_raw)
+        # Based on a conversation with the container factory team,
+        # almost all image components are build-time dependencies in a multi-stage build
+        # and are discarded / do not end up in the final image.
+        # The only exceptions are image components from the base layer (ie UBI)
+        # So we should probably still use PROVIDES here, and not PROVIDES_DEV
+        # Unless we can distinguish between these two types of components
+        # using some other Brew metadata
+        image_arch_node, temp_created = save_node(
+            ComponentNode.ComponentNodeType.PROVIDES, root_node, obj
+        )
+        anything_created |= temp_created
+
+        if "rpm_components" in image:
+            for rpm in image["rpm_components"]:
+                anything_created |= save_component(rpm, image_arch_node)
+                # SRPMs are loaded using nested_builds
+    return anything_created
 
 
 def get_container_repo_from_pyxis(name_label: str, nvr: str, force_process=False) -> str:

@@ -6,15 +6,12 @@ Component Registry exposes a REST API that any number of clients can connect to,
 front-end application to serve as a web client.
 
 For more in-depth information about the resources served by the API, see section
-(REST API Resource Definitions)[#rest-api-resource-definitions].
+[REST API Resource Definitions](#rest-api-resource-definitions).
 
-The [OpenAPI specification](https:///github.com/RedHatProductSecurity/corgi/-/blob/master/openapi.yml) provides
+The [OpenAPI specification](https:///github.com/RedHatProductSecurity/component-registry/blob/main/openapi.yml) provides
 developer level documentation for endpoint usage.
 
 ### Fetching data
-
-[REST API docs](https:///github.com/RedHatProductSecurity/corgi/-/blob/main/openapi.yml) provide detailed
-usage on all endpoints.
 
 #### Retrieving components
 

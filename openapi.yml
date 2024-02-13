@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Component Registry API
-  version: 1.4.2
+  version: 1.4.3
   description: REST API auto-generated docs for Component Registry
 paths:
   /api/authentication_status:
@@ -1920,6 +1920,9 @@ components:
             type: string
             maxLength: 200
           readOnly: true
+        external_name:
+          type: string
+          readOnly: true
         manifest:
           type: string
           readOnly: true
@@ -1964,6 +1967,7 @@ components:
       - description
       - et_product_versions
       - exclude_components
+      - external_name
       - link
       - manifest
       - name

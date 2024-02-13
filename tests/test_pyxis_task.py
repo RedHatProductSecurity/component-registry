@@ -18,6 +18,7 @@ from corgi.tasks.pyxis import (
 from tests.factories import (
     ContainerImageComponentFactory,
     ProductComponentRelationFactory,
+    SoftwareBuildFactory,
 )
 
 pytestmark = pytest.mark.unit
@@ -187,8 +188,14 @@ def test_slow_fetch_pyxis_image_by_nvr(mock_get_repo_name_by_nvr):
 def test_slow_update_name_for_container_from_pyxis(mock_fetch):
     nvr = "package-1-release"
     name, version, release = Brew.split_nvr(nvr)
+    # Need to create a software build with the same name so that we find the images by nvr
+    sb = SoftwareBuildFactory(name=name)
     ContainerImageComponentFactory(
-        type=Component.Type.CONTAINER_IMAGE, name=name, version=version, release=release
+        type=Component.Type.CONTAINER_IMAGE,
+        name=name,
+        version=version,
+        release=release,
+        software_build=sb,
     )
     result = slow_update_name_for_container_from_pyxis(nvr)
     assert result

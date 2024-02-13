@@ -17,6 +17,10 @@ forwarded_allow_ips = "*"
 
 timeout = 300
 
+# the gunicorn default for worker_tmp_dir is /tmp which may not reliably
+# exist in deployment environments, setting to shm filesystem avoids this
+worker_tmp_dir = "/dev/shm"
+
 if not running_dev():
     # Saves memory in the worker process, but breaks --reload
     preload_app = True

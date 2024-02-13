@@ -19,3 +19,6 @@ CSP_UPGRADE_INSECURE_REQUESTS = True
 # the request came over HTTPS from the client to HAProxy.
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# use reltuples in corgi.api.paginate.FasterPageNumberPagination for fast count estimates
+OPTIMISE_REST_API_COUNT = True

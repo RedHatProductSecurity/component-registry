@@ -165,7 +165,7 @@ def save_node(
     retry_kwargs=RETRY_KWARGS,
     soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
 )
-def slow_save_taxonomy(build_id: str, build_type: str) -> None:
+def slow_save_taxonomy(build_id: str, build_type: str, save_components: bool = True) -> None:
     """Helper function to call save_product_taxonomy()
     and save_component_taxonomy() in a separate task
     to reduce the risk of timeouts in slow_fetch_brew_build"""
@@ -180,7 +180,8 @@ def slow_save_taxonomy(build_id: str, build_type: str) -> None:
     # TODO: Save the taxonomy for all components in the tree, CORGI-739
     #  We tried to do this in CORGI-730 but it caused SoftTimeLimitExceeded errors
     #  We may need to switch from GenericForeignKey to regular ForeignKey first
-    logger.info(f"Saving component taxonomy for {build_type} build {build_id}")
-    for root_component in build.components.get_queryset():
-        root_component.save_component_taxonomy()
+    if save_components:
+        logger.info(f"Saving component taxonomy for {build_type} build {build_id}")
+        for root_component in build.components.get_queryset():
+            root_component.save_component_taxonomy()
     logger.info(f"Finished saving taxonomies for {build_type} build {build_id}")

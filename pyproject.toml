@@ -53,7 +53,7 @@ sort = "Cover"
 profile = "black"
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.11"
 ignore_missing_imports = true
 warn_return_any = false
 warn_unused_configs = true

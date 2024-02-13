@@ -279,6 +279,8 @@ LOGGING = {
         # Any submodules of above use the lowest-defined parent module's config
         # Any other modules use the root logger's config, or their own custom config
         # To see more than defined above, call e.g. logger.setLevel(logging.DEBUG) in a shell
+        # Empty name for code run via manage.py, eg. migrations
+        "": {"level": logging.INFO},
     },
 }
 
@@ -414,7 +416,7 @@ REST_FRAMEWORK = {
         "rest_framework.renderers.JSONRenderer",
         "rest_framework.renderers.BrowsableAPIRenderer",
     ],
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.LimitOffsetPagination",
+    "DEFAULT_PAGINATION_CLASS": "corgi.api.pagination.FasterPageNumberPagination",
     "PAGE_SIZE": 10,
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "EXCEPTION_HANDLER": "corgi.api.exception_handlers.exception_handler",
@@ -503,3 +505,13 @@ SCA_ENABLED = strtobool(os.getenv("CORGI_SCA_ENABLED", "true"))
 SCA_SCRATCH_DIR = os.getenv("CORGI_SCA_SCATCH_DIR", "/tmp")
 
 QUAY_TOKEN = os.getenv("CORGI_QUAY_TOKEN", "")
+
+# disable using reltuples in corgi.api.paginate.FasterPageNumberPagination for fast count estimates
+OPTIMISE_REST_API_COUNT = False
+
+# We only process Maven builds from SBOMer, which makes most middleware streams incomplete
+# This list allows the specified streams to have an SBOM published by SDEngine in the customer
+# portal
+ALLOWED_MIDDLEWARE_MANIFEST_STREAMS = os.environ.get(
+    "CORGI_ALLOWED_MIDDLEWARE_MANIFEST_STREAMS", ""
+).split(",")

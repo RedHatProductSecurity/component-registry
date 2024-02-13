@@ -178,9 +178,23 @@ class Syft:
                 )
                 source_ref = target_ref
             else:
-                source_ref = subprocess.check_output(
-                    ["/usr/bin/git", "rev-parse", "HEAD"], cwd=scan_dir, text=True
-                ).strip()  # nosec B603
+                try:
+                    source_ref = subprocess.check_output(
+                        ("/usr/bin/git", "rev-parse", "HEAD"), cwd=scan_dir, text=True
+                    ).strip()  # nosec B603
+                except subprocess.CalledProcessError as exc:
+                    # Work around buggy repo - remote HEAD refers to nonexistent origin/main ref
+                    # All commits are really on origin/master, staging, or production
+                    try:
+                        source_ref = subprocess.check_output(
+                            ("/usr/bin/git", "rev-parse", "origin/production"),
+                            cwd=scan_dir,
+                            text=True,
+                        ).strip()  # nosec B603
+                    except subprocess.CalledProcessError:
+                        # Report the original exc, not the one from the retry
+                        raise GitCloneError(f"git rev-parse of {target_url} failed with: {exc}")
+
             scan_results = cls.scan_files(target_files=[Path(scan_dir)])
         return scan_results, source_ref
 

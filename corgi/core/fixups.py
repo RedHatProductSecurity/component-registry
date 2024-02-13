@@ -94,3 +94,21 @@ supported_stream_cpes = {
 def cpe_lookup(product_stream_name: str) -> set[str]:
     """Manual CPE overrides for streams which cannot be matched with variants"""
     return set(supported_stream_cpes.get(product_stream_name, []))
+
+
+external_names = {
+    # Can't parse the stream version properly due to the version not being after the last dash
+    "openstack-13-els": "RHEL-7-OS-13-ELS",
+}
+
+
+def external_name_lookup(product_stream_name: str) -> str:
+    stream_prefixes = ("dts-", "rhel-br-", "mtr-", "quay-")
+    # 'dts' streams share variants with 'rhscl', however the component sets are different
+    # 'rhel-br' streams share variants with 'rhel' however the components sets are different
+    # 'mtr-' streams share the 'RHEL-8-MTR-1' variant, but have distinct brew_tags
+    # 'quay-' streams share the 'QUAY-3-RHEL-8' variant, but have distinct brew_tags
+    for stream_prefix in stream_prefixes:
+        if product_stream_name.lower().startswith(stream_prefix):
+            return product_stream_name.upper()
+    return external_names.get(product_stream_name, "")

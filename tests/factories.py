@@ -3,9 +3,12 @@ from datetime import datetime
 from random import choice, randint
 
 import factory
+from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
+from factory.fuzzy import FuzzyInteger
 
 from corgi.core import models
+from corgi.core.models import ProductNode
 
 
 class TagFactory(factory.django.DjangoModelFactory):
@@ -58,15 +61,9 @@ class ProductVersionFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = models.ProductVersion
 
-    name = factory.Faker("word")
-    version = "8"
+    version = FuzzyInteger(20)
+    name = factory.LazyAttribute(lambda o: f"{o.description}-{o.version}")
     description = factory.Faker("word")
-    # link model using relationship to parent model
-    products = factory.SubFactory(
-        ProductFactory,
-        name=factory.SelfAttribute("..name"),
-        description=factory.SelfAttribute("..description"),
-    )
     # link model using reverse relationship to child models
     tag = factory.RelatedFactory(ProductVersionTagFactory, factory_related_name="tagged_model")
 
@@ -80,21 +77,10 @@ class ProductStreamFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = models.ProductStream
 
-    name = factory.Faker("word")
-    version = "8.2.0.z"
+    version = FuzzyInteger(20)
+    name = factory.LazyAttribute(lambda o: f"{o.description}-{o.version}")
     description = factory.Faker("word")
-    # link model using relationship to parent model
-    products = factory.SubFactory(
-        ProductFactory,
-        name=factory.SelfAttribute("..name"),
-        description=factory.SelfAttribute("..description"),
-    )
-    productversions = factory.SubFactory(
-        ProductVersionFactory,
-        name=factory.SelfAttribute("..name"),
-        description=factory.SelfAttribute("..description"),
-        products=factory.SelfAttribute("..products"),
-    )
+
     # link model using reverse relationship to child models
     tag = factory.RelatedFactory(ProductStreamTagFactory, factory_related_name="tagged_model")
     active = True
@@ -110,35 +96,62 @@ class ProductVariantFactory(factory.django.DjangoModelFactory):
         model = models.ProductVariant
 
     name = factory.Faker("word")
-    # TODO: Fix below
     version = ""
     description = factory.Faker("word")
-    # TODO: Use dynamic sane value for below
-    #  factories and model properties logic could be improved
-    #  maybe roll some of this into an abstract ProductModelFactory
+
     cpe = "cpe:/o:redhat:enterprise_linux:8"
-    # link model using relationship to parent model
-    # parent model will reuse properties defined here
-    products = factory.SubFactory(
-        ProductFactory,
-        name=factory.SelfAttribute("..name"),
-        description=factory.SelfAttribute("..description"),
-    )
-    productversions = factory.SubFactory(
-        ProductVersionFactory,
-        name=factory.SelfAttribute("..name"),
-        description=factory.SelfAttribute("..description"),
-        products=factory.SelfAttribute("..products"),
-    )
-    productstreams = factory.SubFactory(
-        ProductStreamFactory,
-        name=factory.SelfAttribute("..name"),
-        description=factory.SelfAttribute("..description"),
-        products=factory.SelfAttribute("..products"),
-        productversions=factory.SelfAttribute("..productversions"),
-    )
+
     # link model using reverse relationship to child models
     tag = factory.RelatedFactory(ProductVariantTagFactory, factory_related_name="tagged_model")
+
+    @factory.post_generation
+    def productstreams(self, create, extracted, **kwargs):
+        if not create or not extracted:
+            return
+
+        # Add the iterable of groups using bulk addition
+        self.productstreams.add(*extracted)
+
+
+class NodeFactory(factory.django.DjangoModelFactory):
+    object_id = factory.SelfAttribute("obj.pk")
+    content_type = factory.LazyAttribute(lambda o: ContentType.objects.get_for_model(o.obj))
+
+    class Meta:
+        exclude = ["obj"]
+        abstract = True
+
+
+class ProductModelFactory(NodeFactory):
+    parent = None
+
+    @factory.post_generation
+    def ofuri(obj, create, extracted, **kwargs):
+        if not create:
+            return
+        obj.obj.save_product_taxonomy()
+
+    class Meta:
+        model = ProductNode
+
+
+class ProductNodeFactory(ProductModelFactory):
+    obj = factory.SubFactory(ProductFactory)
+
+
+class ProductVersionNodeFactory(ProductModelFactory):
+    parent = factory.SubFactory(ProductNodeFactory)
+    obj = factory.SubFactory(ProductVersionFactory)
+
+
+class ProductStreamNodeFactory(ProductModelFactory):
+    parent = factory.SubFactory(ProductVersionNodeFactory)
+    obj = factory.SubFactory(ProductStreamFactory)
+
+
+class ProductVariantNodeFactory(ProductModelFactory):
+    parent = factory.SubFactory(ProductStreamNodeFactory)
+    obj = factory.SubFactory(ProductVariantFactory)
 
 
 def random_erratum_name(n):

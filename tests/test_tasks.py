@@ -29,10 +29,7 @@ from .factories import (
     BinaryRpmComponentFactory,
     ContainerImageComponentFactory,
     ProductComponentRelationFactory,
-    ProductFactory,
-    ProductStreamFactory,
     ProductVariantFactory,
-    ProductVersionFactory,
     SoftwareBuildFactory,
     SrpmComponentFactory,
     UpstreamComponentFactory,
@@ -511,23 +508,8 @@ def test_slow_fetch_pnc_sbom():
 
     # Ensure the product variant referenced in the UMB message exists
     # ...
-    rhbq_product = ProductFactory(name="Red Hat build of Quarkus")
-    rhbq_product_version = ProductVersionFactory(
-        name="RHEL-8-RHBQ-2.13",
-        products=rhbq_product,
-    )
-    rhbq_product_stream = ProductStreamFactory(
-        name="RHEL-8-RHBQ-2.13",
-        products=rhbq_product,
-        productversions=rhbq_product_version,
-        brew_tags=["quarkus-mandrel-22-rhel-8-candidate"],
-    )
     ProductVariantFactory(
         name="8Base-RHBQ-2.13",
-        products=rhbq_product,
-        productversions=rhbq_product_version,
-        productstreams=rhbq_product_stream,
-        cpe="cpe:/a:redhat:quarkus:2.13::el8",
     )
 
     # The SBOM referenced in the UMB message

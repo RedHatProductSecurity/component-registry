@@ -1,0 +1,71 @@
+{
+  "certificate": null,
+  "crypto": null,
+  "headers": {
+    "JMSXUserID": "msg-snitch",
+    "JMS_AMQP_MESSAGE_FORMAT": "0",
+    "JMS_AMQP_NATIVE": "false",
+    "amq6100_destination": "queue://Consumer.datanommer.psi-ocp-bm-stage.VirtualTopic.eng.>",
+    "amq6100_originalDestination": "topic://VirtualTopic.eng.snitch.contentmanifest.create",
+    "correlation-id": "0a1b9095-d4c8-48e7-84a6-43106153f875",
+    "database": "data",
+    "destination": "/topic/VirtualTopic.eng.snitch.contentmanifest.create",
+    "entityName": "contentManifest",
+    "expires": "0",
+    "message-id": "ID:umb.example.com-42991-1691783981453-34:61834:0:0:1",
+    "operationType": "insert",
+    "original-destination": "/topic/VirtualTopic.eng.snitch.contentmanifest.create",
+    "priority": "4",
+    "subscription": "/queue/Consumer.datanommer.psi-ocp-bm-stage.VirtualTopic.eng.>",
+    "timestamp": "0"
+  },
+  "i": 0,
+  "msg": {
+    "database": "data",
+    "documentKey": {
+      "_id": {
+        "$oid": "64dccc646d82013739c4f7e0"
+      }
+    },
+    "entityData": {
+      "_id": {
+        "$oid": "64dccc646d82013739c4f7e0"
+      },
+      "created_by": "hacbs-release-pyxis",
+      "created_on_behalf_of": null,
+      "creation_date": {
+        "$date": 1692191844148
+      },
+      "image": {
+        "_id": {
+          "$oid": "64dccc5b6d82013739c4f7b8"
+        },
+        "repositories": [
+          {
+            "published": false,
+            "registry": "quay.io",
+            "repository": "redhat-appstudio/image-controller"
+          }
+        ]
+      },
+      "last_update_date": {
+        "$date": 1692191844148
+      },
+      "last_updated_by": "hacbs-release-pyxis",
+      "updated_on_behalf_of": null
+    },
+    "entityName": "contentManifest",
+    "operationType": "insert",
+    "updateDescription": {
+      "removedFields": [],
+      "updatedFields": {}
+    }
+  },
+  "msg_id": "ID:umb.example.com-42991-1691783981453-34:61834:0:0:1",
+  "signature": null,
+  "source_name": "datanommer",
+  "source_version": "0.9.1",
+  "timestamp": 1692191844.0,
+  "topic": "/topic/VirtualTopic.eng.snitch.contentmanifest.create",
+  "username": null
+}

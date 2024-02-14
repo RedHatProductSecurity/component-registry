@@ -3,7 +3,7 @@
 import logging
 
 from django.db import migrations
-from django.db.models import F
+from django.db.models.fields.json import KeyTextTransform
 
 from corgi.core.models import SoftwareBuild
 
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 def fix_softwarebuild_names(apps, schema_editor) -> None:
     for names in (
         SoftwareBuild.objects.filter(build_type="BREW")
-        .exclude(meta_attr__name=None)
+        .exclude(meta_attr__name="")
         .values("name", "meta_attr__name")
         .distinct()
     ):
@@ -23,7 +23,7 @@ def fix_softwarebuild_names(apps, schema_editor) -> None:
                 f"Updating SoftwareBuild name {names['name']} to {names['meta_attr__name']}"
             )
             SoftwareBuild.objects.filter(build_type="BREW", name=names["name"]).update(
-                name=F("meta_attr__name")
+                name=KeyTextTransform("name", "meta_attr")
             )
 
 

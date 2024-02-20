@@ -4,45 +4,6 @@ info:
   version: 1.4.4
   description: REST API auto-generated docs for Component Registry
 paths:
-  /api/authentication_status:
-    get:
-      operationId: authentication_status_retrieve
-      description: View to determine whether you are currently authenticated and,
-        if so, as whom.
-      tags:
-      - authentication_status
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  oidc_enabled:
-                    type: string
-                  user:
-                    type: string
-                  auth:
-                    type: string
-          description: ''
-  /api/controlled_access_test:
-    get:
-      operationId: controlled_access_test_retrieve
-      description: |-
-        View to determine whether you are authenticated with an account that has a specific
-        role.
-      tags:
-      - controlled_access_test
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  user:
-                    type: string
-          description: ''
   /api/healthy:
     get:
       operationId: healthy_retrieve

@@ -568,22 +568,22 @@ class ProductModel(TimeStampedModel):
         self.ofuri = self.get_ofuri()
         self.save()
 
-    def get_related_names_of_type(self, mapping_model: type) -> list[str]:
+    def get_related_names_of_type(self, mapping_model: type, inferred: bool = False) -> list[str]:
         """For a given ProductModel instance find all directly related nodes with the given model type
         and return their names"""
         mapping_key = mapping_model.__name__
         attribute_name = mapping_key.lower()
         results = []
-        direct_pnodes = self.pnodes.exclude(node_type=ProductNode.ProductNodeType.INFERRED)
+        if inferred:
+            direct_pnodes = self.pnodes.get_queryset()
+        else:
+            direct_pnodes = self.pnodes.exclude(node_type=ProductNode.ProductNodeType.INFERRED)
         if direct_pnodes.exists():
             for tree in direct_pnodes.get_cached_trees():
-                query = (
-                    tree.get_family()
-                    .filter(level=MODEL_NODE_LEVEL_MAPPING[mapping_key])
-                    .exclude(node_type=ProductNode.ProductNodeType.INFERRED)
-                    .values_list(f"{attribute_name}__name", flat=True)
-                    .distinct()
-                )
+                query = tree.get_family().filter(level=MODEL_NODE_LEVEL_MAPPING[mapping_key])
+                if not inferred:
+                    query = query.exclude(node_type=ProductNode.ProductNodeType.INFERRED)
+                query = query.values_list(f"{attribute_name}__name", flat=True).distinct()
                 results.extend(list(query))
         return results
 
@@ -1166,8 +1166,20 @@ class ComponentQuerySet(models.QuerySet):
                 return self
             return components.exclude(**lookup)
 
-    def released_components(self, include: bool = True) -> "ComponentQuerySet":
-        """Show only released components by default, or unreleased components if include=False"""
+    def released_components(
+        self, variants: tuple[str, ...] = (), include: bool = True
+    ) -> "ComponentQuerySet":
+        """Show only released components by default, or unreleased components if include=False
+        If variants are passed in, only return components with errata relations matching one of
+        those variants"""
+
+        if variants:
+            errata_variant_relations = Q(
+                software_build__relations__type=ProductComponentRelation.Type.ERRATA,
+                software_build__relations__product_ref__in=variants,
+            )
+            return self.filter(errata_variant_relations)
+
         errata_relations = Q(
             software_build__relations__type__in=(
                 ProductComponentRelation.Type.ERRATA,
@@ -1211,7 +1223,12 @@ class ComponentQuerySet(models.QuerySet):
         roots = non_container_source_components.root_components()
         if not settings.COMMUNITY_MODE_ENABLED:
             # Only filter in enterprise Corgi, where we have ERRATA-type relations
-            roots = roots.released_components()
+            stream = ProductStream.objects.get(ofuri=ofuri)
+            variant_names = stream.get_related_names_of_type(ProductVariant, inferred=True)
+            if variant_names:
+                roots = roots.released_components(variants=tuple(variant_names))
+            else:
+                roots = roots.released_components()
 
         if not quick:
             # Only filter when we're actually generating a manifest

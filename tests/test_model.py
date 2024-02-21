@@ -1748,6 +1748,7 @@ def test_duplicate_component_in_multiple_stream_variants(stored_proc):
 
 @pytest.mark.django_db
 def test_released_filter():
+    variant = "variant"
     sb = SoftwareBuildFactory()
     c = ComponentFactory(software_build=sb)
     # Make sure that components with no relations don't show in filter
@@ -1761,11 +1762,19 @@ def test_released_filter():
         external_system_id="BREW_TAG",
     )
     assert c not in Component.objects.get_queryset().released_components()
-    # If there is an errata relation, should be considered released
+    # If there is an errata relation, but it's not for a DIRECT or INDIRECT variant of the stream
+    # it shouldn't be included
     ProductComponentRelation.objects.create(
-        type=ProductComponentRelation.Type.ERRATA, software_build=sb, external_system_id="1"
+        type=ProductComponentRelation.Type.ERRATA,
+        software_build=sb,
+        external_system_id="1",
+        product_ref=variant,
     )
     assert c in Component.objects.get_queryset().released_components()
+
+    assert c not in Component.objects.get_queryset().released_components(variants=("non_variant",))
+
+    assert c in Component.objects.get_queryset().released_components(variants=(variant,))
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
@@ -1911,11 +1920,18 @@ def test_get_related_names_of_type():
     result = variant.productstreams.first().get_related_names_of_type(ProductVersion)
     assert list(result) == [variant.productversions.name]
 
-    # Expect empty results when the pnode linking variant to it's parent is INFEFFERED
+    # Expect empty results when the pnode linking variant to it's parent is INFERRED
     result = variant.get_related_names_of_type(ProductVersion)
     assert list(result) == []
     result = variant.get_related_names_of_type(ProductStream)
     assert list(result) == []
+
+    # Make sure that when search ancestors we don't get an INFERRED variant result
+    result = variant.productstreams.first().get_related_names_of_type(ProductVariant)
+    assert list(result) == []
+    # This time we want to include INFERRED types
+    result = variant.productstreams.first().get_related_names_of_type(ProductVariant, inferred=True)
+    assert list(result) == [variant.name]
 
 
 @pytest.mark.django_db

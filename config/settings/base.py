@@ -167,7 +167,6 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework.authtoken",
     "django_filters",
-    "mozilla_django_oidc",
     "corgi.api",
     "corgi.core",
     "corgi.collectors",
@@ -186,7 +185,6 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django.middleware.gzip.GZipMiddleware",
     "csp.middleware.CSPMiddleware",
-    "mozilla_django_oidc.middleware.SessionRefresh",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -270,7 +268,6 @@ LOGGING = {
         # Django's custom config logs INFO messages to the console, which we override here
         # We can't rely only on the root logger's config, so it's not a duplicate of above
         "django": {"handlers": ["mail_admins"], "level": logging.WARNING},
-        "mozilla_django_oidc": {"handlers": ["mail_admins"], "level": logging.WARNING},
         # Don't mail errors, just set level=INFO here to make debugging in a shell easier
         "corgi": {"level": logging.INFO},
         # To control Celery process logging to Splunk, use e.g. --loglevel DEBUG
@@ -421,19 +418,6 @@ REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "EXCEPTION_HANDLER": "corgi.api.exception_handlers.exception_handler",
 }
-
-
-# OIDC Authentication
-# https://mozilla-django-oidc.readthedocs.io/
-OIDC_AUTH_ENABLED = strtobool(os.getenv("CORGI_OIDC_AUTH_ENABLED", "false"))
-OIDC_OP_JWKS_ENDPOINT = os.getenv("CORGI_OIDC_OP_JWKS_ENDPOINT", "")
-OIDC_OP_AUTHORIZATION_ENDPOINT = os.getenv("CORGI_OIDC_OP_AUTHORIZATION_ENDPOINT", "")
-OIDC_OP_TOKEN_ENDPOINT = os.getenv("CORGI_OIDC_OP_TOKEN_ENDPOINT", "")
-OIDC_OP_USER_ENDPOINT = os.getenv("CORGI_OIDC_OP_USER_ENDPOINT", "")
-OIDC_RP_CLIENT_ID = os.getenv("CORGI_OIDC_RP_CLIENT_ID", "")
-OIDC_RP_CLIENT_SECRET = os.getenv("CORGI_OIDC_RP_CLIENT_SECRET", "")
-OIDC_DRF_AUTH_BACKEND = "corgi.core.authentication.CorgiOIDCBackend"
-OIDC_EXEMPT_URLS = ["/static"]
 
 
 # UMB -- Unified Message Bus

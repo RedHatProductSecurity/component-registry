@@ -1,69 +1,13 @@
 import logging
 import uuid
-from collections.abc import Collection, Iterable
+from collections.abc import Collection
 from typing import Any
 
-from django.contrib.auth.models import User
-from mozilla_django_oidc.auth import OIDCAuthenticationBackend
 from rest_framework.permissions import BasePermission
 
 from corgi.core.models import RedHatProfile
 
 logger = logging.getLogger(__name__)
-
-
-class CorgiOIDCBackend(OIDCAuthenticationBackend):
-    """An extension of mozilla_django_oidc's authentication backend
-    which customizes user creation and authentication to support Red
-    Hat SSO additional claims."""
-
-    def verify_claims(self, claims: Any) -> bool:
-        """Require, at a minimum, that a user have a rhatUUID claim before even trying to
-        authenticate them."""
-        verified = super(CorgiOIDCBackend, self).verify_claims(claims)
-        return verified and "rhatUUID" in claims
-
-    def filter_users_by_claims(self, claims: Any) -> Iterable[User]:
-        """The default behavior is to use e-mail, which may not be unique.
-        Instead, we use Red Hat UUID, which should be unique and persistent
-        between changes to other user claims."""
-
-        # Since verify_claims requires rhatUUID in claims, it will always be here.
-        rhat_uuid = claims["rhatUUID"]
-
-        try:
-            rhat_profile = RedHatProfile.objects.get(rhat_uuid=rhat_uuid)
-            return [rhat_profile.user]
-
-        except RedHatProfile.DoesNotExist:
-            logger.info("UUID %s doesn't have a RedHatProfile", rhat_uuid)
-
-        return self.UserModel.objects.none()
-
-    def create_user(self, claims: Any) -> User:
-        """Rather than changing the existing Django user model, this stores Red Hat SSO
-        claims in a separate model keyed to the created user."""
-        user = super(CorgiOIDCBackend, self).create_user(claims)
-
-        # Create a Red Hat Profile for this user
-        # Because verify_claims requires rhatUUID, it will always be here.
-        _ = RedHatProfile.objects.create(
-            rhat_uuid=claims["rhatUUID"],
-            rhat_roles=claims.get("groups", ""),
-            full_name=claims.get("cn", ""),
-            user=user,
-        )
-
-        return user
-
-    def update_user(self, user: User, claims: Any) -> User:
-        RedHatProfile.objects.filter(user=user).update(
-            rhat_uuid=claims["rhatUUID"],
-            rhat_roles=claims.get("groups", ""),
-            full_name=claims.get("cn", ""),
-        )
-
-        return user
 
 
 # drf's BasePermission seems to use metaclasses in a way mypy doesn't like

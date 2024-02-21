@@ -178,7 +178,6 @@ cffi==1.15.1 \
     --hash=sha256:fa6693661a4c91757f4412306191b6dc88c1703f780c8234035eac011922bc01 \
     --hash=sha256:fcd131dd944808b5bdb38e6f5b53013c5aa4f334c5cad0c72742f6eba4b73db0
     # via
-    #   -r requirements/base.txt
     #   -r requirements/test.txt
     #   cryptography
 chardet==5.2.0 \
@@ -319,11 +318,7 @@ cryptography==41.0.6 \
     --hash=sha256:f39812f70fc5c71a15aa3c97b2bbe213c3f2a460b79bd21c40d033bb34a9bf36 \
     --hash=sha256:ff369dd19e8fe0528b02e8df9f2aeb2479f89b1270d90f96a63500afe9af5cae
     # via
-    #   -r requirements/base.txt
     #   -r requirements/test.txt
-    #   josepy
-    #   mozilla-django-oidc
-    #   pyopenssl
     #   types-pyopenssl
     #   types-redis
 decorator==5.1.0 \
@@ -343,9 +338,9 @@ distlib==0.3.8 \
     --hash=sha256:034db59a0b96f8ca18035f36290806a9a6e6bd9d1ff91e45a7f172eb17e51784 \
     --hash=sha256:1530ea13e350031b6312d8580ddb6b27a104275a31106523b8f123787f494f64
     # via virtualenv
-django==3.2.22 \
-    --hash=sha256:83b6d66b06e484807d778263fdc7f9186d4dc1862fcfa6507830446ac6b060ba \
-    --hash=sha256:c5e7b668025a6e06cad9ba6d4de1fd1a21212acebb51ea34abb400c6e4d33430
+django==3.2.24 \
+    --hash=sha256:5dd5b787c3ba39637610fe700f54bf158e33560ea0dba600c19921e7ff926ec5 \
+    --hash=sha256:aaee9fb0fb4ebd4311520887ad2e33313d368846607f82a9a0ed461cd4c35b18
     # via
     #   -r requirements/base.txt
     #   -r requirements/test.txt
@@ -361,7 +356,6 @@ django==3.2.22 \
     #   djangorestframework
     #   drf-spectacular
     #   drf-spectacular-sidecar
-    #   mozilla-django-oidc
 django-celery-beat==2.5.0 \
     --hash=sha256:ae460faa5ea142fba0875409095d22f6bd7bcc7377889b85e8cab5c0dfb781fe \
     --hash=sha256:cd0a47f5958402f51ac0c715bc942ae33d7b50b4e48cba91bc3f2712be505df1
@@ -684,13 +678,6 @@ jedi==0.18.2 \
     --hash=sha256:203c1fd9d969ab8f2119ec0a3342e0b49910045abe6af0a3ae83a5764d54639e \
     --hash=sha256:bae794c30d07f6d910d32a7048af09b5a39ed740918da923c6b780790ebac612
     # via ipython
-josepy==1.13.0 \
-    --hash=sha256:6f64eb35186aaa1776b7a1768651b1c616cab7f9685f9660bffc6491074a5390 \
-    --hash=sha256:8931daf38f8a4c85274a0e8b7cb25addfd8d1f28f9fb8fbed053dd51aec75dc9
-    # via
-    #   -r requirements/base.txt
-    #   -r requirements/test.txt
-    #   mozilla-django-oidc
 jsonschema==4.17.1 \
     --hash=sha256:05b2d22c83640cde0b7e0aa329ca7754fbd98ea66ad8ae24aa61328dfe057fa3 \
     --hash=sha256:410ef23dcdbca4eaedc08b850079179883c2ed09378bd1f760d4af4aacfa28d7
@@ -808,12 +795,6 @@ mccabe==0.6.1 \
     # via
     #   -r requirements/lint.txt
     #   flake8
-mozilla-django-oidc==3.0.0 \
-    --hash=sha256:a7d447af83cb5aa1671a24009b0ce6b2f0d259e9c58d8c88c7a8d0c27c05c04d \
-    --hash=sha256:f535eeddf03698ad9fd89dd87037828e9c7d503771acef21f0509f6cc42fc875
-    # via
-    #   -r requirements/base.txt
-    #   -r requirements/test.txt
 mypy==1.2.0 \
     --hash=sha256:023fe9e618182ca6317ae89833ba422c411469156b690fde6a315ad10695a521 \
     --hash=sha256:031fc69c9a7e12bcc5660b74122ed84b3f1c505e762cc4296884096c6d8ee140 \
@@ -963,7 +944,6 @@ pycparser==2.21 \
     --hash=sha256:8ee45429555515e1f6b185e78100aea234072576aa43ab53aefcae078162fca9 \
     --hash=sha256:e644fdec12f7872f86c58ff790da456218b10f863970249516d60a5eaca77206
     # via
-    #   -r requirements/base.txt
     #   -r requirements/test.txt
     #   cffi
 pyflakes==2.4.0 \
@@ -976,13 +956,6 @@ pygments==2.15.0 \
     --hash=sha256:77a3299119af881904cd5ecd1ac6a66214b6e9bed1f2db16993b54adede64094 \
     --hash=sha256:f7e36cffc4c517fbc252861b9a6e4644ca0e5abadf9a113c72d1358ad09b9500
     # via ipython
-pyopenssl==23.2.0 \
-    --hash=sha256:24f0dc5227396b3e831f4c7f602b950a5e9833d292c8e4a2e06b709292806ae2 \
-    --hash=sha256:276f931f55a452e7dea69c7173e984eb2a4407ce413c918aa34b55f82f9b8bac
-    # via
-    #   -r requirements/base.txt
-    #   -r requirements/test.txt
-    #   josepy
 pyparsing==3.1.1 \
     --hash=sha256:32c7c0b711493c72ff18a981d24f28aaf9c1fb7ed5e9667c9e84e3db623bdbfb \
     --hash=sha256:ede28a1a32462f5a9705e07aea48001a08f7cf81a021585011deba701581a0db
@@ -1149,7 +1122,6 @@ requests==2.31.0 \
     #   detect-secrets
     #   djangorestframework-stubs
     #   koji
-    #   mozilla-django-oidc
     #   requests-gssapi
     #   requests-mock
 requests-gssapi==1.2.3 \
@@ -1460,7 +1432,6 @@ setuptools==67.6.1 \
     # via
     #   -r requirements/base.txt
     #   -r requirements/test.txt
-    #   josepy
     #   pip-tools
     #   zope-event
     #   zope-interface

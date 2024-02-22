@@ -2,26 +2,6 @@
 # This data should be moved to an appropriate object in product definitions as soon as possible.
 
 supported_stream_cpes = {
-    # certificate_system should be resolved by product-definitions/-/merge_requests/2204
-    "certificate_system_10.2.z": [
-        "cpe:/a:redhat:certificate_system_eus:10.2::el8",
-        "cpe:/a:redhat:certificate_system:10.2::el8",
-    ],
-    "certificate_system_10.4.z": ["cpe:/a:redhat:certificate_system:10.4::el8"],
-    # convert2rhel should be resolved by product-definitions/-/merge_requests/2204
-    "convert2rhel-7": ["cpe:/a:redhat:convert2rhel::el7"],
-    "convert2rhel-8": ["cpe:/a:redhat:convert2rhel::el8"],
-    # directory_server sshould be resolved by product-definitions/-/merge_requests/2204
-    "directory_server_11.5": ["cpe:/a:redhat:directory_server:11.5::el8"],
-    "directory_server_11.6": ["cpe:/a:redhat:directory_server:11.6::el8"],
-    "directory_server_12.0": [
-        "cpe:/a:redhat:directory_server_eus:12::el9",
-        "cpe:/a:redhat:directory_server:12::el9",
-    ],
-    "directory_server_12.1": ["cpe:/a:redhat:directory_server:12.1::el9"],
-    # DTS shares a variant with rhscl-3 so brew_tag variant linking is skipped in prod_defs task
-    "dts-11.1.z": ["cpe:/a:redhat:rhel_software_collections:3::el7"],
-    "dts-12.1.z": ["cpe:/a:redhat:rhel_software_collections:3::el7"],
     # Need to support ET releases in brew_tag matching, see CORGI-737
     "rhes-3.5": [
         "cpe:/a:redhat:storage:3.5:nfs:el7",
@@ -81,12 +61,6 @@ supported_stream_cpes = {
         "cpe:/o:redhat:enterprise_linux:9::baseos",
         "cpe:/o:redhat:enterprise_linux:9::fastdatapath",
         "cpe:/o:redhat:enterprise_linux:9::hypervisor",
-    ],
-    # Not getting match with pattern matching, excluded from brew_tag matching because it shadows
-    # dts-11.0.z
-    "rhscl-3.8.z": [
-        "cpe:/a:redhat:rhel_software_collections:3::el6",
-        "cpe:/a:redhat:rhel_software_collections:3::el7",
     ],
 }
 

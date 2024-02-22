@@ -4,6 +4,7 @@ from django.db.utils import IntegrityError, ProgrammingError
 from packageurl import PackageURL
 
 from corgi.core.constants import CONTAINER_DIGEST_FORMATS
+from corgi.core.fixups import cpe_lookup
 from corgi.core.models import (
     Component,
     ComponentNode,
@@ -256,12 +257,30 @@ def test_variant_in_many_streams():
     assert variant.ofuri == "o:redhat:certificate_system:10:8Base-CertSys-10.4"
 
 
-def test_variant_in_many_versions():
-    pass
+def test_cpe_lookup_with_pattern():
+    result = cpe_lookup("rhel-9.2.0")
+    assert result
+    for r in result:
+        assert "9" in r
 
+    result = cpe_lookup("rhel-9.3.0")
+    assert result
+    for r in result:
+        assert "9" in r
 
-def test_variant_in_many_products():
-    pass
+    result = cpe_lookup("rhel-8.1.0")
+    assert result
+    for r in result:
+        assert "8" in r
+
+    result = cpe_lookup("rhel-8.10.0")
+    assert result
+    for r in result:
+        assert "8" in r
+
+    assert not cpe_lookup("rhel-br-8.9.0")
+
+    assert not cpe_lookup("")
 
 
 def test_nevra():

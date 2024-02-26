@@ -1167,7 +1167,10 @@ class ComponentQuerySet(models.QuerySet):
             return components.exclude(**lookup)
 
     def released_components(
-        self, variants: tuple[str, ...] = (), include: bool = True
+        self,
+        variants: tuple[str, ...] = (),
+        active_compose: bool = False,
+        include: bool = True,
     ) -> "ComponentQuerySet":
         """Show only released components by default, or unreleased components if include=False
         If variants are passed in, only return components with errata relations matching one of
@@ -1179,6 +1182,11 @@ class ComponentQuerySet(models.QuerySet):
                 software_build__relations__product_ref__in=variants,
             )
             return self.filter(errata_variant_relations)
+
+        # Ideally this would also check for product_ref in variants, but the only way to get
+        # variants for composes is to hardcode them. We did this for CPEs already but not variants
+        elif active_compose:
+            return Component.objects.none()
 
         errata_relations = Q(
             software_build__relations__type__in=(
@@ -1227,11 +1235,13 @@ class ComponentQuerySet(models.QuerySet):
             variant_names = stream.get_related_names_of_type(ProductVariant, inferred=True)
             if variant_names:
                 roots = roots.released_components(variants=tuple(variant_names))
+            elif stream.composes and stream.active:
+                roots = roots.released_components(active_compose=True)
             else:
                 roots = roots.released_components()
 
         if not quick:
-            # Only filter when we're actually generating a manifest
+            # Only filter latest when we're actually generating a manifest
             # not when checking if there are components to manifest, since it's slow
             roots = roots.latest_components(
                 model_type="ProductStream",

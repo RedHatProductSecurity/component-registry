@@ -1776,6 +1776,8 @@ def test_released_filter():
 
     assert c in Component.objects.get_queryset().released_components(variants=(variant,))
 
+    assert c not in Component.objects.get_queryset().released_components(active_compose=True)
+
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_latest_filter_components_modular(stored_proc):

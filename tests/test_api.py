@@ -237,6 +237,14 @@ def test_component_detail(client, api_path):
     assert response.status_code == 200
     assert response.json()["count"] == 1
 
+    response = client.get(f"{api_path}/components/{c1.pk}/manifest")
+    assert response.status_code == 200
+
+    c1.software_build = None
+    c1.save()
+    response = client.get(f"{api_path}/components/{c1.pk}/manifest")
+    assert response.status_code == 204
+
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_latest_components_by_streams_filter(client, api_path, stored_proc):

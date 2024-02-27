@@ -544,6 +544,8 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         obj = self.queryset.filter(pk=pk).first()
         if not obj:
             return HttpResponse(status=status.HTTP_404_NOT_FOUND)
+        if not obj.software_build:
+            return HttpResponse(status=status.HTTP_204_NO_CONTENT)
         manifest = ComponentManifestFile(obj).render_content()
         return JsonResponse(manifest)
 

@@ -3,20 +3,17 @@ import logging
 
 import requests
 from django.conf import settings
-from requests_gssapi import HTTPSPNEGOAuth
 
 logger = logging.getLogger(__name__)
 
 
 class ProdDefs:
-    GSSAPI_AUTH = HTTPSPNEGOAuth()
-
     @classmethod
     def get_product_definitions_service(cls) -> dict:
-        response = requests.get(
-            f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions",
-            auth=cls.GSSAPI_AUTH,
-        )
+        prod_defs_url = settings.PRODDEFS_DATA_URL
+        if not prod_defs_url:
+            raise ValueError("PRODDEFS_DATA_URL was unset")
+        response = requests.get(prod_defs_url)
         response.raise_for_status()
         return response.json()
 

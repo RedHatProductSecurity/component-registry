@@ -41,7 +41,7 @@ def test_products(requests_mock):
         text = prod_defs.read()
         text = text.replace("{CORGI_TEST_DOWNLOAD_URL}", TEST_DOWNLOAD_URL)
         text = text.replace("{CORGI_PULP_URL}", os.getenv("CORGI_PULP_URL"))
-        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+        requests_mock.get(settings.PRODDEFS_DATA_URL, text=text)
     et_product = CollectorErrataProduct.objects.create(
         et_id=152, name="Red Hat ACM", short_name="RHACM"
     )
@@ -103,7 +103,7 @@ def test_products(requests_mock):
 def test_stream_brew_tags_removed(mock_remove, requests_mock):
     with open("tests/data/prod_defs/proddefs-update.json") as prod_defs:
         text = prod_defs.read()
-        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+        requests_mock.get(settings.PRODDEFS_DATA_URL, text=text)
 
     update_products()
     assert not mock_remove.called
@@ -122,7 +122,7 @@ def test_stream_brew_tags_removed(mock_remove, requests_mock):
 
     with open("tests/data/prod_defs/proddefs-update-tag-removed.json") as prod_defs:
         text = prod_defs.read()
-        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+        requests_mock.get(settings.PRODDEFS_DATA_URL, text=text)
 
     update_products()
     stream.refresh_from_db()
@@ -135,7 +135,7 @@ def test_stream_brew_tags_removed(mock_remove, requests_mock):
 def test_stream_new_brew_tags_with_old_builds(mock_remove, requests_mock):
     with open("tests/data/prod_defs/proddefs-update-tag-with-old-build.json") as prod_defs:
         text = prod_defs.read()
-        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+        requests_mock.get(settings.PRODDEFS_DATA_URL, text=text)
 
     update_products()
 
@@ -162,7 +162,7 @@ def test_stream_new_brew_tags_with_old_builds(mock_remove, requests_mock):
 
     with open("tests/data/prod_defs/proddefs-update-tag-with-old-build-removed.json") as prod_defs:
         text = prod_defs.read()
-        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+        requests_mock.get(settings.PRODDEFS_DATA_URL, text=text)
 
     update_products()
 
@@ -178,7 +178,7 @@ def test_stream_new_brew_tags_with_old_builds(mock_remove, requests_mock):
 def test_stream_variants_with_old_builds(mock_remove, requests_mock):
     with open("tests/data/prod_defs/proddefs-update-variant-with-old-build.json") as prod_defs:
         text = prod_defs.read()
-        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+        requests_mock.get(settings.PRODDEFS_DATA_URL, text=text)
 
     et_product = CollectorErrataProduct.objects.create(
         et_id=1, name="product", short_name="product"
@@ -223,7 +223,7 @@ def test_stream_variants_with_old_builds(mock_remove, requests_mock):
         "tests/data/prod_defs/proddefs-update-variant-with-old-build-removed.json"
     ) as prod_defs:
         text = prod_defs.read()
-        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+        requests_mock.get(settings.PRODDEFS_DATA_URL, text=text)
 
     update_products()
 
@@ -239,7 +239,7 @@ def test_stream_variants_with_old_builds(mock_remove, requests_mock):
 def test_stream_brew_tags_with_inferred_variant_removed(mock_remove, requests_mock):
     with open("tests/data/prod_defs/proddefs-update.json") as prod_defs:
         text = prod_defs.read()
-        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+        requests_mock.get(settings.PRODDEFS_DATA_URL, text=text)
 
     update_products()
     assert not mock_remove.called
@@ -272,7 +272,7 @@ def test_stream_brew_tags_with_inferred_variant_removed(mock_remove, requests_mo
 
     with open("tests/data/prod_defs/proddefs-update-tag-removed.json") as prod_defs:
         text = prod_defs.read()
-        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+        requests_mock.get(settings.PRODDEFS_DATA_URL, text=text)
 
     update_products()
     stream.refresh_from_db()
@@ -284,7 +284,7 @@ def test_stream_brew_tags_with_inferred_variant_removed(mock_remove, requests_mo
 def test_inferred_and_direct_variants(requests_mock):
     with open("tests/data/prod_defs/product-definitions-inferred-and-direct.json") as prod_defs:
         text = prod_defs.read()
-        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+        requests_mock.get(settings.PRODDEFS_DATA_URL, text=text)
 
     variant_name = "8Base-MW-RHBQ-2.13"
     et_product = CollectorErrataProduct.objects.create(
@@ -323,7 +323,7 @@ def test_inferred_and_direct_variants(requests_mock):
 def test_stream_brew_tags_with_inferred_variant_to_errata_info(mock_reset, requests_mock):
     with open("tests/data/prod_defs/proddefs-update-inferred.json") as prod_defs:
         text = prod_defs.read()
-        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+        requests_mock.get(settings.PRODDEFS_DATA_URL, text=text)
 
     variant_name = "8Base-MW-RHBQ-2.13"
     et_product = CollectorErrataProduct.objects.create(
@@ -373,7 +373,7 @@ def test_stream_brew_tags_with_inferred_variant_to_errata_info(mock_reset, reque
 
     with open("tests/data/prod_defs/proddefs-update-inferred-to-direct.json") as prod_defs:
         text = prod_defs.read()
-        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+        requests_mock.get(settings.PRODDEFS_DATA_URL, text=text)
 
     update_products()
 
@@ -395,7 +395,7 @@ def test_stream_brew_tags_with_inferred_variant_to_errata_info(mock_reset, reque
 def test_stream_yum_repos_removed(mock_remove, requests_mock):
     with open("tests/data/prod_defs/proddefs-update.json") as prod_defs:
         text = prod_defs.read()
-        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+        requests_mock.get(settings.PRODDEFS_DATA_URL, text=text)
 
     update_products()
     assert not mock_remove.called
@@ -414,7 +414,7 @@ def test_stream_yum_repos_removed(mock_remove, requests_mock):
 
     with open("tests/data/prod_defs/proddefs-update-repo-removed.json") as prod_defs:
         text = prod_defs.read()
-        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+        requests_mock.get(settings.PRODDEFS_DATA_URL, text=text)
 
     update_products()
 
@@ -435,7 +435,7 @@ def test_stream_yum_repos_removed(mock_remove, requests_mock):
 def test_stream_yum_repos_to_errata_info_not_removed(mock_remove, requests_mock):
     with open("tests/data/prod_defs/proddefs-update.json") as prod_defs:
         text = prod_defs.read()
-        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+        requests_mock.get(settings.PRODDEFS_DATA_URL, text=text)
 
     update_products()
     assert not mock_remove.called
@@ -463,7 +463,7 @@ def test_stream_yum_repos_to_errata_info_not_removed(mock_remove, requests_mock)
 
     with open("tests/data/prod_defs/proddefs-update-repo-to-errata-info.json") as prod_defs:
         text = prod_defs.read()
-        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+        requests_mock.get(settings.PRODDEFS_DATA_URL, text=text)
 
     update_products()
 
@@ -481,7 +481,7 @@ def test_stream_yum_repos_to_errata_info_not_removed(mock_remove, requests_mock)
 def test_cpe_parsing(requests_mock):
     with open("tests/data/prod_defs/product-definitions.json") as prod_defs:
         text = prod_defs.read()
-        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+        requests_mock.get(settings.PRODDEFS_DATA_URL, text=text)
 
     update_products()
 
@@ -510,7 +510,7 @@ def test_match_cpe_patterns(requests_mock):
 
     with open("tests/data/prod_defs/product-definitions.json") as prod_defs:
         text = prod_defs.read()
-        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+        requests_mock.get(settings.PRODDEFS_DATA_URL, text=text)
 
     update_products()
 
@@ -651,9 +651,7 @@ def test_brew_tag_matching(variant_name, cpe, brew_tag, stream_name, requests_mo
     )
 
     with open("tests/data/prod_defs/product-definitions.json") as prod_defs:
-        requests_mock.get(
-            f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=(prod_defs.read())
-        )
+        requests_mock.get(settings.PRODDEFS_DATA_URL, text=(prod_defs.read()))
 
     update_products()
 
@@ -708,7 +706,7 @@ def test_multi_variant_streams(mock_save, mock_remove, requests_mock):
     """Test that errata_info variants are attached to both active stream and inactive streams"""
     with open("tests/data/prod_defs/proddefs-update-multi-stream-variant.json") as prod_defs:
         text = prod_defs.read()
-        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+        requests_mock.get(settings.PRODDEFS_DATA_URL, text=text)
 
     update_products()
     assert not mock_remove.called
@@ -737,7 +735,7 @@ def test_multi_variant_streams(mock_save, mock_remove, requests_mock):
 
     with open("tests/data/prod_defs/proddefs-update-multi-stream-variant-update.json") as prod_defs:
         text = prod_defs.read()
-        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+        requests_mock.get(settings.PRODDEFS_DATA_URL, text=text)
 
     update_products()
 
@@ -756,7 +754,7 @@ def test_multi_variant_active_streams(requests_mock):
     does not cause the variants to move back and forth between the streams"""
     with open("tests/data/prod_defs/proddefs-update-multi-stream-variant-active.json") as prod_defs:
         text = prod_defs.read()
-        requests_mock.get(f"{settings.PRODSEC_DASHBOARD_URL}/product-definitions", text=text)
+        requests_mock.get(settings.PRODDEFS_DATA_URL, text=text)
 
     update_products()
 

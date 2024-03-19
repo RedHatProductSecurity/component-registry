@@ -55,11 +55,11 @@ export CORGI_APP_INTERFACE_URL="https://app-interface.example.com"
 export CORGI_APP_STREAMS_LIFE_CYCLE_URL=https://appstream.example.com/lifecycle-defs/application_streams.yaml
 export CORGI_ERRATA_TOOL_URL=https://errata.example.com
 export CORGI_MANIFEST_HINTS_URL=https://manifesthints.example.com/manifest-hints.txt
-export CORGI_PRODSEC_DASHBOARD_URL=https://dashboard.example.com/rest/api/latest
+export CORGI_PRODDEFS_DATA_URL=https://pages.example.com/product-definitions/products.json
 export CORGI_PYXIS_GRAPHQL_URL=https://catalog.example.com/api/containers
 export CORGI_UMB_CERT=/path/to/cert.crt
 export CORGI_UMB_KEY=/path/to/key.key
-export PIP_INDEX_URL=https://pypi.org/simple
+export PIP_INDEX_URL=https://pypi.org/simple``
 ```
 
 If you're working on the enterprise version, you'll also need the following options set:
@@ -102,7 +102,7 @@ If it's not set the local product-definitions.json file in the config directory 
 ```bash
 CORGI_COMMUNITY_MODE_ENABLED=false
 CORGI_UMB_BREW_MONITOR_ENABLED=true
-CORGI_PRODSEC_DASHBOARD_URL=<value>
+CORGI_PRODDEFS_DATA_URL=<value>
 CORGI_BREW_WEB_URL=<value>
 ```
 

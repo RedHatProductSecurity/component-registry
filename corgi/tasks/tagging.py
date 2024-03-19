@@ -12,6 +12,7 @@ def apply_stream_no_manifest_tags():
     apply_middleware_stream_no_manifest_tags(NO_MANIFEST_TAG, "")
     apply_rhel_8_9_z_stream_no_manifest_tags(NO_MANIFEST_TAG, "")
     apply_managed_services_no_manifest_tags(NO_MANIFEST_TAG, "")
+    apply_rhivos_no_manifest_tags(NO_MANIFEST_TAG, tag_value="")
 
 
 def apply_middleware_stream_no_manifest_tags(tag_name: str, tag_value: str) -> None:
@@ -42,6 +43,15 @@ def apply_rhel_8_9_z_stream_no_manifest_tags(tag_name: str, tag_value: str) -> N
 
 def apply_managed_services_no_manifest_tags(tag_name: str, tag_value: str) -> None:
     for stream in ProductStream.objects.filter(meta_attr__managed_service_components__isnull=False):
+        _, created = ProductStreamTag.objects.get_or_create(
+            name=tag_name, value=tag_value, tagged_model=stream
+        )
+        if created:
+            logger.info(f"Added tag {tag_name}={tag_value} to model {stream.name}")
+
+
+def apply_rhivos_no_manifest_tags(tag_name: str, tag_value: str) -> None:
+    for stream in ProductStream.objects.filter(name__in=["rhivos-test", "rhivos-1.0"]):
         _, created = ProductStreamTag.objects.get_or_create(
             name=tag_name, value=tag_value, tagged_model=stream
         )

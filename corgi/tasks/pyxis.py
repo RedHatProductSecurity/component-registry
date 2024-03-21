@@ -79,8 +79,13 @@ def slow_update_name_for_container_from_pyxis(nvr: str) -> bool:
     # Look it existing containers with the NVR and save them.
     containers_to_update = Component.objects.filter(type=Component.Type.CONTAINER_IMAGE, nvr=nvr)
     for container in containers_to_update:
-        if container.name != name or container.meta_attr["repository_url"] != repository_url:
+        if (
+            container.name != name
+            or container.meta_attr["repository_url"] != repository_url
+            or container.related_url != repository_url
+        ):
             container.name = name
+            container.related_url = repository_url
             container.meta_attr["repository_url"] = repository_url
             container.save()
     return True

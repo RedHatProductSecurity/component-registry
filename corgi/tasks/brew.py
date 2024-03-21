@@ -513,15 +513,14 @@ def save_container(
     nvr = softwarebuild.meta_attr["nvr"]
     repo_name = get_container_repo_from_pyxis(name_label, nvr, force_process)
     filename = build_data["meta"].pop("filename", "")
+    related_url = ""
     if build_data["build_meta"]["build_info"].get("cg_name") == Brew.RHCOS_BUILDER:
         # RHCOS images do not have a registry URL or a container file attachment
-        related_url = ""
         filename = ""
     else:
-        related_url = CONTAINER_REPOSITORY
         if repo_name:
             name = repo_name.rsplit("/", 1)[-1]
-            related_url = f"{related_url}/{repo_name}"
+            related_url = f"{CONTAINER_REPOSITORY}/{repo_name}"
 
     license_declared_raw = build_data["meta"].pop("license", "")
 

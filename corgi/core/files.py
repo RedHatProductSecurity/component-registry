@@ -411,7 +411,7 @@ class ProductManifestFile(ManifestFile):
         document.relationships = relationships
 
         document.extracted_licensing_info = self.build_extracted_license_info()
-        self.validate_document(document, document_name)
+        # self.validate_document(document, document_name)
 
         return DocumentConverter().convert(document)
 

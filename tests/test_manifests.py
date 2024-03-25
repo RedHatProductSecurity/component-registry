@@ -119,6 +119,32 @@ def test_manifests_exclude_bad_golang_components(stored_proc):
 
 
 @pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
+def test_manifests_exclude_bad_dot_dot_golang_components(stored_proc):
+    """Test that Golang components with names like ../ are excluded packages"""
+    # Remove below when CORGI-428 is resolved
+    containers, stream, _ = setup_products_and_rpm_in_containers()
+    assert len(containers) == 3
+
+    bad_golang = ComponentFactory(type=Component.Type.GOLANG, name="../")
+    ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.PROVIDES,
+        parent=containers[0].cnodes.first(),
+        obj=bad_golang,
+    )
+    # Link the bad_golang component to its parent container
+    containers[0].save_component_taxonomy()
+    assert containers[0].provides.filter(name=bad_golang.name).exists()
+
+    manifest = ProductManifestFile(stream).render_content()
+    components = manifest["packages"]
+    # Two containers, one RPM, and a product are included
+    assert len(components) == 4, components
+    # The golang component is excluded
+    for component in components:
+        assert not component["name"] == bad_golang.name
+
+
+@pytest.mark.django_db(databases=("default", "read_only"), transaction=True)
 def test_stream_manifest_backslash(stored_proc):
     """Test that a tailing backslash in a purl doesn't break rendering"""
     stream_node = ProductStreamNodeFactory()

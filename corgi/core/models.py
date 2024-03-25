@@ -716,7 +716,8 @@ class ProductStream(ProductModel):
         return (
             Component.objects.filter(pk__in=unique_provides)
             # Remove .exclude() below when CORGI-428 is resolved
-            .exclude(type=Component.Type.GOLANG, name__contains="./")
+            .exclude(purl__startswith="pkg:golang/", purl__contains="./")
+            .exclude(purl__startswith="pkg:golang/", purl__contains="..")
             .external_components()
             .using(using)
         )
@@ -2226,6 +2227,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
             .exclude(purl__contains="redhat.com")
             # Remove .exclude() below when CORGI-428 is resolved
             .exclude(purl__startswith="pkg:golang/", purl__contains="./")
+            .exclude(purl__startswith="pkg:golang/", purl__contains="..")
             .using(using)
             .values_list("purl", "type", "object_id")
             # Ensure generated manifests only change when content does

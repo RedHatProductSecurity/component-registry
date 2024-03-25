@@ -628,7 +628,7 @@ def test_slow_software_composition_analysis(
         call(
             [
                 "/usr/bin/syft",
-                "packages",
+                "scan",
                 "-q",
                 "-o=syft-json",
                 "--exclude=**/vendor/**",
@@ -643,7 +643,7 @@ def test_slow_software_composition_analysis(
             call(
                 [
                     "/usr/bin/syft",
-                    "packages",
+                    "scan",
                     "-q",
                     "-o=syft-json",
                     "--exclude=**/vendor/**",

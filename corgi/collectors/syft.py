@@ -47,7 +47,7 @@ class Syft:
             scan_result = subprocess.check_output(  # nosec B603
                 [
                     "/usr/bin/syft",
-                    "packages",
+                    "scan",
                     "-q",
                     "-o=syft-json",
                     # see motivation for excluding test/fixtures in CORGI-510, and CORGI-824

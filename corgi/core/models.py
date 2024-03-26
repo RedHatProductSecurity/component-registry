@@ -1254,7 +1254,7 @@ class ComponentQuerySet(models.QuerySet):
         # Order by UUID to give stable results in manifests
         # Other querysets should not define an ordering
         # or should clear it with .order_by() if they use .distinct()
-        return roots.order_by("pk")
+        return roots.order_by("pk").distinct("pk")
 
     def srpms(self, include: bool = True) -> models.QuerySet["Component"]:
         """Show only source RPMs by default, or only non-SRPMs if include=False"""

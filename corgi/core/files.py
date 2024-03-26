@@ -282,7 +282,8 @@ class ManifestFile(ABC):
             logging.error(message.context)
             raise ValueError(
                 f"SPDX validation failed for component {document_name}: "
-                f"{message.validation_message}"
+                f"{message.validation_message}. with context:"
+                f"{message.context}"
             )
 
     def _parse_license_expression(

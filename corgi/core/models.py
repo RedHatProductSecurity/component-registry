@@ -1895,7 +1895,7 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
         purl = self.get_purl().to_string()
         if self.purl != purl:
             self.purl = purl
-        self.cnodes.exclude(purl=purl).update(purl=purl)
+            self.cnodes.exclude(purl=purl).update(purl=purl)
 
         self.related_url = self._build_repo_url_for_type()
 

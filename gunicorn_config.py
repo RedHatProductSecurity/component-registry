@@ -1,3 +1,5 @@
+import os
+
 from config.utils import running_dev
 
 workers = 4  # this can probably be increased
@@ -7,10 +9,12 @@ reuse_port = True
 bind = "0.0.0.0:8008"
 proc_name = "corgi"
 
+environ = os.getenv("DJANGO_SETTINGS_MODULE").rsplit(".",1)[1]
+
 errorlog = "-"
 loglevel = "info"
 accesslog = "-"
-access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"'
+access_log_format = 'process_name=gunicorn, app=corgi, environ={}, remote_address="%(h)s" url_path="%(U)s" query_string="%(q)s" status="%(s)s" response_length="%(b)s" user_agent="%(a)s"'.format(environ)
 
 # Ensure wsgi.url_scheme is set to HTTPS, by trusting the X_FORWARDED_PROTO header set by the proxy
 forwarded_allow_ips = "*"

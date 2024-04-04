@@ -325,7 +325,9 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = "/staticfiles/"
 STATIC_ROOT = os.getenv("CORGI_STATIC_FILES_DIR", str(BASE_DIR / "staticfiles"))
-STATICFILES_STORAGE = "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"
+STORAGES = {
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"}
+}
 
 # Celery config
 CELERY_BROKER_URL = os.getenv("CORGI_REDIS_URL", "redis://redis:6379")

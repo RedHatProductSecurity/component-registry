@@ -1,6 +1,6 @@
 celery[redis]
 celery-singleton
-django
+django==4.2.*  # LTS version
 django-celery-beat
 django-celery-results
 django-csp

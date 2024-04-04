@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Component Registry API
-  version: 1.4.6
+  version: 1.4.7
   description: REST API auto-generated docs for Component Registry
 paths:
   /api/healthy:

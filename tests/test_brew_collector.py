@@ -1652,3 +1652,85 @@ def test_fetch_rhcos_build(mock_fetch_brew_build, mock_sca, mock_brew):
     assert component.epoch == 0
     # Check that it is related to the software build
     assert component.software_build.build_id == build_id
+
+
+@pytest.mark.django_db
+@patch("corgi.tasks.common.slow_save_taxonomy.delay")
+def test_slow_save_container_children(mock_save_taxonomy):
+    children = [
+        {
+            "type": "GITHUB",
+            "namespace": "UPSTREAM",
+            "meta": {
+                "name": "kubevirt/containerized-data-importer",
+                "version": "0c7dd50566c77d2958700947cb7a66164fda25b2",
+                "remote_source": "https://example.com/brewroot/packages/remote-source.json",
+                "remote_source_archive": "https://example.com/brewroot/remote-source.tar.gz",
+                "source": ["koji.listArchives"],
+                "cachito_build": "https://example.com/api/v1/requests/1325015",
+            },
+            "components": [
+                {
+                    "type": "GOLANG",
+                    "namespace": "UPSTREAM",
+                    "meta": {
+                        "go_component_type": "gomod",
+                        "name": "kubevirt.io/containerized-data-importer",
+                        "version": "v1.59.1-0.20240408121353-0c7dd50566c7",
+                    },
+                    "components": [
+                        {
+                            "type": "GOLANG",
+                            "namespace": "UPSTREAM",
+                            "meta": {
+                                "go_component_type": "gomod",
+                                "name": "cloud.google.com/go",
+                                "version": "v0.110.4",
+                            },
+                        },
+                        {
+                            "type": "GOLANG",
+                            "namespace": "UPSTREAM",
+                            "meta": {
+                                "go_component_type": "gomod",
+                                "name": "cloud.google.com/go/compute",
+                                "version": "v1.20.1",
+                            },
+                        },
+                        {
+                            "type": "GOLANG",
+                            "namespace": "UPSTREAM",
+                            "meta": {
+                                "go_component_type": "gomod",
+                                "name": "cloud.google.com/go/compute/metadata",
+                                "version": "v0.2.3",
+                            },
+                        },
+                        {
+                            "type": "GOLANG",
+                            "namespace": "UPSTREAM",
+                            "meta": {
+                                "go_component_type": "gomod",
+                                "name": "sigs.k8s.io/yaml",
+                                "version": "v1.3.0",
+                            },
+                        },
+                    ],
+                }
+            ],
+        }
+    ]
+    root_container = ContainerImageComponentFactory()
+    root_node = ComponentNode.objects.create(
+        type=ComponentNode.ComponentNodeType.SOURCE, parent=None, obj=root_container
+    )
+    slow_save_container_children("3001964", "BREW", [], children, root_node.pk, True)
+    go_source = Component.objects.get(name="kubevirt.io/containerized-data-importer")
+    go_source_node = go_source.cnodes.first()
+    nested_component = Component.objects.get(name="sigs.k8s.io/yaml")
+    nested_node = nested_component.cnodes.first()
+    assert nested_node.parent == go_source_node
+    source = Component.objects.get(name="kubevirt/containerized-data-importer")
+    source_node = source.cnodes.first()
+    assert go_source_node.parent == source_node
+    assert mock_save_taxonomy.called

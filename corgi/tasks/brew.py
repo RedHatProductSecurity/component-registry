@@ -252,24 +252,15 @@ def slow_fetch_modular_build(
     return created or node_created or any_child_created
 
 
-def save_component(
-    component: dict, parent: ComponentNode, level: int = 1, transaction_depth: int = 0
-) -> bool:
+def save_component(component: dict, parent: ComponentNode) -> bool:
     logger.debug("Called save component with component %s", component)
-    created, node_type, obj = do_save_component(component)
-
-    node, node_created = save_node(node_type, parent, obj)
-    level += 1
-    any_child_created = recurse_components(component, node, level, transaction_depth)
-    return created or node_created or any_child_created
-
-
-def do_save_component(component):
     component_type = component.pop("type")
     meta = component.get("meta", {})
+
     node_type = ComponentNode.ComponentNodeType.PROVIDES
     if meta.pop("dev", False):
         node_type = ComponentNode.ComponentNodeType.PROVIDES_DEV
+
     # Map Cachito (lowercase) type to Corgi TYPE, or use existing Corgi TYPE, or raise error
     if component_type in ("go-package", "gomod"):
         meta["go_component_type"] = component_type
@@ -280,6 +271,7 @@ def do_save_component(component):
         component_type = component_type.upper()
     else:
         raise ValueError(f"Tried to create component with invalid component_type: {component_type}")
+
     related_url = meta.pop("url", "")
     if not related_url:
         # Only RPMs have a URL header, containers might have below
@@ -287,22 +279,28 @@ def do_save_component(component):
     if not related_url:
         # Handle case when key is present but value is None
         related_url = ""
+
     license_declared_raw = meta.pop("license", "")
+
     name = meta.pop("name", "")
     version = meta.pop("version", "")
     release = meta.pop("release", "")
     arch = meta.pop("arch", "noarch")
+
     epoch = int(meta.pop("epoch", 0))
     description = meta.pop("description", "")
     namespace = Brew.check_red_hat_namespace(component_type, version)
+
     if epoch:
         nevra = f"{name}:{epoch}-{version}"
     else:
         nevra = f"{name}-{version}"
+
     if release:
         nevra = f"{nevra}-{release}.{arch}"
     else:
         nevra = f"{nevra}.{arch}"
+
     defaults = {
         "description": description,
         "epoch": epoch,
@@ -328,13 +326,18 @@ def do_save_component(component):
                 setattr(obj, field_name, defaults[field_name])
             obj.save()
         created = False
+
     set_license_declared_safely(obj, license_declared_raw)
+
     # Usually component_meta is an empty dict by the time we get here, but if it's not, and we have
     # new keys, add them to the existing meta_attr. Only call save if something has been added
     if meta:
         obj.meta_attr = obj.meta_attr | meta
         obj.save()
-    return created, node_type, obj
+
+    node, node_created = save_node(node_type, parent, obj)
+    any_child_created = recurse_components(component, node)
+    return created or node_created or any_child_created
 
 
 def handle_duplicate_component(
@@ -615,12 +618,6 @@ def get_container_repo_from_pyxis(name_label: str, nvr: str, force_process=False
     return result
 
 
-def dict_depth(dic, level=1):
-    if not isinstance(dic, dict) or not dic:
-        return level
-    return max(dict_depth(dic[key], level + 1) for key in dic)
-
-
 @app.task(
     base=Singleton,
     autoretry_for=RETRYABLE_ERRORS,
@@ -676,14 +673,10 @@ def slow_save_container_children(
         )
         any_source_created |= temp_created
 
-        # The depth of the components nested dictionary
-        leaf_depth = dict_depth(source)
-        transaction_depth = leaf_depth - 1
-
         # Collect the Cachito dependencies
         with transaction.atomic():
             with ComponentNode.objects.delay_mptt_updates():
-                temp_created = recurse_components(source, upstream_node, 1, transaction_depth)
+                temp_created = recurse_components(source, upstream_node)
         any_cachito_created |= temp_created
 
     if save_product:
@@ -703,43 +696,14 @@ def slow_save_container_children(
     return any_go_module_created or any_source_created or any_cachito_created
 
 
-def _save_leaf_nodes_in_transaction(component: dict, parent: ComponentNode) -> bool:
-    """End recursion for components and save children nodes of this component in a transaction
-    This avoids many updates to the parent node tree, which caused high CPU utilization in database
-    """
-    logger.info("Called save leaf nodes in transaction")
-
-    created = False
-    any_child_node_created = False
-    if "components" in component:
-        children = {}
-        for child in component["components"]:
-            component_created, node_type, obj = do_save_component(child)
-            children[obj.pk] = (created, node_type, obj)
-            if component_created:
-                created = True
-        with transaction.atomic():
-            with ComponentNode.objects.delay_mptt_updates():
-                for child_created, child_type, saved_child in children.values():
-                    _, child_node_created = save_node(child_type, parent, saved_child)
-                    if child_node_created:
-                        any_child_node_created = True
-    return created or any_child_node_created
-
-
-def recurse_components(
-    component: dict, parent: ComponentNode, level: int = 1, transaction_depth: int = 0
-) -> bool:
-    if level == transaction_depth:
-        return _save_leaf_nodes_in_transaction(component, parent)
-
+def recurse_components(component: dict, parent: ComponentNode) -> bool:
     any_child_created = False
     if not parent:
         logger.warning(f"Failed to create ComponentNode for component: {component}")
     else:
         if "components" in component:
             for child in component["components"]:
-                any_child_created |= save_component(child, parent, level, transaction_depth)
+                any_child_created |= save_component(child, parent)
     return any_child_created
 
 

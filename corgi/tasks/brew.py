@@ -640,15 +640,13 @@ def slow_save_container_children(
     any_go_module_created = any_source_created = any_cachito_created = False
 
     meta_attr = {"go_component_type": "gomod", "source": ["collectors/brew"]}
-    with transaction.atomic():
-        with ComponentNode.objects.delay_mptt_updates():
-            for module in upstream_go_modules:
-                # the upstream commit is included in the dist-git commit history, but is not
-                # exposed anywhere in the brew data that I can find, so can't set version
-                _, _, temp_created = save_upstream(
-                    Component.Type.GOLANG, module, "", meta_attr, {}, root_node
-                )
-                any_go_module_created |= temp_created
+    for module in upstream_go_modules:
+        # the upstream commit is included in the dist-git commit history, but is not
+        # exposed anywhere in the brew data that I can find, so can't set version
+        _, _, temp_created = save_upstream(
+            Component.Type.GOLANG, module, "", meta_attr, {}, root_node
+        )
+        any_go_module_created |= temp_created
 
     for source in sources:
         component_name = source["meta"].pop("name")

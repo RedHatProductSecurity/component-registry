@@ -569,8 +569,8 @@ class ProductModel(TimeStampedModel):
         self.save()
 
     def get_related_names_of_type(self, mapping_model: type, inferred: bool = False) -> list[str]:
-        """For a given ProductModel instance find all directly related nodes with the given model type
-        and return their names"""
+        """For a given ProductModel instance find all directly related nodes with the given model
+        type and return their names"""
         mapping_key = mapping_model.__name__
         attribute_name = mapping_key.lower()
         results = []
@@ -1347,11 +1347,11 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
     # upstreams is the inverse of downstreams. One Go module can have multiple containers
     # as downstreams, and one container can have multiple Go modules as upstreams
-    upstreams = models.ManyToManyField("Component", related_name="downstreams")
+    upstreams: ManyToManyField = models.ManyToManyField("Component", related_name="downstreams")
 
     # sources is the inverse of provides. One container can provide many RPMs
     # and one RPM can have many different containers as a source (as well as modules and SRPMs)
-    sources = models.ManyToManyField("Component", related_name="provides")
+    sources: ManyToManyField = models.ManyToManyField("Component", related_name="provides")
     provides: models.Manager["Component"]
 
     # Specify related_query_name to add e.g. component field
@@ -2164,8 +2164,9 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
 
     @staticmethod
     def license_list(license_expression: str) -> list[str]:
-        """Return a list of any possibly-relevant licenses. No information is given about which apply
-        To see if all apply or if you may choose between them, parse the license expression above"""
+        """Return a list of any possibly-relevant licenses. No information is given about which
+        apply. To see if all apply or if you may choose between them, parse the license expression
+        above"""
         # "words".split("not present in string") will return ["words"]
         # AKA below will always add one level of nesting to the array
         license_parts = license_expression.split(" AND ")
@@ -2204,8 +2205,8 @@ class Component(TimeStampedModel, ProductTaxonomyMixin):
     def get_provides_nodes_queryset(
         self, include_dev: bool = True, using: str = "read_only"
     ) -> QuerySet[ComponentNode]:
-        """Return (node purl, node type, component PK) which are PROVIDES descendants of this Component,
-        for manifests"""
+        """Return (node purl, node type, component PK) which are PROVIDES descendants of this
+        Component for manifests"""
         type_list: tuple[ComponentNode.ComponentNodeType, ...] = (
             ComponentNode.ComponentNodeType.PROVIDES,
         )

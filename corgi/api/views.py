@@ -399,9 +399,9 @@ class ProductStreamViewSet(ProductDataViewSet):
         .order_by(ProductDataViewSet.ordering_field)
         .using("read_only")
     )
-    serializer_class: Union[
-        Type[ProductStreamSerializer], Type[ProductStreamSummarySerializer]
-    ] = ProductStreamSerializer
+    serializer_class: Union[Type[ProductStreamSerializer], Type[ProductStreamSummarySerializer]] = (
+        ProductStreamSerializer
+    )
 
     @extend_schema(
         parameters=[OpenApiParameter("active", OpenApiTypes.STR, OpenApiParameter.QUERY)]
@@ -497,9 +497,9 @@ class ComponentViewSet(ReadOnlyModelViewSet):  # TODO: TagViewMixin disabled unt
         .select_related("software_build")
         .prefetch_related("tags")
     )
-    serializer_class: Union[
-        Type[ComponentSerializer], Type[ComponentListSerializer]
-    ] = ComponentSerializer
+    serializer_class: Union[Type[ComponentSerializer], Type[ComponentListSerializer]] = (
+        ComponentSerializer
+    )
     search_fields = ["name", "description", "release", "version", "meta_attr"]
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend, filters.SearchFilter]
     filterset_class = ComponentFilter

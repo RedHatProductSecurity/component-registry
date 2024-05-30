@@ -79,7 +79,10 @@ def data_list(request: HttpRequest) -> HttpResponse:
         "data.html",
         {
             "counts": [
-                (model._meta.verbose_name_plural, model.objects.db_manager("read_only").count())
+                (
+                    model._meta.verbose_name_plural,
+                    model.objects.db_manager("read_only").count(),  # type: ignore[attr-defined]
+                )
                 for model in models
             ],
             "nbar": "data",  # Navbar identifier

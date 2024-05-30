@@ -5,6 +5,7 @@ Needed in order to discover new tasks without config changes whenever a new subm
 Note that either name above will work to import and run it in a Python shell
 But Celery uses the name of the module where the app.task decorator was applied, i.e. 1st form
 """
+
 import importlib as _importlib
 import pkgutil as _pkgutil
 

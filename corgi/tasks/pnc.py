@@ -26,7 +26,9 @@ def slow_fetch_pnc_sbom(purl: str, product_data: dict, sbom_data: dict) -> None:
     logger.info(f"Fetching PNC SBOM {sbom_data['id']} for purl {purl} from {sbom_data['link']}")
 
     # Validate the supplied product information
-    ProductVariant.objects.get(name=product_data["productVariant"])
+    variant_name = product_data["productVariant"]
+    if not ProductVariant.objects.filter(name=variant_name).exists():
+        logger.warning(f"ProductVariant {variant_name} found in PNC SBOM does not exist.")
 
     # Fetch and parse the SBOM
     response = requests.get(sbom_data["link"])

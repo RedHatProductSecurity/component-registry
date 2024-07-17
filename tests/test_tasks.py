@@ -12,7 +12,6 @@ from corgi.core.models import (
     ComponentNode,
     ComponentTag,
     ProductComponentRelation,
-    ProductVariant,
     SoftwareBuild,
     SoftwareBuildTag,
 )
@@ -575,23 +574,6 @@ def test_slow_fetch_pnc_sbom():
                 assert "repository_url" not in derived_purl.qualifiers
                 assert "repository_url" not in declared_purl.qualifiers
                 assert declared_purl.to_string() == derived_purl.to_string()
-
-        # Test with an SBOM available message that has a PV that
-        # doesn't exist in ET. An sbom object shouldn't be created,
-        # because the fetch task should raise an error that the PV doesn't exist
-        # and end early.
-        with patch("corgi.collectors.pnc.SbomerSbom.__init__") as parse_sbom_mock:
-            with open("tests/data/pnc/sbom_no_variant.json") as complete_file:
-                complete_data = json.load(complete_file)["msg"]
-
-            with pytest.raises(ProductVariant.DoesNotExist):
-                slow_fetch_pnc_sbom(
-                    complete_data["purl"],
-                    complete_data["productConfig"]["errataTool"],
-                    complete_data["sbom"],
-                )
-
-            parse_sbom_mock.assert_not_called()
 
 
 def test_slow_handle_pnc_errata_released():

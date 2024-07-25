@@ -13,7 +13,7 @@ from spdx_tools.spdx.model import RelationshipType
 
 from config.celery import app
 from corgi.core.files import ProductManifestFile
-from corgi.core.models import ProductStream
+from corgi.core.models import Component, ProductStream
 from corgi.tasks.common import RETRY_KWARGS, RETRYABLE_ERRORS
 
 logger = get_task_logger(__name__)
@@ -212,3 +212,25 @@ def get_document_uuid(new_relationships, external_name, product_stream):
             f"with external_name {external_name}"
         )
     return document_uuid
+
+
+# Added because of PSDEVOPS-1068
+@app.task(
+    base=Singleton,
+    autoretry_for=RETRYABLE_ERRORS,
+    retry_kwargs=RETRY_KWARGS,
+    soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
+)
+def slow_ensure_root_upstreams() -> int:
+    saved_count = 0
+    for ps in ProductStream.objects.annotate(num_components=Count("components")).filter(
+        num_components__gt=0
+    ):
+        for root_c in ps.components.filter(type=Component.Type.CONTAINER_IMAGE).manifest_components(
+            ofuri=ps.ofuri
+        ):
+            if root_c.get_upstreams_pks().count() != root_c.upstreams.count():
+                logger.info(f"saving component taxonomy for {root_c.purl} in stream {ps.name}")
+                root_c.save_component_taxonomy()
+                saved_count += 1
+    return saved_count

@@ -1226,9 +1226,7 @@ class ComponentQuerySet(models.QuerySet):
     def manifest_components(self, ofuri: str, quick=False) -> "ComponentQuerySet":
         """filter latest components takes a long time, dont bother with that if we're just
         checking there is anything to manifest"""
-        non_container_source_components = self.exclude(name__endswith="-container-source").using(
-            "read_only"
-        )
+        non_container_source_components = self.exclude(name__endswith="-container-source")
         roots = non_container_source_components.root_components()
         if not settings.COMMUNITY_MODE_ENABLED:
             # Only filter in enterprise Corgi, where we have ERRATA-type relations

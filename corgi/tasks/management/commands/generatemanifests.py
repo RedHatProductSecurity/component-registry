@@ -3,7 +3,11 @@ import sys
 from django.core.management.base import BaseCommand, CommandParser
 
 from corgi.core.models import ProductStream
-from corgi.tasks.manifest import cpu_update_ps_manifest, update_manifests
+from corgi.tasks.manifest import (
+    cpu_update_ps_manifest,
+    slow_ensure_root_upstreams,
+    update_manifests,
+)
 
 
 class Command(BaseCommand):
@@ -27,6 +31,14 @@ class Command(BaseCommand):
             "re-adding the 'no_manifest' tag.",
         )
 
+        parser.add_argument(
+            "-u",
+            "--upstream_taxonomy",
+            action="store_true",
+            help="Look for manifest components with an incorrect number of upstreams"
+            " and correct them",
+        )
+
     def handle(self, *args, **options) -> None:
         if options["stream"]:
             ps = ProductStream.objects.get(name=options["stream"])
@@ -44,6 +56,10 @@ class Command(BaseCommand):
                 self.style.SUCCESS(f"Removing no_manifest tag from {options['allow-stream']}")
             )
             no_manifest_tag.delete()
+        elif options["upstream_taxonomy"]:
+            self.stdout.write(self.style.SUCCESS("Calling ensure root upstreams task"))
+            updated = slow_ensure_root_upstreams()
+            self.stdout.write(self.style.SUCCESS(f"Updated {updated} root component upstreams"))
         else:
             self.stdout.write(self.style.SUCCESS("Updating manifests for all streams"))
             update_manifests()

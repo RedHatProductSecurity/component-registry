@@ -10,6 +10,7 @@ from django.conf import settings
 from django.db.models import Count
 from django_celery_results.models import TaskResult
 from spdx_tools.spdx.model import RelationshipType
+from spdx_tools.spdx.parser.parse_anything import parse_file
 
 from config.celery import app
 from corgi.core.files import ProductManifestFile
@@ -181,6 +182,7 @@ def cpu_update_ps_manifest(product_stream: str, external_name: str) -> tuple[boo
         created_at, document_uuid = _write_content(
             external_name, content, output_file, product_stream
         )
+        cpu_validate_ps_manifest.delay(product_stream)
         return True, created_at, document_uuid
     else:
         logger.info(
@@ -188,6 +190,21 @@ def cpu_update_ps_manifest(product_stream: str, external_name: str) -> tuple[boo
             f"skipping manifest generation"
         )
     return False, "", ""
+
+
+@app.task(
+    base=Singleton,
+    autoretry_for=RETRYABLE_ERRORS,
+    retry_kwargs=RETRY_KWARGS,
+    soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
+)
+def cpu_validate_ps_manifest(product_stream: str):
+    logger.info(f"Validating manifest for {product_stream}")
+    ps = ProductStream.objects.get(name=product_stream)
+    manifest_file = ProductManifestFile(ps)
+    file_name = f"{settings.STATIC_ROOT}/{ps.external_name}.json"
+    document = parse_file(file_name)
+    manifest_file.validate_document(document, ps.external_name)
 
 
 def _write_content(external_name, new_content, output_file, product_stream) -> tuple[str, str]:

@@ -10,6 +10,7 @@ from django.conf import settings
 from django.db.models import Count
 from django_celery_results.models import TaskResult
 from spdx_tools.spdx.model import RelationshipType
+from spdx_tools.spdx.parser.parse_anything import parse_file
 
 from config.celery import app
 from corgi.core.files import ProductManifestFile
@@ -190,12 +191,34 @@ def cpu_update_ps_manifest(product_stream: str, external_name: str) -> tuple[boo
     return False, "", ""
 
 
+@app.task(
+    base=Singleton,
+    autoretry_for=RETRYABLE_ERRORS,
+    priority=6,
+    retry_kwargs=RETRY_KWARGS,
+    soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
+)
+def cpu_validate_ps_manifest(product_stream: str):
+    logger.info(f"Validating manifest for {product_stream}")
+    ps = ProductStream.objects.get(name=product_stream)
+    manifest_file = ProductManifestFile(ps)
+    file_name = f"{settings.STATIC_ROOT}/{ps.external_name}.json"
+    document = parse_file(file_name)
+    try:
+        manifest_file.validate_document(document, ps.external_name)
+    except ValueError:
+        logger.info(f"Got error validating SPDX document for {product_stream}")
+        slow_ensure_root_provides.delay(product_stream)
+        slow_ensure_root_upstreams.delay(product_stream)
+
+
 def _write_content(external_name, new_content, output_file, product_stream) -> tuple[str, str]:
     with open(output_file, "w") as fh:
         fh.write(json.dumps(new_content, indent=4))
     created_at = new_content["creationInfo"]["created"]
     new_relationships = new_content["relationships"]
     document_uuid = get_document_uuid(new_relationships, external_name, product_stream)
+    cpu_validate_ps_manifest.delay(product_stream)
     return created_at, document_uuid
 
 
@@ -221,16 +244,34 @@ def get_document_uuid(new_relationships, external_name, product_stream):
     retry_kwargs=RETRY_KWARGS,
     soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
 )
-def slow_ensure_root_upstreams() -> int:
+def slow_ensure_root_upstreams(product_stream: str) -> int:
+    logger.info(f"slow_ensure_root_upstreams called for {product_stream}")
     saved_count = 0
-    for ps in ProductStream.objects.annotate(num_components=Count("components")).filter(
-        num_components__gt=0
+    ps = ProductStream.objects.get(name=product_stream)
+    for root_c in ps.components.filter(type=Component.Type.CONTAINER_IMAGE).manifest_components(
+        ofuri=ps.ofuri
     ):
-        for root_c in ps.components.filter(type=Component.Type.CONTAINER_IMAGE).manifest_components(
-            ofuri=ps.ofuri
-        ):
-            if root_c.get_upstreams_pks().count() != root_c.upstreams.count():
-                logger.info(f"saving component taxonomy for {root_c.purl} in stream {ps.name}")
-                root_c.save_component_taxonomy()
-                saved_count += 1
+        if root_c.get_upstreams_pks().count() != root_c.upstreams.count():
+            logger.info(f"saving component taxonomy for {root_c.purl} in stream {ps.name}")
+            root_c.save_component_taxonomy()
+            saved_count += 1
+    return saved_count
+
+
+# Added because of PSDEVOPS-1070
+@app.task(
+    base=Singleton,
+    autoretry_for=RETRYABLE_ERRORS,
+    retry_kwargs=RETRY_KWARGS,
+    soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
+)
+def slow_ensure_root_provides(product_stream: str) -> int:
+    logger.info(f"slow_ensure_root_provides called for {product_stream}")
+    saved_count = 0
+    ps = ProductStream.objects.get(name=product_stream)
+    for root_c in ps.components.manifest_components(ofuri=ps.ofuri):
+        if len(root_c.get_provides_pks()) != root_c.provides.count():
+            logger.info(f"saving component taxonomy for {root_c.purl} in stream {ps.name}")
+            root_c.save_component_taxonomy()
+            saved_count += 1
     return saved_count

@@ -715,6 +715,8 @@ class ProductStream(ProductModel):
         )
         return (
             Component.objects.filter(pk__in=unique_provides)
+            # See CORGI-658 for the motivation
+            .exclude(purl__contains="redhat.com")
             # Remove .exclude() below when CORGI-428 is resolved
             .exclude(purl__startswith="pkg:golang/", purl__contains="./")
             .exclude(purl__startswith="pkg:golang/", purl__contains="..")

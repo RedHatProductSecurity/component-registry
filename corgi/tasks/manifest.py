@@ -196,7 +196,7 @@ def cpu_update_ps_manifest(product_stream: str, external_name: str) -> tuple[boo
     autoretry_for=RETRYABLE_ERRORS,
     priority=6,
     retry_kwargs=RETRY_KWARGS,
-    soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT
+    soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
 )
 def cpu_validate_ps_manifest(product_stream: str):
     logger.info(f"Validating manifest for {product_stream}")

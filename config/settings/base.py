@@ -344,9 +344,9 @@ CELERY_RESULT_EXTENDED = True
 # @app.task(soft_time_limit=<TIME_IN_SECONDS>)
 CELERY_TASK_SOFT_TIME_LIMIT = 900
 # CELERY_SINGLETON_LOCK_EXPIRY and redis visibility timeout must never be less than the below value
-# if you set below to more than 7200 seconds, you must also update the redis visibility timeout
-CELERY_LONGEST_SOFT_TIME_LIMIT = 7200
-# Expire locks after 2 hours, which is the longest task time limit.
+# if you set below to more than 10800 seconds, you must also update the redis visibility timeout
+CELERY_LONGEST_SOFT_TIME_LIMIT = 10800
+# Expire locks after 3 hours, which is the longest task time limit.
 # https://github.com/steinitzu/celery-singleton#app-configuration
 CELERY_SINGLETON_LOCK_EXPIRY = CELERY_LONGEST_SOFT_TIME_LIMIT
 

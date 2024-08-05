@@ -8,7 +8,7 @@ from proton.handlers import MessagingHandler
 from proton.reactor import Container, Selector
 
 from corgi.collectors.pnc import is_sbomer_product
-from corgi.tasks.brew import slow_fetch_brew_build, slow_update_brew_tags
+from corgi.tasks.brew import slow_update_brew_tags
 from corgi.tasks.errata_tool import slow_handle_shipped_errata
 from corgi.tasks.pnc import slow_fetch_pnc_sbom, slow_handle_pnc_errata_released
 from corgi.tasks.pyxis import slow_fetch_pyxis_manifest
@@ -100,24 +100,6 @@ class UMBReceiverHandler(MessagingHandler):
     ##########################
     # Message Handlers: Brew #
     ##########################
-    @staticmethod
-    def brew_builds(event: Event) -> bool:
-        """Handle messages about completed Brew builds"""
-        logger.info("Handling UMB event for completed builds: %s", event.message.id)
-        message = json.loads(event.message.body)
-        build_id = message["info"]["build_id"]
-
-        try:
-            slow_fetch_brew_build.apply_async(args=(build_id,))
-        except Exception as exc:
-            logger.error(
-                "Failed to schedule slow_fetch_brew_build task for build ID %s: %s",
-                build_id,
-                str(exc),
-            )
-            return False
-        else:
-            return True
 
     @staticmethod
     def brew_tags(event: Event) -> bool:
@@ -228,7 +210,6 @@ class UMBListener:
     VIRTUAL_TOPIC_PREFIX = f"Consumer.{settings.UMB_CONSUMER}.VirtualTopic.eng"
     virtual_topic_addresses = {
         # Brew Addresses
-        f"{VIRTUAL_TOPIC_PREFIX}.brew.build.complete": UMBReceiverHandler.brew_builds,
         f"{VIRTUAL_TOPIC_PREFIX}.brew.build.tag": UMBReceiverHandler.brew_tags,
         f"{VIRTUAL_TOPIC_PREFIX}.brew.build.untag": UMBReceiverHandler.brew_tags,
         # ET Addresses

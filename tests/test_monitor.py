@@ -17,8 +17,6 @@ def test_umb_listener_defines_settings():
     listener = UMBListener()
     assert listener.virtual_topic_addresses == {
         f"{VIRTUAL_TOPIC_ADDRESS_PREFIX}VirtualTopic.eng."
-        f"brew.build.complete": UMBReceiverHandler.brew_builds,
-        f"{VIRTUAL_TOPIC_ADDRESS_PREFIX}VirtualTopic.eng."
         f"brew.build.tag": UMBReceiverHandler.brew_tags,
         f"{VIRTUAL_TOPIC_ADDRESS_PREFIX}VirtualTopic.eng."
         f"brew.build.untag": UMBReceiverHandler.brew_tags,
@@ -95,7 +93,7 @@ def test_umb_receiver_setup():
         )
         for address in handler.virtual_topic_addresses
     ]
-    assert len(handler.virtual_topic_addresses) == 6
+    assert len(handler.virtual_topic_addresses) == 5
     mock_umb_event.container.create_receiver.assert_has_calls(create_receiver_calls)
 
 
@@ -121,50 +119,6 @@ def test_umb_receiver_():
     mock_umb_event.message.address = None
     with pytest.raises(ValueError):
         handler.on_message(mock_umb_event)
-
-
-def test_umb_receiver_handles_builds():
-    """Test that the UMBReceiverHandler class either
-    accepts a "build complete" message, when no exception is raised
-    OR rejects the message if any exception is raised"""
-    listener = UMBListener()
-    addresses = listener.virtual_topic_addresses
-    selectors = listener.selectors
-    # Stub out the SSLDomain config class to avoid needing real UMB certs in tests
-    with patch("corgi.monitor.consumer.SSLDomain"):
-        handler = UMBReceiverHandler(virtual_topic_addresses=addresses, selectors=selectors)
-
-    mock_umb_event = MagicMock()
-    mock_id = "1"
-    mock_umb_event.message.address = "topic://VirtualTopic.eng.brew.build.complete"
-    assert (
-        mock_umb_event.message.address.replace("topic://", VIRTUAL_TOPIC_ADDRESS_PREFIX)
-        in addresses
-    )
-
-    mock_umb_event.message.body = '{"info": {"build_id": MOCK_ID}}'.replace("MOCK_ID", mock_id)
-    mock_id = int(mock_id)
-
-    umb_message_exceptions = (None, Exception("Second message received raises an exception"))
-    # side_effect is a list of return values for each call to slow_fetch_brew_build.apply_async()
-    # If any side_effect is an Exception subclass, it will be raised
-    # Any other side_effect is just returned instead
-    with patch(
-        "corgi.monitor.consumer.slow_fetch_brew_build.apply_async",
-        side_effect=umb_message_exceptions,
-    ) as slow_fetch_brew_build_mock:
-        # First call raises no exception, message should be accepted
-        with patch.object(handler, "accept") as mock_accept:
-            handler.on_message(mock_umb_event)
-            mock_accept.assert_called_once_with(mock_umb_event.delivery)
-
-        # Second call raises exception given above, message should be rejected
-        with patch.object(handler, "release") as mock_release:
-            handler.on_message(mock_umb_event)
-            mock_release.assert_called_once_with(mock_umb_event.delivery, delivered=True)
-
-    # slow_fetch_brew_build.apply_async is called once per message with a build_id arg
-    slow_fetch_brew_build_mock.assert_has_calls((call(args=(mock_id,)), call(args=(mock_id,))))
 
 
 def test_handle_tag_and_untag_messages():

@@ -8,7 +8,7 @@ stages:
   - perf-prod
 
 include:
-  - project: 'product-security/dev/component-registry-ops'
+  - project: 'prodsec-dev/component-registry-ops'
     ref: "$CORGI_OPS_BRANCH"
     file: '/templates/gitlab/ansible-run.yml'
   - project: 'enterprise-pipelines/gitlab-ci/includes'

@@ -185,6 +185,7 @@ flake8:
       - schedules
 
 black:
+  tags: ["shared"]
   stage: lint
   image: $PYTHON_TOX_IMAGE_LATEST
   before_script:

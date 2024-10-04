@@ -29,6 +29,7 @@ def apply_middleware_stream_no_manifest_tags(tag_name: str, tag_value: str) -> N
         if created:
             logger.info(f"Added tag {tag_name}={tag_value} to model {stream.name}")
 
+
 def apply_rhel_br_stream_no_manifest_tags(tag_name: str, tag_value: str) -> None:
     for rhel_br_stream in ProductStream.objects.filter(name__startswith="rhel-br"):
         _, created = ProductStreamTag.objects.get_or_create(
@@ -37,9 +38,10 @@ def apply_rhel_br_stream_no_manifest_tags(tag_name: str, tag_value: str) -> None
         if created:
             logger.info(f"Added tag {tag_name}={tag_value} to model {rhel_br_stream.name}")
 
+
 def apply_rhel_8_9_z_stream_no_manifest_tags(tag_name: str, tag_value: str) -> None:
     for stream_pk in ProductVersion.objects.filter(
-        name__in=("rhel-8", "rhel-9"), productstreams__name__endswith=".z"
+        name__in=("rhel-8", "rhel-9", "rhel-10"), productstreams__name__endswith=".z"
     ).values_list("productstreams", flat=True):
         stream = ProductStream.objects.get(pk=stream_pk)
         _, created = ProductStreamTag.objects.get_or_create(

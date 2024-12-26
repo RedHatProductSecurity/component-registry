@@ -379,10 +379,10 @@ jsonschema==4.17.1 \
     --hash=sha256:05b2d22c83640cde0b7e0aa329ca7754fbd98ea66ad8ae24aa61328dfe057fa3 \
     --hash=sha256:410ef23dcdbca4eaedc08b850079179883c2ed09378bd1f760d4af4aacfa28d7
     # via drf-spectacular
-koji==1.27.1 \
-    --hash=sha256:2eb84ad075cfdaabd6520bf69ab01c217d18551cd200132a15f0441b45bc2a4c \
-    --hash=sha256:518a09a10f802ec5635978800d0ff0ab17d57aa31f369c01c93efcf9b9c9e61a \
-    --hash=sha256:b3db519db7bbb07edaef28d281ea463deb9b3998008e7bb47ef702e4cc871748
+koji==1.33.2 \
+    --hash=sha256:53686c053528f53eec4af736f0f3c74f6d7a3b7252d3225977f8a17350ed708d \
+    --hash=sha256:553db1c17aa79483ba7d379a29da1ff59a0d0c5c108df3139d39c1c485d7e75b \
+    --hash=sha256:8b4e690b7df84edb6cba2f907ca32964a92a1f40c62d5f536064cfae0dea31cc
     # via -r requirements/base.in
 kombu==5.2.3 \
     --hash=sha256:81a90c1de97e08d3db37dbf163eaaf667445e1068c98bfd89f051a40e9f6dbbd \

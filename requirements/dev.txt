@@ -415,6 +415,13 @@ decorator==5.1.0 \
     #   gssapi
     #   ipdb
     #   ipython
+defusedxml==0.7.1 \
+    --hash=sha256:1bb3032db185915b62d7c6209c5a8792be6a32ab2fedacc84e01b52c51aa3e69 \
+    --hash=sha256:a352e7e428770286cc899e2542b6cdaedb2b4953ff269a210103ec58f6198a61
+    # via
+    #   -r requirements/base.txt
+    #   -r requirements/test.txt
+    #   koji
 detect-secrets==1.5.0 \
     --hash=sha256:6bb46dcc553c10df51475641bb30fd69d25645cc12339e46c824c1e0c388898a \
     --hash=sha256:e24e7b9b5a35048c313e983f76c4bd09dad89f045ff059e354f9943bf45aa060
@@ -764,10 +771,10 @@ jsonschema==4.17.1 \
     #   -r requirements/base.txt
     #   -r requirements/test.txt
     #   drf-spectacular
-koji==1.27.1 \
-    --hash=sha256:2eb84ad075cfdaabd6520bf69ab01c217d18551cd200132a15f0441b45bc2a4c \
-    --hash=sha256:518a09a10f802ec5635978800d0ff0ab17d57aa31f369c01c93efcf9b9c9e61a \
-    --hash=sha256:b3db519db7bbb07edaef28d281ea463deb9b3998008e7bb47ef702e4cc871748
+koji==1.35.1 \
+    --hash=sha256:0302a5c12173938f88edc02dbd1fb55631454ccd3c6543446edc83befb89d3e1 \
+    --hash=sha256:8321c22920029ca2e8cf6f38eed087e2af947f40fece50aba7f0d52defd1636f \
+    --hash=sha256:916e7dd68e14980ed7245cbd700b74e79e913cfd4f250367307a8fce866381c6
     # via
     #   -r requirements/base.txt
     #   -r requirements/test.txt

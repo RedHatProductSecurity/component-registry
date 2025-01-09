@@ -565,7 +565,7 @@ class ProductModelSerializer(ProductTaxonomySerializer):
 
     @staticmethod
     def get_manifest(instance: ProductStream) -> str:
-        manifest_path = f"{instance.external_name}.json"
+        manifest_path = f"{instance.name}.json"
         path = Path(f"{settings.STATIC_ROOT}/{manifest_path}")
 
         if not path.is_file():

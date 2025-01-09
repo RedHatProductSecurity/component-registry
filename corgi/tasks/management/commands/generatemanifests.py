@@ -31,7 +31,7 @@ class Command(BaseCommand):
         if options["stream"]:
             ps = ProductStream.objects.get(name=options["stream"])
             self.stdout.write(self.style.SUCCESS(f"Updating manifest for {options['stream']}"))
-            cpu_update_ps_manifest(ps.name, ps.external_name)
+            cpu_update_ps_manifest(ps.name)
         elif options["allow-stream"]:
             ps = ProductStream.objects.get(name=options["allow-stream"])
             no_manifest_tag = ps.tags.filter(name="no_manifest").first()

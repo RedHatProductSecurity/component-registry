@@ -28,33 +28,10 @@ BUF_SIZE = 65536  # 64kb
     retry_kwargs=RETRY_KWARGS,
 )
 def update_manifests():
-    external_names = set()
     for ps in ProductStream.objects.annotate(num_components=Count("components")).filter(
         num_components__gt=0
     ):
-        # Don't regenerate a manifests for streams with matching external names, the content will
-        # be the same. This happens for the following streams, which share the same brew_tags, and
-        # variants
-        # CERTSYS-10.4-RHEL-8: ['certificate_system_10.4', 'certificate_system_10.4.z']
-        # RHEL-7-DEVTOOLS-2023.2: ['devtools-compilers-2023-2', 'devtools-compilers-2023-2.z']
-        # RHEL-7-FAST-DATAPATH: ['fdp-el7', 'fdp-el7-ovs']
-        # GITOPS-1.2-RHEL-8: ['gitops-1.2', 'gitops-1.2.z']
-        # JAEGER-1.20-RHEL-8: ['jaeger-1.20.0', 'jaeger-1.20.3', 'jaeger-1.20.4']
-        # OPENJDK TEXT-ONLY: ['openjdk-11', 'openjdk-17', 'openjdk-1.8']
-        # OPENSHIFT-PIPELINES-1.7-RHEL-8: ['pipelines-1.7', 'pipelines-1.7.1']
-        # OPENSHIFT-PIPELINES-1.8-RHEL-8: ['pipelines-1.8', 'pipelines-1.8.1']
-        # RHEL-8-RHACM-2.7: ['rhacm-2.7', 'rhacm-2.7.z']
-        # RHEL-8-RHACM-2.8: ['rhacm-2.8', 'rhacm-2.8.z']
-        #
-        # Since we use the external name as the filename, all streams will share the same manifest
-        if ps.external_name not in external_names:
-            cpu_update_ps_manifest.delay(ps.name, ps.external_name)
-            external_names.add(ps.external_name)
-        else:
-            logger.info(
-                f"Skipping manifest generation for {ps.name} with shared external name "
-                f"{ps.external_name}"
-            )
+        cpu_update_ps_manifest.delay(ps.name)
 
 
 def same_contents(existing_file: str, stream: ProductStream) -> tuple[bool, dict]:
@@ -71,7 +48,7 @@ def same_contents(existing_file: str, stream: ProductStream) -> tuple[bool, dict
     last_update_manifest_task_for_stream = (
         TaskResult.objects.filter(
             task_name="corgi.tasks.manifest.cpu_update_ps_manifest",
-            task_args__contains=stream.external_name,
+            task_args__contains=stream.name,
             result__contains="true",
             status="SUCCESS",
         )
@@ -79,7 +56,7 @@ def same_contents(existing_file: str, stream: ProductStream) -> tuple[bool, dict
         .first()
     )
     if not last_update_manifest_task_for_stream:
-        logger.info(f"Didn't find TaskResult for {stream.external_name}")
+        logger.info(f"Didn't find TaskResult for {stream.name}")
         return False, {}
     task_result = json.loads(last_update_manifest_task_for_stream.result)
     created_at = datetime.strptime(task_result[1], "%Y-%m-%dT%H:%M:%SZ")
@@ -94,19 +71,16 @@ def same_contents(existing_file: str, stream: ProductStream) -> tuple[bool, dict
     old_content_md5_hash = calculate_file_md5_hash(existing_file_obj)
     if new_content_md5_hash == old_content_md5_hash:
         logger.info(
-            f"Not regenerating content for {stream.external_name}, and {stream.name} "
-            f"because the content was not updated"
+            f"Not regenerating content for {stream.name} " f"because the content was not updated"
         )
         return True, {}
     else:
         # The content didn't match. Let's use the new content we just generated, but replace the
         # old created_at, and document_uuid values with some new ones.
         old_created_at = new_content["creationInfo"]["created"]
-        existing_document_uuid = get_document_uuid(
-            new_content["relationships"], existing_file, stream.name
-        )
+        existing_document_uuid = get_document_uuid(new_content["relationships"], stream.name)
         logger.info(
-            f"The manifest content didn't match for {existing_file}, and {stream.name},"
+            f"The manifest content didn't match for {stream.name},"
             f" old created at date: {old_created_at}, old manifest id: "
             f"{existing_document_uuid}"
         )
@@ -162,10 +136,10 @@ def calculate_file_md5_hash(existing_file_obj: Path) -> str:
     retry_kwargs=RETRY_KWARGS,
     soft_time_limit=settings.CELERY_LONGEST_SOFT_TIME_LIMIT,
 )
-def cpu_update_ps_manifest(product_stream: str, external_name: str) -> tuple[bool, str, str]:
-    logger.info(f"Updating manifest for {product_stream}, with external name: {external_name}")
+def cpu_update_ps_manifest(product_stream: str) -> tuple[bool, str, str]:
+    logger.info(f"Updating manifest for {product_stream}")
     ps = ProductStream.objects.get(name=product_stream)
-    output_file = f"{settings.STATIC_ROOT}/{external_name}.json"
+    output_file = f"{settings.STATIC_ROOT}/{product_stream}.json"
     if ps.components.manifest_components(quick=True, ofuri=ps.ofuri).exists():
         match, new_content = same_contents(output_file, ps)
         if match:
@@ -173,15 +147,11 @@ def cpu_update_ps_manifest(product_stream: str, external_name: str) -> tuple[boo
             return False, "", ""
         if new_content:
             logger.info(f"(Re)-generating manifest for {product_stream}")
-            created_at, document_uuid = _write_content(
-                external_name, new_content, output_file, product_stream
-            )
+            created_at, document_uuid = _write_content(new_content, output_file, product_stream)
             return True, created_at, document_uuid
         # output_file was missing, generate new file with manifest content
         content = ProductManifestFile(ps).render_content()
-        created_at, document_uuid = _write_content(
-            external_name, content, output_file, product_stream
-        )
+        created_at, document_uuid = _write_content(content, output_file, product_stream)
         return True, created_at, document_uuid
     else:
         logger.info(
@@ -212,17 +182,17 @@ def cpu_validate_ps_manifest(product_stream: str):
         slow_ensure_root_upstreams.delay(product_stream)
 
 
-def _write_content(external_name, new_content, output_file, product_stream) -> tuple[str, str]:
+def _write_content(new_content, output_file, product_stream) -> tuple[str, str]:
     with open(output_file, "w") as fh:
         fh.write(json.dumps(new_content, indent=4))
     created_at = new_content["creationInfo"]["created"]
     new_relationships = new_content["relationships"]
-    document_uuid = get_document_uuid(new_relationships, external_name, product_stream)
+    document_uuid = get_document_uuid(new_relationships, product_stream)
     cpu_validate_ps_manifest.delay(product_stream)
     return created_at, document_uuid
 
 
-def get_document_uuid(new_relationships, external_name, product_stream):
+def get_document_uuid(new_relationships, product_stream):
     document_uuid = ""
     describes_relationship_count = 0
     for relationship in new_relationships:
@@ -230,10 +200,7 @@ def get_document_uuid(new_relationships, external_name, product_stream):
             describes_relationship_count += 1
             document_uuid = relationship["relatedSpdxElement"]
     if describes_relationship_count != 1:
-        raise ValueError(
-            f"Did not find product manifest id for {product_stream}, "
-            f"with external_name {external_name}"
-        )
+        raise ValueError(f"Did not find product manifest id for {product_stream}")
     return document_uuid
 
 

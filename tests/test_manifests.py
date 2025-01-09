@@ -875,7 +875,7 @@ def test_same_contents(stored_proc):
     stream = ProductStreamFactory(name=external_name, version="1.0")
     TaskResult.objects.create(
         task_name="corgi.tasks.manifest.cpu_update_ps_manifest",
-        task_args=f"\"('{external_name}', 'EXTERNAL-NAME-1.0')\"",
+        task_args=f"\"('{external_name}')\"",
         status="SUCCESS",
         result='[true, "2024-01-31T00:22:29Z", "SPDXRef-303ea2fd-1a48-4590-90b4-4fd901272ca3"]',
     )
@@ -909,7 +909,7 @@ def test_different_contents(stored_proc):
     existing_file = "tests/data/manifest/sbom.json"
     TaskResult.objects.create(
         task_name="corgi.tasks.manifest.cpu_update_ps_manifest",
-        task_args=f"\"('{external_name}', 'EXTERNAL-NAME-1.0')\"",
+        task_args=f"\"('{external_name}')\"",
         status="SUCCESS",
         result=f'[true, "{last_successful_created_at_date}", "{last_successful_document_id}"]',
     )

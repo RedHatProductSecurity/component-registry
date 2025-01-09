@@ -22,6 +22,7 @@ include:
   - cd /etc/pki/ca-trust/source/anchors/ && curl -O "${ROOT_CA_URL}"; cd -
   - update-ca-trust
   - export REQUESTS_CA_BUNDLE=/etc/pki/tls/certs/ca-bundle.crt
+  - dnf install --nodocs --setopt install_weak_deps=false -y git python3.11 python3.11-devel tox
 
 .common_test_setup: &common_test_setup
   # Define below in CI settings, then export here so subprocesses can use also

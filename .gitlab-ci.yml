@@ -22,7 +22,8 @@ include:
   - cd /etc/pki/ca-trust/source/anchors/ && curl -O "${ROOT_CA_URL}"; cd -
   - update-ca-trust
   - export REQUESTS_CA_BUNDLE=/etc/pki/tls/certs/ca-bundle.crt
-  - dnf install --nodocs --setopt install_weak_deps=false -y git python3.11 python3.11-devel tox
+  - dnf install --nodocs --setopt install_weak_deps=false -y git python3.11 python3.11-devel
+  - python3.11 -m pip install tox
 
 .common_test_setup: &common_test_setup
   # Define below in CI settings, then export here so subprocesses can use also
@@ -94,7 +95,6 @@ test:
     - *common_test_setup
   script:
     - $DNF_WITH_OPTIONS install $RPM_REQUIREMENTS
-    - python3.11 -m pip install tox
     - tox -e corgi -- --cov-fail-under=70 --cov-report xml --junitxml=junit.xml
   except:
     refs:
@@ -183,6 +183,7 @@ flake8:
   before_script:
     - *common_ci_setup
   script:
+    -
     - tox -e flake8
   except:
     refs:

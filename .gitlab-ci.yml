@@ -183,7 +183,6 @@ flake8:
   before_script:
     - *common_ci_setup
   script:
-    -
     - tox -e flake8
   except:
     refs:

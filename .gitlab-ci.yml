@@ -22,7 +22,7 @@ include:
   - cd /etc/pki/ca-trust/source/anchors/ && curl -O "${ROOT_CA_URL}"; cd -
   - update-ca-trust
   - export REQUESTS_CA_BUNDLE=/etc/pki/tls/certs/ca-bundle.crt
-  - dnf install --nodocs --setopt install_weak_deps=false -y git python3.11 python-pip
+  - dnf install --nodocs --setopt install_weak_deps=false -y git python3.11 python3.11-pip
   - python3.11 -m pip install tox
 
 .common_test_setup: &common_test_setup
@@ -153,7 +153,7 @@ test-performance:
 
 mypy:
   stage: test
-  image: $PYTHON_TOX_IMAGE_LATEST
+  image: $UBI9_IMAGE
   before_script:
     - *common_ci_setup
     - *common_test_setup
@@ -166,7 +166,7 @@ mypy:
 
 schema:
   stage: test
-  image: $PYTHON_TOX_IMAGE_LATEST
+  image: $UBI9_IMAGE
   before_script:
     - *common_ci_setup
     - *common_test_setup
@@ -179,7 +179,7 @@ schema:
 
 flake8:
   stage: lint
-  image: $PYTHON_TOX_IMAGE_LATEST
+  image: $UBI9_IMAGE
   before_script:
     - *common_ci_setup
   script:
@@ -190,7 +190,7 @@ flake8:
 
 black:
   stage: lint
-  image: $PYTHON_TOX_IMAGE_LATEST
+  image: $UBI9_IMAGE
   before_script:
     - *common_ci_setup
   script:
@@ -201,7 +201,7 @@ black:
 
 isort:
   stage: lint
-  image: $PYTHON_TOX_IMAGE_LATEST
+  image: $UBI9_IMAGE
   before_script:
     - *common_ci_setup
   script:
@@ -212,7 +212,7 @@ isort:
 
 secrets:
   stage: lint
-  image: $PYTHON_TOX_IMAGE_LATEST
+  image: $UBI9_IMAGE
   before_script:
     - *common_ci_setup
   script:
@@ -223,7 +223,7 @@ secrets:
 
 locust-stage:
   stage: perf-stage
-  image: $PYTHON_TOX_IMAGE_LATEST
+  image: $UBI9_IMAGE
   before_script:
     - *common_ci_setup
     - *common_test_setup
@@ -240,7 +240,7 @@ locust-stage:
 
 locust-prod:
   stage: perf-prod
-  image: $PYTHON_TOX_IMAGE_LATEST
+  image: $UBI9_IMAGE
   before_script:
     - *common_ci_setup
     - *common_test_setup

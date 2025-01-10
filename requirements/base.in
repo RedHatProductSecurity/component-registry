@@ -14,7 +14,6 @@ django-mptt @ https://github.com/RedHatProductSecurity/django-mptt/archive/25d49
 djangorestframework @ https://github.com/encode/django-rest-framework/archive/cc3c89a11c7ee9cf7cfd732e0a329c318ace71b2.zip#egg=djangorestframework
 
 drf-spectacular[sidecar]
-flower
 gunicorn[gevent]
 koji
 packageurl-python

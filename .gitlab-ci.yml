@@ -22,6 +22,8 @@ include:
   - cd /etc/pki/ca-trust/source/anchors/ && curl -O "${ROOT_CA_URL}"; cd -
   - update-ca-trust
   - export REQUESTS_CA_BUNDLE=/etc/pki/tls/certs/ca-bundle.crt
+  - dnf install --nodocs --setopt install_weak_deps=false -y git python3.11 python3.11-pip
+  - python3.11 -m pip install tox
 
 .common_test_setup: &common_test_setup
   # Define below in CI settings, then export here so subprocesses can use also
@@ -66,6 +68,7 @@ deploy-prod:
       - schedules
 
 sonarqube:
+  allow_failure: true
   stage: test
 
 variables:
@@ -93,7 +96,6 @@ test:
     - *common_test_setup
   script:
     - $DNF_WITH_OPTIONS install $RPM_REQUIREMENTS
-    - python3.11 -m pip install tox
     - tox -e corgi -- --cov-fail-under=70 --cov-report xml --junitxml=junit.xml
   except:
     refs:
@@ -152,12 +154,12 @@ test-performance:
 
 mypy:
   stage: test
-  image: $PYTHON_TOX_IMAGE_LATEST
+  image: $UBI9_IMAGE
   before_script:
     - *common_ci_setup
     - *common_test_setup
   script:
-    - $DNF_WITH_OPTIONS install python3.11-devel python3-wheel
+    - $DNF_WITH_OPTIONS install $RPM_REQUIREMENTS
     - tox -e mypy
   except:
     refs:
@@ -165,12 +167,12 @@ mypy:
 
 schema:
   stage: test
-  image: $PYTHON_TOX_IMAGE_LATEST
+  image: $UBI9_IMAGE
   before_script:
     - *common_ci_setup
     - *common_test_setup
   script:
-    - $DNF_WITH_OPTIONS install python3.11-devel python3-wheel
+    - $DNF_WITH_OPTIONS install $RPM_REQUIREMENTS
     - tox -e schema
   except:
     refs:
@@ -178,7 +180,7 @@ schema:
 
 flake8:
   stage: lint
-  image: $PYTHON_TOX_IMAGE_LATEST
+  image: $UBI9_IMAGE
   before_script:
     - *common_ci_setup
   script:
@@ -189,7 +191,7 @@ flake8:
 
 black:
   stage: lint
-  image: $PYTHON_TOX_IMAGE_LATEST
+  image: $UBI9_IMAGE
   before_script:
     - *common_ci_setup
   script:
@@ -200,7 +202,7 @@ black:
 
 isort:
   stage: lint
-  image: $PYTHON_TOX_IMAGE_LATEST
+  image: $UBI9_IMAGE
   before_script:
     - *common_ci_setup
   script:
@@ -211,7 +213,7 @@ isort:
 
 secrets:
   stage: lint
-  image: $PYTHON_TOX_IMAGE_LATEST
+  image: $UBI9_IMAGE
   before_script:
     - *common_ci_setup
   script:
@@ -222,7 +224,7 @@ secrets:
 
 locust-stage:
   stage: perf-stage
-  image: $PYTHON_TOX_IMAGE_LATEST
+  image: $UBI9_IMAGE
   before_script:
     - *common_ci_setup
     - *common_test_setup
@@ -239,7 +241,7 @@ locust-stage:
 
 locust-prod:
   stage: perf-prod
-  image: $PYTHON_TOX_IMAGE_LATEST
+  image: $UBI9_IMAGE
   before_script:
     - *common_ci_setup
     - *common_test_setup

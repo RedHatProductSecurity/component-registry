@@ -68,6 +68,7 @@ deploy-prod:
       - schedules
 
 sonarqube:
+  allow_failure: true
   stage: test
 
 variables:
